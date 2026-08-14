@@ -1,10 +1,10 @@
 # Projeto
 
-> Placeholder para documentação do projeto.
+> Health Enterprise
 
 ## Sobre
 
-Breve descrição do projeto, seu objetivo e o problema que ele busca resolver.
+Projeto que busca ajudar aos diferentes níveis de empresários a manterem a saúde de sua empresa, calculando o valor necessário para que sua empresa esteja saúdavel e rendendo lucros, gerir a empresa e entender de maneira mais visual como está o rendimento da empresa.
 
 ## Tecnologias
 
