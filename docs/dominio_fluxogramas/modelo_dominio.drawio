@@ -1,0 +1,145 @@
+<mxfile host="app.diagrams.net">
+  <diagram name="Modelo de Dominio" id="dominio1">
+    <mxGraphModel dx="1400" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="1400" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="id3" value="Negocio" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=1;resizeParent=0;resizeParentMax=0;collapsible=0;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+  <mxGeometry x="40" y="40" width="240" height="86" as="geometry" />
+</mxCell><mxCell id="id4" value="nome
+regimeTributario: MEI | Simples
+plano: Gratuito | Pago" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=6;spacingRight=6;overflow=hidden;whiteSpace=wrap;" vertex="1" parent="id3">
+  <mxGeometry y="30" width="240" height="56" as="geometry" />
+</mxCell><mxCell id="id5" value="Usuario" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=1;resizeParent=0;resizeParentMax=0;collapsible=0;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+  <mxGeometry x="300" y="40" width="240" height="86" as="geometry" />
+</mxCell><mxCell id="id6" value="nome
+email
+senha" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=6;spacingRight=6;overflow=hidden;whiteSpace=wrap;" vertex="1" parent="id5">
+  <mxGeometry y="30" width="240" height="56" as="geometry" />
+</mxCell><mxCell id="id7" value="MembroNegocio" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=1;resizeParent=0;resizeParentMax=0;collapsible=0;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+  <mxGeometry x="560" y="40" width="240" height="70" as="geometry" />
+</mxCell><mxCell id="id8" value="papel: Dono | Gerente | Colaborador
+permissoesCustomizadas" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=6;spacingRight=6;overflow=hidden;whiteSpace=wrap;" vertex="1" parent="id7">
+  <mxGeometry y="30" width="240" height="40" as="geometry" />
+</mxCell><mxCell id="id9" value="Item (abstrato)" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=1;resizeParent=0;resizeParentMax=0;collapsible=0;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+  <mxGeometry x="820" y="40" width="240" height="102" as="geometry" />
+</mxCell><mxCell id="id10" value="nome
+custo
+precoAtual
+categoria" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=6;spacingRight=6;overflow=hidden;whiteSpace=wrap;" vertex="1" parent="id9">
+  <mxGeometry y="30" width="240" height="72" as="geometry" />
+</mxCell><mxCell id="id11" value="ProdutoFisico" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=1;resizeParent=0;resizeParentMax=0;collapsible=0;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+  <mxGeometry x="40" y="260" width="240" height="86" as="geometry" />
+</mxCell><mxCell id="id12" value="quantidadeEstoque
+estoqueMinimo
+unidadeMedida" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=6;spacingRight=6;overflow=hidden;whiteSpace=wrap;" vertex="1" parent="id11">
+  <mxGeometry y="30" width="240" height="56" as="geometry" />
+</mxCell><mxCell id="id13" value="Servico" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=1;resizeParent=0;resizeParentMax=0;collapsible=0;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+  <mxGeometry x="300" y="260" width="240" height="54" as="geometry" />
+</mxCell><mxCell id="id14" value="unidadeMedida" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=6;spacingRight=6;overflow=hidden;whiteSpace=wrap;" vertex="1" parent="id13">
+  <mxGeometry y="30" width="240" height="24" as="geometry" />
+</mxCell><mxCell id="id15" value="MaterialServico" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=1;resizeParent=0;resizeParentMax=0;collapsible=0;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+  <mxGeometry x="560" y="260" width="240" height="54" as="geometry" />
+</mxCell><mxCell id="id16" value="quantidade (padrao=1, editavel)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=6;spacingRight=6;overflow=hidden;whiteSpace=wrap;" vertex="1" parent="id15">
+  <mxGeometry y="30" width="240" height="24" as="geometry" />
+</mxCell><mxCell id="id17" value="MovimentacaoEstoque" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=1;resizeParent=0;resizeParentMax=0;collapsible=0;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+  <mxGeometry x="820" y="260" width="240" height="102" as="geometry" />
+</mxCell><mxCell id="id18" value="tipo: Entrada | SaidaVenda | SaidaManual
+quantidade
+data
+motivo (obrig. se SaidaManual)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=6;spacingRight=6;overflow=hidden;whiteSpace=wrap;" vertex="1" parent="id17">
+  <mxGeometry y="30" width="240" height="72" as="geometry" />
+</mxCell><mxCell id="id19" value="HistoricoPreco" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=1;resizeParent=0;resizeParentMax=0;collapsible=0;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+  <mxGeometry x="40" y="480" width="240" height="102" as="geometry" />
+</mxCell><mxCell id="id20" value="preco
+margemAplicada
+impostoAplicado
+dataConfirmacao" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=6;spacingRight=6;overflow=hidden;whiteSpace=wrap;" vertex="1" parent="id19">
+  <mxGeometry y="30" width="240" height="72" as="geometry" />
+</mxCell><mxCell id="id21" value="Cliente" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=1;resizeParent=0;resizeParentMax=0;collapsible=0;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+  <mxGeometry x="300" y="480" width="240" height="70" as="geometry" />
+</mxCell><mxCell id="id22" value="nome
+contato" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=6;spacingRight=6;overflow=hidden;whiteSpace=wrap;" vertex="1" parent="id21">
+  <mxGeometry y="30" width="240" height="40" as="geometry" />
+</mxCell><mxCell id="id23" value="Venda" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=1;resizeParent=0;resizeParentMax=0;collapsible=0;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+  <mxGeometry x="560" y="480" width="240" height="70" as="geometry" />
+</mxCell><mxCell id="id24" value="data
+valorTotal" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=6;spacingRight=6;overflow=hidden;whiteSpace=wrap;" vertex="1" parent="id23">
+  <mxGeometry y="30" width="240" height="40" as="geometry" />
+</mxCell><mxCell id="id25" value="ItemVenda" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=1;resizeParent=0;resizeParentMax=0;collapsible=0;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+  <mxGeometry x="820" y="480" width="240" height="70" as="geometry" />
+</mxCell><mxCell id="id26" value="quantidade
+precoUnitarioNaVenda" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=6;spacingRight=6;overflow=hidden;whiteSpace=wrap;" vertex="1" parent="id25">
+  <mxGeometry y="30" width="240" height="40" as="geometry" />
+</mxCell><mxCell id="id27" value="Pagamento" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=1;resizeParent=0;resizeParentMax=0;collapsible=0;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+  <mxGeometry x="40" y="700" width="240" height="86" as="geometry" />
+</mxCell><mxCell id="id28" value="formaPagamento: Dinheiro|PIX|Debito|Credito
+valor
+numeroParcelas (1-12, so Credito)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=6;spacingRight=6;overflow=hidden;whiteSpace=wrap;" vertex="1" parent="id27">
+  <mxGeometry y="30" width="240" height="56" as="geometry" />
+</mxCell><mxCell id="id29" value="Parcela" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=1;resizeParent=0;resizeParentMax=0;collapsible=0;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+  <mxGeometry x="300" y="700" width="240" height="102" as="geometry" />
+</mxCell><mxCell id="id30" value="numero
+valor
+vencimento
+status: Pendente|Pago|Parcial" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=6;spacingRight=6;overflow=hidden;whiteSpace=wrap;" vertex="1" parent="id29">
+  <mxGeometry y="30" width="240" height="72" as="geometry" />
+</mxCell><mxCell id="id31" value="LancamentoFinanceiro" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=1;resizeParent=0;resizeParentMax=0;collapsible=0;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+  <mxGeometry x="560" y="700" width="240" height="118" as="geometry" />
+</mxCell><mxCell id="id32" value="tipo: Entrada | Saida
+categoria: Vendas|Fornecedores|Impostos|Salario|Outros
+valor
+data
+origem: Venda | Manual" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=6;spacingRight=6;overflow=hidden;whiteSpace=wrap;" vertex="1" parent="id31">
+  <mxGeometry y="30" width="240" height="88" as="geometry" />
+</mxCell><mxCell id="id33" value="ContaPagarReceber" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=1;resizeParent=0;resizeParentMax=0;collapsible=0;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+  <mxGeometry x="820" y="700" width="240" height="118" as="geometry" />
+</mxCell><mxCell id="id34" value="tipo: Pagar | Receber
+valorTotal
+valorPago
+vencimento
+status: Aberta|Parcial|Quitada" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=6;spacingRight=6;overflow=hidden;whiteSpace=wrap;" vertex="1" parent="id33">
+  <mxGeometry y="30" width="240" height="88" as="geometry" />
+</mxCell><mxCell id="id35" value="possui  (1..N)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;elbow=vertical;fontSize=10;" edge="1" parent="1" source="id3" target="id7">
+  <mxGeometry relative="1" as="geometry" />
+</mxCell><mxCell id="id36" value="participa como  (1..N)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;elbow=vertical;fontSize=10;" edge="1" parent="1" source="id5" target="id7">
+  <mxGeometry relative="1" as="geometry" />
+</mxCell><mxCell id="id37" value="cadastra  (1..N)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;elbow=vertical;fontSize=10;" edge="1" parent="1" source="id3" target="id9">
+  <mxGeometry relative="1" as="geometry" />
+</mxCell><mxCell id="id38" value="registra  (1..N)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;elbow=vertical;fontSize=10;" edge="1" parent="1" source="id3" target="id23">
+  <mxGeometry relative="1" as="geometry" />
+</mxCell><mxCell id="id39" value="mantem  (1..N)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;elbow=vertical;fontSize=10;" edge="1" parent="1" source="id3" target="id31">
+  <mxGeometry relative="1" as="geometry" />
+</mxCell><mxCell id="id40" value="mantem  (1..N)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;elbow=vertical;fontSize=10;" edge="1" parent="1" source="id3" target="id33">
+  <mxGeometry relative="1" as="geometry" />
+</mxCell><mxCell id="id41" value="acumula  (1..N)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;elbow=vertical;fontSize=10;" edge="1" parent="1" source="id9" target="id19">
+  <mxGeometry relative="1" as="geometry" />
+</mxCell><mxCell id="id42" value="consome  (1..N)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;elbow=vertical;fontSize=10;" edge="1" parent="1" source="id13" target="id15">
+  <mxGeometry relative="1" as="geometry" />
+</mxCell><mxCell id="id43" value="referencia  (N..1)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;elbow=vertical;fontSize=10;" edge="1" parent="1" source="id15" target="id11">
+  <mxGeometry relative="1" as="geometry" />
+</mxCell><mxCell id="id44" value="sofre  (1..N)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;elbow=vertical;fontSize=10;" edge="1" parent="1" source="id11" target="id17">
+  <mxGeometry relative="1" as="geometry" />
+</mxCell><mxCell id="id45" value="associada a  (0..1..1)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;elbow=vertical;fontSize=10;" edge="1" parent="1" source="id23" target="id21">
+  <mxGeometry relative="1" as="geometry" />
+</mxCell><mxCell id="id46" value="contem  (1..N)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;elbow=vertical;fontSize=10;" edge="1" parent="1" source="id23" target="id25">
+  <mxGeometry relative="1" as="geometry" />
+</mxCell><mxCell id="id47" value="refere-se a  (N..1)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;elbow=vertical;fontSize=10;" edge="1" parent="1" source="id25" target="id9">
+  <mxGeometry relative="1" as="geometry" />
+</mxCell><mxCell id="id48" value="e paga por  (1..N)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;elbow=vertical;fontSize=10;" edge="1" parent="1" source="id23" target="id27">
+  <mxGeometry relative="1" as="geometry" />
+</mxCell><mxCell id="id49" value="gera se Credito  (1..N)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;elbow=vertical;fontSize=10;" edge="1" parent="1" source="id27" target="id29">
+  <mxGeometry relative="1" as="geometry" />
+</mxCell><mxCell id="id50" value="dispara  (1..1)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;elbow=vertical;fontSize=10;" edge="1" parent="1" source="id23" target="id31">
+  <mxGeometry relative="1" as="geometry" />
+</mxCell><mxCell id="id51" value="origina  (1..1)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;elbow=vertical;fontSize=10;" edge="1" parent="1" source="id29" target="id33">
+  <mxGeometry relative="1" as="geometry" />
+</mxCell><mxCell id="id52" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=0;endSize=16;" edge="1" parent="1" source="id11" target="id9">
+  <mxGeometry relative="1" as="geometry" />
+</mxCell><mxCell id="id53" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=0;endSize=16;" edge="1" parent="1" source="id13" target="id9">
+  <mxGeometry relative="1" as="geometry" />
+</mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
