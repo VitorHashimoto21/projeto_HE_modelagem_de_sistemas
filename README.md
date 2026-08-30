@@ -1,6 +1,6 @@
-# Projeto
+#  Health Enterprise
 
-> Health Enterprise
+> Vitor Hashimoto, Rafael Katahira, Rafael Di Santi
 
 ## Sobre
 
