@@ -116,14 +116,14 @@ Uma das regras de negócio é o suporte a pagamentos parciais. Se uma conta não
 stateDiagram-v2
     [*] --> Pendente : Lançamento criado (vencimento futuro)
     
-    Pendente --> Quitado : Registrar Pagamento Total\n(valorPago == valorTotal)
-    Pendente --> PagoParcialmente : Registrar Pagamento Parcial\n(valorPago < valorTotal)
+    Pendente --> Quitado : Registrar Pagamento Total (valorPago == valorTotal)
+    Pendente --> PagoParcialmente : Registrar Pagamento Parcial (valorPago < valorTotal)
     
-    PagoParcialmente --> PagoParcialmente : Registrar novo pagamento parcial\n(soma_pagamentos < valorTotal)
-    PagoParcialmente --> Quitado : Registrar pagamento do saldo restante\n(soma_pagamentos == valorTotal)
+    PagoParcialmente --> PagoParcialmente : Registrar novo pagamento parcial (soma_pagamentos < valorTotal)
+    PagoParcialmente --> Quitado : Registrar pagamento do saldo restante (soma_pagamentos == valorTotal)
     
-    Pendente --> Atrasado : Data atual ultrapassa Vencimento\n(saldo_aberto > 0)
-    PagoParcialmente --> Atrasado : Data atual ultrapassa Vencimento\n(saldo_aberto > 0)
+    Pendente --> Atrasado : Data atual ultrapassa Vencimento (saldo_aberto > 0)
+    PagoParcialmente --> Atrasado : Data atual ultrapassa Vencimento (saldo_aberto > 0)
     
     Atrasado --> Quitado : Registrar quitação do saldo em atraso
     Atrasado --> PagoParcialmente : Registrar pagamento parcial de conta atrasada
