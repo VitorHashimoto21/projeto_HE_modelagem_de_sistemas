@@ -31,7 +31,7 @@ sequenceDiagram
     end
 
     Action->>Action: Executa cálculo da Alíquota do Imposto
-    Action->>Action: Aplica fórmula: Preço = Custo Base / (1 - Margem% - Imposto%)
+    Action->>Action: Aplica fórmula: PreçoSugerido = CustoProduto x Markup, em que *Markup = 1/(1 - (Desp fixas + Desp variáveis + Margem))
     Action-->>UI: Retorna Preço Sugerido e detalhes do cálculo
     UI-->>Empreendedor: Exibe preço sugerido e aguarda confirmação
 
@@ -68,7 +68,7 @@ sequenceDiagram
     
     rect rgb(255, 245, 230)
         note right of Action: Inicia transação ACID de Venda no Banco de Dados
-        Action->>ORM: Iniciar Transação (prisma.$ [cite: 125, 136] [cite: 11, 125] [cite: 125] [cite: 125]transaction)
+        Action->>ORM: Iniciar Transação (prisma.$ transaction)
         
         Action->>ORM: Venda.create(dados da venda)
         ORM->>DB: INSERT INTO Venda ...
