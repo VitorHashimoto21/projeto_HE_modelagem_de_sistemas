@@ -8,45 +8,47 @@ Para atender ao rigor acadêmico e técnico da disciplina, as issues estão divi
 
 ## 🛠️ Bloco 1: Setup Técnico e Arquitetural (Início do Projeto)
 
-### Issue #01 [Technical]: Setup Inicial do Projeto Django, Banco Relacional e Estrutura de Pastas
-*   **Título:** `[SETUP] Setup do Projeto Django, Estrutura de Pastas e Banco de Dados Relacional`
+### Issue #01 [Technical]: Setup Inicial do Projeto Next.js, Prisma ORM e Banco Relacional
+*   **Título:** `[SETUP] Setup do Projeto Next.js (App Router), Prisma e Banco de Dados (Supabase)`
 *   **Tipo/Label:** `technical`, `enhancement`
 *   **Responsável sugerido:** Integrante responsável por DevOps/Infraestrutura.
 *   **Descrição:**
     ```text
-    Realizar o setup inicial da aplicação web utilizando o framework Django (Python) para servir como chassis do sistema. A estrutura do repositório deve respeitar o padrão de pastas exigido pela disciplina.
+    Realizar o setup inicial da aplicação utilizando Next.js com App Router e TypeScript. Configurar o Prisma ORM para comunicação com o banco de dados PostgreSQL.
 
     Tarefas:
-    - [ ] Criar projeto Django com estrutura limpa.
-    - [ ] Configurar o banco de dados relacional (SQLite para desenvolvimento/PostgreSQL para homologação).
+    - [ ] Inicializar projeto Next.js (npx create-next-app@latest) com TS, Tailwind e ESLint.
+    - [ ] Configurar Prisma ORM e conectar ao banco de dados (Supabase) via variáveis de ambiente.
     - [ ] Estruturar as pastas do repositório:
-          ├── src/          (código-fonte Django)
-          ├── tests/        (testes unitários e de integração)
-          ├── docs/         (documentação complementar e diagramas)
-          └── .specify/     (planejamentos e especificações de IA)
-    - [ ] Configurar os modelos iniciais de Usuário estendidos e isolamento inicial por Negócio (Tenant).
-    - [ ] Garantir que o professor (niltonmack@mackenzie.br) esteja adicionado como colaborador.
+      ├── src/
+      │   ├── app/ (Routes/Pages/Server Actions)
+      │   ├── components/ (shadcn/ui e componentes reutilizáveis)
+      │   ├── lib/ (Configurações Prisma/Supabase)
+      │   └── hooks/ (Custom hooks para o front)
+      ├── prisma/ (Schema e Migrations)
+      └── docs/ (Documentação e ADRs)
+    - [ ] Criar o schema.prisma inicial com as entidades de Usuário e Negócio (Multi-tenant).
+    - [ ] Garantir que o professor (niltonmack@mackenzie.br) esteja como colaborador.
     - [ ] Subir o primeiro PR funcional com o setup inicial para a branch main.
     ```
 *   **Critérios de Aceitação (EARS Notation) [RNF02, RNF03, RNF09]:**
-    *   **Ubíquo:** *THE SYSTEM SHALL* isolar logicamente todos os dados de negócio a nível de banco de dados, impedindo o acesso cruzado entre diferentes contas cadastrais.
-    *   **Ubíquo:** *THE SYSTEM SHALL* salvar as senhas dos usuários utilizando criptografia com algoritmo de hash seguro e salt.
+    *   **Ubíquo:** *THE SYSTEM SHALL*  isolar logicamente todos os dados de negócio a nível de banco de dados, utilizando filtros de ID de Negócio em todas as queries do Prisma.
+    *   **Ubíquo:** *THE SYSTEM SHALL* salvar as senhas dos usuários utilizando criptografia via Supabase Auth ou biblioteca de hash segura (Argon2/Bcrypt).
 
 ---
 
-### Issue #02 [Technical]: Pipeline de Integração Contínua (CI) e Suite de Testes Unitários
-*   **Título:** `[CI/CD] Configurar GitHub Actions para execução de testes unitários automatizados`
+### Issue #02 [Technical]: Pipeline de CI e Validação de Schema Prisma
+*   **Título:** `Configurar GitHub Actions para Linting e Validação do Prisma Schema`
 *   **Tipo/Label:** `technical`, `CI`
 *   **Descrição:**
     ```text
-    Configurar um workflow automatizado no GitHub Actions que execute a suite de testes unitários do Django a cada Pull Request que tenha como destino as branches principais (develop/main).
+    Configurar workflow automatizado que valide a integridade do código e do banco a cada Pull Request.
 
     Tarefas:
-    - [ ] Criar o arquivo `.github/workflows/ci.yml`.
-    - [ ] Configurar o runner com Python e dependências de ambiente (requirements.txt).
-    - [ ] Configurar execução automática do comando `python manage.py test`.
-    - [ ] Implementar um teste unitário "placeholder" inicial em `/tests` para validar o workflow.
-    - [ ] Garantir que o merge de PRs seja bloqueado caso os testes automatizados falhem.
+    - [ ] Criar arquivo `.github/workflows/ci.yml`.
+    - [ ] Configurar execução de `npm install`, `npm run lint` e `npx prisma validate`.
+    - [ ] Implementar um teste unitário simples (ex: Vitest ou Jest) para validar o setup de CI.
+    - [ ] Bloquear merges caso o pipeline falhe ou o schema Prisma esteja inconsistente.
     ```
 *   **Critérios de Aceitação:**
     *   **Orientado a Evento:** *WHEN* um novo Pull Request for aberto para as branches `main` ou `develop`, *THE SYSTEM SHALL* disparar automaticamente o pipeline de CI do GitHub Actions e exibir o status de sucesso/falha na tela do PR.
@@ -72,8 +74,8 @@ Para atender ao rigor acadêmico e técnico da disciplina, as issues estão divi
 
 ## 📦 Bloco 2: Módulos e Funcionalidades Core (User Stories)
 
-### Issue #04 [Feature]: Autenticação de Usuário e Multiempresa (Módulo Acesso)
-*   **Título:** `[US01] Autenticação de Usuários, Criação de Múltiplos Negócios e Controle de Permissões`
+### Issue #04 [Feature]: Autenticação, Multiempresa e Middleware de Acesso
+*   **Título:** `[US01] Autenticação via Supabase Auth, Seleção de Negócio e Middleware de Proteção`
 *   **Tipo/Label:** `feature`
 *   **Requisitos Mapeados:** RF01, RF02, RF03, RF04, RF05, RF06, RN01, RN02, RNF07
 *   **Descrição:**
@@ -83,10 +85,10 @@ Para atender ao rigor acadêmico e técnico da disciplina, as issues estão divi
     Para gerenciar com segurança o acesso aos dados operacionais e financeiros.
 
     Tarefas:
-    - [ ] Implementar fluxo de Sign-Up e Sign-In via e-mail e senha.
-    - [ ] Criar a entidade Negócio vinculada a um ou mais Usuários.
-    - [ ] Implementar o seletor de "Trocar de Negócio" no menu principal.
-    - [ ] Implementar papéis de acesso: Dono (total), Gerente (sem configs) e Colaborador (apenas vendas/estoque).
+    - [ ] Configurar Supabase Auth (ou Auth.js) para login social e e-mail/senha.
+    - [ ] Implementar Middleware do Next.js para proteger rotas e garantir o isolamento por Negócio (RN01.
+    - [ ] Desenvolver o seletor de Negócio no Header da aplicação (RF03).
+    - [ ] Implementar lógica de convite de colaboradores via e-mail.
     - [ ] Implementar controle de permissões customizadas (RF06).
     ```
 *   **Critérios de Aceitação (EARS Notation):**
@@ -96,8 +98,8 @@ Para atender ao rigor acadêmico e técnico da disciplina, as issues estão divi
 
 ---
 
-### Issue #05 [Feature]: Cadastro Unificado de Produtos e Serviços com Associação de Materiais
-*   **Título:** `[US02] Cadastro de Itens (Produtos Físicos vs. Serviços) e Associação de Materiais`
+### Issue #05 [Feature]: Cadastro Unificado de Itens com shadcn/ui e Server Actions
+*   **Título:** `[US02]  Cadastro de Produtos e Serviços com Associação de Materiais (Client + Server Actions)`
 *   **Tipo/Label:** `feature`
 *   **Requisitos Mapeados:** RF07, RF08, RF09, RF10, RF11, RF12, RF13, RF14, RN03, RN04
 *   **Descrição:**
@@ -107,10 +109,10 @@ Para atender ao rigor acadêmico e técnico da disciplina, as issues estão divi
     Para que meu custo seja calculado com exatidão no módulo de Precificação.
 
     Tarefas:
-    - [ ] Implementar o formulário de cadastro de Produto Físico (exigindo nome, custo, estoque mínimo, unidade e categoria).
-    - [ ] Implementar o formulário de cadastro de Serviços (exigindo nome, custo e categoria, além da opção de materiais).
-    - [ ] Desenvolver componente para vincular múltiplos materiais (Produtos Físicos) a um Serviço (RF12).
-    - [ ] Garantir que a quantidade inicial do Produto Físico no cadastro seja zero (operação separada) (RF14, RN03).
+    - [ ] Criar formulários responsivos usando Tailwind e componentes shadcn/ui (RF08, RF09).
+    - [ ] Implementar Server Actions para salvar dados no PostgreSQL via Prisma.
+    - [ ] Criar componente de "Seleção de Materiais" para serviços, consumindo dados do estoque em tempo real (RF12).
+    - [ ] Garantir que o Prisma inicialize a quantidade de novos produtos como zero (aplicar RN03).
     ```
 *   **Critérios de Aceitação (EARS Notation):**
     *   **Estado + Evento (RF08):** *WHILE* o tipo do item selecionado for Produto Físico, *WHEN* o usuário submeter o formulário de cadastro, *THE SYSTEM SHALL* exigir o preenchimento de nome, custo, estoque mínimo, unidade de medida e categoria.
@@ -194,7 +196,7 @@ Para atender ao rigor acadêmico e técnico da disciplina, as issues estão divi
 
 ---
 
-### Issue #09 [Feature]: Calculadora de Precificação Inteligente e Integração Tributária (Simples/MEI)
+### Issue #09 [Feature]: Calculadora de Precificação Inteligente (Motor TypeScript)
 *   **Título:** `[US06] Calculadora de Precificação, Margem por Categoria e Cálculo Tributário por RBT12`
 *   **Tipo/Label:** `feature`
 *   **Requisitos Mapeados:** RF34, RF35, RF36, RF37, RF38, RF39, RF40, RF41, RN15, RN16, RN17, RNF06, RNF08
@@ -205,12 +207,12 @@ Para atender ao rigor acadêmico e técnico da disciplina, as issues estão divi
     Para precificar meus produtos de forma matematicamente viável e sem perdas financeiras.
 
     Tarefas:
-    - [ ] Implementar o motor de cálculo da fórmula `Preço = Custo ÷ (1 − Margem%)` (RF34).
-    - [ ] Criar lógica para somar custos de materiais vinculados no caso de cálculo de Serviços (RF35).
+    - [ ] Implementar função auxiliar em TS para a fórmula Markup (Preço = Custo / (1 - Margem)) (RF34).
+    - [ ] Desenvolver lógica no Prisma para somar custos de materiais vinculados ao serviço (RF35).
     - [ ] Desenvolver interface que solicita o regime de tributação (MEI ou Simples Nacional) (RF37).
     - [ ] Criar motor que lê o histórico financeiro, calcula o RBT12 e determina a alíquota de imposto proporcional (RF38, RF39).
     - [ ] Implementar tela de histórico de preços para auditoria técnica (RF41, RN16).
-    - [ ] Criar painel parametrizável de alíquotas de impostos (MEI/Simples) para edição via banco sem alteração de código (RN17, RNF08).
+    - [ ] Configurar tabela de parâmetros tributários editável no banco para evitar hard-coding (RN17, RNF08).
     ```
 *   **Critérios de Aceitação (EARS Notation):**
     *   **Orientado a Evento (RF34):** *WHEN* o usuário solicitar o cálculo de preço de um item, *THE SYSTEM SHALL* calcular o preço de venda sugerido utilizando a fórmula `Preço = Custo ÷ (1 − Margem%)`.
@@ -264,8 +266,8 @@ Para atender ao rigor acadêmico e técnico da disciplina, as issues estão divi
 
 ## 🔒 Bloco 3: Segurança, Auditoria e LGPD
 
-### Issue #12 [Technical]: Implementação do Log de Auditoria e Mecanismos de Conformidade LGPD
-*   **Título:** `[SECURITY] Mecanismo de Logs Auditáveis e Ferramentas de Conformidade LGPD`
+### Issue #12 [Technical]: Log de Auditoria via Prisma Middleware e LGPD
+*   **Título:** `Auditoria de Estoque/Preços e Exportação de Dados LGPD`
 *   **Tipo/Label:** `security`, `technical`
 *   **Requisitos Mapeados:** RNF04, RNF05
 *   **Descrição:**
@@ -273,7 +275,7 @@ Para atender ao rigor acadêmico e técnico da disciplina, as issues estão divi
     Implementar os logs de segurança para auditoria e os processos técnicos necessários para garantir que o sistema respeite integralmente os requisitos de privacidade da LGPD.
 
     Tarefas:
-    - [ ] Desenvolver middleware ou sinais no Django que registrem logs automáticos de auditoria (data, hora, usuário responsável e descrição da alteração) sempre que houver alteração manual de estoque ou nos preços calculados (RNF05).
+    - [ ] Implementar Prisma Middleware (ou Extension) para interceptar updates em Itens e Estoque e salvar logs na tabela de Auditoria (RNF05)
     - [ ] Implementar o termo de consentimento explícito de uso de dados no cadastro inicial.
     - [ ] Desenvolver rota exclusiva para que o usuário possa realizar o download de seus dados cadastrais (Mecanismo de Exportação de Dados em formato JSON/CSV).
     - [ ] Desenvolver o botão de encerramento de conta, que realize a deleção lógica ou anonimização de dados pessoais identificáveis (Mecanismo de Exclusão).
