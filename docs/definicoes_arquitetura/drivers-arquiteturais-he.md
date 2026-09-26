@@ -4,9 +4,9 @@ Drivers arquiteturais são os requisitos, restrições e cenários que mais impa
 
 Este documento foi elaborado a partir do levantamento de requisitos, regras em EARS, visão de negócio, modelos de domínio e fluxogramas, guia de caso de uso e orientações metodológicas de arquitetura.
 
-\---
+---
 
-#### 1\. Critério de Seleção
+#### 1. Critério de Seleção
 
 Um requisito, regra ou restrição entra neste documento quando atende a pelo menos um dos seguintes testes arquiteturais:
 
@@ -15,9 +15,9 @@ Um requisito, regra ou restrição entra neste documento quando atende a pelo me
 3. **Impõe medidas de qualidade mensuráveis** — como tempo de resposta performático no cálculo do RBT12 e logs auditáveis.
 4. **Cria tensão estrutural entre dois objetivos** — como permitir vendas sem estoque suficiente sem corromper a integridade financeira e de auditoria.
 
-\---
+---
 
-#### 2\. Mapa Priorizado de Drivers
+#### 2. Mapa Priorizado de Drivers
 
 |ID|Tipo|Driver|Impacto na Arquitetura|Prioridade|
 |-|-|-|-|-|
@@ -33,11 +33,11 @@ Um requisito, regra ou restrição entra neste documento quando atende a pelo me
 |**AD-QA04**|Qualidade|Interface web única e responsiva para múltiplos dispositivos (RNF01)|Construção de interface em componentes reativos (TailwindCSS/shadcn/ui) adaptáveis a mobile e desktop.|Média|
 |**AD-QA05**|Negócio|Modelo Freemium limitado por funcionalidade sem restrição de volume (RF45-RF47, RN18)|Guardas de acesso por plano no backend sem travas de contagem de registros no banco.|Média|
 |**AD-CEN01**|Cenário|Venda de serviço composto por múltiplos materiais de estoque (RF12, RN05)|Baixa iterativa transacional de múltiplos itens no estoque ao fechar uma venda.|Alta|
-|**AD-CEN02**|Cenário|Venda realizada com quantidade de estoque insuficiente (RF18, RN06)|Liberação da venda pelo sistema permitindo saldo negativo de estoque, registrando alerta sem bloquear o caixa.|Alta|
+|**AD-CEN02**|Cenário|Venda realizada com quantidade de estoque insuficiente (RF18, RN06)|O sistema deve bloquear a conclusão da venda, notificando o usuário sobre a indisponibilidade física do item para evitar pedidos com estoque falso e problemas de sincronia.|Alta|
 
-\---
+---
 
-#### 3\. Requisitos Arquiteturalmente Significativos
+#### 3. Requisitos Arquiteturalmente Significativos
 
 ##### 3.1 AD-C02 — Multi-tenancy e Isolamento Estrito de Dados
 
@@ -66,9 +66,9 @@ A Calculadora de Precificação não pode utilizar valores fixos de alíquotas (
 * **Regras Vinculadas:** RF34 ao RF41, RN15, RN17 e RNF08.
 * **Decisão que o driver força:** As faixas e alíquotas de imposto devem ser armazenadas em tabelas de configuração editáveis no banco de dados. O cálculo do RBT12 deve realizar agregação dinâmica da receita bruta dos últimos 12 meses filtrada por `NegocioID`.
 
-\---
+---
 
-#### 4\. Restrições do Sistema
+#### 4. Restrições do Sistema
 
 * **AD-C01 (Next.js + Prisma + TypeScript):** O sistema deve ser estruturado em Next.js (App Router) utilizando TypeScript em todo o ciclo, utilizando o Prisma ORM para acesso tipado ao banco PostgreSQL.
 * **AD-C02 (Multi-tenancy Lógico):** O isolamento entre empresas é lógico, operando em um único banco relacional compartilhado onde todas as consultas são filtradas pela chave da empresa (`NegocioID`).
@@ -79,9 +79,9 @@ A Calculadora de Precificação não pode utilizar valores fixos de alíquotas (
   * O preço de venda oficial utilizado na transação é sempre o último valor confirmado pelo usuário na calculadora (RN15).
   * O saldo do fluxo de caixa considera exclusivamente valores recebidos/pagos efetivamente (RN14).
 
-\---
+---
 
-#### 5\. Atributos de Qualidade (Cenários)
+#### 5. Atributos de Qualidade (Cenários)
 
 ##### AD-QA01 — Desempenho do Cálculo de Precificação e RBT12 (RNF06)
 
@@ -110,19 +110,19 @@ A Calculadora de Precificação não pode utilizar valores fixos de alíquotas (
 * **Resposta:** Registro gravado com data, hora, ID do usuário, valor anterior, valor novo e motivo.
 * **Medida:** Logs persistidos de forma permanente, sem permissão de alteração ou exclusão.
 
-\---
+---
 
-#### 6\. Tensões Arquiteturais
+#### 6. Tensões Arquiteturais
 
 |Tensão|Polo A|Polo B|Direção Sugerida pelos Drivers|
 |-|-|-|-|
-|**Agilidade na Venda vs. Rigo do Estoque**|Exigir estoque positivo para liberar venda.|Permitir venda rápida mesmo sem estoque prévio (RN06).|Permitir a venda, registrando o saldo negativo e acionando o alerta visual.|
+|**Agilidade na Venda vs. Rigor do Estoque**|Exigir estoque positivo para liberar venda.|O sistema deve impor a validação de saldo positivo como pré-condição para a venda, garantindo que o estoque digital reflita fielmente o estoque físico.|
 |**Agregação em Tempo Real vs. Performance**|Recalcular o RBT12 do zero em toda simulação da calculadora.|Resposta performática da interface (< 2s) (RNF06).|Criar índices compostos em `(negocio\_id, data)` na tabela de vendas para consultas agregadas rápidas.|
 |**Flexibilidade de Acesso vs. Segurança LGPD**|Dar acesso amplo a colaboradores para agilizar tarefas.|Garantir isolamento estrito de relatórios estratégicos (RN01, RN02).|Impor validação de papéis obrigatoriamente no servidor/API.|
 
-\---
+---
 
-#### 7\. Matriz de Rastreabilidade
+#### 7. Matriz de Rastreabilidade
 
 |Driver|Requisitos Mapeados|Regras Vinculadas|Artefatos Afetados|
 |-|-|-|-|
@@ -136,5 +136,5 @@ A Calculadora de Precificação não pode utilizar valores fixos de alíquotas (
 |**AD-QA02**|RNF05|—|Tabelas `MovimentacaoEstoque` e `HistoricoPreco`.|
 |**AD-QA03**|RNF04|—|Endpoints de Exportação e Deleção de Conta.|
 
-\---
+---
 

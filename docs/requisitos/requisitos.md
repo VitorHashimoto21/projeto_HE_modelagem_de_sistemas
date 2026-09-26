@@ -73,14 +73,14 @@
 | RF15 | O sistema deve permitir registrar entrada manual de estoque, informando quantidade e data. |
 | RF16 | O sistema deve dar baixa automática de estoque quando uma venda é registrada. |
 | RF17 | O sistema deve permitir baixa manual de estoque (ajuste/perda), exigindo motivo obrigatório: Perda, Quebra, Uso interno, Doação ou Outro. |
-| RF18 | O sistema deve bloquear o registro de uma venda quando não houver estoque suficiente para os produtos físicos e/ou materiais envolvidos. |
+| RF18 | O sistema deve bloquear o registro de uma venda quando não houver estoque suficiente para os produtos físicos e/ou materiais envolvidos, interrompendo o fluxo antes do pagamento. |
 | RF19 | O sistema deve exibir um alerta visual quando o estoque atual de um produto estiver igual ou abaixo do estoque mínimo. |
 | RF20 | O sistema deve sugerir automaticamente um valor de estoque mínimo com base em percentual do histórico de estoque do produto, permitindo que o usuário sobrescreva com um valor fixo. |
 | RF21 | O alerta de estoque baixo deve ser exibido tanto em notificação no sistema (dashboard/lista) quanto em indicador visual no cadastro do produto. |
 
 ### Regras de Negócio
 
-- **RN06** — Vendas com estoque insuficiente não são permitidas; o sistema bloqueia a operação.
+- **RN06** — Vendas com estoque insuficiente são estritamente proibidas; o sistema bloqueia a operação e deve validar a disponibilidade de cada item no carrinho antes de processar a transação.
 - **RN07** — O alerta de estoque baixo permanece **desativado** para um produto até que ele complete pelo menos 1 ciclo de entrada e saída registrado no sistema — antes disso, não há histórico suficiente para comparação.
 - **RN08** — Após o primeiro ciclo completo, o sistema passa a sugerir o estoque mínimo automaticamente; o valor sugerido pode ser sobrescrito manualmente pelo usuário a qualquer momento.
 

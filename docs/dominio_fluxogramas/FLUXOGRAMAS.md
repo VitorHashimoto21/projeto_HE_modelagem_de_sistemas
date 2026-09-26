@@ -51,8 +51,9 @@ flowchart TD
     G6 --> G8{Soma bate com total?}
     G8 -->|Nao| G6
     G8 -->|Sim| G9[Confirmar Venda]
-    G7 --> G9
-    G9 --> G10[Baixa de Estoque + Lancamento Financeiro automaticos]
+    G9 [Confirmar Venda] --> D11 {Estoque disponível?}
+    D11 --> |Nao| D12 [Exibir Erro e Impedir Venda]
+    D11 --> |Sim| G10 [Baixa de Estoque + Lançamento Automático]
 
     C --> H[Financeiro]
     H --> H1[Fluxo de Caixa]

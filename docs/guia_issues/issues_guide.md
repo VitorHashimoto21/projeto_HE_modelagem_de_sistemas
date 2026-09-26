@@ -135,12 +135,12 @@ Para atender ao rigor acadêmico e técnico da disciplina, as issues estão divi
     Tarefas:
     - [ ] Implementar tela de lançamento de entrada de estoque (informando quantidade e data) (RF15).
     - [ ] Implementar formulário de baixa manual de ajuste de estoque (perda, quebra, uso interno, etc.) com motivo obrigatório (RF17).
-    - [ ] Criar gatilho (Trigger/Signal) no Django para dar baixa automática em itens de vendas físicas e insumos de serviços (RF16, RN05).
+    - [ ] Implementar validação impeditiva (Gatekeeper) dentro da transação de venda. A Server Action deve verificar o saldo de cada item e lançar uma exceção de negócio caso a quantidade seja insuficiente, impedindo o `COMMIT` da venda. (RF16, RN05).
     - [ ] Implementar o cálculo dinâmico de sugestão de estoque mínimo após o 1º ciclo completo (RF20, RN08).
     - [ ] Adicionar indicadores visuais de estoque baixo no dashboard e no cadastro de produtos (RF19, RF21).
     ```
 *   **Critérios de Aceitação (EARS Notation):**
-    *   **Comportamento Indesejado (RF18 / RN06):** *IF* o estoque de um produto for insuficiente no momento de uma venda, *THEN* *THE SYSTEM SHALL* concluir a venda normalmente e sinalizar o estoque resultante como negativo.
+    *   **Comportamento Indesejado (RF18 / RN06):** *IF* o estoque de um produto for insuficiente no momento de uma venda, *THEN* *THE SYSTEM SHALL* deve bloquear o registro de uma venda quando não houver estoque suficiente para os produtos físicos e/ou materiais envolvidos, interrompendo o fluxo antes do pagamento.
     *   **Orientado a Estado (RF19):** *WHILE* o estoque atual de um produto estiver igual ou abaixo do estoque mínimo, *THE SYSTEM SHALL* exibir um alerta visual associado ao produto.
     *   **Orientado a Estado (RN07):** *WHILE* um produto não tiver completado ao menos 1 ciclo de entrada e saída registrado, *THE SYSTEM SHALL* manter o alerta de estoque baixo desativado para esse produto.
     *   **Orientado a Evento (RN05):** *WHEN* um Serviço com materiais vinculados for vendido, *THE SYSTEM SHALL* dar baixa automática no estoque desses materiais, na quantidade configurada.

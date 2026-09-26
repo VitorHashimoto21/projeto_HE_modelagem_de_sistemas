@@ -42,15 +42,15 @@
 
 | ID | Padrão | Requisito EARS |
 |---|---|---|
-| RF15 | Orientado a evento | **QUANDO** o usuário registrar uma entrada de estoque, o sistema deve armazenar a quantidade informada e a data da movimentação. |
-| RF16 | Orientado a evento | **QUANDO** uma venda for registrada, o sistema deve dar baixa automática no estoque dos itens e materiais envolvidos. |
-| RF17 | Orientado a evento | **QUANDO** o usuário registrar uma baixa manual de estoque, o sistema deve exigir a seleção de um motivo dentre: Perda, Quebra, Uso interno, Doação ou Outro. |
-| RF18 | Comportamento indesejado | **SE** o estoque de um produto for insuficiente no momento de uma venda, **ENTÃO** o sistema deve bloquear o registro da venda e exibir uma mensagem de erro. |
+| RF15 | Orientado a evento | **QUANDO** o usuário registrar uma entrada de estoque, **O SISTEMA DEVE** armazenar a quantidade informada e a data da movimentação. |
+| RF16 | Orientado a evento | **QUANDO** uma venda for registrada, **O SISTEMA DEVE** dar baixa automática no estoque dos itens e materiais envolvidos. |
+| RF17 | Orientado a evento | **QUANDO** o usuário registrar uma baixa manual de estoque, **O SISTEMA DEVE** exigir a seleção de um motivo dentre: Perda, Quebra, Uso interno, Doação ou Outro. |
+| RF18 | Orientado a evento | **QUANDO** o usuário tentar finalizar uma venda com itens cujas quantidades excedam o saldo em estoque, **O SISTEMA DEVE** bloquear a finalização e exibir um alerta de 'Estoque Insuficiente' para os itens específicos. |
 | RF19 | Orientado a estado | **ENQUANTO** o estoque atual de um produto estiver igual ou abaixo do estoque mínimo, o sistema deve exibir um alerta visual associado ao produto. |
 | RF20 | Complexo (Evento + resposta condicional) | **QUANDO** um produto completar seu primeiro ciclo de entrada e saída de estoque, o sistema deve sugerir automaticamente um valor de estoque mínimo com base em percentual do histórico, e deve permitir que o usuário sobrescreva esse valor manualmente a qualquer momento. |
 | RF21 | Ubíquo | O sistema deve exibir o alerta de estoque baixo tanto na notificação do sistema (dashboard/lista) quanto no indicador visual do cadastro do produto. |
-| RN06 | Comportamento indesejado | **SE** o estoque de um produto for insuficiente para a venda, **ENTÃO** o sistema deve impedir a operação e não registrar a venda. |
-| RN07 | Orientado a estado | **ENQUANTO** um produto não tiver completado ao menos 1 ciclo de entrada e saída registrado, o sistema deve manter o alerta de estoque baixo desativado para esse produto. |
+| RN06 | Orientado a evento | **QUANDO** o estoque de um produto for insuficiente para a venda, **O SISTEMA DEVE** impedir a operação e não registrar a venda. |
+| RN07 | Orientado a estado | **ENQUANTO** um produto não tiver completado ao menos 1 ciclo de entrada e saída registrado, **O SISTEMA DEVE** deve manter o alerta de estoque baixo desativado para esse produto. |
 
 ---
 
