@@ -31,7 +31,7 @@
 | RF02 | Um usuário deve poder cadastrar mais de um negócio (empresa) na mesma conta. |
 | RF03 | O usuário deve poder alternar entre negócios sem precisar realizar novo login (sessão única). |
 | RF04 | O dono do negócio deve poder convidar colaboradores para acessar o sistema. |
-| RF05 | O sistema deve oferecer 3 papéis fixos de acesso: **Dono** (acesso total), **Gerente** (acesso total exceto configurações) e **Colaborador** (acesso restrito a Vendas e Estoque, sem Financeiro). |
+| RF05 | O sistema deve oferecer 3 papéis fixos de acesso: **Dono** (acesso total), **Gerente** (acesso total exceto configurações) e **Colaborador** (acesso restrito a Vendas e Estoque, sem Financeiro e Configurações). |
 | RF06 | O dono deve poder configurar permissões granulares customizadas por módulo para um colaborador, além dos 3 papéis fixos. |
 
 ### Regras de Negócio
@@ -73,15 +73,15 @@
 | RF15 | O sistema deve permitir registrar entrada manual de estoque, informando quantidade e data. |
 | RF16 | O sistema deve dar baixa automática de estoque quando uma venda é registrada. |
 | RF17 | O sistema deve permitir baixa manual de estoque (ajuste/perda), exigindo motivo obrigatório: Perda, Quebra, Uso interno, Doação ou Outro. |
-| RF18 | O sistema deve permitir registrar venda mesmo quando não há estoque suficiente do produto (não bloqueia a operação). |
+| RF18 | O sistema deve bloquear o registro de uma venda quando não houver estoque suficiente para os produtos físicos e/ou materiais envolvidos. |
 | RF19 | O sistema deve exibir um alerta visual quando o estoque atual de um produto estiver igual ou abaixo do estoque mínimo. |
 | RF20 | O sistema deve sugerir automaticamente um valor de estoque mínimo com base em percentual do histórico de estoque do produto, permitindo que o usuário sobrescreva com um valor fixo. |
 | RF21 | O alerta de estoque baixo deve ser exibido tanto em notificação no sistema (dashboard/lista) quanto em indicador visual no cadastro do produto. |
 
 ### Regras de Negócio
 
-- **RN06** — Vendas com estoque insuficiente são permitidas; o sistema apenas sinaliza estoque negativo, sem bloquear a operação.
-- **RN07** — O alerta de estoque baixo permanece **desativado** para um produto até que ele complete pelo menos 1 ciclo de entrada e saída registrado no sistema — antes disso, não há histórico suficiente para sugerir um mínimo confiável.
+- **RN06** — Vendas com estoque insuficiente não são permitidas; o sistema bloqueia a operação.
+- **RN07** — O alerta de estoque baixo permanece **desativado** para um produto até que ele complete pelo menos 1 ciclo de entrada e saída registrado no sistema — antes disso, não há histórico suficiente para comparação.
 - **RN08** — Após o primeiro ciclo completo, o sistema passa a sugerir o estoque mínimo automaticamente; o valor sugerido pode ser sobrescrito manualmente pelo usuário a qualquer momento.
 
 ---
@@ -205,7 +205,7 @@
 | RN03 | Produto Físico é criado com estoque inicial zero. |
 | RN04 | Tipo do item (Físico/Serviço) determina participação no Estoque e possibilidade de materiais vinculados. |
 | RN05 | Serviço com materiais vinculados dá baixa automática desses materiais no estoque ao ser vendido. |
-| RN06 | Venda é permitida mesmo com estoque insuficiente; sistema apenas sinaliza, não bloqueia. |
+| RN06 | Vendas com estoque insuficiente não são permitidas; o sistema bloqueia a operação. |
 | RN07 | Alerta de estoque baixo fica desativado até o produto completar 1 ciclo de entrada/saída. |
 | RN08 | Estoque mínimo sugerido automaticamente após o 1º ciclo; sobrescrevível manualmente a qualquer momento. |
 | RN09 | Dinheiro/PIX/Débito geram lançamento imediato no caixa. |
