@@ -31,7 +31,7 @@
 | RF02 | Um usuário deve poder cadastrar mais de um negócio (empresa) na mesma conta. |
 | RF03 | O usuário deve poder alternar entre negócios sem precisar realizar novo login (sessão única). |
 | RF04 | O dono do negócio deve poder convidar colaboradores para acessar o sistema. |
-| RF05 | O sistema deve oferecer 3 papéis fixos de acesso: **Dono** (acesso total), **Gerente** (acesso total exceto configurações) e **Colaborador** (acesso restrito a Vendas e Estoque, sem Financeiro e Configurações). |
+| RF05 | O sistema deve oferecer 3 papéis fixos de acesso: **Dono** (acesso total), **Gerente** (acesso total exceto configurações) e **Colaborador** (acesso restrito a Vendas e Estoque, sem Financeiro). |
 | RF06 | O dono deve poder configurar permissões granulares customizadas por módulo para um colaborador, além dos 3 papéis fixos. |
 
 ### Regras de Negócio
