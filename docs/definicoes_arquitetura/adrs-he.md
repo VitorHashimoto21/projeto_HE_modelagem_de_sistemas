@@ -8,7 +8,7 @@ Este documento reúne o conjunto inicial de **ADRs (Architecture Decision Record
 * **ADR:** É o registro documental da Decisão Técnica, detalhando **o que** foi escolhido, **por que** foi escolhido, **quais alternativas** foram consideradas e **quais consequências** a escolha traz.
 * **Critério de Reversibilidade:** Escreve-se um ADR quando uma decisão técnica exige o registro de uma ADR apenas quando sua alteração posterior for cara ou implicar na reescrita substancial da estrutura da aplicação, das APIs, do modelo de dados persistido ou da estratégia de segurança. Escolhas locais e baratas de substituir (como bibliotecas secundárias de UI) não possuem ADR.
 
-\---
+---
 
 #### Resumo das Decisões Aceitas
 
@@ -19,7 +19,7 @@ Este documento reúne o conjunto inicial de **ADRs (Architecture Decision Record
 |**ADR-003**|Autenticação via Supabase Auth com Autorização no Backend|Alterar o mecanismo de gerenciamento de sessões e migrar credenciais registradas.|**Aceita**|
 |**ADR-004**|Parametrização Tributária em Banco de Dados e Motor de RBT12|Reescrever a lógica de cálculo de impostos e a integração do módulo financeiro.|**Aceita**|
 
-\---
+---
 
 #### O que Deliberadamente Não Tem ADR
 
@@ -29,7 +29,7 @@ Este documento reúne o conjunto inicial de **ADRs (Architecture Decision Record
 |**Provedor de Hospedagem (Vercel / Supabase / Neon)**|A conexão com o banco ocorre via string de conexão padrão do PostgreSQL tratada pelo Prisma, permitindo migração de infraestrutura sem reescrever código.|
 |**Biblioteca de Gráficos do Dashboard**|Componente visual que pode ser trocado na camada de apresentação sem impacto nos dados financeiros.|
 
-\---
+---
 
 #### ADR-001 — Adção do Framework Fullstack Next.js (App Router) com TypeScript
 
@@ -59,7 +59,7 @@ O sistema HealthEnterprise (HE) necessita de uma arquitetura web reativa, respon
 
 **Drivers Relacionados:** AD-C01, AD-QA04, RNF01, RNF07.
 
-\---
+---
 
 #### ADR-002 — Camada de Persistência com Prisma ORM e Banco PostgreSQL Multi-tenant Lógico
 
@@ -89,7 +89,7 @@ O ERP lida com dados financeiros, registros de vendas e movimentações de estoq
 
 **Drivers Relacionados:** AD-C02, AD-RF03, RN01, RNF02, RNF09.
 
-\---
+---
 
 #### ADR-003 — Autenticação e Autorização Centralizada no Backend
 
@@ -119,7 +119,7 @@ O sistema precisa proteger operações estratégicas (como alterar preços, visu
 
 **Drivers Relacionados:** AD-RF02, AD-QA02, RF05, RF06, RN02, RNF03, RNF05.
 
-\---
+---
 
 #### ADR-004 — Parametrização Tributária e Agregação Dinâmica do RBT12
 
@@ -147,3 +147,26 @@ A legislação tributária brasileira passa por alterações frequentes nas faix
 
 **Drivers Relacionados:** AD-RF04, AD-QA01, RF38, RF39, RN17, RNF06, RNF08.
 
+---
+
+### ADR-05: Lógica Determinística da Calculadora de Precificação (Markup Matemático)
+
+* **Status:** Aceito
+* **Data:** 2026-09-10
+* **Autores:** Equipe HealthEnterprise
+
+#### 1. Contexto e Problema
+O módulo **Calculadora de Precificação** é a funcionalidade central do HE [cite: 11, 17]. O sistema precisa sugerir o preço de venda ideal com base em custos fixos, custos variáveis de insumos, margem de lucro e tributação (MEI/Simples Nacional) [cite: 152].
+
+#### 2. Decisão
+Implementar o motor de cálculo da calculadora através de funções matemáticas determinísticas puras escritas em **TypeScript isolado na camada de domínio**, utilizando a fórmula do Markup `Preço = Custo ÷ (1 - Margem% - Imposto%)` [cite: 104, 152]. Nenhuma decisão ou cálculo numérico de preços será terceirizado para chamadas de IA ou modelos de linguagem (LLM) [cite: 129, 130].
+
+#### 3. Alternativas Consideradas
+* **Uso de LLM/IA para cálculo de preços:** Avaliado e rejeitado [cite: 129, 130]. Conforme as regras da disciplina (Seção 6.5 da especificação), sistemas financeiros não devem depender de LLMs para cálculos numéricos devido ao risco indesejado de não-determinismo e "alucinações" [cite: 129, 130].
+
+#### 4. Consequências e Impactos
+* **Positivas:**
+  * 100% de previsibilidade matemática, precisão auditável e zero risco de respostas inconsistentes [cite: 104, 130].
+  * Permite a criação de uma suíte de testes unitários extremamente veloz e independente de banco de dados ou APIs externas [cite: 104].
+* **Negativas / Limitações:**
+  * Exige atualização manual das tabelas e faixas tributárias do Simples Nacional (RBT12) no código sempre que a legislação fiscal sofrer alterações [cite: 152].
