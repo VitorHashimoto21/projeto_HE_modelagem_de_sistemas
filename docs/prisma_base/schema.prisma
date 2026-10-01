@@ -5,6 +5,9 @@
 // ContaPagarReceber), campos livres convertidos em enum,
 // tabela de parâmetros tributários (RNF08/RN17) e vínculo
 // de auditoria em MovimentacaoEstoque (RNF05).
+// v3: markup completo (RF34, RF48–RF57): DespesaFixa, parâmetros de
+// precificação no Negocio, comissão opcional no Item, auditoria de
+// usuário em HistoricoPreco; Lancamento renomeado p/ LancamentoFinanceiro.
 // ==========================================================
 
 datasource db {
@@ -111,32 +114,41 @@ enum StatusConta {
 // ==========================================================
 
 model Usuario {
-  id        String          @id @default(uuid()) @db.Uuid
-  nome      String
-  email     String          @unique
-  senha     String // RNF03: armazenar com hash seguro (Argon2/Bcrypt)
+  id    String @id @default(uuid()) @db.Uuid
+  nome  String
+  email String @unique
+  senha String // RNF03: armazenar com hash seguro (Argon2/Bcrypt)
 
   // RNF04: consentimento explícito de uso de dados (LGPD)
   consentimentoLgpdEm DateTime?
 
-  membroEm      MembroNegocio[]
-  movimentacoes MovimentacaoEstoque[] // RNF05: auditoria (quem fez a alteração)
-  createdAt     DateTime              @default(now())
+  membroEm        MembroNegocio[]
+  movimentacoes   MovimentacaoEstoque[] // RNF05: auditoria (quem fez a alteração)
+  historicoPrecos HistoricoPreco[] // RNF05: auditoria (quem confirmou o preço)
+  createdAt       DateTime              @default(now())
 }
 
 model Negocio {
-  id               String              @id @default(uuid()) @db.Uuid
+  id               String           @id @default(uuid()) @db.Uuid
   nome             String
-  regimeTributario RegimeTributario    @default(MEI)
-  plano            PlanoNegocio        @default(GRATUITO) // RF45
-  createdAt        DateTime            @default(now())
+  regimeTributario RegimeTributario @default(MEI)
+  plano            PlanoNegocio     @default(GRATUITO) // RF45
+  createdAt        DateTime         @default(now())
 
-  membros     MembroNegocio[]
-  itens       Item[]
-  vendas      Venda[]
-  lancamentos Lancamento[]
-  contas      ContaPagarReceber[]
-  clientes    Cliente[]
+  // Parâmetros de precificação (RF49–RF51, RF56)
+  taxaCartaoMedia           Decimal  @default(0) @db.Decimal(5, 2) // RF51: % médio da maquininha
+  margemLucroMeta           Decimal? @db.Decimal(5, 2) // RF56: margem desejada p/ faturamento meta
+  capacidadeMensal          Decimal? @db.Decimal(10, 2) // RF50: horas/atendimentos/unidades por mês
+  ticketMedioEstimado       Decimal? @db.Decimal(10, 2) // RF50
+  faturamentoMensalEstimado Decimal? @db.Decimal(12, 2) // RF50: recomendado = capacidade × ticket, editável
+
+  membros       MembroNegocio[]
+  itens         Item[]
+  vendas        Venda[]
+  lancamentos   LancamentoFinanceiro[]
+  contas        ContaPagarReceber[]
+  clientes      Cliente[]
+  despesasFixas DespesaFixa[]
 
   @@index([id])
 }
@@ -146,7 +158,7 @@ model MembroNegocio {
   usuarioId        String       @db.Uuid
   negocioId        String       @db.Uuid
   papel            PapelUsuario @default(COLABORADOR) // RF05
-  permissoesCustom Json?        // RF06: permissões granulares por módulo
+  permissoesCustom Json? // RF06: permissões granulares por módulo
 
   usuario Usuario @relation(fields: [usuarioId], references: [id])
   negocio Negocio @relation(fields: [negocioId], references: [id])
@@ -181,15 +193,17 @@ model Item {
   tipo          TipoItem
   nome          String
   categoria     CategoriaItem // RF11
-  unidadeMedida String        // RF10
+  unidadeMedida String // RF10
   custoBase     Decimal       @db.Decimal(10, 2)
   precoAtual    Decimal       @db.Decimal(10, 2) // RN15: sempre o último preço confirmado
 
   // Campos específicos de Produto Físico — irrelevantes para Servico,
   // participação no Estoque é determinada pelo campo `tipo` (RN04),
   // validar na camada de aplicação.
-  quantidadeEstoque Decimal @default(0) @db.Decimal(10, 3) // RN03: nasce zerado
-  estoqueMinimo     Decimal? @db.Decimal(10, 3) // RF20: sugerido após 1º ciclo (RN07/RN08)
+  quantidadeEstoque Decimal  @default(0) @db.Decimal(10, 3) // RN03: nasce zerado
+  estoqueMinimo     Decimal? @db.Decimal(10, 3) // RF08/RF20: opcional, sugerido após 1º ciclo (RN07/RN08)
+
+  comissaoPercentual Decimal? @db.Decimal(5, 2) // RF52: opcional (null = 0%), entra como despesa variável
 
   negocio         Negocio               @relation(fields: [negocioId], references: [id])
   movimentacoes   MovimentacaoEstoque[]
@@ -230,19 +244,41 @@ model MovimentacaoEstoque {
 
 // Referenciado em Item.historicoPrecos na v1, mas nunca definido — adicionado agora.
 // Cada linha = uma confirmação explícita do usuário na Calculadora (RN15/RN16).
+// Guarda todos os componentes do markup (RF34) para auditoria (RNF05).
 model HistoricoPreco {
-  id               String            @id @default(uuid()) @db.Uuid
-  itemId           String            @db.Uuid
-  preco            Decimal           @db.Decimal(10, 2)
-  margemAplicada   Decimal           @db.Decimal(5, 2) // percentual usado no cálculo
-  custoConsiderado Decimal           @db.Decimal(10, 2) // custo total no momento (RF35: já soma materiais)
-  regimeTributario RegimeTributario?
-  impostoAplicado  Decimal?          @db.Decimal(5, 2) // alíquota efetiva utilizada
-  dataConfirmacao  DateTime          @default(now())
+  id                          String            @id @default(uuid()) @db.Uuid
+  itemId                      String            @db.Uuid
+  usuarioId                   String            @db.Uuid // RNF05: quem confirmou
+  preco                       Decimal           @db.Decimal(10, 2)
+  margemAplicada              Decimal           @db.Decimal(5, 2) // percentual usado no cálculo
+  custoConsiderado            Decimal           @db.Decimal(10, 2) // custo total no momento (RF35: já soma materiais)
+  despesasFixasPercentual     Decimal           @db.Decimal(5, 2) // RF49
+  despesasVariaveisPercentual Decimal           @db.Decimal(5, 2) // RN20: taxa cartão + comissão
+  regimeTributario            RegimeTributario?
+  impostoAplicado             Decimal?          @db.Decimal(5, 2) // alíquota efetiva utilizada
+  dataConfirmacao             DateTime          @default(now())
 
-  item Item @relation(fields: [itemId], references: [id])
+  item    Item    @relation(fields: [itemId], references: [id])
+  usuario Usuario @relation(fields: [usuarioId], references: [id])
 
   @@index([itemId])
+}
+
+// ==========================================================
+// Despesas fixas mensais (RF48) — base de Desp. Fixas% (RF49) e do PE (RF55)
+// ==========================================================
+
+model DespesaFixa {
+  id          String   @id @default(uuid()) @db.Uuid
+  negocioId   String   @db.Uuid
+  descricao   String
+  valorMensal Decimal  @db.Decimal(10, 2)
+  ativo       Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  negocio Negocio @relation(fields: [negocioId], references: [id])
+
+  @@index([negocioId])
 }
 
 // ==========================================================
@@ -253,10 +289,10 @@ model HistoricoPreco {
 model FaixaTributaria {
   id             String           @id @default(uuid()) @db.Uuid
   regime         RegimeTributario
-  faixaOrdem     Int              // 1ª, 2ª, 3ª faixa...
+  faixaOrdem     Int // 1ª, 2ª, 3ª faixa...
   rbt12De        Decimal          @db.Decimal(12, 2)
   rbt12Ate       Decimal?         @db.Decimal(12, 2) // null = sem teto (última faixa)
-  aliquota       Decimal          @db.Decimal(5, 2)  // percentual nominal
+  aliquota       Decimal          @db.Decimal(5, 2) // percentual nominal
   parcelaDeduzir Decimal?         @db.Decimal(12, 2) // usado no cálculo de alíquota efetiva do Simples
   vigenteDesde   DateTime         @default(now())
   ativo          Boolean          @default(true)
@@ -275,11 +311,11 @@ model Venda {
   data       DateTime @default(now())
   valorTotal Decimal  @db.Decimal(10, 2)
 
-  negocio     Negocio      @relation(fields: [negocioId], references: [id])
-  cliente     Cliente?     @relation(fields: [clienteId], references: [id])
+  negocio     Negocio                @relation(fields: [negocioId], references: [id])
+  cliente     Cliente?               @relation(fields: [clienteId], references: [id])
   itens       ItemVenda[]
   pagamentos  Pagamento[]
-  lancamentos Lancamento[] // RN12 — 1:N: pagamento misto pode gerar mais de um lançamento imediato
+  lancamentos LancamentoFinanceiro[] // RN12 — 1:N: pagamento misto pode gerar mais de um lançamento imediato
 
   @@index([negocioId])
 }
@@ -313,7 +349,7 @@ model Parcela {
   pagamentoId String        @db.Uuid
   numero      Int
   valor       Decimal       @db.Decimal(10, 2)
-  vencimento  DateTime      // RF28: mensal, a partir da data da venda
+  vencimento  DateTime // RF28: mensal, a partir da data da venda
   status      StatusParcela @default(PENDENTE)
 
   pagamento Pagamento          @relation(fields: [pagamentoId], references: [id])
@@ -322,7 +358,7 @@ model Parcela {
   @@index([pagamentoId])
 }
 
-model Lancamento {
+model LancamentoFinanceiro {
   id        String              @id @default(uuid()) @db.Uuid
   negocioId String              @db.Uuid
   vendaId   String?             @db.Uuid
@@ -339,6 +375,7 @@ model Lancamento {
 
 // Referenciado em Negocio.contas na v1, mas nunca definido — adicionado agora.
 // RF30/RF31: contas a pagar/receber com vencimento e quitação parcial.
+// "Atrasada" não é persistida: é derivada (vencimento < hoje E valorPago < valorTotal).
 model ContaPagarReceber {
   id         String      @id @default(uuid()) @db.Uuid
   negocioId  String      @db.Uuid

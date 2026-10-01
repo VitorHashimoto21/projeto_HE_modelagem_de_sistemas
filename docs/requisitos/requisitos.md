@@ -32,7 +32,7 @@
 | RF03 | O usuário deve poder alternar entre negócios sem precisar realizar novo login (sessão única). |
 | RF04 | O dono do negócio deve poder convidar colaboradores para acessar o sistema. |
 | RF05 | O sistema deve oferecer 3 papéis fixos de acesso: **Dono** (acesso total), **Gerente** (acesso total exceto configurações) e **Colaborador** (acesso restrito a Vendas e Estoque, sem Financeiro). |
-| RF06 | O dono deve poder configurar permissões granulares customizadas por módulo para um colaborador, além dos 3 papéis fixos. |
+| RF06 | O dono deve poder configurar permissões granulares customizadas por módulo para um colaborador, além dos 3 papéis fixos (ex.: liberar a um Colaborador apenas o lançamento de despesas operacionais no Financeiro, sem acesso a saldo, relatórios, custos fixos ou margens). |
 
 ### Regras de Negócio
 
@@ -48,7 +48,7 @@
 | ID | Descrição |
 |---|---|
 | RF07 | O sistema deve permitir cadastrar itens de dois tipos: **Produto Físico** ou **Serviço**. |
-| RF08 | O cadastro de Produto Físico deve exigir: nome, custo, quantidade em estoque, estoque mínimo, unidade de medida e categoria. |
+| RF08 | O cadastro de Produto Físico deve exigir: nome, custo, unidade de medida e categoria. O estoque mínimo é opcional no cadastro (sugerido automaticamente após o 1º ciclo — RN07/RN08). A quantidade em estoque **não** faz parte do cadastro (RF14/RN03). |
 | RF09 | O cadastro de Serviço deve exigir: nome, custo, categoria, e deve perguntar se há materiais/insumos associados. |
 | RF10 | Todo produto/serviço deve ter uma unidade de medida obrigatória (ex: unidade, kg, litro, hora, caixa). |
 | RF11 | Todo produto/serviço deve ter uma categoria obrigatória, escolhida de uma lista fixa do sistema: Serviços, Produtos, Alimentação, Vestuário, Beleza, Saúde, Casa, Tecnologia, Outros. |
@@ -134,7 +134,7 @@
 
 | ID | Descrição |
 |---|---|
-| RF34 | O sistema deve calcular o preço de venda sugerido usando a fórmula: **Preço = Custo ÷ (1 − Margem%)**. |
+| RF34 | O sistema deve calcular o preço de venda sugerido usando a fórmula de markup completo: **Preço = Custo Total ÷ (1 − (Desp. Fixas% + Desp. Variáveis% + Imposto% + Margem%))**. |
 | RF35 | Para Serviços com materiais vinculados, o custo utilizado no cálculo deve ser a soma do custo do serviço com o custo dos materiais vinculados (considerando a quantidade de cada material). |
 | RF36 | O sistema deve sugerir uma margem de lucro padrão de acordo com a categoria do produto/serviço, permitindo edição pelo usuário. |
 | RF37 | O sistema deve perguntar ao usuário o regime tributário (MEI ou Simples Nacional) para o cálculo de imposto embutido no preço. |
@@ -142,12 +142,21 @@
 | RF39 | O RBT12 deve ser calculado automaticamente pelo sistema, somando as vendas já registradas no módulo Financeiro. |
 | RF40 | O resultado do cálculo (preço sugerido) deve ser exibido ao usuário, que deve confirmar explicitamente antes de o valor ser salvo como preço de venda oficial do produto/serviço. |
 | RF41 | O sistema deve manter histórico de alterações de preço de cada produto/serviço. |
+| RF48 | O sistema deve permitir cadastrar as despesas fixas mensais do negócio (descrição e valor mensal — ex.: aluguel, energia, licenças de software, pró-labore). |
+| RF49 | O sistema deve calcular o percentual de despesas fixas como **Desp. Fixas% = Total de despesas fixas mensais ÷ Faturamento médio mensal**, em que o faturamento médio mensal = RBT12 ÷ número de meses com vendas registradas (até 12). |
+| RF50 | Quando o negócio não possuir histórico de vendas, o sistema deve solicitar a capacidade mensal (horas, atendimentos ou unidades por mês) e o ticket médio esperado, recomendar um faturamento mensal estimado = capacidade × ticket médio e permitir que o usuário edite esse valor, que passa a ser usado no RF49. |
+| RF51 | O sistema deve permitir informar a taxa média de cartão/maquininha (%) do negócio, utilizada como despesa variável no cálculo de preço. |
+| RF52 | O sistema deve permitir informar, de forma **opcional**, um percentual de comissão por produto/serviço (padrão 0%), utilizado como despesa variável no cálculo de preço daquele item. |
+| RF53 | A Calculadora deve exibir um aviso explícito de que a Margem% representa o ganho líquido do dono em cada venda (após custos, despesas fixas, despesas variáveis e impostos), e não o lucro total do negócio. |
+| RF54 | A Calculadora deve exibir o ponto de equilíbrio mensal do negócio (RF55) e alertar o usuário quando o faturamento estimado (RF50) estiver abaixo dele. |
 
 ### Regras de Negócio
 
 - **RN15** — O preço de venda usado nas vendas do sistema é sempre o último preço confirmado pelo usuário via Calculadora (ou cadastro manual), nunca um valor calculado e não confirmado.
 - **RN16** — Cada nova confirmação de preço gera um novo registro no histórico, preservando os valores anteriores.
 - **RN17** — A alíquota de imposto (MEI/Simples) deve ser parametrizável no sistema, permitindo atualização das faixas/percentuais sem alteração de código, já que a legislação pode mudar.
+- **RN19** — A soma Desp. Fixas% + Desp. Variáveis% + Imposto% + Margem% deve ser menor que 100%; caso contrário, o sistema bloqueia o cálculo e informa ao usuário que o preço é inviável com os parâmetros atuais.
+- **RN20** — Despesas Variáveis% = taxa média de cartão do negócio (RF51) + comissão do item (RF52). Esses percentuais são usados **apenas** na formação do preço: no MVP não geram desconto nos lançamentos/contas a receber (RN11 permanece válida) nem repasse automático de comissão.
 
 ---
 
@@ -160,6 +169,9 @@
 | RF42 | O sistema deve exibir na tela inicial um resumo do dia: vendas do dia, saldo em caixa e alertas de estoque baixo. |
 | RF43 | O sistema deve exibir um gráfico simples de vendas dos últimos dias/mês. |
 | RF44 | A estrutura do Dashboard deve ser pensada para comportar novos indicadores/widgets no futuro, sem redesenho completo da tela. |
+| RF55 | O sistema deve calcular e exibir o ponto de equilíbrio mensal: **PE = Total de despesas fixas mensais ÷ (1 − Imposto% − Taxa média de cartão%)**. |
+| RF56 | O sistema deve calcular o faturamento meta mensal: **Meta = Total de despesas fixas mensais ÷ (1 − Imposto% − Taxa média de cartão% − Margem meta%)**, em que a margem meta é a margem de lucro desejada informada para o negócio. |
+| RF57 | O Dashboard deve exibir um semáforo de saúde financeira comparando o faturamento bruto do mês corrente com o PE e a Meta: **Vermelho** (faturamento < PE — déficit), **Amarelo** (PE ≤ faturamento < Meta — alerta), **Verde** (faturamento ≥ Meta — saudável). |
 
 ---
 
@@ -218,12 +230,14 @@
 | RN16 | Toda confirmação de novo preço gera registro em histórico. |
 | RN17 | Alíquotas de MEI/Simples são parametrizáveis, não fixas em código. |
 | RN18 | Limitação do plano Freemium é por funcionalidade, nunca por volume de uso. |
+| RN19 | Soma de Desp. Fixas% + Desp. Variáveis% + Imposto% + Margem% deve ser < 100%; senão o cálculo é bloqueado. |
+| RN20 | Taxa de cartão e comissão entram só na formação do preço; não descontam lançamentos nem geram repasse no MVP. |
 
 ---
 
 ## Próximos Passos Técnicos
 
-- [ ] Modelar o esquema de dados (entidades: Negócio, Usuário, Produto, Material, Estoque/Movimentação, Venda, ItemVenda, Pagamento, Parcela, LançamentoFinanceiro, HistóricoPreço).
+- [ ] Modelar o esquema de dados (entidades: Negócio, Usuário, Produto, Material, Estoque/Movimentação, Venda, ItemVenda, Pagamento, Parcela, LançamentoFinanceiro, HistóricoPreço, DespesaFixa, FaixaTributaria).
 - [ ] Especificar as faixas de alíquota vigentes do MEI e do Simples Nacional para parametrização inicial (RNF08 / RN17).
 - [ ] Detalhar wireframes das telas de: cadastro de produto/serviço, registro de venda (com pagamento misto), calculadora de precificação e dashboard.
 - [ ] Definir a matriz de permissões granulares por módulo (RF06) para o papel customizado.

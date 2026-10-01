@@ -15,7 +15,7 @@
 | RF03 | Orientado a evento | **QUANDO** o usuário selecionar outro negócio vinculado à sua conta, o sistema deve alternar o contexto ativo mantendo a sessão de login corrente. |
 | RF04 | Ubíquo | O sistema deve permitir que o Dono do negócio convide colaboradores para acessar o sistema. |
 | RF05 | Ubíquo | O sistema deve disponibilizar três papéis de acesso para atribuição a colaboradores: Dono (acesso total), Gerente (acesso total exceto configurações) e Colaborador (acesso restrito a Vendas e Estoque). |
-| RF06 | Feature opcional | **ONDE** o Dono configurar permissões granulares customizadas para um colaborador, o sistema deve aplicar essas permissões em vez do papel fixo padrão. |
+| RF06 | Feature opcional | **ONDE** o Dono configurar permissões granulares customizadas para um colaborador (ex.: liberar apenas o lançamento de despesas operacionais), o sistema deve aplicar essas permissões em vez do papel fixo padrão. |
 | RN01 | Ubíquo | O sistema deve restringir o acesso de cada colaborador exclusivamente aos negócios aos quais ele foi convidado. |
 | RN02 | Comportamento indesejado | **SE** um usuário sem o papel de Dono tentar convidar/remover colaboradores ou alterar permissões, **ENTÃO** o sistema deve impedir a ação e manter as permissões inalteradas. |
 
@@ -26,7 +26,7 @@
 | ID | Padrão | Requisito EARS |
 |---|---|---|
 | RF07 | Ubíquo | O sistema deve permitir o cadastro de itens dos tipos Produto Físico ou Serviço. |
-| RF08 | Complexo (Estado + Evento) | **ENQUANTO** o tipo do item selecionado for Produto Físico, **QUANDO** o usuário submeter o formulário de cadastro, o sistema deve exigir o preenchimento de nome, custo, quantidade em estoque, estoque mínimo, unidade de medida e categoria. |
+| RF08 | Complexo (Estado + Evento) | **ENQUANTO** o tipo do item selecionado for Produto Físico, **QUANDO** o usuário submeter o formulário de cadastro, o sistema deve exigir o preenchimento de nome, custo, unidade de medida e categoria, aceitando estoque mínimo como campo opcional e sem solicitar quantidade em estoque. |
 | RF09 | Complexo (Estado + Evento) | **ENQUANTO** o tipo do item selecionado for Serviço, **QUANDO** o usuário submeter o formulário de cadastro, o sistema deve exigir o preenchimento de nome, custo e categoria, e deve perguntar se há materiais/insumos associados. |
 | RF10 | Ubíquo | O sistema deve exigir que todo produto/serviço tenha uma unidade de medida definida (ex.: unidade, kg, litro, hora, caixa). |
 | RF11 | Ubíquo | O sistema deve exigir que todo produto/serviço seja associado a uma categoria da lista fixa: Serviços, Produtos, Alimentação, Vestuário, Beleza, Saúde, Casa, Tecnologia, Outros. |
@@ -88,7 +88,7 @@
 
 | ID | Padrão | Requisito EARS |
 |---|---|---|
-| RF34 | Orientado a evento | **QUANDO** o usuário solicitar o cálculo de preço de um item, o sistema deve calcular o preço de venda sugerido utilizando a fórmula Preço = Custo ÷ (1 − Margem%). |
+| RF34 | Orientado a evento | **QUANDO** o usuário solicitar o cálculo de preço de um item, o sistema deve calcular o preço de venda sugerido utilizando a fórmula Preço = Custo Total ÷ (1 − (Desp. Fixas% + Desp. Variáveis% + Imposto% + Margem%)). |
 | RF35 | Orientado a estado | **ENQUANTO** o item calculado for um Serviço com materiais vinculados, o sistema deve somar ao custo base o custo dos materiais vinculados, considerando a quantidade configurada de cada material. |
 | RF36 | Orientado a evento | **QUANDO** o usuário iniciar o cálculo de preço de um item, o sistema deve sugerir uma margem de lucro padrão de acordo com a categoria do item, permitindo edição pelo usuário. |
 | RF37 | Orientado a evento | **QUANDO** o usuário utilizar a Calculadora de Precificação, o sistema deve solicitar o regime tributário (MEI ou Simples Nacional) para o cálculo do imposto embutido no preço. |
@@ -96,6 +96,15 @@
 | RF39 | Ubíquo | O sistema deve calcular automaticamente o RBT12 somando as vendas registradas no módulo Financeiro. |
 | RF40 | Orientado a evento | **QUANDO** o cálculo de preço for concluído, o sistema deve exibir o resultado ao usuário e aguardar confirmação explícita antes de salvar o valor como preço de venda oficial. |
 | RF41 | Orientado a evento | **QUANDO** um novo preço for confirmado pelo usuário, o sistema deve registrar essa alteração no histórico de preços do produto/serviço. |
+| RF48 | Ubíquo | O sistema deve permitir o cadastro das despesas fixas mensais do negócio, com descrição e valor mensal. |
+| RF49 | Orientado a evento | **QUANDO** o usuário solicitar o cálculo de preço, o sistema deve calcular Desp. Fixas% dividindo o total de despesas fixas mensais pelo faturamento médio mensal (RBT12 ÷ meses com vendas, até 12). |
+| RF50 | Orientado a estado | **ENQUANTO** o negócio não possuir histórico de vendas, o sistema deve solicitar capacidade mensal e ticket médio, recomendar faturamento estimado = capacidade × ticket médio e permitir que o usuário edite esse valor. |
+| RF51 | Ubíquo | O sistema deve permitir que o usuário informe a taxa média de cartão/maquininha (%) do negócio para uso no cálculo de preço. |
+| RF52 | Feature opcional | **ONDE** o usuário informar um percentual de comissão para um produto/serviço, o sistema deve somá-lo às despesas variáveis no cálculo de preço desse item. |
+| RF53 | Orientado a evento | **QUANDO** a Calculadora exibir a margem de lucro, o sistema deve informar que a Margem% é o ganho líquido do dono por venda, e não o lucro total do negócio. |
+| RF54 | Comportamento indesejado | **SE** o faturamento estimado for menor que o ponto de equilíbrio mensal, **ENTÃO** o sistema deve exibir um alerta na Calculadora. |
+| RN19 | Comportamento indesejado | **SE** a soma de Desp. Fixas% + Desp. Variáveis% + Imposto% + Margem% for maior ou igual a 100%, **ENTÃO** o sistema deve bloquear o cálculo e informar que o preço é inviável com os parâmetros atuais. |
+| RN20 | Ubíquo | O sistema deve utilizar taxa de cartão e comissão somente na formação do preço, sem descontá-las dos lançamentos financeiros nem gerar repasse automático no MVP. |
 | RN15 | Ubíquo | O sistema deve utilizar sempre o último preço confirmado pelo usuário como preço de venda oficial do produto/serviço nas vendas. |
 | RN17 | Ubíquo | O sistema deve manter as faixas e percentuais de alíquota de MEI e Simples Nacional como configuração parametrizável, permitindo atualização sem alteração de código. |
 
@@ -108,6 +117,9 @@
 | RF42 | Ubíquo | O sistema deve exibir na tela inicial um resumo do dia contendo vendas do dia, saldo em caixa e alertas de estoque baixo. |
 | RF43 | Ubíquo | O sistema deve exibir um gráfico com o histórico de vendas dos últimos dias/mês. |
 | RF44 | Ubíquo | O sistema deve estruturar o dashboard de forma extensível, permitindo a adição de novos indicadores sem redesenho completo da tela. |
+| RF55 | Ubíquo | O sistema deve calcular e exibir o ponto de equilíbrio mensal PE = Despesas fixas ÷ (1 − Imposto% − Taxa média de cartão%). |
+| RF56 | Ubíquo | O sistema deve calcular o faturamento meta mensal = Despesas fixas ÷ (1 − Imposto% − Taxa média de cartão% − Margem meta%). |
+| RF57 | Orientado a estado | **ENQUANTO** o faturamento bruto do mês for menor que o PE, o sistema deve exibir o semáforo em Vermelho; **ENQUANTO** estiver entre o PE e a Meta, em Amarelo; **ENQUANTO** for maior ou igual à Meta, em Verde. |
 
 ---
 

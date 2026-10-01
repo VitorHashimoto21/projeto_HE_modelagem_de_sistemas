@@ -85,8 +85,12 @@ Concorrentes diretos mapeados: **Bling, Omie e Granatum**.
 ### 6.3 Calculadora de Precificação
 
 **Lógica de cálculo priorizada para o MVP:**
-- Markup simples: custo + percentual de margem desejada.
+- Markup completo: **Preço = Custo Total ÷ (1 − (Despesas Fixas% + Despesas Variáveis% + Imposto% + Margem%))**.
+- Despesas fixas mensais do negócio rateadas sobre o faturamento médio (ou, para negócios novos, sobre um faturamento estimado por capacidade × ticket médio).
+- Despesas variáveis: taxa média de cartão/maquininha e comissão opcional por item.
 - Precificação com impostos do MEI/Simples Nacional embutidos no cálculo.
+- Aviso claro de que a margem é o ganho líquido do dono por venda, não o lucro total do negócio.
+- Ponto de equilíbrio e semáforo de saúde financeira (Vermelho/Amarelo/Verde) no Dashboard.
 
 **Fora do MVP inicial (roadmap):**
 - Comparação automática com preço de mercado/concorrência.

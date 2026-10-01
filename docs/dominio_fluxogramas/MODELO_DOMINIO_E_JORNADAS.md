@@ -18,6 +18,17 @@ classDiagram
         +nome
         +regimeTributario  MEI | Simples
         +plano  Gratuito | Pago
+        +taxaCartaoMedia
+        +margemLucroMeta
+        +capacidadeMensal
+        +ticketMedioEstimado
+        +faturamentoMensalEstimado
+    }
+
+    class DespesaFixa {
+        +descricao
+        +valorMensal
+        +ativo
     }
 
     class Usuario {
@@ -49,6 +60,7 @@ classDiagram
         +nome
         +custo
         +precoAtual
+        +comissaoPercentual  opcional
     }
 
     class ProdutoFisico {
@@ -75,6 +87,8 @@ classDiagram
     class HistoricoPreco {
         +preco
         +margemAplicada
+        +despesasFixasPercentual
+        +despesasVariaveisPercentual
         +impostoAplicado
         +dataConfirmacao
     }
@@ -129,10 +143,11 @@ classDiagram
     Negocio "1" --> "N" Venda : registra
     Negocio "1" --> "N" LancamentoFinanceiro : mantem
     Negocio "1" --> "N" ContaPagarReceber : mantem
+    Negocio "1" --> "N" DespesaFixa : possui
 
     Item <|-- ProdutoFisico
     Item <|-- Servico
-    Item "1" --> "N" Categoria : pertence a
+    Item "N" --> "1" Categoria : pertence a
     Item "1" --> "N" HistoricoPreco : acumula
 
     Servico "1" --> "N" MaterialServico : consome
@@ -140,13 +155,13 @@ classDiagram
 
     ProdutoFisico "1" --> "N" MovimentacaoEstoque : sofre
 
-    Venda "0..1" --> "1" Cliente : associada a
+    Venda "N" --> "0..1" Cliente : associada a
     Venda "1" --> "N" ItemVenda : contem
     ItemVenda "N" --> "1" Item : refere-se a
     Venda "1" --> "N" Pagamento : e paga por
     Pagamento "1" --> "N" Parcela : gera quando Credito
 
-    Venda "1" --> "1" LancamentoFinanceiro : dispara
+    Venda "1" --> "N" LancamentoFinanceiro : dispara
     Parcela "1" --> "1" ContaPagarReceber : origina
 ```
 
@@ -160,6 +175,9 @@ classDiagram
 | `HistoricoPreco` | Cada novo registro representa uma confirmação explícita do usuário; o mais recente é o `precoAtual` do `Item` (RN15, RN16). |
 | `Pagamento` | Dinheiro/PIX/Débito geram `LancamentoFinanceiro` imediato; Cartão de Crédito gera `Parcela(s)` → `ContaPagarReceber` (RN09, RN10). |
 | `Parcela` | Vencimentos gerados mensalmente a partir da data da `Venda`, limitado a 12 parcelas (RF27, RF28). |
+| `DespesaFixa` | Base de Desp. Fixas% no markup (RF49) e do ponto de equilíbrio/semáforo do Dashboard (RF55–RF57). |
+| `Item.comissaoPercentual` | Opcional (padrão 0%); entra como despesa variável junto da taxa média de cartão do `Negocio` (RF51, RF52, RN20). |
+| `LancamentoFinanceiro` | Relação 1:N com `Venda`: pagamento misto pode gerar mais de um lançamento imediato. |
 | `MembroNegocio` | Isola o acesso: um `Usuario` só enxerga dados dos `Negocio`s onde tem `MembroNegocio` (RN01). |
 
 ---
@@ -173,16 +191,17 @@ Fluxos de navegação por papel de usuário, com base nas permissões definidas 
 ```mermaid
 flowchart TD
     A[Tela de Login] -->|e-mail + senha| B[Selecionar Negocio]
-    B --> C[Dashboard]
+    B --> C[Dashboard - resumo do dia + semaforo de saude financeira]
 
     C --> D[Cadastro de Produto/Servico]
     D --> D1{Tipo do item?}
-    D1 -->|Fisico| D2[Formulario Produto Fisico]
+    D1 -->|Fisico| D2[Formulario Produto Fisico - sem quantidade em estoque]
     D1 -->|Servico| D3[Formulario Servico]
     D3 --> D4{Possui materiais?}
     D4 -->|Sim| D5[Vincular materiais do Estoque]
     D4 -->|Nao| D6[Salvar Servico]
-    D2 --> D7[Salvar Produto]
+    D5 --> D6
+    D2 --> D7[Salvar Produto - estoque inicial zero]
 
     C --> E[Estoque]
     E --> E1[Lista de Produtos]
@@ -192,9 +211,13 @@ flowchart TD
 
     C --> F[Calculadora de Precificacao]
     F --> F1[Selecionar Item]
-    F1 --> F2[Definir Margem - sugerida por categoria]
+    F1 --> F2[Definir Margem - sugerida por categoria + aviso: ganho liquido por venda]
     F2 --> F3[Selecionar Regime Tributario]
-    F3 --> F4[Ver Preco Sugerido]
+    F3 --> F3a{Possui historico de vendas?}
+    F3a -->|Nao| F3b[Informar capacidade mensal e ticket medio - faturamento estimado editavel]
+    F3a -->|Sim| F3c[Usar faturamento medio - RBT12]
+    F3b --> F4[Ver Preco Sugerido + detalhamento + ponto de equilibrio]
+    F3c --> F4
     F4 --> F5{Confirmar preco?}
     F5 -->|Sim| F6[Salvar como Preco Oficial + Historico]
     F5 -->|Nao| F1
@@ -212,18 +235,23 @@ flowchart TD
     G8 -->|Nao| G6
     G8 -->|Sim| G9[Confirmar Venda]
     G7 --> G9
-    G9 --> G10[Baixa de Estoque + Lancamento Financeiro automaticos]
+    G9 --> G11{Estoque disponivel para todos os itens e materiais?}
+    G11 -->|Nao| G12[Exibir Estoque Insuficiente e impedir a venda]
+    G12 --> G1
+    G11 -->|Sim| G10[Baixa de Estoque + Lancamento Financeiro automaticos]
 
     C --> H[Financeiro]
     H --> H1[Fluxo de Caixa]
     H --> H2[Contas a Pagar/Receber]
     H2 --> H3[Marcar como Pago/Recebido - total ou parcial]
+    H --> H4[Despesas Fixas Mensais]
 
     C --> I[Configuracoes do Negocio]
     I --> I1[Convidar Colaborador]
     I1 --> I2[Definir Papel: Gerente/Colaborador]
     I2 --> I3[Customizar Permissoes por Modulo]
     I --> I4[Gerenciar Plano - Gratuito/Pago]
+    I --> I5[Parametros de Precificacao - taxa media de cartao, margem meta, capacidade e ticket medio]
 ```
 
 ### 2.2 Jornada — Gerente (acesso total, exceto configurações)
@@ -254,20 +282,23 @@ flowchart TD
     E --> E1[Adicionar Itens]
     E1 --> E2[Selecionar Pagamento]
     E2 --> E3[Confirmar Venda]
-    E3 --> E4[Baixa de Estoque automatica]
+    E3 --> E5{Estoque disponivel?}
+    E5 -->|Nao| E6[Exibir Estoque Insuficiente e impedir a venda]
+    E5 -->|Sim| E4[Baixa de Estoque automatica]
 
     C -.-> F[[Financeiro - acesso bloqueado]]
+    C -.-> F1[[Lancar Despesas Operacionais - conforme permissao granular]]
     C -.-> G[[Calculadora de Precificacao - conforme permissao granular]]
     C -.-> H[[Configuracoes - acesso bloqueado]]
 ```
 
-> A Calculadora aparece como bloqueada por padrão para o Colaborador no papel fixo, mas pode ser liberada via permissão granular customizada (RF06).
+> A Calculadora e o lançamento de despesas operacionais aparecem como bloqueados por padrão para o Colaborador no papel fixo, mas podem ser liberados via permissão granular customizada (RF06) — sem acesso a saldo, relatórios, custos fixos ou margens.
 
 ---
 
 ## Próximos ajustes sugeridos
 
 - [ ] Validar se `Cliente` deveria ter campos adicionais (histórico de compras, contato via WhatsApp) para uma futura fase.
-- [ ] Confirmar se `LancamentoFinanceiro` deve se relacionar 1:1 ou 1:N com `Venda` (ex.: venda com pagamento misto pode gerar mais de um lançamento imediato).
+- [x] ~~Confirmar se `LancamentoFinanceiro` deve se relacionar 1:1 ou 1:N com `Venda`~~ — definido como 1:N.
 - [ ] Ajustar a jornada do Colaborador conforme as permissões granulares reais forem desenhadas nas telas.
 - [ ] Adicionar jornada de "primeiro acesso" (onboarding) separada, já que ela provavelmente difere do fluxo recorrente mostrado acima.

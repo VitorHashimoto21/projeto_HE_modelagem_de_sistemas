@@ -18,6 +18,7 @@ Este documento reúne o conjunto inicial de **ADRs (Architecture Decision Record
 |**ADR-002**|Camada de Persistência com Prisma ORM e PostgreSQL Multi-tenant|Reestruturar todos os schemas de dados, migrations e queries de isolamento.|**Aceita**|
 |**ADR-003**|Autenticação via Supabase Auth com Autorização no Backend|Alterar o mecanismo de gerenciamento de sessões e migrar credenciais registradas.|**Aceita**|
 |**ADR-004**|Parametrização Tributária em Banco de Dados e Motor de RBT12|Reescrever a lógica de cálculo de impostos e a integração do módulo financeiro.|**Aceita**|
+|**ADR-005**|Motor de Precificação Determinístico (Markup Completo) em TypeScript Puro|Reescrever o motor de cálculo, seus testes e o formato do histórico de preços.|**Aceita**|
 
 ---
 
@@ -31,7 +32,7 @@ Este documento reúne o conjunto inicial de **ADRs (Architecture Decision Record
 
 ---
 
-#### ADR-001 — Adção do Framework Fullstack Next.js (App Router) com TypeScript
+#### ADR-001 — Adoção do Framework Fullstack Next.js (App Router) com TypeScript
 
 ##### Decisão
 
@@ -65,7 +66,7 @@ O sistema HealthEnterprise (HE) necessita de uma arquitetura web reativa, respon
 
 ##### Decisão
 
-A persistência de dados utilizará um banco de dados relacional **PostgreSQL**, acessado através do **Prisma ORM**. O isolamento entre diferentes empresas (*multi-tenancy*) será feito de forma lógica, incluindo a coluna `negocio\\\_id` em todas as tabelas operacionais do sistema.
+A persistência de dados utilizará um banco de dados relacional **PostgreSQL**, acessado através do **Prisma ORM**. O isolamento entre diferentes empresas (*multi-tenancy*) será feito de forma lógica, incluindo a coluna `negocio_id` em todas as tabelas operacionais do sistema.
 
 ##### Contexto e Problema
 
@@ -74,7 +75,7 @@ O ERP lida com dados financeiros, registros de vendas e movimentações de estoq
 ##### Por que foi tomada
 
 1. **Garantia de Integridade e Transações:** O PostgreSQL oferece suporte a transações complexas (`ACID`), essenciais para garantir que uma venda só seja gravada se a baixa no estoque e o lançamento financeiro ocorrerem com sucesso (RN12).
-2. **Isolamento por Negócio (RN01):** O uso da chave `negocio\\\_id` tratada na camada de aplicação via filtros do ORM é a abordagem mais simples e eficiente para o público-alvo de microempreendedores.
+2. **Isolamento por Negócio (RN01):** O uso da chave `negocio_id` tratada na camada de aplicação via filtros do ORM é a abordagem mais simples e eficiente para o público-alvo de microempreendedores.
 3. **Modelagem de Domínio Tipada:** O Prisma traduz o modelo de domínio para o banco de dados e gera tipos TypeScript atualizados a cada migration.
 
 ##### Alternativas Consideradas
@@ -85,7 +86,7 @@ O ERP lida com dados financeiros, registros de vendas e movimentações de estoq
 ##### Consequências
 
 * **Positivas:** Schema fortemente tipado; suporte seguro a migrations; garantia transacional em vendas e parcelamentos, com integridade referencial estrita por chaves estrangeiras entre `Negocio`, `Venda`, `ItemVenda`, `MovimentacaoEstoque` e `LancamentoFinanceiro`.
-* **Negativas:** Todas as consultas no backend devem ter a garantia de conter o filtro do `negocio\\\_id` para evitar acesso indevido; necessidade de configurar Connection Pooling (pgBouncer) para evitar estourar o limite de conexões simultâneas do PostgreSQL durante picos de requisições serverless.
+* **Negativas:** Todas as consultas no backend devem ter a garantia de conter o filtro do `negocio_id` para evitar acesso indevido; necessidade de configurar Connection Pooling (pgBouncer) para evitar estourar o limite de conexões simultâneas do PostgreSQL durante picos de requisições serverless.
 
 **Drivers Relacionados:** AD-C02, AD-RF03, RN01, RNF02, RNF09.
 
@@ -125,7 +126,7 @@ O sistema precisa proteger operações estratégicas (como alterar preços, visu
 
 ##### Decisão
 
-As faixas tributárias do MEI e do Simples Nacional serão armazenadas em tabela de parâmetros no banco de dados (`TabelaAliquota`), e o faturamento bruto dos últimos 12 meses (RBT12) será calculado via consultas agregadas temporais na tabela de vendas.
+As faixas tributárias do MEI e do Simples Nacional serão armazenadas em tabela de parâmetros no banco de dados (`FaixaTributaria`), e o faturamento bruto dos últimos 12 meses (RBT12) será calculado via consultas agregadas temporais na tabela de vendas.
 
 ##### Contexto e Problema
 
@@ -142,31 +143,41 @@ A legislação tributária brasileira passa por alterações frequentes nas faix
 
 ##### Consequências
 
-* **Positivas:** Sistema flexível a mudanças fiscais; precificação precisa e automática baseada no histórico real do empreendedor´.
+* **Positivas:** Sistema flexível a mudanças fiscais; precificação precisa e automática baseada no histórico real do empreendedor.
 * **Negativas:** Exige a criação de rotinas de agregação performáticas para que o cálculo do RBT12 responda dentro do SLA do sistema (< 2 segundos).
 
 **Drivers Relacionados:** AD-RF04, AD-QA01, RF38, RF39, RN17, RNF06, RNF08.
 
 ---
 
-### ADR-05: Lógica Determinística da Calculadora de Precificação (Markup Matemático)
+#### ADR-005 — Motor de Precificação Determinístico (Markup Completo) em TypeScript Puro
 
-* **Status:** Aceito
-* **Data:** 2026-09-10
-* **Autores:** Equipe HealthEnterprise
+##### Decisão
 
-#### 1. Contexto e Problema
-O módulo **Calculadora de Precificação** é a funcionalidade central do HE [cite: 11, 17]. O sistema precisa sugerir o preço de venda ideal com base em custos fixos, custos variáveis de insumos, margem de lucro e tributação (MEI/Simples Nacional) [cite: 152].
+O cálculo do preço sugerido será implementado como **funções matemáticas determinísticas puras em TypeScript**, isoladas na camada de domínio (sem acesso a banco, rede ou estado global), aplicando a fórmula de markup completo:
 
-#### 2. Decisão
-Implementar o motor de cálculo da calculadora através de funções matemáticas determinísticas puras escritas em **TypeScript isolado na camada de domínio**, utilizando a fórmula do Markup `Preço = Custo ÷ (1 - Margem% - Imposto%)` [cite: 104, 152]. Nenhuma decisão ou cálculo numérico de preços será terceirizado para chamadas de IA ou modelos de linguagem (LLM) [cite: 129, 130].
+`Preço = Custo Total ÷ (1 − (Desp. Fixas% + Desp. Variáveis% + Imposto% + Margem%))`
 
-#### 3. Alternativas Consideradas
-* **Uso de LLM/IA para cálculo de preços:** Avaliado e rejeitado [cite: 129, 130]. Conforme as regras da disciplina (Seção 6.5 da especificação), sistemas financeiros não devem depender de LLMs para cálculos numéricos devido ao risco indesejado de não-determinismo e "alucinações" [cite: 129, 130].
+A função recebe todos os insumos já resolvidos como parâmetros — custo total (custo base + materiais, RF35), percentual de despesas fixas (RF49), despesas variáveis (taxa média de cartão + comissão opcional do item, RN20), alíquota de imposto e margem. A alíquota é obtida previamente pela camada de dados a partir da tabela `FaixaTributaria` e do RBT12 (ADR-004). Nenhum cálculo numérico de preço é delegado a IA/LLM.
 
-#### 4. Consequências e Impactos
-* **Positivas:**
-  * 100% de previsibilidade matemática, precisão auditável e zero risco de respostas inconsistentes [cite: 104, 130].
-  * Permite a criação de uma suíte de testes unitários extremamente veloz e independente de banco de dados ou APIs externas [cite: 104].
-* **Negativas / Limitações:**
-  * Exige atualização manual das tabelas e faixas tributárias do Simples Nacional (RBT12) no código sempre que a legislação fiscal sofrer alterações [cite: 152].
+##### Contexto e Problema
+
+A Calculadora de Precificação é o diferencial central do HE. O sistema precisa sugerir o preço de venda ideal considerando custos do item, rateio das despesas fixas do negócio, despesas variáveis, tributação (MEI/Simples Nacional) e margem desejada (RF34–RF41, RF48–RF54). Um erro nesse cálculo compromete diretamente a saúde financeira do usuário.
+
+##### Por que foi tomada
+
+1. **Previsibilidade e auditabilidade:** mesmas entradas sempre produzem a mesma saída; cada componente é gravado no `HistoricoPreco` (RNF05).
+2. **Testabilidade:** permite uma suíte de testes unitários rápida e independente de banco ou APIs externas, cobrindo inclusive a restrição RN19 (soma dos percentuais < 100%).
+3. **Separação de responsabilidades:** a parametrização (faixas tributárias, despesas fixas, taxas) fica no banco; a matemática fica no domínio.
+
+##### Alternativas Consideradas
+
+* **Uso de LLM/IA para cálculo de preços:** rejeitado. Sistemas financeiros não devem depender de modelos de linguagem para cálculos numéricos devido ao não-determinismo e ao risco de respostas inconsistentes ("alucinações").
+* **Cálculo dentro das Server Actions/componentes:** rejeitado por misturar regra de negócio com a camada de apresentação (ver consequência negativa do ADR-001) e dificultar testes.
+
+##### Consequências
+
+* **Positivas:** 100% de previsibilidade matemática; precisão auditável; testes unitários velozes; atualização de alíquotas sem deploy, pois as faixas vêm de `FaixaTributaria` (RN17, RNF08).
+* **Negativas:** a camada de dados precisa resolver corretamente todos os insumos (RBT12, faturamento médio ou estimado, despesas fixas) antes de chamar o motor; mudanças na *estrutura* da fórmula (não nos valores) exigem alteração de código e de testes.
+
+**Drivers Relacionados:** AD-RF04, AD-QA01, AD-QA02, RF34, RF35, RF49, RN17, RN19, RN20, RNF08.

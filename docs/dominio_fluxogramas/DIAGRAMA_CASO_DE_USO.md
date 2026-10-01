@@ -33,9 +33,11 @@ flowchart LR
         UC11c("Dar Baixa Automatica no Estoque")
         UC11d("Gerar Lancamento Financeiro")
         UC12("Consultar Fluxo de Caixa")
+        UC12a("Registrar Despesa Operacional")
         UC13("Gerenciar Contas a Pagar e Receber")
         UC14("Consultar Dashboard")
         UC15("Gerenciar Plano do Negocio")
+        UC16("Gerenciar Despesas Fixas e Parametros de Precificacao")
     end
 
     Dono --- UC1
@@ -53,6 +55,8 @@ flowchart LR
     Dono --- UC13
     Dono --- UC14
     Dono --- UC15
+    Dono --- UC12a
+    Dono --- UC16
 
     Gerente --- UC1
     Gerente --- UC2
@@ -66,6 +70,8 @@ flowchart LR
     Gerente --- UC12
     Gerente --- UC13
     Gerente --- UC14
+    Gerente --- UC12a
+    Gerente --- UC16
 
     Colaborador --- UC1
     Colaborador --- UC2
@@ -75,6 +81,7 @@ flowchart LR
     Colaborador --- UC11
     Colaborador --- UC14
     Colaborador -.->|extend via permissao customizada| UC10
+    Colaborador -.->|extend via permissao customizada| UC12a
 
     UC6 -.->|include| UC6a
     UC11 -.->|include| UC11a
@@ -83,6 +90,7 @@ flowchart LR
     UC11a -.->|extend se Credito| UC11b
     UC10 -.->|extend| UC10a
     UC10a -.->|include| UC10b
+    UC14 -.->|include| UC14a("Ver Semaforo e Ponto de Equilibrio")
 ```
 
 ## Legenda
@@ -97,6 +105,6 @@ flowchart LR
 
 | Ator | Casos de uso |
 |---|---|
-| **Dono** | Todos os 15 casos de uso principais, incluindo Convidar Colaborador, Definir Permissões e Gerenciar Plano do Negócio (exclusivos do Dono). |
+| **Dono** | Todos os casos de uso principais, incluindo Convidar Colaborador, Definir Permissões e Gerenciar Plano do Negócio (exclusivos do Dono). |
 | **Gerente** | Todos, exceto Convidar Colaborador, Definir Permissões e Gerenciar Plano do Negócio. |
-| **Colaborador** | Autenticar-se, Alternar entre Negócios, Registrar Entrada/Saída de Estoque, Consultar Alertas de Estoque Baixo, Registrar Venda, Consultar Dashboard. Acesso a Calcular Preço de Venda apenas via permissão customizada (RF06). |
+| **Colaborador** | Autenticar-se, Alternar entre Negócios, Registrar Entrada/Saída de Estoque, Consultar Alertas de Estoque Baixo, Registrar Venda, Consultar Dashboard. Acesso a Calcular Preço de Venda e a Registrar Despesa Operacional apenas via permissão customizada (RF06). |

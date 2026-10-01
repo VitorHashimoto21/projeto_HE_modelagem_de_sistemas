@@ -1,3 +1,5 @@
+> ⚠️ **Documento histórico.** Rascunho inicial da visão do produto, **substituído por [`VISAO_DE_NEGOCIO.md`](./VISAO_DE_NEGOCIO.md)**. Mantido apenas para rastreabilidade — o escopo, o MVP e as regras atuais estão em `VISAO_DE_NEGOCIO.md` e em `docs/requisitos/`.
+
 1. O Problema e o Contexto [cite: 2, 5]
 Muitos profissionais autônomos e microempreendedores enfrentam grandes dificuldades para compreender a real situação financeira dos seus negócios [cite: 2]. O problema central reside na falta de clareza sobre o ponto de equilíbrio (break-even point) e na mistura frequente entre finanças pessoais e empresariais [cite: 5]. Frequentemente, esses empreendedores geram faturamento, mas não sabem se estão operando com lucro real ou se estão apenas "trocando dinheiro" no final do mês [cite: 5].
 Dor principal: Dificuldade em definir se a empresa está saudável financeira e matematicamente, além da complexidade das ferramentas de gestão existentes no mercado que exigem conhecimentos contábeis avançados [cite: 2, 5].

@@ -13,16 +13,17 @@ Cada bloco é independente e pode ser renderizado isoladamente em qualquer visua
 ```mermaid
 flowchart TD
     A[Tela de Login] -->|e-mail + senha| B[Selecionar Negocio]
-    B --> C[Dashboard]
+    B --> C[Dashboard - resumo do dia + semaforo de saude financeira]
 
     C --> D[Cadastro de Produto/Servico]
     D --> D1{Tipo do item?}
-    D1 -->|Fisico| D2[Formulario Produto Fisico]
+    D1 -->|Fisico| D2[Formulario Produto Fisico - sem quantidade em estoque]
     D1 -->|Servico| D3[Formulario Servico]
     D3 --> D4{Possui materiais?}
     D4 -->|Sim| D5[Vincular materiais do Estoque]
     D4 -->|Nao| D6[Salvar Servico]
-    D2 --> D7[Salvar Produto]
+    D5 --> D6
+    D2 --> D7[Salvar Produto - estoque inicial zero]
 
     C --> E[Estoque]
     E --> E1[Lista de Produtos]
@@ -32,9 +33,13 @@ flowchart TD
 
     C --> F[Calculadora de Precificacao]
     F --> F1[Selecionar Item]
-    F1 --> F2[Definir Margem - sugerida por categoria]
+    F1 --> F2[Definir Margem - sugerida por categoria + aviso: ganho liquido por venda]
     F2 --> F3[Selecionar Regime Tributario]
-    F3 --> F4[Ver Preco Sugerido]
+    F3 --> F3a{Possui historico de vendas?}
+    F3a -->|Nao| F3b[Informar capacidade mensal e ticket medio - faturamento estimado editavel]
+    F3a -->|Sim| F3c[Usar faturamento medio - RBT12]
+    F3b --> F4[Ver Preco Sugerido + detalhamento + ponto de equilibrio]
+    F3c --> F4
     F4 --> F5{Confirmar preco?}
     F5 -->|Sim| F6[Salvar como Preco Oficial + Historico]
     F5 -->|Nao| F1
@@ -51,20 +56,24 @@ flowchart TD
     G6 --> G8{Soma bate com total?}
     G8 -->|Nao| G6
     G8 -->|Sim| G9[Confirmar Venda]
-    G9 [Confirmar Venda] --> D11 {Estoque disponível?}
-    D11 --> |Nao| D12 [Exibir Erro e Impedir Venda]
-    D11 --> |Sim| G10 [Baixa de Estoque + Lançamento Automático]
+    G7 --> G9
+    G9 --> G11{Estoque disponivel para todos os itens e materiais?}
+    G11 -->|Nao| G12[Exibir Estoque Insuficiente e impedir a venda]
+    G12 --> G1
+    G11 -->|Sim| G10[Baixa de Estoque + Lancamento Financeiro automaticos]
 
     C --> H[Financeiro]
     H --> H1[Fluxo de Caixa]
     H --> H2[Contas a Pagar/Receber]
     H2 --> H3[Marcar como Pago/Recebido - total ou parcial]
+    H --> H4[Despesas Fixas Mensais]
 
     C --> I[Configuracoes do Negocio]
     I --> I1[Convidar Colaborador]
     I1 --> I2[Definir Papel: Gerente/Colaborador]
     I2 --> I3[Customizar Permissoes por Modulo]
     I --> I4[Gerenciar Plano - Gratuito/Pago]
+    I --> I5[Parametros de Precificacao - taxa media de cartao, margem meta, capacidade e ticket medio]
 ```
 
 ---
@@ -99,9 +108,12 @@ flowchart TD
     E --> E1[Adicionar Itens]
     E1 --> E2[Selecionar Pagamento]
     E2 --> E3[Confirmar Venda]
-    E3 --> E4[Baixa de Estoque automatica]
+    E3 --> E5{Estoque disponivel?}
+    E5 -->|Nao| E6[Exibir Estoque Insuficiente e impedir a venda]
+    E5 -->|Sim| E4[Baixa de Estoque automatica]
 
     C -.-> F[[Financeiro - acesso bloqueado]]
+    C -.-> F1[[Lancar Despesas Operacionais - conforme permissao granular]]
     C -.-> G[[Calculadora de Precificacao - conforme permissao granular]]
     C -.-> H[[Configuracoes - acesso bloqueado]]
 ```
@@ -137,9 +149,11 @@ flowchart LR
         UC11c("Dar Baixa Automatica no Estoque")
         UC11d("Gerar Lancamento Financeiro")
         UC12("Consultar Fluxo de Caixa")
+        UC12a("Registrar Despesa Operacional")
         UC13("Gerenciar Contas a Pagar e Receber")
         UC14("Consultar Dashboard")
         UC15("Gerenciar Plano do Negocio")
+        UC16("Gerenciar Despesas Fixas e Parametros de Precificacao")
     end
 
     Dono --- UC1
@@ -157,6 +171,8 @@ flowchart LR
     Dono --- UC13
     Dono --- UC14
     Dono --- UC15
+    Dono --- UC12a
+    Dono --- UC16
 
     Gerente --- UC1
     Gerente --- UC2
@@ -170,6 +186,8 @@ flowchart LR
     Gerente --- UC12
     Gerente --- UC13
     Gerente --- UC14
+    Gerente --- UC12a
+    Gerente --- UC16
 
     Colaborador --- UC1
     Colaborador --- UC2
@@ -179,6 +197,7 @@ flowchart LR
     Colaborador --- UC11
     Colaborador --- UC14
     Colaborador -.->|extend via permissao customizada| UC10
+    Colaborador -.->|extend via permissao customizada| UC12a
 
     UC6 -.->|include| UC6a
     UC11 -.->|include| UC11a
@@ -187,6 +206,7 @@ flowchart LR
     UC11a -.->|extend se Credito| UC11b
     UC10 -.->|extend| UC10a
     UC10a -.->|include| UC10b
+    UC14 -.->|include| UC14a("Ver Semaforo e Ponto de Equilibrio")
 ```
 
 ---

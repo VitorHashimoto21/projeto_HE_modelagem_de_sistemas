@@ -60,12 +60,17 @@ Para atender ao rigor acadêmico e técnico da disciplina, as issues estão divi
 *   **Tipo/Label:** `documentation`
 *   **Descrição:**
     ```text
-    Escrever e versionar em `/docs/adr/` as primeiras decisões técnicas estruturais do projeto HealthEnterprise. De acordo com as especificações da disciplina, cada ADR deve conter obrigatoriamente as seções de Contexto, Decisão e Consequências.
+    Manter versionadas em `docs/definicoes_arquitetura/adrs-he.md` as decisões técnicas estruturais do projeto HealthEnterprise, junto aos drivers em `docs/definicoes_arquitetura/drivers-arquiteturais-he.md`. De acordo com as especificações da disciplina, cada ADR deve conter obrigatoriamente as seções de Contexto, Decisão, Alternativas e Consequências.
 
-    ADRs a serem criados:
-    1. ADR-01: Escolha do Framework Django e do Stack de Banco de Dados.
-    2. ADR-02: Abordagem de arquitetura Multi-tenant para isolamento das empresas (RN01).
-    3. ADR-03: Estratégia de segurança, hashing de senhas e conformidade de privacidade (LGPD).
+    ADRs registrados:
+    1. ADR-001: Framework Fullstack Next.js (App Router) + TypeScript.
+    2. ADR-002: Persistência com Prisma ORM e PostgreSQL multi-tenant lógico (RN01, RNF02).
+    3. ADR-003: Autenticação via Supabase Auth com autorização (RBAC) no backend (RF05, RF06, RN02).
+    4. ADR-004: Parametrização tributária em banco (`FaixaTributaria`) e agregação dinâmica do RBT12 (RN17, RNF08).
+    5. ADR-005: Motor de precificação determinístico (markup completo) em TypeScript puro, sem LLM (RF34).
+
+    Tarefas:
+    - [ ] Revisar os ADRs com o grupo e registrar novos ADRs quando surgir decisão de difícil reversão.
     ```
 *   **Critérios de Aceitação:**
     *   **Ubíquo:** *THE SYSTEM SHALL* disponibilizar a documentação de arquitetura na pasta `/docs` em formato Markdown perfeitamente versionado.
@@ -109,13 +114,14 @@ Para atender ao rigor acadêmico e técnico da disciplina, as issues estão divi
     Para que meu custo seja calculado com exatidão no módulo de Precificação.
 
     Tarefas:
-    - [ ] Criar formulários responsivos usando Tailwind e componentes shadcn/ui (RF08, RF09).
+    - [ ] Criar formulários responsivos usando Tailwind e componentes shadcn/ui (RF08, RF09), sem campo de quantidade em estoque e com estoque mínimo opcional.
+    - [ ] Adicionar campo opcional de comissão (%) no cadastro do item (RF52).
     - [ ] Implementar Server Actions para salvar dados no PostgreSQL via Prisma.
     - [ ] Criar componente de "Seleção de Materiais" para serviços, consumindo dados do estoque em tempo real (RF12).
     - [ ] Garantir que o Prisma inicialize a quantidade de novos produtos como zero (aplicar RN03).
     ```
 *   **Critérios de Aceitação (EARS Notation):**
-    *   **Estado + Evento (RF08):** *WHILE* o tipo do item selecionado for Produto Físico, *WHEN* o usuário submeter o formulário de cadastro, *THE SYSTEM SHALL* exigir o preenchimento de nome, custo, estoque mínimo, unidade de medida e categoria.
+    *   **Estado + Evento (RF08):** *WHILE* o tipo do item selecionado for Produto Físico, *WHEN* o usuário submeter o formulário de cadastro, *THE SYSTEM SHALL* exigir o preenchimento de nome, custo, unidade de medida e categoria, aceitando estoque mínimo como campo opcional.
     *   **Estado + Evento (RF09):** *WHILE* o tipo do item selecionado for Serviço, *WHEN* o usuário submeter o formulário de cadastro, *THE SYSTEM SHALL* exigir o preenchimento de nome, custo e categoria, e deve perguntar se há materiais/insumos associados.
     *   **Orientado a Evento (RF13):** *WHEN* um material for vinculado a um Serviço, *THE SYSTEM SHALL* preencher automaticamente a quantidade padrão de 1 unidade por execução, permitindo que o usuário edite esse valor.
     *   **Orientado a Evento (RN03):** *WHEN* um Produto Físico for criado, *THE SYSTEM SHALL* inicializar seu estoque com quantidade igual a zero.
@@ -135,7 +141,7 @@ Para atender ao rigor acadêmico e técnico da disciplina, as issues estão divi
     Tarefas:
     - [ ] Implementar tela de lançamento de entrada de estoque (informando quantidade e data) (RF15).
     - [ ] Implementar formulário de baixa manual de ajuste de estoque (perda, quebra, uso interno, etc.) com motivo obrigatório (RF17).
-    - [ ] Implementar validação impeditiva (Gatekeeper) dentro da transação de venda. A Server Action deve verificar o saldo de cada item e lançar uma exceção de negócio caso a quantidade seja insuficiente, impedindo o `COMMIT` da venda. (RF16, RN05).
+    - [ ] Implementar validação impeditiva (Gatekeeper) dentro da transação de venda. A Server Action deve verificar o saldo de cada item e lançar uma exceção de negócio caso a quantidade seja insuficiente, impedindo o `COMMIT` da venda (RF18, RN06).
     - [ ] Implementar o cálculo dinâmico de sugestão de estoque mínimo após o 1º ciclo completo (RF20, RN08).
     - [ ] Adicionar indicadores visuais de estoque baixo no dashboard e no cadastro de produtos (RF19, RF21).
     ```
@@ -199,15 +205,19 @@ Para atender ao rigor acadêmico e técnico da disciplina, as issues estão divi
 ### Issue #09 [Feature]: Calculadora de Precificação Inteligente (Motor TypeScript)
 *   **Título:** `[US06] Calculadora de Precificação, Margem por Categoria e Cálculo Tributário por RBT12`
 *   **Tipo/Label:** `feature`
-*   **Requisitos Mapeados:** RF34, RF35, RF36, RF37, RF38, RF39, RF40, RF41, RN15, RN16, RN17, RNF06, RNF08
+*   **Requisitos Mapeados:** RF34, RF35, RF36, RF37, RF38, RF39, RF40, RF41, RF48, RF49, RF50, RF51, RF52, RF53, RF54, RN15, RN16, RN17, RN19, RN20, RNF06, RNF08
 *   **Descrição:**
     ```text
     Como gestor do negócio,
-    Eu quero calcular meus preços sugeridos de venda com base em custos reais, impostos federais configuráveis e margem de lucro por categoria,
+    Eu quero calcular meus preços sugeridos de venda com base em custos reais, rateio das despesas fixas, despesas variáveis (taxa de cartão e comissão), impostos configuráveis e margem de lucro por categoria,
     Para precificar meus produtos de forma matematicamente viável e sem perdas financeiras.
 
     Tarefas:
-    - [ ] Implementar função auxiliar em TS para a fórmula Markup (Preço = Custo / (1 - Margem)) (RF34).
+    - [ ] Implementar função pura em TS para o markup completo: Preço = Custo Total ÷ (1 − (Desp. Fixas% + Desp. Variáveis% + Imposto% + Margem%)) (RF34, ADR-005), bloqueando quando a soma for ≥ 100% (RN19).
+    - [ ] Implementar CRUD de despesas fixas mensais e cálculo de Desp. Fixas% sobre o faturamento médio (RF48, RF49).
+    - [ ] Implementar estimativa de faturamento por capacidade × ticket médio para negócios sem histórico (RF50).
+    - [ ] Adicionar parâmetro de taxa média de cartão do negócio e somar a comissão opcional do item como despesa variável (RF51, RF52, RN20).
+    - [ ] Exibir aviso de que a margem é o ganho líquido por venda e alerta de faturamento estimado abaixo do ponto de equilíbrio (RF53, RF54).
     - [ ] Desenvolver lógica no Prisma para somar custos de materiais vinculados ao serviço (RF35).
     - [ ] Desenvolver interface que solicita o regime de tributação (MEI ou Simples Nacional) (RF37).
     - [ ] Criar motor que lê o histórico financeiro, calcula o RBT12 e determina a alíquota de imposto proporcional (RF38, RF39).
@@ -215,7 +225,8 @@ Para atender ao rigor acadêmico e técnico da disciplina, as issues estão divi
     - [ ] Configurar tabela de parâmetros tributários editável no banco para evitar hard-coding (RN17, RNF08).
     ```
 *   **Critérios de Aceitação (EARS Notation):**
-    *   **Orientado a Evento (RF34):** *WHEN* o usuário solicitar o cálculo de preço de um item, *THE SYSTEM SHALL* calcular o preço de venda sugerido utilizando a fórmula `Preço = Custo ÷ (1 − Margem%)`.
+    *   **Orientado a Evento (RF34):** *WHEN* o usuário solicitar o cálculo de preço de um item, *THE SYSTEM SHALL* calcular o preço de venda sugerido utilizando a fórmula `Preço = Custo Total ÷ (1 − (Desp. Fixas% + Desp. Variáveis% + Imposto% + Margem%))`.
+    *   **Comportamento Indesejado (RN19):** *IF* a soma de Desp. Fixas% + Desp. Variáveis% + Imposto% + Margem% for maior ou igual a 100%, *THEN* *THE SYSTEM SHALL* bloquear o cálculo e informar que o preço é inviável.
     *   **Orientado a Estado (RF35):** *WHILE* o item calculado for um Serviço com materiais vinculados, *THE SYSTEM SHALL* somar ao custo base o custo dos materiais vinculados, considerando a quantidade configurada de cada material.
     *   **Orientado a Evento (RF40):** *WHEN* o cálculo de preço for concluído, *THE SYSTEM SHALL* exibir o resultado ao usuário e aguardar confirmação explícita antes de salvar o valor como preço de venda oficial.
     *   **Orientado a Evento (RF41):** *WHEN* um novo preço for confirmado pelo usuário, *THE SYSTEM SHALL* registrar essa alteração no histórico de preços do produto/serviço.
@@ -225,7 +236,7 @@ Para atender ao rigor acadêmico e técnico da disciplina, as issues estão divi
 ### Issue #10 [Feature]: Dashboard de Vendas, Resumo de Caixa e Alertas Visuais do Negócio
 *   **Título:** `[US07] Dashboard Inicial, Gráficos de Histórico de Vendas e Resumo Consolidado do Dia`
 *   **Tipo/Label:** `feature`
-*   **Requisitos Mapeados:** RF42, RF43, RF44, RNF10
+*   **Requisitos Mapeados:** RF42, RF43, RF44, RF55, RF56, RF57, RNF10
 *   **Descrição:**
     ```text
     Como proprietário do negócio,
@@ -235,10 +246,12 @@ Para atender ao rigor acadêmico e técnico da disciplina, as issues estão divi
     Tarefas:
     - [ ] Implementar tela inicial com widgets rápidos: Faturamento do Dia, Saldo em Caixa e Cards de Alertas de Estoque Baixo (RF42).
     - [ ] Integrar biblioteca de gráficos (ex: Chart.js ou Plotly) para renderizar o faturamento consolidado diário/mensal (RF43).
+    - [ ] Implementar o semáforo de saúde financeira (Vermelho < ponto de equilíbrio ≤ Amarelo < faturamento meta ≤ Verde) (RF55, RF56, RF57).
     - [ ] Estruturar a arquitetura do Dashboard como uma malha modular que suporte expansão futura para novos componentes de inteligência artificial (RF44, RNF10).
     ```
 *   **Critérios de Aceitação (EARS Notation):**
     *   **Ubíquo (RF42):** *THE SYSTEM SHALL* exibir na tela inicial um resumo do dia contendo vendas do dia, saldo em caixa e alertas de estoque baixo.
+    *   **Orientado a Estado (RF57):** *WHILE* o faturamento bruto do mês for menor que o ponto de equilíbrio, *THE SYSTEM SHALL* exibir o semáforo em Vermelho; entre o ponto de equilíbrio e a meta, em Amarelo; igual ou acima da meta, em Verde.
 
 ---
 
