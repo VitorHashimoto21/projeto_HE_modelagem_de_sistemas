@@ -29,7 +29,7 @@ Para atender ao rigor acadêmico e técnico da disciplina, as issues estão divi
       └── docs/ (Documentação e ADRs)
     - [ ] Criar o schema.prisma inicial com as entidades de Usuário e Negócio (Multi-tenant).
     - [ ] Garantir que o professor (niltonmack@mackenzie.br) esteja como colaborador.
-    - [ ] Subir o primeiro PR funcional com o setup inicial para a branch main.
+    - [ ] Subir o primeiro PR funcional com o setup inicial para a branch de integração `DEVELOP` (a `main` recebe apenas versões estáveis vindas da `DEVELOP`).
     ```
 *   **Critérios de Aceitação (EARS Notation) [RNF02, RNF03, RNF09]:**
     *   **Ubíquo:** *THE SYSTEM SHALL*  isolar logicamente todos os dados de negócio a nível de banco de dados, utilizando filtros de ID de Negócio em todas as queries do Prisma.
@@ -51,7 +51,7 @@ Para atender ao rigor acadêmico e técnico da disciplina, as issues estão divi
     - [ ] Bloquear merges caso o pipeline falhe ou o schema Prisma esteja inconsistente.
     ```
 *   **Critérios de Aceitação:**
-    *   **Orientado a Evento:** *WHEN* um novo Pull Request for aberto para as branches `main` ou `develop`, *THE SYSTEM SHALL* disparar automaticamente o pipeline de CI do GitHub Actions e exibir o status de sucesso/falha na tela do PR.
+    *   **Orientado a Evento:** *WHEN* um novo Pull Request for aberto para as branches `DEVELOP` ou `main`, *THE SYSTEM SHALL* disparar automaticamente o pipeline de CI do GitHub Actions e exibir o status de sucesso/falha na tela do PR.
 
 ---
 
@@ -144,7 +144,7 @@ Para atender ao rigor acadêmico e técnico da disciplina, as issues estão divi
     - [ ] Implementar tela de lançamento de entrada de estoque (informando quantidade e data) (RF15).
     - [ ] Implementar formulário de baixa manual de ajuste de estoque (perda, quebra, uso interno, etc.) com motivo obrigatório (RF17).
     - [ ] Implementar validação impeditiva (Gatekeeper) dentro da transação de venda. A Server Action deve verificar o saldo de cada item e lançar uma exceção de negócio caso a quantidade seja insuficiente, impedindo o `COMMIT` da venda (RF18, RN06).
-    - [ ] Implementar o cálculo dinâmico de sugestão de estoque mínimo após o 1º ciclo completo (RF20, RN08).
+    - [ ] Implementar a sugestão de estoque mínimo após o 1º ciclo (1 entrada + 1 saída): ⌈consumo médio diário dos últimos 90 dias × dias de cobertura (padrão 7)⌉, com teste automatizado (ex.: 45 unidades saídas em 30 dias, cobertura 7 → mínimo 11) (RF20, RN07, RN08).
     - [ ] Adicionar indicadores visuais de estoque baixo no dashboard e no cadastro de produtos (RF19, RF21).
     ```
 *   **Critérios de Aceitação (EARS Notation):**
@@ -158,7 +158,7 @@ Para atender ao rigor acadêmico e técnico da disciplina, as issues estão divi
 ### Issue #07 [Feature]: Fluxo de Vendas (Registros, Formas de Pagamento e Parcelamento)
 *   **Título:** `[US04] Registro de Vendas Multi-itens, Pagamentos Mistos e Agendamento de Parcelas`
 *   **Tipo/Label:** `feature`
-*   **Requisitos Mapeados:** RF22, RF22b, RF23, RF24, RF25, RF26, RF27, RF28, RF62, RN09, RN10, RN11, RN12, RN23
+*   **Requisitos Mapeados:** RF22, RF22b, RF23, RF24, RF25, RF26, RF27, RF28, RF62, RF65, RF66, RN09, RN10, RN11, RN12, RN23, RN25, RN26
 *   **Descrição:**
     ```text
     Como operador do caixa (Dono ou Colaborador),
@@ -172,6 +172,9 @@ Para atender ao rigor acadêmico e técnico da disciplina, as issues estão divi
     - [ ] Implementar motor matemático de parcelamento para cartão de crédito (limite de 12 parcelas, gerando vencimentos mensais futuros) (RF27, RF28).
     - [ ] Configurar lógica que impede a finalização se a soma dos pagamentos não bater com o total da venda, na interface e no servidor (RF26).
     - [ ] Bloquear a inclusão no carrinho de itens sem preço oficial (RN23).
+    - [ ] Implementar cancelamento de venda (Dono/Gerente, motivo obrigatório) em transação única: status CANCELADA, estoque devolvido (ENTRADA_ESTORNO), contas abertas canceladas e estorno do recebido (RF65, RN25).
+    - [ ] Implementar troca no cancelamento: nova venda vinculada, crédito de troca limitado ao recebido, reembolso da diferença (RF66, RN26).
+    - [ ] Criar teste automatizado: venda de R$ 100,00 em PIX trocada por item de R$ 70,00 → crédito R$ 70,00 sem lançamento, estorno de R$ 30,00, saldo final R$ 70,00 e venda original fora do RBT12 (RN25, RN26).
     - [ ] Gravar `precoUnitario` e `custoUnitario` de cada item vendido, definidos pelo servidor (RF62).
     - [ ] Arredondar parcelas em centavos com a diferença na 1ª parcela, com teste automatizado (ex.: R$ 100,00 em 3x = 33,34 + 33,33 + 33,33) (RN11).
     ```
@@ -186,7 +189,7 @@ Para atender ao rigor acadêmico e técnico da disciplina, as issues estão divi
 ### Issue #08 [Feature]: Módulo Financeiro e Fluxo de Caixa (Lançamentos e Contas a Pagar/Receber)
 *   **Título:** `[US05] Gestão Financeira, Fluxo de Caixa Consolidado e Controle de Contas a Pagar/Receber`
 *   **Tipo/Label:** `feature`
-*   **Requisitos Mapeados:** RF29, RF30, RF31, RF32, RF33, RN13, RN14, RN22
+*   **Requisitos Mapeados:** RF29, RF30, RF31, RF32, RF33, RF67, RN13, RN14, RN22
 *   **Descrição:**
     ```text
     Como gestor financeiro,
@@ -200,6 +203,7 @@ Para atender ao rigor acadêmico e técnico da disciplina, as issues estão divi
     - [ ] Criar teste automatizado: recebimento parcial de R$ 40,00 em uma conta de R$ 100,00 gera lançamento de entrada de R$ 40,00, deixa a conta PARCIAL e o saldo de caixa sobe R$ 40,00 (RN22, RN14).
     - [ ] Vincular a gravação automática de lançamentos financeiros de categoria "Vendas" ao fechar uma venda (RF33, RN13).
     - [ ] Aplicar a regra de que transações de cartão de crédito só entram no caixa operacional na data do recebimento (RN14).
+    - [ ] Gerar automaticamente, todo mês, uma conta a pagar por despesa fixa ativa (inclusive o DAS do MEI), sem duplicar a competência (RF67).
     ```
 *   **Critérios de Aceitação (EARS Notation):**
     *   **Orientado a Evento (RF31):** *WHEN* o usuário registrar um pagamento ou recebimento parcial de uma conta, *THE SYSTEM SHALL* manter o valor restante em aberto.
@@ -247,7 +251,7 @@ Para atender ao rigor acadêmico e técnico da disciplina, as issues estão divi
 ### Issue #10 [Feature]: Dashboard de Vendas, Resumo de Caixa e Alertas Visuais do Negócio
 *   **Título:** `[US07] Dashboard Inicial, Gráficos de Histórico de Vendas e Resumo Consolidado do Dia`
 *   **Tipo/Label:** `feature`
-*   **Requisitos Mapeados:** RF42, RF43, RF44, RF55, RF56, RF57, RF62, RF63, RNF10
+*   **Requisitos Mapeados:** RF42, RF43, RF44, RF55, RF56, RF57, RF62, RF63, RF68, RNF10
 *   **Descrição:**
     ```text
     Como proprietário do negócio,
@@ -261,6 +265,7 @@ Para atender ao rigor acadêmico e técnico da disciplina, as issues estão divi
     - [ ] Implementar o semáforo de saúde financeira (Vermelho < ponto de equilíbrio ≤ Amarelo < faturamento meta ≤ Verde), com PE e Meta descontando o CMV%; sem margem meta, mostrar só a posição frente ao PE (RF55, RF56, RF57).
     - [ ] Criar teste automatizado do PE: despesas fixas R$ 6.000, CMV 41%, imposto 6% e taxa 3% → PE = R$ 12.000; nesse faturamento o lucro simulado deve ser zero (RF55).
     - [ ] Implementar o Dashboard restrito do Colaborador: só vendas do dia e alertas de estoque (RF63).
+    - [ ] Implementar a projeção de caixa dos próximos 6 meses para Dono e Gerente (RF68).
     - [ ] Estruturar a arquitetura do Dashboard como uma malha modular que suporte expansão futura para novos componentes de inteligência artificial (RF44, RNF10).
     ```
 *   **Critérios de Aceitação (EARS Notation):**
@@ -283,6 +288,7 @@ Para atender ao rigor acadêmico e técnico da disciplina, as issues estão divi
     - [ ] Adicionar flag `plano_pago` ao modelo do Negócio.
     - [ ] Implementar decorações e Middleware de autorização para bloquear as rotas de Multi-Colaboradores e Relatórios Avançados para contas gratuitas (RF47).
     - [ ] Garantir que o plano gratuito continue com registros de vendas, produtos e lançamentos sem nenhuma limitação de volume (RF46, RN18).
+    - [ ] Permitir no plano gratuito o Dono + 1 colaborador; exigir upgrade a partir do 2º convite (RF47).
     - [ ] Adicionar tela de convite para upgrade de plano quando o usuário tentar usar recursos restritos.
     ```
 *   **Critérios de Aceitação (EARS Notation):**
@@ -296,7 +302,7 @@ Para atender ao rigor acadêmico e técnico da disciplina, as issues estão divi
 ### Issue #12 [Technical]: Log de Auditoria via Prisma Middleware e LGPD
 *   **Título:** `Auditoria de Estoque/Preços e Exportação de Dados LGPD`
 *   **Tipo/Label:** `security`, `technical`
-*   **Requisitos Mapeados:** RNF04, RNF05
+*   **Requisitos Mapeados:** RNF04, RNF05, RN27
 *   **Descrição:**
     ```text
     Implementar os logs de segurança para auditoria e os processos técnicos necessários para garantir que o sistema respeite integralmente os requisitos de privacidade da LGPD.
@@ -305,7 +311,7 @@ Para atender ao rigor acadêmico e técnico da disciplina, as issues estão divi
     - [ ] Implementar Prisma Middleware (ou Extension) para interceptar updates em Itens e Estoque e salvar logs na tabela de Auditoria (RNF05)
     - [ ] Implementar o termo de consentimento explícito de uso de dados no cadastro inicial.
     - [ ] Desenvolver rota exclusiva para que o usuário possa realizar o download de seus dados cadastrais (Mecanismo de Exportação de Dados em formato JSON/CSV).
-    - [ ] Desenvolver o botão de encerramento de conta, que realize a deleção lógica ou anonimização de dados pessoais identificáveis (Mecanismo de Exclusão).
+    - [ ] Desenvolver o encerramento de conta: bloquear acesso, anonimizar dados pessoais do usuário e dos clientes dos negócios em que é o único Dono, encerrar esses negócios e manter os registros fiscais/financeiros por 5 anos sem identificação (RN27).
     ```
 *   **Critérios de Aceitação (EARS Notation):**
     *   **Orientado a Evento (RNF05):** *WHEN* houver alteração em estoque ou em preço, *THE SYSTEM SHALL* registrar um log auditável contendo data, usuário responsável e motivo (quando aplicável).

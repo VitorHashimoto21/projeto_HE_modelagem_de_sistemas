@@ -34,6 +34,7 @@ Um requisito, regra ou restrição entra neste documento quando atende a pelo me
 |**AD-QA05**|Negócio|Modelo Freemium limitado por funcionalidade sem restrição de volume (RF45-RF47, RN18)|Guardas de acesso por plano no backend sem travas de contagem de registros no banco.|Média|
 |**AD-CEN01**|Cenário|Venda de serviço composto por múltiplos materiais de estoque (RF12, RN05)|Baixa iterativa transacional de múltiplos itens no estoque ao fechar uma venda.|Alta|
 |**AD-RF05**|Requisito|Cadastro fiscal do negócio pela consulta de CNPJ na base pública da Receita, com sugestão de Anexo pelo CNAE e fallback manual (RF58, RF59, RN24)|Adaptador de integração externa isolado do domínio (ADR-006) e tabelas oficiais parametrizadas (ADR-004).|Alta|
+|**AD-CEN03**|Cenário|Cancelamento e troca de venda já registrada (RF65, RF66, RN25, RN26)|Reversão transacional de estoque, contas e caixa sem apagar registros; crédito de troca limitado ao valor já recebido para não distorcer o saldo.|Alta|
 |**AD-CEN02**|Cenário|Venda realizada com quantidade de estoque insuficiente (RF18, RN06)|O sistema deve bloquear a conclusão da venda, notificando o usuário sobre a indisponibilidade física do item para evitar pedidos com estoque falso e problemas de sincronia.|Alta|
 
 ---

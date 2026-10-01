@@ -11,6 +11,8 @@
 // v4: cadastro via CNPJ/CNAE e Anexo do Simples por negócio (RF58, RF59, RN24),
 // parâmetros fiscais oficiais (RN17), MEI/DAS (RF60, RF61), CMV% (RF62),
 // preço opcional com origem (RF64, RN23), quitação de conta gera lançamento (RN22).
+// v5: cancelamento/troca de venda (RF65, RF66, RN25, RN26), contas mensais de
+// despesas fixas e DAS (RF67), estoque mínimo por cobertura (RF20), LGPD (RN27).
 // ==========================================================
 
 datasource db {
@@ -51,6 +53,7 @@ enum TipoMovimentacao {
   ENTRADA
   SAIDA_VENDA
   SAIDA_MANUAL
+  ENTRADA_ESTORNO // RN25: devolução de estoque por cancelamento de venda
 }
 
 // RF17: motivo obrigatório apenas quando tipo = SAIDA_MANUAL (validar na aplicação)
@@ -67,6 +70,19 @@ enum FormaPagamento {
   PIX
   DEBITO
   CREDITO
+  CREDITO_TROCA // RN26: crédito da venda original cancelada; não gera lançamento
+}
+
+// RF65: status da venda (nunca é apagada)
+enum StatusVenda {
+  CONCLUIDA
+  CANCELADA
+}
+
+// RF60/RF67: origem da despesa fixa (DAS é criado e mantido pelo sistema para MEI)
+enum OrigemDespesaFixa {
+  MANUAL
+  DAS_MEI
 }
 
 // RF59/RN24: Anexos do Simples Nacional (LC 123/2006)
@@ -126,6 +142,7 @@ enum StatusConta {
   ABERTA
   PARCIAL
   QUITADA
+  CANCELADA // RN25: conta a receber de venda cancelada
 }
 
 // ==========================================================
@@ -140,11 +157,14 @@ model Usuario {
 
   // RNF04: consentimento explícito de uso de dados (LGPD)
   consentimentoLgpdEm DateTime?
+  excluidoEm          DateTime? // RN27: acesso bloqueado
+  anonimizadoEm       DateTime? // RN27: nome/e-mail/senha substituídos por valores anônimos
 
-  membroEm        MembroNegocio[]
-  movimentacoes   MovimentacaoEstoque[] // RNF05: auditoria (quem fez a alteração)
-  historicoPrecos HistoricoPreco[] // RNF05: auditoria (quem confirmou o preço)
-  createdAt       DateTime              @default(now())
+  membroEm         MembroNegocio[]
+  movimentacoes    MovimentacaoEstoque[] // RNF05: auditoria (quem fez a alteração)
+  historicoPrecos  HistoricoPreco[] // RNF05: auditoria (quem confirmou o preço)
+  vendasCanceladas Venda[]               @relation("VendaCanceladaPor") // RF65: auditoria do cancelamento
+  createdAt        DateTime              @default(now())
 }
 
 model Negocio {
@@ -168,6 +188,9 @@ model Negocio {
   ticketMedioEstimado       Decimal? @db.Decimal(10, 2) // RF50
   faturamentoMensalEstimado Decimal? @db.Decimal(12, 2) // RF50: recomendado = capacidade × ticket, editável
   cmvEstimado               Decimal? @db.Decimal(5, 2) // RF62: CMV% usado enquanto não há histórico
+  diasCoberturaEstoque      Int      @default(7) // RF20: estoque mínimo = ⌈consumo médio diário × dias⌉
+
+  encerradoEm DateTime? // RN27: negócio encerrado após exclusão do único Dono (dados fiscais retidos 5 anos)
 
   membros       MembroNegocio[]
   itens         Item[]
@@ -199,10 +222,11 @@ model MembroNegocio {
 
 // Referenciado em Negocio.clientes e Venda.cliente na v1, mas nunca definido — adicionado agora.
 model Cliente {
-  id        String  @id @default(uuid()) @db.Uuid
-  negocioId String  @db.Uuid
-  nome      String
-  contato   String?
+  id            String    @id @default(uuid()) @db.Uuid
+  negocioId     String    @db.Uuid
+  nome          String
+  contato       String?
+  anonimizadoEm DateTime? // RN27
 
   negocio Negocio @relation(fields: [negocioId], references: [id])
   vendas  Venda[]
@@ -297,14 +321,18 @@ model HistoricoPreco {
 // ==========================================================
 
 model DespesaFixa {
-  id          String   @id @default(uuid()) @db.Uuid
-  negocioId   String   @db.Uuid
-  descricao   String
-  valorMensal Decimal  @db.Decimal(10, 2)
-  ativo       Boolean  @default(true)
-  createdAt   DateTime @default(now())
+  id            String              @id @default(uuid()) @db.Uuid
+  negocioId     String              @db.Uuid
+  descricao     String
+  valorMensal   Decimal             @db.Decimal(10, 2)
+  diaVencimento Int                 @default(10) // RF67: dia do mês da conta a pagar gerada
+  categoria     CategoriaLancamento @default(OUTROS) // RF67: ex. SALARIO, IMPOSTOS (DAS)
+  origem        OrigemDespesaFixa   @default(MANUAL)
+  ativo         Boolean             @default(true)
+  createdAt     DateTime            @default(now())
 
-  negocio Negocio @relation(fields: [negocioId], references: [id])
+  negocio Negocio             @relation(fields: [negocioId], references: [id])
+  contas  ContaPagarReceber[] // RF67: uma conta a pagar por mês
 
   @@index([negocioId])
 }
@@ -371,14 +399,24 @@ model Venda {
   data       DateTime @default(now())
   valorTotal Decimal  @db.Decimal(10, 2)
 
-  negocio     Negocio                @relation(fields: [negocioId], references: [id])
-  cliente     Cliente?               @relation(fields: [clienteId], references: [id])
-  itens       ItemVenda[]
-  pagamentos  Pagamento[]
-  lancamentos LancamentoFinanceiro[] // RN12 — 1:N: pagamento misto pode gerar mais de um lançamento imediato
+  // RF65/RN25: cancelamento (a venda nunca é apagada)
+  status             StatusVenda @default(CONCLUIDA)
+  canceladaEm        DateTime?
+  canceladaPorId     String?     @db.Uuid
+  motivoCancelamento String?
+  vendaOrigemId      String?     @unique @db.Uuid // RF66: troca — nova venda aponta para a venda cancelada
+
+  negocio      Negocio                @relation(fields: [negocioId], references: [id])
+  cliente      Cliente?               @relation(fields: [clienteId], references: [id])
+  canceladaPor Usuario?               @relation("VendaCanceladaPor", fields: [canceladaPorId], references: [id])
+  vendaOrigem  Venda?                 @relation("TrocaDeVenda", fields: [vendaOrigemId], references: [id])
+  vendaTroca   Venda?                 @relation("TrocaDeVenda")
+  itens        ItemVenda[]
+  pagamentos   Pagamento[]
+  lancamentos  LancamentoFinanceiro[] // RN12 — 1:N: pagamento misto pode gerar mais de um lançamento imediato
 
   @@index([negocioId])
-  @@index([negocioId, data]) // AD-QA01/RN21: agregação do RBT12 e do faturamento mensal
+  @@index([negocioId, data, status]) // AD-QA01/RN21/RN25: RBT12 e faturamento somam só vendas CONCLUIDA
 }
 
 model ItemVenda {
@@ -428,6 +466,7 @@ model LancamentoFinanceiro {
   tipo      TipoLancamento
   categoria CategoriaLancamento // RF32
   valor     Decimal             @db.Decimal(10, 2)
+  estorno   Boolean             @default(false) // RN25: saída que estorna valor recebido de venda cancelada
   data      DateTime            @default(now())
 
   negocio Negocio            @relation(fields: [negocioId], references: [id])
@@ -442,20 +481,24 @@ model LancamentoFinanceiro {
 // RF30/RF31: contas a pagar/receber com vencimento e quitação parcial.
 // "Atrasada" não é persistida: é derivada (vencimento < hoje E valorPago < valorTotal).
 model ContaPagarReceber {
-  id         String              @id @default(uuid()) @db.Uuid
-  negocioId  String              @db.Uuid
-  parcelaId  String?             @unique @db.Uuid // preenchido quando originada de uma Parcela de cartão (RN10)
-  tipo       TipoConta
-  categoria  CategoriaLancamento // RF30/RN13: contas de venda usam VENDAS
-  descricao  String?
-  valorTotal Decimal             @db.Decimal(10, 2)
-  valorPago  Decimal             @default(0) @db.Decimal(10, 2) // RF31
-  vencimento DateTime
-  status     StatusConta         @default(ABERTA)
+  id            String              @id @default(uuid()) @db.Uuid
+  negocioId     String              @db.Uuid
+  parcelaId     String?             @unique @db.Uuid // preenchido quando originada de uma Parcela de cartão (RN10)
+  despesaFixaId String?             @db.Uuid // RF67: conta gerada a partir de despesa fixa (ou DAS)
+  competencia   DateTime? // RF67: 1º dia do mês de referência
+  tipo          TipoConta
+  categoria     CategoriaLancamento // RF30/RN13: contas de venda usam VENDAS
+  descricao     String?
+  valorTotal    Decimal             @db.Decimal(10, 2)
+  valorPago     Decimal             @default(0) @db.Decimal(10, 2) // RF31
+  vencimento    DateTime
+  status        StatusConta         @default(ABERTA)
 
   negocio     Negocio                @relation(fields: [negocioId], references: [id])
   parcela     Parcela?               @relation(fields: [parcelaId], references: [id])
+  despesaFixa DespesaFixa?           @relation(fields: [despesaFixaId], references: [id])
   lancamentos LancamentoFinanceiro[] // RN22: cada pagamento parcial/total gera um lançamento
 
+  @@unique([despesaFixaId, competencia]) // RF67: não duplicar a conta do mesmo mês
   @@index([negocioId])
 }

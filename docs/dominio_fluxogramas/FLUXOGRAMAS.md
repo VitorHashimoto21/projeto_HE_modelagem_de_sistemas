@@ -70,12 +70,18 @@ flowchart TD
     G11 -->|Nao| G12[Exibir Estoque Insuficiente e impedir a venda]
     G12 --> G1
     G11 -->|Sim| G10[Baixa de Estoque + Lancamento Financeiro automaticos]
+    G --> G13[Historico de Vendas]
+    G13 --> G14[Cancelar Venda - motivo obrigatorio]
+    G14 --> G15{Troca por item de valor menor ou igual?}
+    G15 -->|Sim| G16[Nova venda com credito de troca + reembolso da diferenca]
+    G15 -->|Nao| G17[Estorno total - estoque volta, contas canceladas, reembolso]
 
     C --> H[Financeiro]
     H --> H1[Fluxo de Caixa]
     H --> H2[Contas a Pagar/Receber]
     H2 --> H3[Marcar como Pago/Recebido - total ou parcial, gera lancamento no caixa]
-    H --> H4[Despesas Fixas Mensais]
+    H --> H4[Despesas Fixas Mensais - geram contas a pagar todo mes]
+    H --> H5[Projecao de Caixa - proximos 6 meses]
 
     C --> I[Configuracoes do Negocio]
     I --> I1[Convidar Colaborador]
@@ -165,6 +171,8 @@ flowchart LR
         UC15("Gerenciar Plano do Negocio")
         UC16("Gerenciar Despesas Fixas e Parametros de Precificacao")
         UC17("Ver Semaforo e Ponto de Equilibrio")
+        UC18("Cancelar ou Trocar Venda")
+        UC19("Consultar Projecao de Caixa")
     end
 
     Dono --- UC0
@@ -186,6 +194,8 @@ flowchart LR
     Dono --- UC12a
     Dono --- UC16
     Dono --- UC17
+    Dono --- UC18
+    Dono --- UC19
 
     Gerente --- UC1
     Gerente --- UC2
@@ -202,6 +212,8 @@ flowchart LR
     Gerente --- UC12a
     Gerente --- UC16
     Gerente --- UC17
+    Gerente --- UC18
+    Gerente --- UC19
 
     Colaborador --- UC1
     Colaborador --- UC2
@@ -212,6 +224,7 @@ flowchart LR
     Colaborador --- UC14
     Colaborador -.->|extend via permissao customizada| UC10
     Colaborador -.->|extend via permissao customizada| UC12a
+    Colaborador -.->|extend via permissao customizada| UC18
 
     UC6 -.->|include| UC6a
     UC11 -.->|include| UC11a

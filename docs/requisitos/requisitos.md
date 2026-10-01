@@ -80,13 +80,13 @@
 | RF17 | O sistema deve permitir baixa manual de estoque (ajuste/perda), exigindo motivo obrigatório: Perda, Quebra, Uso interno, Doação ou Outro. |
 | RF18 | O sistema deve bloquear o registro de uma venda quando não houver estoque suficiente para os produtos físicos e/ou materiais envolvidos, interrompendo o fluxo antes do pagamento. |
 | RF19 | O sistema deve exibir um alerta visual quando o estoque atual de um produto estiver igual ou abaixo do estoque mínimo. |
-| RF20 | O sistema deve sugerir automaticamente um valor de estoque mínimo com base em percentual do histórico de estoque do produto, permitindo que o usuário sobrescreva com um valor fixo. |
+| RF20 | O sistema deve sugerir automaticamente o estoque mínimo de cada produto como **⌈consumo médio diário × dias de cobertura⌉**, em que o consumo médio diário = soma das saídas (por venda e manuais, exceto estornos) dos últimos 90 dias ÷ número de dias com histórico nessa janela, e os dias de cobertura são configuráveis por negócio (padrão 7). O usuário pode sobrescrever com um valor fixo. |
 | RF21 | O alerta de estoque baixo deve ser exibido tanto em notificação no sistema (dashboard/lista) quanto em indicador visual no cadastro do produto. |
 
 ### Regras de Negócio
 
 - **RN06** — Vendas com estoque insuficiente são estritamente proibidas; o sistema bloqueia a operação e deve validar a disponibilidade de cada item no carrinho antes de processar a transação.
-- **RN07** — O alerta de estoque baixo permanece **desativado** para um produto até que ele complete pelo menos 1 ciclo de entrada e saída registrado no sistema — antes disso, não há histórico suficiente para comparação.
+- **RN07** — O alerta de estoque baixo permanece **desativado** para um produto até que ele complete pelo menos 1 ciclo — ao menos uma entrada e uma saída registradas no sistema; antes disso, não há histórico suficiente para comparação.
 - **RN08** — Após o primeiro ciclo completo, o sistema passa a sugerir o estoque mínimo automaticamente; o valor sugerido pode ser sobrescrito manualmente pelo usuário a qualquer momento.
 
 ---
@@ -104,6 +104,8 @@
 | RF26 | O sistema deve validar, na interface e novamente no servidor, que a soma dos valores informados nas formas de pagamento é igual ao valor total da venda, bloqueando o registro caso não bata. |
 | RF27 | O sistema deve permitir parcelamento no Cartão de Crédito em até 12 vezes. |
 | RF28 | As datas de vencimento das parcelas devem ser geradas automaticamente de forma mensal, a partir da data da venda. |
+| RF65 | O sistema deve permitir que Dono e Gerente (ou Colaborador com permissão granular — RF06) cancelem uma venda inteira, informando motivo obrigatório. A venda cancelada nunca é apagada: fica com status Cancelada e registro auditável de quem cancelou, quando e por quê. |
+| RF66 | Ao cancelar uma venda, o operador pode opcionalmente realizar uma **troca**: escolher itens de substituição de valor total menor ou igual ao da venda original. O sistema registra uma nova venda vinculada à original, abatendo o valor com crédito de troca, e reembolsa a diferença na forma escolhida. Troca por itens de valor maior fica fora do MVP. |
 
 ### Regras de Negócio
 
@@ -111,6 +113,8 @@
 - **RN10** — Pagamentos em Cartão de Crédito (à vista ou parcelado) geram uma ou mais contas a receber com vencimento futuro, em vez de lançamento imediato.
 - **RN11** — O valor de cada parcela é o valor pago no crédito dividido igualmente pelo número de parcelas, arredondado em centavos, com a diferença de arredondamento somada à **1ª parcela** (ex.: R$ 100,00 em 3x = R$ 33,34 + R$ 33,33 + R$ 33,33), sem desconto de taxa de maquininha no MVP.
 - **RN12** — Toda venda registrada dispara automaticamente: (1) baixa de estoque dos itens/materiais envolvidos e (2) lançamento(s) no Financeiro, conforme a(s) forma(s) de pagamento.
+- **RN25** — O cancelamento de venda ocorre em uma única transação: (1) a venda passa a Cancelada; (2) o estoque dos produtos e materiais é devolvido por movimentação de entrada de estorno; (3) as contas a receber ainda abertas da venda são canceladas (estorno feito na maquininha); (4) os valores já recebidos no caixa são estornados por lançamento de saída — exceto a parte usada como crédito de troca (RN26). Vendas canceladas não entram no RBT12, no faturamento nem no CMV%.
+- **RN26** — O crédito de troca é limitado ao valor da venda original que já entrou no caixa. Ele é registrado como forma de pagamento "Crédito de troca" da nova venda e não gera novo lançamento (o dinheiro já está no caixa). O reembolso ao cliente é o valor recebido menos o crédito usado. Se o crédito não cobrir a nova venda (ex.: original no cartão ainda não recebido), o restante é pago normalmente.
 
 ---
 
@@ -125,6 +129,7 @@
 | RF31 | Contas a pagar/receber devem poder ser marcadas como pagas/recebidas parcialmente, mantendo o valor restante em aberto. |
 | RF32 | Lançamentos financeiros devem ser classificados em categorias fixas do sistema: Vendas, Fornecedores, Impostos, Salário, Outros. |
 | RF33 | Toda venda registrada deve gerar lançamento automático no Financeiro, sem necessidade de lançamento manual duplicado. |
+| RF67 | Cada despesa fixa ativa (RF48), incluindo o DAS para MEI (RF60), deve gerar automaticamente uma conta a pagar por mês, com o dia de vencimento e a categoria definidos na despesa, sem duplicar a conta de um mesmo mês. O usuário apenas registra o pagamento (RN22). |
 
 ### Regras de Negócio
 
@@ -145,7 +150,7 @@
 | RF36 | O sistema deve sugerir uma margem de lucro padrão de acordo com a categoria do produto/serviço, permitindo edição pelo usuário. As margens padrão ficam em tabela parametrizável por categoria, com valores iniciais baseados nos percentuais de presunção de lucro definidos pela legislação federal (Lei 9.249/1995, art. 15 — ex.: 8% comércio/indústria, 32% serviços em geral). |
 | RF37 | O sistema deve utilizar o regime tributário do negócio (MEI ou Simples Nacional), obtido no cadastro (RF58/RF59), exibindo-o na Calculadora para conferência do usuário. |
 | RF38 | Para o Simples Nacional, o sistema deve calcular a alíquota efetiva com base no Anexo do negócio e na faixa de faturamento (RBT12 — Receita Bruta dos últimos 12 meses): **Alíquota efetiva = (RBT12 × Alíquota nominal − Parcela a deduzir) ÷ RBT12**. Para o MEI, Imposto% = 0 no markup (RF60). |
-| RF39 | O RBT12 deve ser calculado automaticamente pelo sistema, somando o valor total de **todas** as vendas registradas nos últimos 12 meses (data da venda), independentemente da forma de pagamento ou de já terem sido recebidas (RN21). |
+| RF39 | O RBT12 deve ser calculado automaticamente pelo sistema, somando o valor total de **todas** as vendas registradas nos últimos 12 meses (data da venda), independentemente da forma de pagamento ou de já terem sido recebidas (RN21), exceto vendas canceladas (RN25). |
 | RF40 | O resultado do cálculo (preço sugerido) deve ser exibido ao usuário, que deve confirmar explicitamente antes de o valor ser salvo como preço de venda oficial do produto/serviço. |
 | RF41 | O sistema deve manter histórico de alterações de preço de cada produto/serviço. |
 | RF48 | O sistema deve permitir cadastrar as despesas fixas mensais do negócio (descrição e valor mensal — ex.: aluguel, energia, licenças de software, pró-labore). |
@@ -165,7 +170,7 @@
 - **RN17** — Os parâmetros fiscais devem ser parametrizáveis no sistema, permitindo atualização sem alteração de código, já que a legislação pode mudar: faixas, alíquotas e parcelas a deduzir por Anexo do Simples, tabela CNAE → Anexo, valores do DAS e limite anual do MEI e margens padrão por categoria. Cada parâmetro registra sua fonte legal e data de vigência.
 - **RN19** — A soma Desp. Fixas% + Desp. Variáveis% + Imposto% + Margem% deve ser menor que 100%; caso contrário, o sistema bloqueia o cálculo e informa ao usuário que o preço é inviável com os parâmetros atuais.
 - **RN20** — Despesas Variáveis% = taxa média de cartão do negócio (RF51) + comissão do item (RF52). Esses percentuais são usados **apenas** na formação do preço: no MVP não geram desconto nos lançamentos/contas a receber (RN11 permanece válida) nem repasse automático de comissão.
-- **RN21** — O RBT12 e o faturamento bruto são apurados por **regime de competência**: somam o valor total de todas as vendas registradas no período (`Venda.valorTotal`), inclusive vendas no cartão de crédito com parcelas ainda não recebidas. Diferente do saldo de caixa (RN14), que considera apenas valores efetivamente recebidos.
+- **RN21** — O RBT12 e o faturamento bruto são apurados por **regime de competência**: somam o valor total de todas as vendas registradas e não canceladas no período (`Venda.valorTotal`), inclusive vendas no cartão de crédito com parcelas ainda não recebidas. Diferente do saldo de caixa (RN14), que considera apenas valores efetivamente recebidos.
 
 ---
 
@@ -182,6 +187,7 @@
 | RF62 | O sistema deve calcular o **CMV%** (custo das mercadorias/insumos vendidos sobre o faturamento) como Σ (custo unitário registrado no item da venda × quantidade) ÷ faturamento bruto dos últimos 12 meses. O custo unitário de cada item (incluindo materiais de serviços) deve ser gravado no momento da venda. Sem histórico de vendas, usa-se um CMV% estimado informado pelo usuário junto da capacidade e do ticket médio (RF50). |
 | RF56 | O sistema deve calcular o faturamento meta mensal: **Meta = Total de despesas fixas mensais ÷ (1 − CMV% − Imposto% − Taxa média de cartão% − Margem meta%)**, em que a margem meta é a margem de lucro desejada informada para o negócio. |
 | RF57 | O Dashboard deve exibir um semáforo de saúde financeira comparando o faturamento bruto do mês corrente (soma de todas as vendas registradas no mês, conforme RN21) com o PE e a Meta: **Vermelho** (faturamento < PE — déficit), **Amarelo** (PE ≤ faturamento < Meta — alerta), **Verde** (faturamento ≥ Meta — saudável). Sem margem meta configurada, o semáforo indica apenas se o faturamento está abaixo ou acima do PE e solicita a configuração da meta. O semáforo é exibido apenas para Dono e Gerente. |
+| RF68 | O sistema deve exibir, para Dono e Gerente, a **projeção de caixa** dos próximos 6 meses: saldo atual + contas a receber abertas − contas a pagar abertas, agrupadas por mês de vencimento; para meses cujas contas de despesas fixas ainda não foram geradas, usa as despesas fixas ativas. |
 | RF63 | Para o papel Colaborador, o Dashboard deve ser restrito a: vendas do dia e alertas de estoque baixo — sem saldo em caixa, semáforo, ponto de equilíbrio ou gráficos de faturamento. |
 
 ---
@@ -194,11 +200,11 @@
 |---|---|
 | RF45 | O sistema deve diferenciar funcionalidades disponíveis no plano gratuito das disponíveis apenas no plano pago. |
 | RF46 | O plano gratuito não deve impor limite de quantidade de produtos, vendas ou lançamentos financeiros. |
-| RF47 | Funcionalidades como relatórios avançados e gestão de múltiplos colaboradores devem ser exclusivas do plano pago. |
+| RF47 | Funcionalidades como relatórios avançados e gestão de múltiplos colaboradores devem ser exclusivas do plano pago. O plano gratuito permite o Dono e **1 colaborador** convidado; a partir do segundo convidado, é necessário o plano pago. |
 
 ### Regras de Negócio
 
-- **RN18** — A limitação do plano Freemium é sempre por **funcionalidade disponível**, nunca por volume de uso (quantidade de produtos, vendas ou registros).
+- **RN18** — A limitação do plano Freemium é sempre por **funcionalidade disponível**, nunca por volume de uso (quantidade de produtos, vendas ou registros). O número de usuários do negócio (RF47) é tratado como funcionalidade de multiusuário, não como volume de dados.
 
 ---
 
@@ -209,13 +215,19 @@
 | RNF01 | A aplicação deve ser web, acessível via navegador, com layout responsivo para desktop e mobile. |
 | RNF02 | Os dados de cada negócio devem ser isolados logicamente dos demais (arquitetura multi-tenant), impedindo acesso cruzado entre contas. |
 | RNF03 | Senhas de usuário devem ser armazenadas com hash seguro, nunca em texto plano. |
-| RNF04 | O sistema deve estar em conformidade com a LGPD, incluindo política de privacidade, consentimento explícito e mecanismos de exportação/exclusão de dados pessoais. |
+| RNF04 | O sistema deve estar em conformidade com a LGPD, incluindo política de privacidade, consentimento explícito e mecanismos de exportação/exclusão de dados pessoais. A exclusão de conta segue a RN27. |
 | RNF05 | Alterações em estoque (entrada, saída manual) e em preço devem manter registro auditável (data, usuário responsável, motivo quando aplicável). |
 | RNF06 | O cálculo de precificação e do RBT12 deve responder de forma performática, mesmo com histórico extenso de vendas. |
 | RNF07 | A sessão do usuário deve persistir ao alternar entre negócios, sem exigir novo login. |
 | RNF08 | Os percentuais/faixas de alíquota de MEI e Simples Nacional devem ser mantidos de forma parametrizável (configuração, não código), para facilitar atualização conforme mudanças na legislação. |
 | RNF09 | O sistema deve manter rotina de backup dos dados financeiros e de estoque. |
 | RNF10 | A arquitetura do Dashboard e dos módulos deve ser extensível, suportando a adição de novos indicadores e integrações (Nota Fiscal, PIX) sem necessidade de reestruturação do core. |
+
+---
+
+### Regras de Negócio
+
+- **RN27** — A exclusão de conta (LGPD) bloqueia o acesso e **anonimiza** os dados pessoais (nome, e-mail e senha do usuário; nome e contato de clientes dos negócios em que ele é o único Dono). Os registros fiscais e financeiros desses negócios (vendas, lançamentos, contas, movimentações) são mantidos por 5 anos, sem identificação pessoal, para cumprimento de obrigações legais, e os negócios ficam encerrados.
 
 ---
 
@@ -229,7 +241,7 @@
 | RN04 | Tipo do item (Físico/Serviço) determina participação no Estoque e possibilidade de materiais vinculados. |
 | RN05 | Serviço com materiais vinculados dá baixa automática desses materiais no estoque ao ser vendido. |
 | RN06 | Vendas com estoque insuficiente não são permitidas; o sistema bloqueia a operação. |
-| RN07 | Alerta de estoque baixo fica desativado até o produto completar 1 ciclo de entrada/saída. |
+| RN07 | Alerta de estoque baixo fica desativado até o produto completar 1 ciclo (ao menos 1 entrada e 1 saída). |
 | RN08 | Estoque mínimo sugerido automaticamente após o 1º ciclo; sobrescrevível manualmente a qualquer momento. |
 | RN09 | Dinheiro/PIX/Débito geram lançamento imediato no caixa. |
 | RN10 | Cartão de Crédito (à vista ou parcelado) gera conta(s) a receber com vencimento futuro. |
@@ -247,6 +259,9 @@
 | RN22 | Todo pagamento/recebimento de conta (total ou parcial) gera lançamento no caixa; o status da conta é a fonte única de verdade. |
 | RN23 | Item sem preço oficial confirmado não pode ser vendido. |
 | RN24 | O Anexo do Simples é definido por negócio e aplicado a todo o faturamento. |
+| RN25 | Cancelamento de venda em transação única: estoque devolvido, contas abertas canceladas, recebidos estornados (exceto crédito de troca); venda cancelada sai do RBT12, faturamento e CMV%. |
+| RN26 | Crédito de troca limitado ao já recebido; não gera novo lançamento; reembolso = recebido − crédito usado. |
+| RN27 | Exclusão de conta anonimiza dados pessoais e mantém registros fiscais/financeiros por 5 anos sem identificação. |
 
 ---
 

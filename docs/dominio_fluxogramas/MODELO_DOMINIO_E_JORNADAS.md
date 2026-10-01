@@ -22,6 +22,8 @@ classDiagram
         +cnaePrincipal
         +anexoSimples  I a V, so Simples
         +atividadeMei  so MEI
+        +diasCoberturaEstoque  padrao 7
+        +encerradoEm  LGPD
         +taxaCartaoMedia
         +margemLucroMeta
         +capacidadeMensal
@@ -33,6 +35,9 @@ classDiagram
     class DespesaFixa {
         +descricao
         +valorMensal
+        +diaVencimento
+        +categoria
+        +origem  Manual | DAS MEI
         +ativo
     }
 
@@ -83,7 +88,7 @@ classDiagram
     }
 
     class MovimentacaoEstoque {
-        +tipo  Entrada | SaidaVenda | SaidaManual
+        +tipo  Entrada | SaidaVenda | SaidaManual | EntradaEstorno
         +quantidade
         +data
         +motivo  obrigatorio se SaidaManual
@@ -107,6 +112,9 @@ classDiagram
     class Venda {
         +data
         +valorTotal
+        +status  Concluida | Cancelada
+        +motivoCancelamento
+        +canceladaEm
     }
 
     class ItemVenda {
@@ -116,7 +124,7 @@ classDiagram
     }
 
     class Pagamento {
-        +formaPagamento  Dinheiro | PIX | Debito | Credito
+        +formaPagamento  Dinheiro | PIX | Debito | Credito | CreditoTroca
         +valor
         +numeroParcelas  1 a 12, so Credito
     }
@@ -141,7 +149,8 @@ classDiagram
         +valorTotal
         +valorPago
         +vencimento
-        +status  Aberta | Parcial | Quitada
+        +status  Aberta | Parcial | Quitada | Cancelada
+        +competencia  se gerada por despesa fixa
     }
 
     Negocio "1" --> "N" MembroNegocio : possui
@@ -151,6 +160,8 @@ classDiagram
     Negocio "1" --> "N" LancamentoFinanceiro : mantem
     Negocio "1" --> "N" ContaPagarReceber : mantem
     Negocio "1" --> "N" DespesaFixa : possui
+    DespesaFixa "1" --> "N" ContaPagarReceber : gera mensalmente
+    Venda "0..1" --> "0..1" Venda : troca de
 
     Item <|-- ProdutoFisico
     Item <|-- Servico
@@ -190,6 +201,8 @@ classDiagram
 | `DespesaFixa` | Base de Desp. Fixas% no markup (RF49) e do ponto de equilíbrio/semáforo do Dashboard (RF55–RF57). |
 | `Item.comissaoPercentual` | Opcional (padrão 0%); entra como despesa variável junto da taxa média de cartão do `Negocio` (RF51, RF52, RN20). |
 | `LancamentoFinanceiro` | Relação 1:N com `Venda`: pagamento misto pode gerar mais de um lançamento imediato. |
+| `Venda` | Nunca é apagada; cancelamento muda o status, devolve estoque, cancela contas abertas e estorna o recebido (RN25). Troca gera nova venda ligada à original, paga com crédito de troca limitado ao recebido (RN26). |
+| `DespesaFixa` (contas) | Gera uma conta a pagar por mês (competência), sem duplicar; o DAS do MEI é uma despesa fixa mantida pelo sistema (RF60, RF67). |
 | `MembroNegocio` | Isola o acesso: um `Usuario` só enxerga dados dos `Negocio`s onde tem `MembroNegocio` (RN01). |
 
 ---
@@ -260,12 +273,18 @@ flowchart TD
     G11 -->|Nao| G12[Exibir Estoque Insuficiente e impedir a venda]
     G12 --> G1
     G11 -->|Sim| G10[Baixa de Estoque + Lancamento Financeiro automaticos]
+    G --> G13[Historico de Vendas]
+    G13 --> G14[Cancelar Venda - motivo obrigatorio]
+    G14 --> G15{Troca por item de valor menor ou igual?}
+    G15 -->|Sim| G16[Nova venda com credito de troca + reembolso da diferenca]
+    G15 -->|Nao| G17[Estorno total - estoque volta, contas canceladas, reembolso]
 
     C --> H[Financeiro]
     H --> H1[Fluxo de Caixa]
     H --> H2[Contas a Pagar/Receber]
     H2 --> H3[Marcar como Pago/Recebido - total ou parcial, gera lancamento no caixa]
-    H --> H4[Despesas Fixas Mensais]
+    H --> H4[Despesas Fixas Mensais - geram contas a pagar todo mes]
+    H --> H5[Projecao de Caixa - proximos 6 meses]
 
     C --> I[Configuracoes do Negocio]
     I --> I1[Convidar Colaborador]

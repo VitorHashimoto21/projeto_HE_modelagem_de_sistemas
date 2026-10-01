@@ -67,10 +67,13 @@ Concorrentes diretos mapeados: **Bling, Omie e Granatum**.
 
 **Funcionalidades priorizadas para o MVP:**
 - Fluxo de caixa simples — registro de entradas e saídas, com saldo atualizado.
-- Contas a pagar e a receber, com datas de vencimento.
+- Contas a pagar e a receber, com datas de vencimento; despesas fixas geram contas a pagar mensais automaticamente.
+- Projeção de caixa dos próximos 6 meses.
+- Cancelamento e troca de vendas com estorno.
 
 **Fora do MVP inicial (roadmap):**
 - Conciliação bancária / integração com PIX e bancos.
+- Repasse automático de comissão a colaboradores/parceiros (no MVP, a comissão entra apenas na formação do preço).
 
 ### 6.2 Módulo Estoque
 

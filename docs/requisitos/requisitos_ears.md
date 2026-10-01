@@ -53,7 +53,7 @@
 | RF17 | Orientado a evento | **QUANDO** o usuário registrar uma baixa manual de estoque, **O SISTEMA DEVE** exigir a seleção de um motivo dentre: Perda, Quebra, Uso interno, Doação ou Outro. |
 | RF18 | Orientado a evento | **QUANDO** o usuário tentar finalizar uma venda com itens cujas quantidades excedam o saldo em estoque, **O SISTEMA DEVE** bloquear a finalização e exibir um alerta de 'Estoque Insuficiente' para os itens específicos. |
 | RF19 | Orientado a estado | **ENQUANTO** o estoque atual de um produto estiver igual ou abaixo do estoque mínimo, o sistema deve exibir um alerta visual associado ao produto. |
-| RF20 | Complexo (Evento + resposta condicional) | **QUANDO** um produto completar seu primeiro ciclo de entrada e saída de estoque, o sistema deve sugerir automaticamente um valor de estoque mínimo com base em percentual do histórico, e deve permitir que o usuário sobrescreva esse valor manualmente a qualquer momento. |
+| RF20 | Complexo (Evento + resposta condicional) | **QUANDO** um produto completar seu primeiro ciclo (ao menos uma entrada e uma saída), o sistema deve sugerir o estoque mínimo como ⌈consumo médio diário dos últimos 90 dias × dias de cobertura do negócio (padrão 7)⌉, e deve permitir que o usuário sobrescreva esse valor manualmente a qualquer momento. |
 | RF21 | Ubíquo | O sistema deve exibir o alerta de estoque baixo tanto na notificação do sistema (dashboard/lista) quanto no indicador visual do cadastro do produto. |
 | RN06 | Orientado a evento | **QUANDO** o estoque de um produto for insuficiente para a venda, **O SISTEMA DEVE** impedir a operação e não registrar a venda. |
 | RN07 | Orientado a estado | **ENQUANTO** um produto não tiver completado ao menos 1 ciclo de entrada e saída registrado, **O SISTEMA DEVE** deve manter o alerta de estoque baixo desativado para esse produto. |
@@ -75,6 +75,10 @@
 | RN09 | Orientado a evento | **QUANDO** uma venda for paga em Dinheiro, PIX ou Cartão de Débito, o sistema deve gerar lançamento imediato no fluxo de caixa. |
 | RN10 | Orientado a evento | **QUANDO** uma venda for paga (total ou parcialmente) em Cartão de Crédito, o sistema deve gerar uma ou mais contas a receber com vencimento futuro. |
 | RN12 | Orientado a evento | **QUANDO** uma venda for registrada, o sistema deve disparar a baixa de estoque dos itens envolvidos e o(s) lançamento(s) correspondente(s) no Financeiro. |
+| RF65 | Comportamento indesejado | **SE** um usuário sem papel de Dono ou Gerente (e sem permissão granular) tentar cancelar uma venda, **ENTÃO** o sistema deve impedir a ação; **QUANDO** um usuário autorizado cancelar uma venda, o sistema deve exigir o motivo e registrar quem cancelou e quando. |
+| RN25 | Orientado a evento | **QUANDO** uma venda for cancelada, o sistema deve, em uma única transação, marcá-la como Cancelada, devolver o estoque dos produtos e materiais, cancelar as contas a receber abertas e estornar os valores já recebidos (exceto o crédito de troca), removendo-a do RBT12, do faturamento e do CMV%. |
+| RF66 | Feature opcional | **ONDE** o operador optar por troca no cancelamento, o sistema deve registrar uma nova venda vinculada à original com itens de valor total menor ou igual ao original e reembolsar a diferença na forma escolhida. |
+| RN26 | Comportamento indesejado | **SE** o crédito de troca solicitado for maior que o valor da venda original já recebido no caixa, **ENTÃO** o sistema deve limitar o crédito a esse valor e exigir que o restante da nova venda seja pago por outra forma. |
 | RN11 | Orientado a evento | **QUANDO** um pagamento em cartão de crédito for parcelado, o sistema deve dividir o valor igualmente entre as parcelas, arredondando em centavos e somando a diferença à 1ª parcela, sem descontar taxa de maquininha. |
 
 ---
@@ -91,6 +95,7 @@
 | RN14 | Orientado a estado | **ENQUANTO** uma conta a receber de cartão de crédito não tiver sido recebida, o sistema deve manter esse valor fora do saldo de caixa atual. |
 | RN13 | Orientado a evento | **QUANDO** um lançamento ou conta a receber for gerado automaticamente por uma venda, o sistema deve classificá-lo na categoria Vendas. |
 | RN22 | Orientado a evento | **QUANDO** o usuário registrar um pagamento ou recebimento (total ou parcial) de uma conta, o sistema deve gerar um lançamento no fluxo de caixa vinculado à conta, com a categoria da conta, e atualizar o status da conta. |
+| RF67 | Orientado a evento | **QUANDO** um novo mês iniciar, o sistema deve gerar uma conta a pagar para cada despesa fixa ativa (e para o DAS, se MEI), com vencimento e categoria definidos na despesa, sem duplicar contas do mesmo mês. |
 
 ---
 
@@ -103,7 +108,7 @@
 | RF36 | Orientado a evento | **QUANDO** o usuário iniciar o cálculo de preço de um item, o sistema deve sugerir a margem padrão da categoria do item (tabela parametrizável inicializada com os percentuais de presunção da Lei 9.249/1995), permitindo edição pelo usuário. |
 | RF37 | Orientado a evento | **QUANDO** o usuário utilizar a Calculadora de Precificação, o sistema deve exibir o regime tributário do negócio (obtido no cadastro) para conferência. |
 | RF38 | Complexo (Estado + Evento) | **ENQUANTO** o negócio for do Simples Nacional, **QUANDO** o cálculo de preço for solicitado, o sistema deve calcular a alíquota efetiva pelo Anexo do negócio e pelo RBT12: (RBT12 × Alíquota nominal − Parcela a deduzir) ÷ RBT12. |
-| RF39 | Ubíquo | O sistema deve calcular automaticamente o RBT12 somando o valor total de todas as vendas registradas nos últimos 12 meses, independentemente da forma de pagamento ou do recebimento. |
+| RF39 | Ubíquo | O sistema deve calcular automaticamente o RBT12 somando o valor total de todas as vendas não canceladas registradas nos últimos 12 meses, independentemente da forma de pagamento ou do recebimento. |
 | RF40 | Orientado a evento | **QUANDO** o cálculo de preço for concluído, o sistema deve exibir o resultado ao usuário e aguardar confirmação explícita antes de salvar o valor como preço de venda oficial. |
 | RF41 | Orientado a evento | **QUANDO** um novo preço for confirmado pelo usuário, o sistema deve registrar essa alteração no histórico de preços do produto/serviço. |
 | RN16 | Orientado a evento | **QUANDO** um novo preço for confirmado, o sistema deve criar um novo registro de histórico, preservando todos os registros anteriores. |
@@ -136,6 +141,7 @@
 | RF57 | Orientado a estado | **ENQUANTO** o faturamento bruto do mês for menor que o PE, o sistema deve exibir o semáforo em Vermelho; **ENQUANTO** estiver entre o PE e a Meta, em Amarelo; **ENQUANTO** for maior ou igual à Meta, em Verde. Sem margem meta configurada, o sistema deve indicar apenas a posição em relação ao PE e solicitar a configuração da meta. |
 | RF62 | Complexo (Evento + Estado) | **QUANDO** uma venda for registrada, o sistema deve gravar o custo unitário de cada item vendido; **ENQUANTO** o negócio não possuir histórico de vendas, o sistema deve usar o CMV% estimado informado pelo usuário no lugar do CMV% apurado. |
 | RF63 | Orientado a estado | **ENQUANTO** o usuário for Colaborador, o sistema deve exibir no Dashboard apenas vendas do dia e alertas de estoque baixo, ocultando saldo em caixa, semáforo, ponto de equilíbrio e gráficos de faturamento. |
+| RF68 | Orientado a estado | **ENQUANTO** o usuário for Dono ou Gerente, o sistema deve exibir a projeção de caixa dos próximos 6 meses: saldo atual + contas a receber abertas − contas a pagar abertas por mês, usando as despesas fixas ativas para meses sem contas geradas. |
 
 ---
 
@@ -145,7 +151,7 @@
 |---|---|---|
 | RF45 | Ubíquo | O sistema deve diferenciar as funcionalidades disponíveis no plano gratuito das disponíveis exclusivamente no plano pago. |
 | RF46 | Ubíquo | O sistema deve permitir uso ilimitado de produtos, vendas e lançamentos financeiros para negócios no plano gratuito. |
-| RF47 | Feature opcional | **ONDE** o negócio estiver no plano pago, o sistema deve disponibilizar relatórios avançados e gestão de múltiplos colaboradores. |
+| RF47 | Complexo (Opcional + Indesejado) | **ONDE** o negócio estiver no plano pago, o sistema deve disponibilizar relatórios avançados e gestão de múltiplos colaboradores; **SE** um negócio do plano gratuito tentar convidar um segundo colaborador, **ENTÃO** o sistema deve exigir o upgrade para o plano pago. |
 | RN18 | Comportamento indesejado | **SE** um negócio do plano gratuito atingir qualquer volume de produtos, vendas ou lançamentos, **ENTÃO** o sistema não deve bloquear novos registros por esse motivo, restringindo apenas funcionalidades exclusivas do plano pago. |
 
 ---
@@ -158,6 +164,7 @@
 | RNF02 | Ubíquo | O sistema deve isolar logicamente os dados de cada negócio, impedindo acesso cruzado entre contas (arquitetura multi-tenant). |
 | RNF03 | Ubíquo | O sistema deve armazenar as senhas dos usuários utilizando hash seguro. |
 | RNF04 | Ubíquo | O sistema deve estar em conformidade com a LGPD, incluindo política de privacidade, consentimento explícito e mecanismos de exportação/exclusão de dados pessoais. |
+| RN27 | Orientado a evento | **QUANDO** o usuário solicitar a exclusão da conta, o sistema deve bloquear o acesso, anonimizar seus dados pessoais e os dos clientes dos negócios em que for o único Dono, e manter por 5 anos os registros fiscais e financeiros sem identificação pessoal. |
 | RNF05 | Orientado a evento | **QUANDO** houver alteração em estoque ou em preço, o sistema deve registrar um log auditável contendo data, usuário responsável e motivo (quando aplicável). |
 | RNF06 | Ubíquo | O sistema deve responder ao cálculo de precificação e do RBT12 em tempo adequado, mesmo com histórico extenso de vendas. |
 | RNF07 | Orientado a evento | **QUANDO** o usuário alternar entre negócios vinculados à sua conta, o sistema deve manter a sessão ativa. |

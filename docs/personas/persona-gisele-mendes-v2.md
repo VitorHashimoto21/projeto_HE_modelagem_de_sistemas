@@ -6,6 +6,7 @@ Gisele tem 39 anos, é microempresária e proprietária de um espaço de maquiag
 ## Objetivo
 *   **Precificação:** Precificar adequadamente os procedimentos estéticos e pacotes promocionais do salão, cobrindo o custo fixo (aluguel, água, energia) e calculando com exatidão os custos variáveis associados (kits de maquiagem, esmaltes, insumos de estética, taxas de cartão e a porcentagem de comissão das colaboradoras).
 *   **ERP (Controle de Fluxo de Caixa):** Centralizar a gestão financeira do salão em um ERP ágil, consolidando os lançamentos de vendas diárias, registrando contas a pagar a fornecedores e automatizando a apuração de lucros líquidos e repasse de comissões.
+    *   > **Nota de escopo:** no MVP, a comissão das parceiras entra na formação do preço (RF52) e o pagamento a elas é registrado como conta a pagar; o **repasse automático de comissões** está no roadmap pós-MVP (ver `VISAO_DE_NEGOCIO.md`, seção 6.1).
 
 ## Dores
 *   Incerteza se os combos promocionais criados geram lucro de verdade ou se estão consumindo as reservas de caixa do salão.

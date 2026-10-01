@@ -40,6 +40,8 @@ flowchart LR
         UC15("Gerenciar Plano do Negocio")
         UC16("Gerenciar Despesas Fixas e Parametros de Precificacao")
         UC17("Ver Semaforo e Ponto de Equilibrio")
+        UC18("Cancelar ou Trocar Venda")
+        UC19("Consultar Projecao de Caixa")
     end
 
     Dono --- UC0
@@ -61,6 +63,8 @@ flowchart LR
     Dono --- UC12a
     Dono --- UC16
     Dono --- UC17
+    Dono --- UC18
+    Dono --- UC19
 
     Gerente --- UC1
     Gerente --- UC2
@@ -77,6 +81,8 @@ flowchart LR
     Gerente --- UC12a
     Gerente --- UC16
     Gerente --- UC17
+    Gerente --- UC18
+    Gerente --- UC19
 
     Colaborador --- UC1
     Colaborador --- UC2
@@ -87,6 +93,7 @@ flowchart LR
     Colaborador --- UC14
     Colaborador -.->|extend via permissao customizada| UC10
     Colaborador -.->|extend via permissao customizada| UC12a
+    Colaborador -.->|extend via permissao customizada| UC18
 
     UC6 -.->|include| UC6a
     UC11 -.->|include| UC11a
@@ -111,4 +118,4 @@ flowchart LR
 |---|---|
 | **Dono** | Todos os casos de uso principais, incluindo Cadastrar Negócio (consulta CNPJ), Convidar Colaborador, Definir Permissões e Gerenciar Plano do Negócio (exclusivos do Dono). |
 | **Gerente** | Todos, exceto Cadastrar Negócio, Convidar Colaborador, Definir Permissões e Gerenciar Plano do Negócio. |
-| **Colaborador** | Autenticar-se, Alternar entre Negócios, Registrar Entrada/Saída de Estoque, Consultar Alertas de Estoque Baixo, Registrar Venda, Consultar Dashboard (restrito a vendas do dia e alertas de estoque — RF63; sem semáforo). Acesso a Calcular Preço de Venda e a Registrar Despesa Operacional apenas via permissão customizada (RF06). |
+| **Colaborador** | Autenticar-se, Alternar entre Negócios, Registrar Entrada/Saída de Estoque, Consultar Alertas de Estoque Baixo, Registrar Venda, Consultar Dashboard (restrito a vendas do dia e alertas de estoque — RF63; sem semáforo). Acesso a Calcular Preço de Venda, Registrar Despesa Operacional e Cancelar ou Trocar Venda apenas via permissão customizada (RF06). |
