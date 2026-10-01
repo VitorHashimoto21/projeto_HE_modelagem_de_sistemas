@@ -18,11 +18,16 @@ classDiagram
         +nome
         +regimeTributario  MEI | Simples
         +plano  Gratuito | Pago
+        +cnpj  opcional
+        +cnaePrincipal
+        +anexoSimples  I a V, so Simples
+        +atividadeMei  so MEI
         +taxaCartaoMedia
         +margemLucroMeta
         +capacidadeMensal
         +ticketMedioEstimado
         +faturamentoMensalEstimado
+        +cmvEstimado
     }
 
     class DespesaFixa {
@@ -59,7 +64,7 @@ classDiagram
         <<abstrato>>
         +nome
         +custo
-        +precoAtual
+        +precoAtual  opcional, sem preco nao vende
         +comissaoPercentual  opcional
     }
 
@@ -86,6 +91,7 @@ classDiagram
 
     class HistoricoPreco {
         +preco
+        +origem  Calculadora | Manual
         +margemAplicada
         +despesasFixasPercentual
         +despesasVariaveisPercentual
@@ -106,6 +112,7 @@ classDiagram
     class ItemVenda {
         +quantidade
         +precoUnitarioNaVenda
+        +custoUnitarioNaVenda
     }
 
     class Pagamento {
@@ -118,7 +125,6 @@ classDiagram
         +numero
         +valor
         +vencimento
-        +status  Pendente | Pago | Parcial
     }
 
     class LancamentoFinanceiro {
@@ -126,11 +132,12 @@ classDiagram
         +categoria  Vendas | Fornecedores | Impostos | Salario | Outros
         +valor
         +data
-        +origem  Venda | Manual
+        +origem  Venda | Conta | Manual
     }
 
     class ContaPagarReceber {
         +tipo  Pagar | Receber
+        +categoria
         +valorTotal
         +valorPago
         +vencimento
@@ -163,6 +170,7 @@ classDiagram
 
     Venda "1" --> "N" LancamentoFinanceiro : dispara
     Parcela "1" --> "1" ContaPagarReceber : origina
+    ContaPagarReceber "1" --> "N" LancamentoFinanceiro : quitada por
 ```
 
 ### Notas de regras de negócio ligadas ao modelo
@@ -174,7 +182,11 @@ classDiagram
 | `MaterialServico` | Quantidade sugerida automaticamente como 1, editável pelo usuário (RF13). |
 | `HistoricoPreco` | Cada novo registro representa uma confirmação explícita do usuário; o mais recente é o `precoAtual` do `Item` (RN15, RN16). |
 | `Pagamento` | Dinheiro/PIX/Débito geram `LancamentoFinanceiro` imediato; Cartão de Crédito gera `Parcela(s)` → `ContaPagarReceber` (RN09, RN10). |
-| `Parcela` | Vencimentos gerados mensalmente a partir da data da `Venda`, limitado a 12 parcelas (RF27, RF28). |
+| `Parcela` | Vencimentos gerados mensalmente a partir da data da `Venda`, limitado a 12 parcelas (RF27, RF28); diferença de centavos na 1ª parcela (RN11). Não tem status próprio: a situação é a da `ContaPagarReceber` (RN22). |
+| `ContaPagarReceber` | Cada pagamento/recebimento (total ou parcial) gera um `LancamentoFinanceiro` com a categoria da conta (RN22). |
+| `Item.precoAtual` | Opcional; definido por confirmação na Calculadora ou manual, sempre com `HistoricoPreco` (RF64). Item sem preço não pode ser vendido (RN23). |
+| `ItemVenda.custoUnitarioNaVenda` | Base do CMV% usado no ponto de equilíbrio e na meta (RF55, RF56, RF62). |
+| `Negocio` (dados fiscais) | CNPJ, CNAE e regime obtidos da Receita (RF58); um Anexo do Simples por negócio (RN24); MEI usa DAS como despesa fixa (RF60). |
 | `DespesaFixa` | Base de Desp. Fixas% no markup (RF49) e do ponto de equilíbrio/semáforo do Dashboard (RF55–RF57). |
 | `Item.comissaoPercentual` | Opcional (padrão 0%); entra como despesa variável junto da taxa média de cartão do `Negocio` (RF51, RF52, RN20). |
 | `LancamentoFinanceiro` | Relação 1:N com `Venda`: pagamento misto pode gerar mais de um lançamento imediato. |
@@ -191,7 +203,14 @@ Fluxos de navegação por papel de usuário, com base nas permissões definidas 
 ```mermaid
 flowchart TD
     A[Tela de Login] -->|e-mail + senha| B[Selecionar Negocio]
-    B --> C[Dashboard - resumo do dia + semaforo de saude financeira]
+    B --> B1[Cadastrar Novo Negocio]
+    B1 --> B2{Possui CNPJ?}
+    B2 -->|Sim| B3[Consultar CNPJ na Receita - razao social, CNAE, regime]
+    B2 -->|Nao ou consulta indisponivel| B4[Preencher regime e atividade manualmente]
+    B3 --> B5[Confirmar Anexo do Simples ou atividade MEI sugeridos]
+    B4 --> B5
+    B5 --> C
+    B --> C[Dashboard - resumo do dia, saldo e semaforo de saude financeira]
 
     C --> D[Cadastro de Produto/Servico]
     D --> D1{Tipo do item?}
@@ -202,6 +221,8 @@ flowchart TD
     D4 -->|Nao| D6[Salvar Servico]
     D5 --> D6
     D2 --> D7[Salvar Produto - estoque inicial zero]
+    D6 --> D8[Definir preco oficial - Calculadora ou manual, opcional]
+    D7 --> D8
 
     C --> E[Estoque]
     E --> E1[Lista de Produtos]
@@ -212,9 +233,9 @@ flowchart TD
     C --> F[Calculadora de Precificacao]
     F --> F1[Selecionar Item]
     F1 --> F2[Definir Margem - sugerida por categoria + aviso: ganho liquido por venda]
-    F2 --> F3[Selecionar Regime Tributario]
+    F2 --> F3[Conferir regime e anexo do negocio]
     F3 --> F3a{Possui historico de vendas?}
-    F3a -->|Nao| F3b[Informar capacidade mensal e ticket medio - faturamento estimado editavel]
+    F3a -->|Nao| F3b[Informar capacidade mensal, ticket medio e CMV estimado - faturamento estimado editavel]
     F3a -->|Sim| F3c[Usar faturamento medio - RBT12]
     F3b --> F4[Ver Preco Sugerido + detalhamento + ponto de equilibrio]
     F3c --> F4
@@ -223,7 +244,7 @@ flowchart TD
     F5 -->|Nao| F1
 
     C --> G[Nova Venda]
-    G --> G1[Adicionar Itens]
+    G --> G1[Adicionar Itens - somente com preco oficial]
     G1 --> G2{Informar Cliente?}
     G2 -->|Sim| G3[Buscar/Cadastrar Cliente]
     G2 -->|Nao| G4[Selecionar Pagamento]
@@ -243,7 +264,7 @@ flowchart TD
     C --> H[Financeiro]
     H --> H1[Fluxo de Caixa]
     H --> H2[Contas a Pagar/Receber]
-    H2 --> H3[Marcar como Pago/Recebido - total ou parcial]
+    H2 --> H3[Marcar como Pago/Recebido - total ou parcial, gera lancamento no caixa]
     H --> H4[Despesas Fixas Mensais]
 
     C --> I[Configuracoes do Negocio]
@@ -273,13 +294,13 @@ flowchart TD
 ```mermaid
 flowchart TD
     A[Tela de Login] --> B[Selecionar Negocio]
-    B --> C[Dashboard restrito]
+    B --> C[Dashboard restrito - vendas do dia + alertas de estoque]
     C --> D[Estoque]
     D --> D1[Consultar Produtos]
     D --> D2[Registrar Entrada/Saida]
 
     C --> E[Nova Venda]
-    E --> E1[Adicionar Itens]
+    E --> E1[Adicionar Itens - somente com preco oficial]
     E1 --> E2[Selecionar Pagamento]
     E2 --> E3[Confirmar Venda]
     E3 --> E5{Estoque disponivel?}

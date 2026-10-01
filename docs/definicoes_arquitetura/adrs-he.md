@@ -19,6 +19,7 @@ Este documento reúne o conjunto inicial de **ADRs (Architecture Decision Record
 |**ADR-003**|Autenticação via Supabase Auth com Autorização no Backend|Alterar o mecanismo de gerenciamento de sessões e migrar credenciais registradas.|**Aceita**|
 |**ADR-004**|Parametrização Tributária em Banco de Dados e Motor de RBT12|Reescrever a lógica de cálculo de impostos e a integração do módulo financeiro.|**Aceita**|
 |**ADR-005**|Motor de Precificação Determinístico (Markup Completo) em TypeScript Puro|Reescrever o motor de cálculo, seus testes e o formato do histórico de preços.|**Aceita**|
+|**ADR-006**|Consulta de CNPJ em Base Pública da Receita via Adaptador com Fallback Manual|Trocar o provedor afeta o cadastro de negócios e a origem dos dados fiscais (CNAE, regime, anexo).|**Aceita**|
 
 ---
 
@@ -126,7 +127,7 @@ O sistema precisa proteger operações estratégicas (como alterar preços, visu
 
 ##### Decisão
 
-As faixas tributárias do MEI e do Simples Nacional serão armazenadas em tabela de parâmetros no banco de dados (`FaixaTributaria`), e o faturamento bruto dos últimos 12 meses (RBT12) será calculado via consultas agregadas temporais na tabela de vendas.
+Os parâmetros fiscais oficiais serão armazenados em tabelas de parâmetros no banco de dados, cada registro com fonte legal e data de vigência: faixas, alíquotas nominais e parcelas a deduzir por Anexo do Simples Nacional (`FaixaTributaria`), tabela CNAE → Anexo (`CnaeAnexo`), valor do DAS e limite anual do MEI (`ParametroMei`) e margens padrão por categoria baseadas nos percentuais de presunção (`MargemPadraoCategoria`). O faturamento bruto dos últimos 12 meses (RBT12) será calculado por competência, via consultas agregadas temporais na tabela `Venda` (todas as vendas, inclusive as ainda não recebidas — RN21). No Simples, a alíquota efetiva é `(RBT12 × alíquota nominal − parcela a deduzir) ÷ RBT12`, usando o Anexo do negócio (RN24); no MEI, o imposto entra como despesa fixa (DAS) e não como percentual (RF60).
 
 ##### Contexto e Problema
 
@@ -146,7 +147,7 @@ A legislação tributária brasileira passa por alterações frequentes nas faix
 * **Positivas:** Sistema flexível a mudanças fiscais; precificação precisa e automática baseada no histórico real do empreendedor.
 * **Negativas:** Exige a criação de rotinas de agregação performáticas para que o cálculo do RBT12 responda dentro do SLA do sistema (< 2 segundos).
 
-**Drivers Relacionados:** AD-RF04, AD-QA01, RF38, RF39, RN17, RNF06, RNF08.
+**Drivers Relacionados:** AD-RF04, AD-QA01, RF36, RF38, RF39, RF59, RF60, RF61, RN17, RN21, RN24, RNF06, RNF08.
 
 ---
 
@@ -181,3 +182,33 @@ A Calculadora de Precificação é o diferencial central do HE. O sistema precis
 * **Negativas:** a camada de dados precisa resolver corretamente todos os insumos (RBT12, faturamento médio ou estimado, despesas fixas) antes de chamar o motor; mudanças na *estrutura* da fórmula (não nos valores) exigem alteração de código e de testes.
 
 **Drivers Relacionados:** AD-RF04, AD-QA01, AD-QA02, RF34, RF35, RF49, RN17, RN19, RN20, RNF08.
+
+---
+
+#### ADR-006 — Consulta de CNPJ em Base Pública da Receita via Adaptador com Fallback Manual
+
+##### Decisão
+
+No cadastro do negócio, o sistema consultará o CNPJ em uma base pública derivada dos **dados abertos de CNPJ da Receita Federal** (ex.: BrasilAPI), obtendo razão social, CNAE principal e opção pelo Simples Nacional/MEI (RF58). A consulta ficará atrás de uma interface própria (adaptador `ConsultaCnpj`), de modo que o provedor possa ser trocado sem afetar o domínio. A partir do CNAE, o Anexo do Simples é sugerido pela tabela `CnaeAnexo` (ADR-004). Se a consulta falhar, ou se o usuário for autônomo sem CNPJ, os dados são preenchidos manualmente (RF59).
+
+##### Contexto e Problema
+
+O imposto embutido no preço depende do regime tributário e do Anexo do Simples do negócio, que o público-alvo (MEI e autônomos) normalmente não sabe informar. Pedir esses dados manualmente aumenta a chance de erro na precificação, que é a proposta de valor central do produto.
+
+##### Por que foi tomada
+
+1. **Precisão fiscal:** CNAE e opção pelo Simples/MEI vêm do cadastro oficial, reduzindo erro de enquadramento.
+2. **Simplicidade para o usuário:** o cadastro do negócio exige apenas o CNPJ.
+3. **Baixo custo:** os dados abertos de CNPJ são gratuitos, adequados ao modelo freemium.
+
+##### Alternativas Consideradas
+
+* **Serpro Consulta CNPJ (API oficial paga):** dados oficiais em tempo real, mas com custo por consulta e contratação; pode substituir o provedor no futuro pelo mesmo adaptador.
+* **Somente preenchimento manual:** rejeitado como caminho principal por depender de conhecimento fiscal que o público-alvo não tem; mantido como fallback.
+
+##### Consequências
+
+* **Positivas:** cadastro rápido e enquadramento fiscal mais confiável; provedor substituível.
+* **Negativas:** dependência de serviço externo (disponibilidade e defasagem dos dados abertos); necessidade de tratar falhas e permitir edição manual; a tabela CNAE → Anexo precisa ser mantida atualizada (RN17).
+
+**Drivers Relacionados:** AD-RF04, AD-RF05, RF58, RF59, RN17, RN24.

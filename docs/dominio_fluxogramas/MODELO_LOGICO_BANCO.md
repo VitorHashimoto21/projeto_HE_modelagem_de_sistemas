@@ -33,17 +33,25 @@ erDiagram
     VENDA |o--o{ LANCAMENTO_FINANCEIRO : "gera"
     PAGAMENTO ||--o{ PARCELA : "gera_se_credito"
     PARCELA |o--o| CONTA_PAGAR_RECEBER : "origina"
+    CONTA_PAGAR_RECEBER |o--o{ LANCAMENTO_FINANCEIRO : "quitada_por"
+    CNAE_ANEXO ||..o{ NEGOCIO : "sugere_anexo"
 
     NEGOCIO {
         uuid id PK
         string nome
         enum regime_tributario "MEI | SIMPLES_NACIONAL"
         enum plano "GRATUITO | PAGO"
+        string cnpj UK "opcional"
+        string razao_social
+        string cnae_principal
+        enum anexo_simples "I..V, so Simples"
+        enum atividade_mei "so MEI"
         decimal taxa_cartao_media
         decimal margem_lucro_meta
         decimal capacidade_mensal
         decimal ticket_medio_estimado
         decimal faturamento_mensal_estimado
+        decimal cmv_estimado
         datetime created_at
     }
 
@@ -78,7 +86,7 @@ erDiagram
         enum categoria "lista fixa RF11"
         string unidade_medida
         decimal custo_base
-        decimal preco_atual
+        decimal preco_atual "null = nao vendavel"
         decimal quantidade_estoque "so PRODUTO_FISICO"
         decimal estoque_minimo "opcional"
         decimal comissao_percentual "opcional"
@@ -106,6 +114,7 @@ erDiagram
         uuid item_id FK
         uuid usuario_id FK
         decimal preco
+        enum origem "CALCULADORA | MANUAL"
         decimal margem_aplicada
         decimal custo_considerado
         decimal despesas_fixas_percentual
@@ -117,14 +126,37 @@ erDiagram
 
     FAIXA_TRIBUTARIA {
         uuid id PK
-        enum regime
+        enum anexo "I..V"
         int faixa_ordem
         decimal rbt12_de
         decimal rbt12_ate
         decimal aliquota
         decimal parcela_deduzir
+        string fonte_legal
         datetime vigente_desde
         boolean ativo
+    }
+
+    CNAE_ANEXO {
+        string cnae PK
+        string descricao
+        enum anexo
+        string fonte_legal
+    }
+
+    PARAMETRO_MEI {
+        uuid id PK
+        enum atividade
+        decimal valor_das_mensal
+        decimal limite_faturamento_anual
+        string fonte_legal
+        boolean ativo
+    }
+
+    MARGEM_PADRAO_CATEGORIA {
+        enum categoria PK
+        decimal margem_padrao
+        string fonte_legal
     }
 
     DESPESA_FIXA {
@@ -149,6 +181,7 @@ erDiagram
         uuid item_id FK
         decimal quantidade
         decimal preco_unitario
+        decimal custo_unitario
     }
 
     PAGAMENTO {
@@ -165,13 +198,13 @@ erDiagram
         int numero
         decimal valor
         datetime vencimento
-        enum status "PENDENTE | PAGO | PARCIAL"
     }
 
     LANCAMENTO_FINANCEIRO {
         uuid id PK
         uuid negocio_id FK
         uuid venda_id FK "opcional"
+        uuid conta_id FK "opcional"
         enum tipo "ENTRADA | SAIDA"
         enum categoria "VENDAS | FORNECEDORES | IMPOSTOS | SALARIO | OUTROS"
         decimal valor
@@ -183,6 +216,7 @@ erDiagram
         uuid negocio_id FK
         uuid parcela_id FK "UK, opcional"
         enum tipo "PAGAR | RECEBER"
+        enum categoria
         string descricao
         decimal valor_total
         decimal valor_pago
@@ -199,7 +233,11 @@ erDiagram
 | `categoria` como enum (sem tabela `CATEGORIA`) | A lista de categorias é fixa do sistema (RF11). |
 | `MATERIAL_SERVICO` referencia `ITEM` duas vezes | `servico_id` aponta para um item `SERVICO` e `material_id` para um item `PRODUTO_FISICO` (RF12). |
 | `VENDA` 1:N `LANCAMENTO_FINANCEIRO` | Pagamento misto pode gerar mais de um lançamento imediato (RN09). |
-| `PARCELA` 1:1 `CONTA_PAGAR_RECEBER` | Cada parcela de cartão gera sua própria conta a receber com vencimento mensal (RN10, RF28). |
+| `PARCELA` 1:1 `CONTA_PAGAR_RECEBER` | Cada parcela de cartão gera sua própria conta a receber com vencimento mensal (RN10, RF28). A parcela não tem status próprio: a situação é o status da conta (RN22). |
+| `CONTA_PAGAR_RECEBER` 1:N `LANCAMENTO_FINANCEIRO` | Cada pagamento/recebimento (total ou parcial) gera um lançamento no caixa (RN22, RN14). |
+| `ITEM.preco_atual` opcional + `HISTORICO_PRECO.origem` | Preço nasce de confirmação via Calculadora ou manual (RF64); item sem preço não é vendável (RN23). |
+| `ITEM_VENDA.custo_unitario` | Custo gravado na venda para apurar o CMV% (RF62) usado no PE e na Meta (RF55, RF56). |
+| Tabelas de parâmetros fiscais (`FAIXA_TRIBUTARIA`, `CNAE_ANEXO`, `PARAMETRO_MEI`, `MARGEM_PADRAO_CATEGORIA`) | Valores oficiais parametrizáveis com fonte legal e vigência, sem `negocio_id` (globais do sistema) — RN17, RF36, RF59, RF60. |
 | Status "Atrasada" não persistido | É derivado: `vencimento < hoje` e `valor_pago < valor_total`. |
 | `DESPESA_FIXA` + parâmetros no `NEGOCIO` | Base do markup completo (RF34, RF48–RF51) e do ponto de equilíbrio/semáforo (RF55–RF57). |
 

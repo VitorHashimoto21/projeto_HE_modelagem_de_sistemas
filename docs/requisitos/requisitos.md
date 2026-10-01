@@ -31,13 +31,16 @@
 | RF02 | Um usuário deve poder cadastrar mais de um negócio (empresa) na mesma conta. |
 | RF03 | O usuário deve poder alternar entre negócios sem precisar realizar novo login (sessão única). |
 | RF04 | O dono do negócio deve poder convidar colaboradores para acessar o sistema. |
-| RF05 | O sistema deve oferecer 3 papéis fixos de acesso: **Dono** (acesso total), **Gerente** (acesso total exceto configurações) e **Colaborador** (acesso restrito a Vendas e Estoque, sem Financeiro). |
+| RF05 | O sistema deve oferecer 3 papéis fixos de acesso: **Dono** (acesso total), **Gerente** (acesso total exceto configurações) e **Colaborador** (acesso restrito a Vendas, Estoque e Dashboard restrito — RF63 —, sem Financeiro). |
 | RF06 | O dono deve poder configurar permissões granulares customizadas por módulo para um colaborador, além dos 3 papéis fixos (ex.: liberar a um Colaborador apenas o lançamento de despesas operacionais no Financeiro, sem acesso a saldo, relatórios, custos fixos ou margens). |
+| RF58 | Ao cadastrar um negócio, o sistema deve solicitar o CNPJ e consultar a base pública de CNPJ da Receita Federal para preencher automaticamente razão social, CNAE principal e opção pelo Simples Nacional/MEI (regime tributário). |
+| RF59 | A partir do CNAE principal, o sistema deve sugerir o **Anexo do Simples Nacional** do negócio (tabela oficial CNAE → Anexo) ou, para MEI, o tipo de atividade (comércio/indústria, serviços ou ambos), permitindo edição. Para autônomos sem CNPJ ou quando a consulta estiver indisponível, esses dados devem ser preenchidos manualmente. |
 
 ### Regras de Negócio
 
 - **RN01** — Todos os dados (produtos, estoque, vendas, financeiro) são isolados por negócio; um colaborador só acessa os dados do(s) negócio(s) ao qual foi convidado.
 - **RN02** — Apenas o papel Dono pode convidar/remover colaboradores e alterar permissões.
+- **RN24** — O Anexo do Simples é definido **por negócio** e aplicado a todo o faturamento (RBT12) do negócio.
 
 ---
 
@@ -50,6 +53,7 @@
 | RF07 | O sistema deve permitir cadastrar itens de dois tipos: **Produto Físico** ou **Serviço**. |
 | RF08 | O cadastro de Produto Físico deve exigir: nome, custo, unidade de medida e categoria. O estoque mínimo é opcional no cadastro (sugerido automaticamente após o 1º ciclo — RN07/RN08). A quantidade em estoque **não** faz parte do cadastro (RF14/RN03). |
 | RF09 | O cadastro de Serviço deve exigir: nome, custo, categoria, e deve perguntar se há materiais/insumos associados. |
+| RF64 | O preço de venda é **opcional** no cadastro do item. O preço oficial é definido por confirmação na Calculadora (RF40) ou por informação manual do usuário; ambos geram registro no histórico de preços, indicando a origem (Calculadora ou Manual). |
 | RF10 | Todo produto/serviço deve ter uma unidade de medida obrigatória (ex: unidade, kg, litro, hora, caixa). |
 | RF11 | Todo produto/serviço deve ter uma categoria obrigatória, escolhida de uma lista fixa do sistema: Serviços, Produtos, Alimentação, Vestuário, Beleza, Saúde, Casa, Tecnologia, Outros. |
 | RF12 | Um Serviço deve poder ter múltiplos materiais vinculados, sendo cada material um Produto Físico já cadastrado no Estoque. |
@@ -61,6 +65,7 @@
 - **RN03** — Todo Produto Físico é criado com estoque inicial igual a zero.
 - **RN04** — O tipo do item (Físico/Serviço) determina se ele participa do controle de Estoque e se pode receber materiais vinculados.
 - **RN05** — Um Serviço com materiais vinculados consome (dá baixa) automaticamente do estoque desses materiais quando o serviço é vendido.
+- **RN23** — Um item sem preço oficial confirmado não pode ser adicionado a uma venda.
 
 ---
 
@@ -96,7 +101,7 @@
 | RF23 | Uma venda deve poder conter múltiplos itens, combinando produtos físicos e/ou serviços. |
 | RF24 | O sistema deve suportar as formas de pagamento: Dinheiro, PIX, Cartão de Débito e Cartão de Crédito. |
 | RF25 | O sistema deve permitir pagamento misto em uma mesma venda (ex: parte em PIX + parte em Cartão de Crédito parcelado). |
-| RF26 | O sistema deve validar que a soma dos valores informados nas formas de pagamento é igual ao valor total da venda, bloqueando o registro caso não bata. |
+| RF26 | O sistema deve validar, na interface e novamente no servidor, que a soma dos valores informados nas formas de pagamento é igual ao valor total da venda, bloqueando o registro caso não bata. |
 | RF27 | O sistema deve permitir parcelamento no Cartão de Crédito em até 12 vezes. |
 | RF28 | As datas de vencimento das parcelas devem ser geradas automaticamente de forma mensal, a partir da data da venda. |
 
@@ -104,7 +109,7 @@
 
 - **RN09** — Pagamentos em Dinheiro, PIX ou Cartão de Débito geram lançamento imediato no fluxo de caixa (Financeiro).
 - **RN10** — Pagamentos em Cartão de Crédito (à vista ou parcelado) geram uma ou mais contas a receber com vencimento futuro, em vez de lançamento imediato.
-- **RN11** — O valor de cada parcela é o valor total dividido igualmente pelo número de parcelas, sem desconto de taxa de maquininha no MVP.
+- **RN11** — O valor de cada parcela é o valor pago no crédito dividido igualmente pelo número de parcelas, arredondado em centavos, com a diferença de arredondamento somada à **1ª parcela** (ex.: R$ 100,00 em 3x = R$ 33,34 + R$ 33,33 + R$ 33,33), sem desconto de taxa de maquininha no MVP.
 - **RN12** — Toda venda registrada dispara automaticamente: (1) baixa de estoque dos itens/materiais envolvidos e (2) lançamento(s) no Financeiro, conforme a(s) forma(s) de pagamento.
 
 ---
@@ -116,7 +121,7 @@
 | ID | Descrição |
 |---|---|
 | RF29 | O sistema deve manter um fluxo de caixa com entradas, saídas e saldo atualizado. |
-| RF30 | O sistema deve permitir o cadastro de contas a pagar e contas a receber, com data de vencimento. |
+| RF30 | O sistema deve permitir o cadastro de contas a pagar e contas a receber, com data de vencimento e categoria (RF32). Contas a receber geradas por vendas usam a categoria Vendas. |
 | RF31 | Contas a pagar/receber devem poder ser marcadas como pagas/recebidas parcialmente, mantendo o valor restante em aberto. |
 | RF32 | Lançamentos financeiros devem ser classificados em categorias fixas do sistema: Vendas, Fornecedores, Impostos, Salário, Outros. |
 | RF33 | Toda venda registrada deve gerar lançamento automático no Financeiro, sem necessidade de lançamento manual duplicado. |
@@ -125,6 +130,7 @@
 
 - **RN13** — Lançamentos gerados automaticamente por vendas usam a categoria "Vendas" por padrão.
 - **RN14** — O saldo do fluxo de caixa deve refletir apenas valores efetivamente recebidos/pagos (contas a receber futuras de cartão de crédito não entram no saldo até a data de vencimento/recebimento).
+- **RN22** — Todo pagamento ou recebimento registrado em uma conta (total ou parcial) gera um lançamento no fluxo de caixa (Entrada para conta a receber, Saída para conta a pagar), vinculado à conta e com a categoria dela. O status da conta (Aberta, Parcial, Quitada) é a única fonte de verdade sobre a situação de pagamento das parcelas de cartão.
 
 ---
 
@@ -136,9 +142,9 @@
 |---|---|
 | RF34 | O sistema deve calcular o preço de venda sugerido usando a fórmula de markup completo: **Preço = Custo Total ÷ (1 − (Desp. Fixas% + Desp. Variáveis% + Imposto% + Margem%))**. |
 | RF35 | Para Serviços com materiais vinculados, o custo utilizado no cálculo deve ser a soma do custo do serviço com o custo dos materiais vinculados (considerando a quantidade de cada material). |
-| RF36 | O sistema deve sugerir uma margem de lucro padrão de acordo com a categoria do produto/serviço, permitindo edição pelo usuário. |
-| RF37 | O sistema deve perguntar ao usuário o regime tributário (MEI ou Simples Nacional) para o cálculo de imposto embutido no preço. |
-| RF38 | O sistema deve calcular a alíquota de imposto aplicável com base em faixas de faturamento (RBT12 — Receita Bruta dos últimos 12 meses). |
+| RF36 | O sistema deve sugerir uma margem de lucro padrão de acordo com a categoria do produto/serviço, permitindo edição pelo usuário. As margens padrão ficam em tabela parametrizável por categoria, com valores iniciais baseados nos percentuais de presunção de lucro definidos pela legislação federal (Lei 9.249/1995, art. 15 — ex.: 8% comércio/indústria, 32% serviços em geral). |
+| RF37 | O sistema deve utilizar o regime tributário do negócio (MEI ou Simples Nacional), obtido no cadastro (RF58/RF59), exibindo-o na Calculadora para conferência do usuário. |
+| RF38 | Para o Simples Nacional, o sistema deve calcular a alíquota efetiva com base no Anexo do negócio e na faixa de faturamento (RBT12 — Receita Bruta dos últimos 12 meses): **Alíquota efetiva = (RBT12 × Alíquota nominal − Parcela a deduzir) ÷ RBT12**. Para o MEI, Imposto% = 0 no markup (RF60). |
 | RF39 | O RBT12 deve ser calculado automaticamente pelo sistema, somando o valor total de **todas** as vendas registradas nos últimos 12 meses (data da venda), independentemente da forma de pagamento ou de já terem sido recebidas (RN21). |
 | RF40 | O resultado do cálculo (preço sugerido) deve ser exibido ao usuário, que deve confirmar explicitamente antes de o valor ser salvo como preço de venda oficial do produto/serviço. |
 | RF41 | O sistema deve manter histórico de alterações de preço de cada produto/serviço. |
@@ -149,12 +155,14 @@
 | RF52 | O sistema deve permitir informar, de forma **opcional**, um percentual de comissão por produto/serviço (padrão 0%), utilizado como despesa variável no cálculo de preço daquele item. |
 | RF53 | A Calculadora deve exibir um aviso explícito de que a Margem% representa o ganho líquido do dono em cada venda (após custos, despesas fixas, despesas variáveis e impostos), e não o lucro total do negócio. |
 | RF54 | A Calculadora deve exibir o ponto de equilíbrio mensal do negócio (RF55) e alertar o usuário quando o faturamento estimado (RF50) estiver abaixo dele. |
+| RF60 | Para negócios MEI, o sistema deve incluir automaticamente o valor mensal do DAS (parametrizável conforme o tipo de atividade do MEI) no total de despesas fixas, e usar Imposto% = 0 no markup e no ponto de equilíbrio. |
+| RF61 | Para negócios MEI, o sistema deve alertar o usuário quando o RBT12 ultrapassar o limite anual de faturamento do MEI (valor parametrizável). |
 
 ### Regras de Negócio
 
 - **RN15** — O preço de venda usado nas vendas do sistema é sempre o último preço confirmado pelo usuário via Calculadora (ou cadastro manual), nunca um valor calculado e não confirmado.
 - **RN16** — Cada nova confirmação de preço gera um novo registro no histórico, preservando os valores anteriores.
-- **RN17** — A alíquota de imposto (MEI/Simples) deve ser parametrizável no sistema, permitindo atualização das faixas/percentuais sem alteração de código, já que a legislação pode mudar.
+- **RN17** — Os parâmetros fiscais devem ser parametrizáveis no sistema, permitindo atualização sem alteração de código, já que a legislação pode mudar: faixas, alíquotas e parcelas a deduzir por Anexo do Simples, tabela CNAE → Anexo, valores do DAS e limite anual do MEI e margens padrão por categoria. Cada parâmetro registra sua fonte legal e data de vigência.
 - **RN19** — A soma Desp. Fixas% + Desp. Variáveis% + Imposto% + Margem% deve ser menor que 100%; caso contrário, o sistema bloqueia o cálculo e informa ao usuário que o preço é inviável com os parâmetros atuais.
 - **RN20** — Despesas Variáveis% = taxa média de cartão do negócio (RF51) + comissão do item (RF52). Esses percentuais são usados **apenas** na formação do preço: no MVP não geram desconto nos lançamentos/contas a receber (RN11 permanece válida) nem repasse automático de comissão.
 - **RN21** — O RBT12 e o faturamento bruto são apurados por **regime de competência**: somam o valor total de todas as vendas registradas no período (`Venda.valorTotal`), inclusive vendas no cartão de crédito com parcelas ainda não recebidas. Diferente do saldo de caixa (RN14), que considera apenas valores efetivamente recebidos.
@@ -167,12 +175,14 @@
 
 | ID | Descrição |
 |---|---|
-| RF42 | O sistema deve exibir na tela inicial um resumo do dia: vendas do dia, saldo em caixa e alertas de estoque baixo. |
+| RF42 | O sistema deve exibir na tela inicial, para Dono e Gerente, um resumo do dia: vendas do dia, saldo em caixa e alertas de estoque baixo. |
 | RF43 | O sistema deve exibir um gráfico simples de vendas dos últimos dias/mês. |
 | RF44 | A estrutura do Dashboard deve ser pensada para comportar novos indicadores/widgets no futuro, sem redesenho completo da tela. |
-| RF55 | O sistema deve calcular e exibir o ponto de equilíbrio mensal: **PE = Total de despesas fixas mensais ÷ (1 − Imposto% − Taxa média de cartão%)**. |
-| RF56 | O sistema deve calcular o faturamento meta mensal: **Meta = Total de despesas fixas mensais ÷ (1 − Imposto% − Taxa média de cartão% − Margem meta%)**, em que a margem meta é a margem de lucro desejada informada para o negócio. |
-| RF57 | O Dashboard deve exibir um semáforo de saúde financeira comparando o faturamento bruto do mês corrente (soma de todas as vendas registradas no mês, conforme RN21) com o PE e a Meta: **Vermelho** (faturamento < PE — déficit), **Amarelo** (PE ≤ faturamento < Meta — alerta), **Verde** (faturamento ≥ Meta — saudável). |
+| RF55 | O sistema deve calcular e exibir o ponto de equilíbrio mensal: **PE = Total de despesas fixas mensais ÷ (1 − CMV% − Imposto% − Taxa média de cartão%)**. |
+| RF62 | O sistema deve calcular o **CMV%** (custo das mercadorias/insumos vendidos sobre o faturamento) como Σ (custo unitário registrado no item da venda × quantidade) ÷ faturamento bruto dos últimos 12 meses. O custo unitário de cada item (incluindo materiais de serviços) deve ser gravado no momento da venda. Sem histórico de vendas, usa-se um CMV% estimado informado pelo usuário junto da capacidade e do ticket médio (RF50). |
+| RF56 | O sistema deve calcular o faturamento meta mensal: **Meta = Total de despesas fixas mensais ÷ (1 − CMV% − Imposto% − Taxa média de cartão% − Margem meta%)**, em que a margem meta é a margem de lucro desejada informada para o negócio. |
+| RF57 | O Dashboard deve exibir um semáforo de saúde financeira comparando o faturamento bruto do mês corrente (soma de todas as vendas registradas no mês, conforme RN21) com o PE e a Meta: **Vermelho** (faturamento < PE — déficit), **Amarelo** (PE ≤ faturamento < Meta — alerta), **Verde** (faturamento ≥ Meta — saudável). Sem margem meta configurada, o semáforo indica apenas se o faturamento está abaixo ou acima do PE e solicita a configuração da meta. O semáforo é exibido apenas para Dono e Gerente. |
+| RF63 | Para o papel Colaborador, o Dashboard deve ser restrito a: vendas do dia e alertas de estoque baixo — sem saldo em caixa, semáforo, ponto de equilíbrio ou gráficos de faturamento. |
 
 ---
 
@@ -223,24 +233,27 @@
 | RN08 | Estoque mínimo sugerido automaticamente após o 1º ciclo; sobrescrevível manualmente a qualquer momento. |
 | RN09 | Dinheiro/PIX/Débito geram lançamento imediato no caixa. |
 | RN10 | Cartão de Crédito (à vista ou parcelado) gera conta(s) a receber com vencimento futuro. |
-| RN11 | Valor da parcela é o total dividido igualmente, sem desconto de taxa de maquininha no MVP. |
+| RN11 | Valor da parcela é o total dividido igualmente; diferença de centavos na 1ª parcela; sem desconto de taxa de maquininha no MVP. |
 | RN12 | Toda venda dispara baixa de estoque + lançamento financeiro automaticamente. |
 | RN13 | Lançamentos automáticos de venda usam a categoria "Vendas". |
 | RN14 | Saldo de caixa reflete apenas valores já recebidos/pagos, não contas a receber futuras. |
 | RN15 | Preço de venda oficial é sempre o último preço confirmado pelo usuário. |
 | RN16 | Toda confirmação de novo preço gera registro em histórico. |
-| RN17 | Alíquotas de MEI/Simples são parametrizáveis, não fixas em código. |
+| RN17 | Parâmetros fiscais (faixas por Anexo, CNAE → Anexo, DAS e limite do MEI, margens padrão) são parametrizáveis, com fonte legal e vigência. |
 | RN18 | Limitação do plano Freemium é por funcionalidade, nunca por volume de uso. |
 | RN19 | Soma de Desp. Fixas% + Desp. Variáveis% + Imposto% + Margem% deve ser < 100%; senão o cálculo é bloqueado. |
 | RN20 | Taxa de cartão e comissão entram só na formação do preço; não descontam lançamentos nem geram repasse no MVP. |
 | RN21 | RBT12 e faturamento bruto somam todas as vendas registradas no período (competência), inclusive as ainda não recebidas. |
+| RN22 | Todo pagamento/recebimento de conta (total ou parcial) gera lançamento no caixa; o status da conta é a fonte única de verdade. |
+| RN23 | Item sem preço oficial confirmado não pode ser vendido. |
+| RN24 | O Anexo do Simples é definido por negócio e aplicado a todo o faturamento. |
 
 ---
 
 ## Próximos Passos Técnicos
 
-- [ ] Modelar o esquema de dados (entidades: Negócio, Usuário, Produto, Material, Estoque/Movimentação, Venda, ItemVenda, Pagamento, Parcela, LançamentoFinanceiro, HistóricoPreço, DespesaFixa, FaixaTributaria).
-- [ ] Especificar as faixas de alíquota vigentes do MEI e do Simples Nacional para parametrização inicial (RNF08 / RN17).
+- [ ] Carregar os parâmetros fiscais oficiais vigentes para a parametrização inicial (RNF08 / RN17): faixas e parcelas a deduzir dos Anexos I a V (LC 123/2006), tabela CNAE → Anexo (Resolução CGSN 140/2018), valores do DAS e limite anual do MEI, percentuais de presunção (Lei 9.249/1995, art. 15).
+- [ ] Avaliar o tratamento do **Fator R** (Anexo III × V) e de negócios com receitas de atividades em anexos diferentes — pela LC 123/2006 cada receita é tributada no seu anexo, com o RBT12 global; o MVP adota um anexo por negócio (RN24).
 - [ ] Detalhar wireframes das telas de: cadastro de produto/serviço, registro de venda (com pagamento misto), calculadora de precificação e dashboard.
 - [ ] Definir a matriz de permissões granulares por módulo (RF06) para o papel customizado.
-- [ ] Validar com o time de negócio a lista de categorias e margens padrão sugeridas por categoria (RF36).
+- [ ] Validar com o time de negócio o mapeamento categoria → percentual de presunção usado como margem padrão inicial (RF36).

@@ -14,6 +14,7 @@ flowchart LR
 
     subgraph Sistema["Sistema: ERP + Calculadora de Precificacao"]
         direction TB
+        UC0("Cadastrar Negocio - consulta CNPJ")
         UC1("Autenticar-se")
         UC2("Alternar entre Negocios")
         UC3("Convidar Colaborador")
@@ -38,8 +39,10 @@ flowchart LR
         UC14("Consultar Dashboard")
         UC15("Gerenciar Plano do Negocio")
         UC16("Gerenciar Despesas Fixas e Parametros de Precificacao")
+        UC17("Ver Semaforo e Ponto de Equilibrio")
     end
 
+    Dono --- UC0
     Dono --- UC1
     Dono --- UC2
     Dono --- UC3
@@ -57,6 +60,7 @@ flowchart LR
     Dono --- UC15
     Dono --- UC12a
     Dono --- UC16
+    Dono --- UC17
 
     Gerente --- UC1
     Gerente --- UC2
@@ -72,6 +76,7 @@ flowchart LR
     Gerente --- UC14
     Gerente --- UC12a
     Gerente --- UC16
+    Gerente --- UC17
 
     Colaborador --- UC1
     Colaborador --- UC2
@@ -90,7 +95,6 @@ flowchart LR
     UC11a -.->|extend se Credito| UC11b
     UC10 -.->|extend| UC10a
     UC10a -.->|include| UC10b
-    UC14 -.->|include| UC14a("Ver Semaforo e Ponto de Equilibrio")
 ```
 
 ## Legenda
@@ -105,6 +109,6 @@ flowchart LR
 
 | Ator | Casos de uso |
 |---|---|
-| **Dono** | Todos os casos de uso principais, incluindo Convidar Colaborador, Definir Permissões e Gerenciar Plano do Negócio (exclusivos do Dono). |
-| **Gerente** | Todos, exceto Convidar Colaborador, Definir Permissões e Gerenciar Plano do Negócio. |
-| **Colaborador** | Autenticar-se, Alternar entre Negócios, Registrar Entrada/Saída de Estoque, Consultar Alertas de Estoque Baixo, Registrar Venda, Consultar Dashboard. Acesso a Calcular Preço de Venda e a Registrar Despesa Operacional apenas via permissão customizada (RF06). |
+| **Dono** | Todos os casos de uso principais, incluindo Cadastrar Negócio (consulta CNPJ), Convidar Colaborador, Definir Permissões e Gerenciar Plano do Negócio (exclusivos do Dono). |
+| **Gerente** | Todos, exceto Cadastrar Negócio, Convidar Colaborador, Definir Permissões e Gerenciar Plano do Negócio. |
+| **Colaborador** | Autenticar-se, Alternar entre Negócios, Registrar Entrada/Saída de Estoque, Consultar Alertas de Estoque Baixo, Registrar Venda, Consultar Dashboard (restrito a vendas do dia e alertas de estoque — RF63; sem semáforo). Acesso a Calcular Preço de Venda e a Registrar Despesa Operacional apenas via permissão customizada (RF06). |

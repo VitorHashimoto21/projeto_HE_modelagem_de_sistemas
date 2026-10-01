@@ -33,6 +33,7 @@ Um requisito, regra ou restrição entra neste documento quando atende a pelo me
 |**AD-QA04**|Qualidade|Interface web única e responsiva para múltiplos dispositivos (RNF01)|Construção de interface em componentes reativos (TailwindCSS/shadcn/ui) adaptáveis a mobile e desktop.|Média|
 |**AD-QA05**|Negócio|Modelo Freemium limitado por funcionalidade sem restrição de volume (RF45-RF47, RN18)|Guardas de acesso por plano no backend sem travas de contagem de registros no banco.|Média|
 |**AD-CEN01**|Cenário|Venda de serviço composto por múltiplos materiais de estoque (RF12, RN05)|Baixa iterativa transacional de múltiplos itens no estoque ao fechar uma venda.|Alta|
+|**AD-RF05**|Requisito|Cadastro fiscal do negócio pela consulta de CNPJ na base pública da Receita, com sugestão de Anexo pelo CNAE e fallback manual (RF58, RF59, RN24)|Adaptador de integração externa isolado do domínio (ADR-006) e tabelas oficiais parametrizadas (ADR-004).|Alta|
 |**AD-CEN02**|Cenário|Venda realizada com quantidade de estoque insuficiente (RF18, RN06)|O sistema deve bloquear a conclusão da venda, notificando o usuário sobre a indisponibilidade física do item para evitar pedidos com estoque falso e problemas de sincronia.|Alta|
 
 ---
@@ -62,7 +63,7 @@ O ato de registrar uma venda envolve múltiplos subsistemas (Estoque, Contas a R
 
 A Calculadora de Precificação não pode utilizar valores fixos de alíquotas (*hardcoded*) nem exigir que o usuário conheça os percentuais do Simples Nacional ou MEI.
 
-* **Entidades Afetadas:** `Item`, `MaterialServico`, `HistoricoPreco`, `FaixaTributaria`, `DespesaFixa`, `Negocio` (parâmetros de precificação).
+* **Entidades Afetadas:** `Item`, `MaterialServico`, `HistoricoPreco`, `FaixaTributaria`, `CnaeAnexo`, `ParametroMei`, `MargemPadraoCategoria`, `DespesaFixa`, `ItemVenda` (custo unitário para o CMV%), `Negocio` (dados fiscais e parâmetros de precificação).
 * **Regras Vinculadas:** RF34 ao RF41, RF48 ao RF54, RN15, RN17, RN19, RN20 e RNF08.
 * **Decisão que o driver força:** As faixas e alíquotas de imposto devem ser armazenadas em tabelas de configuração editáveis no banco de dados. O cálculo do RBT12 deve realizar agregação dinâmica da receita bruta dos últimos 12 meses filtrada por `NegocioID`. O motor aplica `Preço = Custo Total ÷ (1 − (Desp. Fixas% + Desp. Variáveis% + Imposto% + Margem%))` como função pura (ADR-005), recebendo os percentuais já resolvidos pela camada de dados.
 
@@ -135,6 +136,7 @@ A Calculadora de Precificação não pode utilizar valores fixos de alíquotas (
 |**AD-QA01**|RNF06|—|Consultas do Prisma / Banco PostgreSQL.|
 |**AD-QA02**|RNF05|—|Tabelas `MovimentacaoEstoque` e `HistoricoPreco`.|
 |**AD-QA03**|RNF04|—|Endpoints de Exportação e Deleção de Conta.|
+|**AD-RF05**|RF58, RF59, RF60, RF61|RN17, RN24|Adaptador `ConsultaCnpj`, tabelas `CnaeAnexo` e `ParametroMei`, cadastro de `Negocio`.|
 
 ---
 

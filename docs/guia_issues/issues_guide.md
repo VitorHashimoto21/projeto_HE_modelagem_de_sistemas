@@ -82,7 +82,7 @@ Para atender ao rigor acadêmico e técnico da disciplina, as issues estão divi
 ### Issue #04 [Feature]: Autenticação, Multiempresa e Middleware de Acesso
 *   **Título:** `[US01] Autenticação via Supabase Auth, Seleção de Negócio e Middleware de Proteção`
 *   **Tipo/Label:** `feature`
-*   **Requisitos Mapeados:** RF01, RF02, RF03, RF04, RF05, RF06, RN01, RN02, RNF07
+*   **Requisitos Mapeados:** RF01, RF02, RF03, RF04, RF05, RF06, RF58, RF59, RN01, RN02, RN24, RNF07
 *   **Descrição:**
     ```text
     Como empreendedor ou colaborador do HE,
@@ -95,6 +95,7 @@ Para atender ao rigor acadêmico e técnico da disciplina, as issues estão divi
     - [ ] Desenvolver o seletor de Negócio no Header da aplicação (RF03).
     - [ ] Implementar lógica de convite de colaboradores via e-mail.
     - [ ] Implementar controle de permissões customizadas (RF06).
+    - [ ] Implementar cadastro do negócio com consulta de CNPJ via adaptador `ConsultaCnpj` (ADR-006): razão social, CNAE, regime; sugerir Anexo pela tabela `CnaeAnexo` ou atividade MEI; fallback manual (RF58, RF59, RN24).
     ```
 *   **Critérios de Aceitação (EARS Notation):**
     *   **Orientado a Evento (RF03):** *WHEN* o usuário selecionar outro negócio vinculado à sua conta, *THE SYSTEM SHALL* alternar o contexto ativo mantendo a sessão de login corrente.
@@ -106,7 +107,7 @@ Para atender ao rigor acadêmico e técnico da disciplina, as issues estão divi
 ### Issue #05 [Feature]: Cadastro Unificado de Itens com shadcn/ui e Server Actions
 *   **Título:** `[US02]  Cadastro de Produtos e Serviços com Associação de Materiais (Client + Server Actions)`
 *   **Tipo/Label:** `feature`
-*   **Requisitos Mapeados:** RF07, RF08, RF09, RF10, RF11, RF12, RF13, RF14, RN03, RN04
+*   **Requisitos Mapeados:** RF07, RF08, RF09, RF10, RF11, RF12, RF13, RF14, RF64, RN03, RN04, RN23
 *   **Descrição:**
     ```text
     Como gestor do negócio,
@@ -116,6 +117,7 @@ Para atender ao rigor acadêmico e técnico da disciplina, as issues estão divi
     Tarefas:
     - [ ] Criar formulários responsivos usando Tailwind e componentes shadcn/ui (RF08, RF09), sem campo de quantidade em estoque e com estoque mínimo opcional.
     - [ ] Adicionar campo opcional de comissão (%) no cadastro do item (RF52).
+    - [ ] Permitir definir o preço oficial depois do cadastro, pela Calculadora ou manualmente, sempre gravando histórico com a origem (RF64).
     - [ ] Implementar Server Actions para salvar dados no PostgreSQL via Prisma.
     - [ ] Criar componente de "Seleção de Materiais" para serviços, consumindo dados do estoque em tempo real (RF12).
     - [ ] Garantir que o Prisma inicialize a quantidade de novos produtos como zero (aplicar RN03).
@@ -156,7 +158,7 @@ Para atender ao rigor acadêmico e técnico da disciplina, as issues estão divi
 ### Issue #07 [Feature]: Fluxo de Vendas (Registros, Formas de Pagamento e Parcelamento)
 *   **Título:** `[US04] Registro de Vendas Multi-itens, Pagamentos Mistos e Agendamento de Parcelas`
 *   **Tipo/Label:** `feature`
-*   **Requisitos Mapeados:** RF22, RF22b, RF23, RF24, RF25, RF26, RF27, RF28, RN09, RN10, RN11, RN12
+*   **Requisitos Mapeados:** RF22, RF22b, RF23, RF24, RF25, RF26, RF27, RF28, RF62, RN09, RN10, RN11, RN12, RN23
 *   **Descrição:**
     ```text
     Como operador do caixa (Dono ou Colaborador),
@@ -168,7 +170,10 @@ Para atender ao rigor acadêmico e técnico da disciplina, as issues estão divi
     - [ ] Criar campos opcionais de identificação do cliente (RF22).
     - [ ] Implementar módulo de pagamentos mistos (Dinheiro, PIX, Débito e Crédito) (RF25).
     - [ ] Implementar motor matemático de parcelamento para cartão de crédito (limite de 12 parcelas, gerando vencimentos mensais futuros) (RF27, RF28).
-    - [ ] Configurar lógica que impede a finalização se a soma dos pagamentos não bater com o total da venda (RF26).
+    - [ ] Configurar lógica que impede a finalização se a soma dos pagamentos não bater com o total da venda, na interface e no servidor (RF26).
+    - [ ] Bloquear a inclusão no carrinho de itens sem preço oficial (RN23).
+    - [ ] Gravar `precoUnitario` e `custoUnitario` de cada item vendido, definidos pelo servidor (RF62).
+    - [ ] Arredondar parcelas em centavos com a diferença na 1ª parcela, com teste automatizado (ex.: R$ 100,00 em 3x = 33,34 + 33,33 + 33,33) (RN11).
     ```
 *   **Critérios de Aceitação (EARS Notation):**
     *   **Comportamento Indesejado (RF26):** *IF* a soma dos valores informados nas formas de pagamento for diferente do valor total da venda, *THEN* *THE SYSTEM SHALL* impedir a conclusão do registro da venda.
@@ -181,7 +186,7 @@ Para atender ao rigor acadêmico e técnico da disciplina, as issues estão divi
 ### Issue #08 [Feature]: Módulo Financeiro e Fluxo de Caixa (Lançamentos e Contas a Pagar/Receber)
 *   **Título:** `[US05] Gestão Financeira, Fluxo de Caixa Consolidado e Controle de Contas a Pagar/Receber`
 *   **Tipo/Label:** `feature`
-*   **Requisitos Mapeados:** RF29, RF30, RF31, RF32, RF33, RN13, RN14
+*   **Requisitos Mapeados:** RF29, RF30, RF31, RF32, RF33, RN13, RN14, RN22
 *   **Descrição:**
     ```text
     Como gestor financeiro,
@@ -191,7 +196,8 @@ Para atender ao rigor acadêmico e técnico da disciplina, as issues estão divi
     Tarefas:
     - [ ] Implementar módulo de fluxo de caixa mostrando Entradas, Saídas e Saldo Operacional consolidado (RF29).
     - [ ] Desenvolver CRUD para Contas a Pagar e Contas a Receber com datas de vencimento e categorias (RF30).
-    - [ ] Adicionar funcionalidade para registrar pagamentos ou recebimentos parciais em contas (RF31).
+    - [ ] Adicionar funcionalidade para registrar pagamentos ou recebimentos parciais em contas (RF31), gerando um lançamento no caixa vinculado à conta a cada pagamento/recebimento (RN22).
+    - [ ] Criar teste automatizado: recebimento parcial de R$ 40,00 em uma conta de R$ 100,00 gera lançamento de entrada de R$ 40,00, deixa a conta PARCIAL e o saldo de caixa sobe R$ 40,00 (RN22, RN14).
     - [ ] Vincular a gravação automática de lançamentos financeiros de categoria "Vendas" ao fechar uma venda (RF33, RN13).
     - [ ] Aplicar a regra de que transações de cartão de crédito só entram no caixa operacional na data do recebimento (RN14).
     ```
@@ -219,11 +225,14 @@ Para atender ao rigor acadêmico e técnico da disciplina, as issues estão divi
     - [ ] Adicionar parâmetro de taxa média de cartão do negócio e somar a comissão opcional do item como despesa variável (RF51, RF52, RN20).
     - [ ] Exibir aviso de que a margem é o ganho líquido por venda e alerta de faturamento estimado abaixo do ponto de equilíbrio (RF53, RF54).
     - [ ] Desenvolver lógica no Prisma para somar custos de materiais vinculados ao serviço (RF35).
-    - [ ] Desenvolver interface que solicita o regime de tributação (MEI ou Simples Nacional) (RF37).
+    - [ ] Exibir o regime e o anexo do negócio (obtidos no cadastro) para conferência na Calculadora (RF37).
+    - [ ] Calcular a alíquota efetiva do Simples pelo Anexo do negócio: (RBT12 × alíquota − parcela a deduzir) ÷ RBT12 (RF38, RN24).
+    - [ ] Para MEI: somar o DAS às despesas fixas, usar Imposto% = 0 e alertar quando o RBT12 passar do limite anual (RF60, RF61).
+    - [ ] Sugerir a margem padrão pela tabela `MargemPadraoCategoria` (percentuais de presunção) (RF36).
     - [ ] Criar motor que soma todas as vendas registradas nos últimos 12 meses (inclusive crédito não recebido), calcula o RBT12 e determina a alíquota de imposto proporcional (RF38, RF39, RN21).
     - [ ] Criar teste automatizado do RBT12: dada uma venda de R$ 1.000,00 em cartão de crédito 10x sem nenhuma parcela recebida e uma venda de R$ 500,00 em PIX, o RBT12 deve ser R$ 1.500,00 (e o saldo de caixa, R$ 500,00 — RN14). Vendas com mais de 12 meses não devem entrar na soma.
     - [ ] Implementar tela de histórico de preços para auditoria técnica (RF41, RN16).
-    - [ ] Configurar tabela de parâmetros tributários editável no banco para evitar hard-coding (RN17, RNF08).
+    - [ ] Carregar as tabelas de parâmetros fiscais oficiais com fonte legal e vigência: `FaixaTributaria` (Anexos I–V), `CnaeAnexo`, `ParametroMei`, `MargemPadraoCategoria` (RN17, RNF08).
     ```
 *   **Critérios de Aceitação (EARS Notation):**
     *   **Orientado a Evento (RF34):** *WHEN* o usuário solicitar o cálculo de preço de um item, *THE SYSTEM SHALL* calcular o preço de venda sugerido utilizando a fórmula `Preço = Custo Total ÷ (1 − (Desp. Fixas% + Desp. Variáveis% + Imposto% + Margem%))`.
@@ -238,7 +247,7 @@ Para atender ao rigor acadêmico e técnico da disciplina, as issues estão divi
 ### Issue #10 [Feature]: Dashboard de Vendas, Resumo de Caixa e Alertas Visuais do Negócio
 *   **Título:** `[US07] Dashboard Inicial, Gráficos de Histórico de Vendas e Resumo Consolidado do Dia`
 *   **Tipo/Label:** `feature`
-*   **Requisitos Mapeados:** RF42, RF43, RF44, RF55, RF56, RF57, RNF10
+*   **Requisitos Mapeados:** RF42, RF43, RF44, RF55, RF56, RF57, RF62, RF63, RNF10
 *   **Descrição:**
     ```text
     Como proprietário do negócio,
@@ -248,7 +257,10 @@ Para atender ao rigor acadêmico e técnico da disciplina, as issues estão divi
     Tarefas:
     - [ ] Implementar tela inicial com widgets rápidos: Faturamento do Dia, Saldo em Caixa e Cards de Alertas de Estoque Baixo (RF42).
     - [ ] Integrar biblioteca de gráficos (ex: Chart.js ou Plotly) para renderizar o faturamento consolidado diário/mensal (RF43).
-    - [ ] Implementar o semáforo de saúde financeira (Vermelho < ponto de equilíbrio ≤ Amarelo < faturamento meta ≤ Verde) (RF55, RF56, RF57).
+    - [ ] Calcular o CMV% pelo custo gravado nas vendas (ou o CMV% estimado, sem histórico) (RF62).
+    - [ ] Implementar o semáforo de saúde financeira (Vermelho < ponto de equilíbrio ≤ Amarelo < faturamento meta ≤ Verde), com PE e Meta descontando o CMV%; sem margem meta, mostrar só a posição frente ao PE (RF55, RF56, RF57).
+    - [ ] Criar teste automatizado do PE: despesas fixas R$ 6.000, CMV 41%, imposto 6% e taxa 3% → PE = R$ 12.000; nesse faturamento o lucro simulado deve ser zero (RF55).
+    - [ ] Implementar o Dashboard restrito do Colaborador: só vendas do dia e alertas de estoque (RF63).
     - [ ] Estruturar a arquitetura do Dashboard como uma malha modular que suporte expansão futura para novos componentes de inteligência artificial (RF44, RNF10).
     ```
 *   **Critérios de Aceitação (EARS Notation):**
