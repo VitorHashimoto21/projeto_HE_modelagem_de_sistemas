@@ -318,6 +318,7 @@ model Venda {
   lancamentos LancamentoFinanceiro[] // RN12 — 1:N: pagamento misto pode gerar mais de um lançamento imediato
 
   @@index([negocioId])
+  @@index([negocioId, data]) // AD-QA01/RN21: agregação do RBT12 e do faturamento mensal
 }
 
 model ItemVenda {

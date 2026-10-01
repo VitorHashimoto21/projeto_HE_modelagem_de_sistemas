@@ -9,6 +9,7 @@ Preço = Custo Total ÷ (1 − (Desp. Fixas% + Desp. Variáveis% + Imposto% + Ma
 
 Custo Total       = custoBase + Σ (custo do material × quantidade)          (RF35)
 Desp. Fixas%      = Σ despesas fixas mensais ÷ faturamento médio mensal     (RF49)
+RBT12             = Σ Venda.valorTotal dos últimos 12 meses — todas as vendas, inclusive crédito não recebido (RF39, RN21)
 Faturamento médio = RBT12 ÷ meses com vendas (até 12)
                     sem histórico → faturamento estimado (capacidade × ticket médio, editável) (RF50)
 Desp. Variáveis%  = taxa média de cartão do negócio + comissão do item (opcional, padrão 0%) (RF51, RF52, RN20)
@@ -37,9 +38,9 @@ sequenceDiagram
     end
 
     rect rgb(255, 240, 240)
-        note right of Action: RBT12 e faturamento médio mensal (RF39, RF49)
-        Action->>ORM: LancamentoFinanceiro.aggregate(_sum: valor, categoria: VENDAS, últimos 12 meses)
-        ORM->>DB: SELECT SUM(valor), COUNT(DISTINCT mês) FROM LancamentoFinanceiro WHERE ...
+        note right of Action: RBT12 por competência: todas as vendas, pagas ou não (RF39, RN21, RF49)
+        Action->>ORM: Venda.aggregate(_sum: valorTotal, data >= hoje − 12 meses)
+        ORM->>DB: SELECT SUM(valorTotal), COUNT(DISTINCT mês) FROM Venda WHERE negocioId = ... AND data >= ...
         DB-->>ORM: RBT12 + meses com vendas
         ORM-->>Action: RBT12 (R$), meses com vendas
         Action->>ORM: FaixaTributaria.findFirst(regime, rbt12De <= RBT12 < rbt12Ate, ativo)

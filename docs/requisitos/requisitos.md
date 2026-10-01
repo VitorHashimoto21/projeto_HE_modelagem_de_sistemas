@@ -139,7 +139,7 @@
 | RF36 | O sistema deve sugerir uma margem de lucro padrão de acordo com a categoria do produto/serviço, permitindo edição pelo usuário. |
 | RF37 | O sistema deve perguntar ao usuário o regime tributário (MEI ou Simples Nacional) para o cálculo de imposto embutido no preço. |
 | RF38 | O sistema deve calcular a alíquota de imposto aplicável com base em faixas de faturamento (RBT12 — Receita Bruta dos últimos 12 meses). |
-| RF39 | O RBT12 deve ser calculado automaticamente pelo sistema, somando as vendas já registradas no módulo Financeiro. |
+| RF39 | O RBT12 deve ser calculado automaticamente pelo sistema, somando o valor total de **todas** as vendas registradas nos últimos 12 meses (data da venda), independentemente da forma de pagamento ou de já terem sido recebidas (RN21). |
 | RF40 | O resultado do cálculo (preço sugerido) deve ser exibido ao usuário, que deve confirmar explicitamente antes de o valor ser salvo como preço de venda oficial do produto/serviço. |
 | RF41 | O sistema deve manter histórico de alterações de preço de cada produto/serviço. |
 | RF48 | O sistema deve permitir cadastrar as despesas fixas mensais do negócio (descrição e valor mensal — ex.: aluguel, energia, licenças de software, pró-labore). |
@@ -157,6 +157,7 @@
 - **RN17** — A alíquota de imposto (MEI/Simples) deve ser parametrizável no sistema, permitindo atualização das faixas/percentuais sem alteração de código, já que a legislação pode mudar.
 - **RN19** — A soma Desp. Fixas% + Desp. Variáveis% + Imposto% + Margem% deve ser menor que 100%; caso contrário, o sistema bloqueia o cálculo e informa ao usuário que o preço é inviável com os parâmetros atuais.
 - **RN20** — Despesas Variáveis% = taxa média de cartão do negócio (RF51) + comissão do item (RF52). Esses percentuais são usados **apenas** na formação do preço: no MVP não geram desconto nos lançamentos/contas a receber (RN11 permanece válida) nem repasse automático de comissão.
+- **RN21** — O RBT12 e o faturamento bruto são apurados por **regime de competência**: somam o valor total de todas as vendas registradas no período (`Venda.valorTotal`), inclusive vendas no cartão de crédito com parcelas ainda não recebidas. Diferente do saldo de caixa (RN14), que considera apenas valores efetivamente recebidos.
 
 ---
 
@@ -171,7 +172,7 @@
 | RF44 | A estrutura do Dashboard deve ser pensada para comportar novos indicadores/widgets no futuro, sem redesenho completo da tela. |
 | RF55 | O sistema deve calcular e exibir o ponto de equilíbrio mensal: **PE = Total de despesas fixas mensais ÷ (1 − Imposto% − Taxa média de cartão%)**. |
 | RF56 | O sistema deve calcular o faturamento meta mensal: **Meta = Total de despesas fixas mensais ÷ (1 − Imposto% − Taxa média de cartão% − Margem meta%)**, em que a margem meta é a margem de lucro desejada informada para o negócio. |
-| RF57 | O Dashboard deve exibir um semáforo de saúde financeira comparando o faturamento bruto do mês corrente com o PE e a Meta: **Vermelho** (faturamento < PE — déficit), **Amarelo** (PE ≤ faturamento < Meta — alerta), **Verde** (faturamento ≥ Meta — saudável). |
+| RF57 | O Dashboard deve exibir um semáforo de saúde financeira comparando o faturamento bruto do mês corrente (soma de todas as vendas registradas no mês, conforme RN21) com o PE e a Meta: **Vermelho** (faturamento < PE — déficit), **Amarelo** (PE ≤ faturamento < Meta — alerta), **Verde** (faturamento ≥ Meta — saudável). |
 
 ---
 
@@ -232,6 +233,7 @@
 | RN18 | Limitação do plano Freemium é por funcionalidade, nunca por volume de uso. |
 | RN19 | Soma de Desp. Fixas% + Desp. Variáveis% + Imposto% + Margem% deve ser < 100%; senão o cálculo é bloqueado. |
 | RN20 | Taxa de cartão e comissão entram só na formação do preço; não descontam lançamentos nem geram repasse no MVP. |
+| RN21 | RBT12 e faturamento bruto somam todas as vendas registradas no período (competência), inclusive as ainda não recebidas. |
 
 ---
 

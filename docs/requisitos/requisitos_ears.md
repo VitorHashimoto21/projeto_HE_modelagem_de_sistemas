@@ -93,7 +93,7 @@
 | RF36 | Orientado a evento | **QUANDO** o usuário iniciar o cálculo de preço de um item, o sistema deve sugerir uma margem de lucro padrão de acordo com a categoria do item, permitindo edição pelo usuário. |
 | RF37 | Orientado a evento | **QUANDO** o usuário utilizar a Calculadora de Precificação, o sistema deve solicitar o regime tributário (MEI ou Simples Nacional) para o cálculo do imposto embutido no preço. |
 | RF38 | Orientado a evento | **QUANDO** o regime tributário informado exigir cálculo por faixa, o sistema deve determinar a alíquota aplicável com base no RBT12 (Receita Bruta dos últimos 12 meses). |
-| RF39 | Ubíquo | O sistema deve calcular automaticamente o RBT12 somando as vendas registradas no módulo Financeiro. |
+| RF39 | Ubíquo | O sistema deve calcular automaticamente o RBT12 somando o valor total de todas as vendas registradas nos últimos 12 meses, independentemente da forma de pagamento ou do recebimento. |
 | RF40 | Orientado a evento | **QUANDO** o cálculo de preço for concluído, o sistema deve exibir o resultado ao usuário e aguardar confirmação explícita antes de salvar o valor como preço de venda oficial. |
 | RF41 | Orientado a evento | **QUANDO** um novo preço for confirmado pelo usuário, o sistema deve registrar essa alteração no histórico de preços do produto/serviço. |
 | RF48 | Ubíquo | O sistema deve permitir o cadastro das despesas fixas mensais do negócio, com descrição e valor mensal. |
@@ -105,6 +105,7 @@
 | RF54 | Comportamento indesejado | **SE** o faturamento estimado for menor que o ponto de equilíbrio mensal, **ENTÃO** o sistema deve exibir um alerta na Calculadora. |
 | RN19 | Comportamento indesejado | **SE** a soma de Desp. Fixas% + Desp. Variáveis% + Imposto% + Margem% for maior ou igual a 100%, **ENTÃO** o sistema deve bloquear o cálculo e informar que o preço é inviável com os parâmetros atuais. |
 | RN20 | Ubíquo | O sistema deve utilizar taxa de cartão e comissão somente na formação do preço, sem descontá-las dos lançamentos financeiros nem gerar repasse automático no MVP. |
+| RN21 | Orientado a evento | **QUANDO** uma venda for registrada, inclusive com pagamento em cartão de crédito ainda não recebido, o sistema deve considerar seu valor total no RBT12 e no faturamento bruto do mês da venda. |
 | RN15 | Ubíquo | O sistema deve utilizar sempre o último preço confirmado pelo usuário como preço de venda oficial do produto/serviço nas vendas. |
 | RN17 | Ubíquo | O sistema deve manter as faixas e percentuais de alíquota de MEI e Simples Nacional como configuração parametrizável, permitindo atualização sem alteração de código. |
 

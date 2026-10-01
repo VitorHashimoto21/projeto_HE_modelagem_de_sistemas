@@ -206,6 +206,6 @@ erDiagram
 ---
 
 ## 🖼️ Imagem Exportada
-> ⚠️ A imagem abaixo foi exportada antes da revisão v3 e está **desatualizada** em relação ao diagrama acima (ainda mostra `PRODUTO_FISICO`, `SERVICO` e `CATEGORIA` como tabelas). Deve ser regerada a partir do bloco Mermaid.
+> Imagem gerada a partir do bloco Mermaid acima. Ao alterar o diagrama, regere a imagem (ex.: `npx @mermaid-js/mermaid-cli -i diagrama.mmd -o ../img/modelo_logico_bd.png`).
 
 ![Modelo Lógico de Banco de Dados](../img/modelo_logico_bd.png)

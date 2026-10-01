@@ -205,7 +205,7 @@ Para atender ao rigor acadêmico e técnico da disciplina, as issues estão divi
 ### Issue #09 [Feature]: Calculadora de Precificação Inteligente (Motor TypeScript)
 *   **Título:** `[US06] Calculadora de Precificação, Margem por Categoria e Cálculo Tributário por RBT12`
 *   **Tipo/Label:** `feature`
-*   **Requisitos Mapeados:** RF34, RF35, RF36, RF37, RF38, RF39, RF40, RF41, RF48, RF49, RF50, RF51, RF52, RF53, RF54, RN15, RN16, RN17, RN19, RN20, RNF06, RNF08
+*   **Requisitos Mapeados:** RF34, RF35, RF36, RF37, RF38, RF39, RF40, RF41, RF48, RF49, RF50, RF51, RF52, RF53, RF54, RN15, RN16, RN17, RN19, RN20, RN21, RNF06, RNF08
 *   **Descrição:**
     ```text
     Como gestor do negócio,
@@ -220,12 +220,14 @@ Para atender ao rigor acadêmico e técnico da disciplina, as issues estão divi
     - [ ] Exibir aviso de que a margem é o ganho líquido por venda e alerta de faturamento estimado abaixo do ponto de equilíbrio (RF53, RF54).
     - [ ] Desenvolver lógica no Prisma para somar custos de materiais vinculados ao serviço (RF35).
     - [ ] Desenvolver interface que solicita o regime de tributação (MEI ou Simples Nacional) (RF37).
-    - [ ] Criar motor que lê o histórico financeiro, calcula o RBT12 e determina a alíquota de imposto proporcional (RF38, RF39).
+    - [ ] Criar motor que soma todas as vendas registradas nos últimos 12 meses (inclusive crédito não recebido), calcula o RBT12 e determina a alíquota de imposto proporcional (RF38, RF39, RN21).
+    - [ ] Criar teste automatizado do RBT12: dada uma venda de R$ 1.000,00 em cartão de crédito 10x sem nenhuma parcela recebida e uma venda de R$ 500,00 em PIX, o RBT12 deve ser R$ 1.500,00 (e o saldo de caixa, R$ 500,00 — RN14). Vendas com mais de 12 meses não devem entrar na soma.
     - [ ] Implementar tela de histórico de preços para auditoria técnica (RF41, RN16).
     - [ ] Configurar tabela de parâmetros tributários editável no banco para evitar hard-coding (RN17, RNF08).
     ```
 *   **Critérios de Aceitação (EARS Notation):**
     *   **Orientado a Evento (RF34):** *WHEN* o usuário solicitar o cálculo de preço de um item, *THE SYSTEM SHALL* calcular o preço de venda sugerido utilizando a fórmula `Preço = Custo Total ÷ (1 − (Desp. Fixas% + Desp. Variáveis% + Imposto% + Margem%))`.
+    *   **Orientado a Evento (RN21):** *WHEN* uma venda for registrada, inclusive com cartão de crédito ainda não recebido, *THE SYSTEM SHALL* considerar seu valor total no RBT12 — verificado por teste automatizado.
     *   **Comportamento Indesejado (RN19):** *IF* a soma de Desp. Fixas% + Desp. Variáveis% + Imposto% + Margem% for maior ou igual a 100%, *THEN* *THE SYSTEM SHALL* bloquear o cálculo e informar que o preço é inviável.
     *   **Orientado a Estado (RF35):** *WHILE* o item calculado for um Serviço com materiais vinculados, *THE SYSTEM SHALL* somar ao custo base o custo dos materiais vinculados, considerando a quantidade configurada de cada material.
     *   **Orientado a Evento (RF40):** *WHEN* o cálculo de preço for concluído, *THE SYSTEM SHALL* exibir o resultado ao usuário e aguardar confirmação explícita antes de salvar o valor como preço de venda oficial.
