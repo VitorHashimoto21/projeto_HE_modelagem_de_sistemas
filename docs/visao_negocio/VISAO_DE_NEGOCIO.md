@@ -12,7 +12,7 @@ O projeto propõe uma aplicação web do tipo ERP simplificado, voltada para mic
 
 A validação prévia com usuários reais confirmou tanto a dor (dificuldade de precificar corretamente e falta de controle financeiro/estoque organizado) quanto a demanda por uma ferramenta unificada, mas simples — em contraste com soluções como Bling, Omie e Granatum, percebidas como caras, complexas ou voltadas para empresas de maior porte.
 
-**O prazo definido para o ciclo completo — do MVP à Versão Final (VF) — é de 6 meses.**
+**O MVP é a entrega do final do semestre letivo (2026-2): um pré-produto final, com os módulos integrados e funcionando de ponta a ponta.**
 
 ---
 
@@ -67,10 +67,13 @@ Concorrentes diretos mapeados: **Bling, Omie e Granatum**.
 
 **Funcionalidades priorizadas para o MVP:**
 - Fluxo de caixa simples — registro de entradas e saídas, com saldo atualizado.
-- Contas a pagar e a receber, com datas de vencimento.
+- Contas a pagar e a receber, com datas de vencimento; despesas fixas geram contas a pagar mensais automaticamente.
+- Projeção de caixa dos próximos 6 meses.
+- Cancelamento e troca de vendas com estorno.
 
 **Fora do MVP inicial (roadmap):**
 - Conciliação bancária / integração com PIX e bancos.
+- Repasse automático de comissão a colaboradores/parceiros (no MVP, a comissão entra apenas na formação do preço).
 
 ### 6.2 Módulo Estoque
 
@@ -85,8 +88,12 @@ Concorrentes diretos mapeados: **Bling, Omie e Granatum**.
 ### 6.3 Calculadora de Precificação
 
 **Lógica de cálculo priorizada para o MVP:**
-- Markup simples: custo + percentual de margem desejada.
+- Markup completo: **Preço = Custo Total ÷ (1 − (Despesas Fixas% + Despesas Variáveis% + Imposto% + Margem%))**.
+- Despesas fixas mensais do negócio rateadas sobre o faturamento médio (ou, para negócios novos, sobre um faturamento estimado por capacidade × ticket médio).
+- Despesas variáveis: taxa média de cartão/maquininha e comissão opcional por item.
 - Precificação com impostos do MEI/Simples Nacional embutidos no cálculo.
+- Aviso claro de que a margem é o ganho líquido do dono por venda, não o lucro total do negócio.
+- Ponto de equilíbrio e semáforo de saúde financeira (Vermelho/Amarelo/Verde) no Dashboard.
 
 **Fora do MVP inicial (roadmap):**
 - Comparação automática com preço de mercado/concorrência.
@@ -98,17 +105,21 @@ Concorrentes diretos mapeados: **Bling, Omie e Granatum**.
 
 ## 7. MVP e Cronograma
 
-**Escopo do MVP:** Financeiro básico + Estoque básico + Calculadora de Precificação, totalmente integrados entre si.
+**Escopo do MVP:** Cadastro do negócio com consulta de CNPJ + Financeiro básico + Estoque básico + Calculadora de Precificação + Dashboard com semáforo, totalmente integrados entre si.
 
-**Prazo total do projeto (MVP → Versão Final):** 6 meses.
+**Prazo:** o MVP é entregue ao final do semestre letivo (2026-2), como pré-produto final. O cronograma anterior de 6 meses (MVP → Versão Final) foi descartado por não se encaixar no calendário; a evolução após o MVP será planejada depois da entrega.
 
 Critério de sucesso do MVP definido pelo time do projeto: ter os três módulos funcionando de forma integrada e estável — a integração entre eles (não apenas a existência isolada de cada um) é o principal indicador de que o MVP cumpriu seu propósito.
 
-| Fase | Foco |
+A ordem de construção segue o Mapa de Specs (a ser gerado), entregando cada spec individualmente:
+
+| Etapa | Foco |
 |---|---|
-| Meses 1–2 | Desenvolvimento do núcleo: cadastro de produtos, Estoque básico e Financeiro básico |
-| Meses 3–4 | Calculadora de Precificação e integração completa com o Estoque |
-| Meses 5–6 | Testes de ponta a ponta, ajustes de usabilidade e preparação da Versão Final (VF) |
+| 1 | Fundação: setup, autenticação, multi-tenant e cadastro do negócio com consulta de CNPJ |
+| 2 | Catálogo de itens e Estoque |
+| 3 | Calculadora de Precificação (markup completo, parâmetros fiscais) |
+| 4 | Vendas e Financeiro (caixa, contas a pagar/receber, parcelamento) |
+| 5 | Dashboard (resumo, semáforo e ponto de equilíbrio), testes de ponta a ponta e ajustes de usabilidade |
 
 ---
 
@@ -120,7 +131,12 @@ Modelo recomendado: **Freemium com trial guiado**. Uma camada gratuita permanent
 
 **Status:** modelo validado como direção com o responsável pelo projeto; os valores de preço do plano pago ainda precisam ser definidos em uma etapa futura de precificação do próprio produto.
 
-### 8.2 Integrações Externas Priorizadas (pós-MVP)
+### 8.2 Integrações Externas
+
+**No MVP:**
+- Consulta de CNPJ na base pública da Receita Federal (razão social, CNAE, opção pelo Simples/MEI) para enquadramento fiscal automático, com preenchimento manual como alternativa.
+
+**Pós-MVP:**
 
 - Emissão de Nota Fiscal (NFS-e / MEI).
 - Pagamentos (PIX).

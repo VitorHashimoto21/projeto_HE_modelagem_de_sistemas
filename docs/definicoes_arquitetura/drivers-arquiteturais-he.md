@@ -13,7 +13,7 @@ Um requisito, regra ou restrição entra neste documento quando atende a pelo me
 1. **Obriga uma fronteira de isolamento ou integração** — como o isolamento estrito de dados entre diferentes empresas (multi-tenancy).
 2. **Define um invariante de domínio crítico** — como a garantia de que a venda dispara simultaneamente a baixa de estoque e o lançamento financeiro.
 3. **Impõe medidas de qualidade mensuráveis** — como tempo de resposta performático no cálculo do RBT12 e logs auditáveis.
-4. **Cria tensão estrutural entre dois objetivos** — como permitir vendas sem estoque suficiente sem corromper a integridade financeira e de auditoria.
+4. **Cria tensão estrutural entre dois objetivos** — como manter a agilidade do caixa (PDV) e, ao mesmo tempo, bloquear estritamente vendas sem estoque suficiente para preservar a integridade do estoque, do financeiro e da auditoria (RF18, RN06).
 
 ---
 
@@ -26,13 +26,15 @@ Um requisito, regra ou restrição entra neste documento quando atende a pelo me
 |**AD-RF01**|Requisito|Integração nativa dos três módulos: Estoque → Calculadora → Financeiro|Encadeamento de chamadas transacionais e atualização em cascata de dados.|Alta|
 |**AD-RF02**|Requisito|Controle de acesso por papéis (Dono, Gerente, Colaborador) e permissões granulares (RF05, RF06)|Middleware de autorização centralizado e guardas de execução em nível de API/Server Actions.|Alta|
 |**AD-RF03**|Requisito|Automação do fluxo de vendas: pagamentos mistos, parcelamento e baixa de estoque (RN05, RN09, RN10, RN12)|Transações distribuídas no banco de dados para estoque, contas a receber e fluxo de caixa.|Alta|
-|**AD-RF04**|Requisito|Precificação inteligente com RBT12 dinâmico e parametrização tributária (RF34-RF39, RN17, RNF08)|Motor de cálculo desacoplado do código, alimentado por agregações de histórico e tabelas dinâmicas.|Alta|
+|**AD-RF04**|Requisito|Precificação inteligente por markup completo (despesas fixas, despesas variáveis, imposto e margem), com RBT12 dinâmico e parametrização tributária (RF34-RF39, RF48-RF54, RN17, RN19, RN20, RNF08)|Motor de cálculo desacoplado do código, alimentado por agregações de histórico e tabelas dinâmicas.|Alta|
 |**AD-QA01**|Qualidade|Desempenho performático no cálculo de preços e RBT12 (RNF06)|Otimização de consultas agregadas no PostgreSQL com índices em dados temporais e de negócio.|Alta|
 |**AD-QA02**|Qualidade|Registro auditável imutável de movimentações de estoque e alterações de preço (RNF05)|Middleware de auditoria via Prisma/PostgreSQL para gravação automática de histórico sem permissão de exclusão.|Alta|
 |**AD-QA03**|Qualidade|Conformidade com LGPD para retenção, exportação e exclusão de dados (RNF04)|Serviços de exportação estruturada (JSON/CSV) e anonimização/deleção lógica de contas.|Alta|
 |**AD-QA04**|Qualidade|Interface web única e responsiva para múltiplos dispositivos (RNF01)|Construção de interface em componentes reativos (TailwindCSS/shadcn/ui) adaptáveis a mobile e desktop.|Média|
 |**AD-QA05**|Negócio|Modelo Freemium limitado por funcionalidade sem restrição de volume (RF45-RF47, RN18)|Guardas de acesso por plano no backend sem travas de contagem de registros no banco.|Média|
 |**AD-CEN01**|Cenário|Venda de serviço composto por múltiplos materiais de estoque (RF12, RN05)|Baixa iterativa transacional de múltiplos itens no estoque ao fechar uma venda.|Alta|
+|**AD-RF05**|Requisito|Cadastro fiscal do negócio pela consulta de CNPJ na base pública da Receita, com sugestão de Anexo pelo CNAE e fallback manual (RF58, RF59, RN24)|Adaptador de integração externa isolado do domínio (ADR-006) e tabelas oficiais parametrizadas (ADR-004).|Alta|
+|**AD-CEN03**|Cenário|Cancelamento e troca de venda já registrada (RF65, RF66, RN25, RN26)|Reversão transacional de estoque, contas e caixa sem apagar registros; crédito de troca limitado ao valor já recebido para não distorcer o saldo.|Alta|
 |**AD-CEN02**|Cenário|Venda realizada com quantidade de estoque insuficiente (RF18, RN06)|O sistema deve bloquear a conclusão da venda, notificando o usuário sobre a indisponibilidade física do item para evitar pedidos com estoque falso e problemas de sincronia.|Alta|
 
 ---
@@ -62,9 +64,9 @@ O ato de registrar uma venda envolve múltiplos subsistemas (Estoque, Contas a R
 
 A Calculadora de Precificação não pode utilizar valores fixos de alíquotas (*hardcoded*) nem exigir que o usuário conheça os percentuais do Simples Nacional ou MEI.
 
-* **Entidades Afetadas:** `Item`, `MaterialServico`, `HistoricoPreco`, `TabelaAliquota`.
-* **Regras Vinculadas:** RF34 ao RF41, RN15, RN17 e RNF08.
-* **Decisão que o driver força:** As faixas e alíquotas de imposto devem ser armazenadas em tabelas de configuração editáveis no banco de dados. O cálculo do RBT12 deve realizar agregação dinâmica da receita bruta dos últimos 12 meses filtrada por `NegocioID`.
+* **Entidades Afetadas:** `Item`, `MaterialServico`, `HistoricoPreco`, `FaixaTributaria`, `CnaeAnexo`, `ParametroMei`, `MargemPadraoCategoria`, `DespesaFixa`, `ItemVenda` (custo unitário para o CMV%), `Negocio` (dados fiscais e parâmetros de precificação).
+* **Regras Vinculadas:** RF34 ao RF41, RF48 ao RF54, RN15, RN17, RN19, RN20 e RNF08.
+* **Decisão que o driver força:** As faixas e alíquotas de imposto devem ser armazenadas em tabelas de configuração editáveis no banco de dados. O cálculo do RBT12 deve realizar agregação dinâmica da receita bruta dos últimos 12 meses filtrada por `NegocioID`. O motor aplica `Preço = Custo Total ÷ (1 − (Desp. Fixas% + Desp. Variáveis% + Imposto% + Margem%))` como função pura (ADR-005), recebendo os percentuais já resolvidos pela camada de dados.
 
 ---
 
@@ -116,7 +118,7 @@ A Calculadora de Precificação não pode utilizar valores fixos de alíquotas (
 
 |Tensão|Polo A|Polo B|Direção Sugerida pelos Drivers|
 |-|-|-|-|
-|**Agilidade na Venda vs. Rigor do Estoque**|Exigir estoque positivo para liberar venda.|O sistema deve impor a validação de saldo positivo como pré-condição para a venda, garantindo que o estoque digital reflita fielmente o estoque físico.|
+|**Agilidade na Venda vs. Rigor do Estoque**|Registrar a venda rapidamente no caixa, sem interrupções.|Exigir saldo suficiente de cada produto e material antes de concluir a venda (RF18, RN06).|Validar o saldo dentro da transação da venda (`prisma.$transaction`) e abortar com rollback integral quando insuficiente, exibindo o item faltante ao operador.|
 |**Agregação em Tempo Real vs. Performance**|Recalcular o RBT12 do zero em toda simulação da calculadora.|Resposta performática da interface (< 2s) (RNF06).|Criar índices compostos em `(negocio\_id, data)` na tabela de vendas para consultas agregadas rápidas.|
 |**Flexibilidade de Acesso vs. Segurança LGPD**|Dar acesso amplo a colaboradores para agilizar tarefas.|Garantir isolamento estrito de relatórios estratégicos (RN01, RN02).|Impor validação de papéis obrigatoriamente no servidor/API.|
 
@@ -131,10 +133,11 @@ A Calculadora de Precificação não pode utilizar valores fixos de alíquotas (
 |**AD-RF01**|RF08, RF09, RF33, RF35|RN05, RN12, RN13|Módulos Estoque, Precificação e Financeiro.|
 |**AD-RF02**|RF01, RF04, RF05, RF06|RN02|Tabela `MembroNegocio`, Guardas de Acesso.|
 |**AD-RF03**|RF23, RF25, RF27, RF28|RN09, RN10, RN11, RN12|Motor de Vendas e Transações Financeiras.|
-|**AD-RF04**|RF34, RF37, RF38, RF39, RF40|RN15, RN16, RN17|Calculadora de Precificação e Tabela Tributária.|
+|**AD-RF04**|RF34, RF37, RF38, RF39, RF40, RF48–RF57|RN15, RN16, RN17, RN19, RN20|Calculadora de Precificação, `FaixaTributaria`, `DespesaFixa`, Dashboard (semáforo).|
 |**AD-QA01**|RNF06|—|Consultas do Prisma / Banco PostgreSQL.|
 |**AD-QA02**|RNF05|—|Tabelas `MovimentacaoEstoque` e `HistoricoPreco`.|
 |**AD-QA03**|RNF04|—|Endpoints de Exportação e Deleção de Conta.|
+|**AD-RF05**|RF58, RF59, RF60, RF61|RN17, RN24|Adaptador `ConsultaCnpj`, tabelas `CnaeAnexo` e `ParametroMei`, cadastro de `Negocio`.|
 
 ---
 

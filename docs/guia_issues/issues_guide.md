@@ -29,7 +29,7 @@ Para atender ao rigor acadêmico e técnico da disciplina, as issues estão divi
       └── docs/ (Documentação e ADRs)
     - [ ] Criar o schema.prisma inicial com as entidades de Usuário e Negócio (Multi-tenant).
     - [ ] Garantir que o professor (niltonmack@mackenzie.br) esteja como colaborador.
-    - [ ] Subir o primeiro PR funcional com o setup inicial para a branch main.
+    - [ ] Subir o primeiro PR funcional com o setup inicial para a branch de integração `DEVELOP` (a `main` recebe apenas versões estáveis vindas da `DEVELOP`).
     ```
 *   **Critérios de Aceitação (EARS Notation) [RNF02, RNF03, RNF09]:**
     *   **Ubíquo:** *THE SYSTEM SHALL*  isolar logicamente todos os dados de negócio a nível de banco de dados, utilizando filtros de ID de Negócio em todas as queries do Prisma.
@@ -51,7 +51,7 @@ Para atender ao rigor acadêmico e técnico da disciplina, as issues estão divi
     - [ ] Bloquear merges caso o pipeline falhe ou o schema Prisma esteja inconsistente.
     ```
 *   **Critérios de Aceitação:**
-    *   **Orientado a Evento:** *WHEN* um novo Pull Request for aberto para as branches `main` ou `develop`, *THE SYSTEM SHALL* disparar automaticamente o pipeline de CI do GitHub Actions e exibir o status de sucesso/falha na tela do PR.
+    *   **Orientado a Evento:** *WHEN* um novo Pull Request for aberto para as branches `DEVELOP` ou `main`, *THE SYSTEM SHALL* disparar automaticamente o pipeline de CI do GitHub Actions e exibir o status de sucesso/falha na tela do PR.
 
 ---
 
@@ -60,12 +60,17 @@ Para atender ao rigor acadêmico e técnico da disciplina, as issues estão divi
 *   **Tipo/Label:** `documentation`
 *   **Descrição:**
     ```text
-    Escrever e versionar em `/docs/adr/` as primeiras decisões técnicas estruturais do projeto HealthEnterprise. De acordo com as especificações da disciplina, cada ADR deve conter obrigatoriamente as seções de Contexto, Decisão e Consequências.
+    Manter versionadas em `docs/definicoes_arquitetura/adrs-he.md` as decisões técnicas estruturais do projeto HealthEnterprise, junto aos drivers em `docs/definicoes_arquitetura/drivers-arquiteturais-he.md`. De acordo com as especificações da disciplina, cada ADR deve conter obrigatoriamente as seções de Contexto, Decisão, Alternativas e Consequências.
 
-    ADRs a serem criados:
-    1. ADR-01: Escolha do Framework Django e do Stack de Banco de Dados.
-    2. ADR-02: Abordagem de arquitetura Multi-tenant para isolamento das empresas (RN01).
-    3. ADR-03: Estratégia de segurança, hashing de senhas e conformidade de privacidade (LGPD).
+    ADRs registrados:
+    1. ADR-001: Framework Fullstack Next.js (App Router) + TypeScript.
+    2. ADR-002: Persistência com Prisma ORM e PostgreSQL multi-tenant lógico (RN01, RNF02).
+    3. ADR-003: Autenticação via Supabase Auth com autorização (RBAC) no backend (RF05, RF06, RN02).
+    4. ADR-004: Parametrização tributária em banco (`FaixaTributaria`) e agregação dinâmica do RBT12 (RN17, RNF08).
+    5. ADR-005: Motor de precificação determinístico (markup completo) em TypeScript puro, sem LLM (RF34).
+
+    Tarefas:
+    - [ ] Revisar os ADRs com o grupo e registrar novos ADRs quando surgir decisão de difícil reversão.
     ```
 *   **Critérios de Aceitação:**
     *   **Ubíquo:** *THE SYSTEM SHALL* disponibilizar a documentação de arquitetura na pasta `/docs` em formato Markdown perfeitamente versionado.
@@ -77,7 +82,7 @@ Para atender ao rigor acadêmico e técnico da disciplina, as issues estão divi
 ### Issue #04 [Feature]: Autenticação, Multiempresa e Middleware de Acesso
 *   **Título:** `[US01] Autenticação via Supabase Auth, Seleção de Negócio e Middleware de Proteção`
 *   **Tipo/Label:** `feature`
-*   **Requisitos Mapeados:** RF01, RF02, RF03, RF04, RF05, RF06, RN01, RN02, RNF07
+*   **Requisitos Mapeados:** RF01, RF02, RF03, RF04, RF05, RF06, RF58, RF59, RN01, RN02, RN24, RNF07
 *   **Descrição:**
     ```text
     Como empreendedor ou colaborador do HE,
@@ -90,6 +95,7 @@ Para atender ao rigor acadêmico e técnico da disciplina, as issues estão divi
     - [ ] Desenvolver o seletor de Negócio no Header da aplicação (RF03).
     - [ ] Implementar lógica de convite de colaboradores via e-mail.
     - [ ] Implementar controle de permissões customizadas (RF06).
+    - [ ] Implementar cadastro do negócio com consulta de CNPJ via adaptador `ConsultaCnpj` (ADR-006): razão social, CNAE, regime; sugerir Anexo pela tabela `CnaeAnexo` ou atividade MEI; fallback manual (RF58, RF59, RN24).
     ```
 *   **Critérios de Aceitação (EARS Notation):**
     *   **Orientado a Evento (RF03):** *WHEN* o usuário selecionar outro negócio vinculado à sua conta, *THE SYSTEM SHALL* alternar o contexto ativo mantendo a sessão de login corrente.
@@ -101,7 +107,7 @@ Para atender ao rigor acadêmico e técnico da disciplina, as issues estão divi
 ### Issue #05 [Feature]: Cadastro Unificado de Itens com shadcn/ui e Server Actions
 *   **Título:** `[US02]  Cadastro de Produtos e Serviços com Associação de Materiais (Client + Server Actions)`
 *   **Tipo/Label:** `feature`
-*   **Requisitos Mapeados:** RF07, RF08, RF09, RF10, RF11, RF12, RF13, RF14, RN03, RN04
+*   **Requisitos Mapeados:** RF07, RF08, RF09, RF10, RF11, RF12, RF13, RF14, RF64, RN03, RN04, RN23
 *   **Descrição:**
     ```text
     Como gestor do negócio,
@@ -109,13 +115,15 @@ Para atender ao rigor acadêmico e técnico da disciplina, as issues estão divi
     Para que meu custo seja calculado com exatidão no módulo de Precificação.
 
     Tarefas:
-    - [ ] Criar formulários responsivos usando Tailwind e componentes shadcn/ui (RF08, RF09).
+    - [ ] Criar formulários responsivos usando Tailwind e componentes shadcn/ui (RF08, RF09), sem campo de quantidade em estoque e com estoque mínimo opcional.
+    - [ ] Adicionar campo opcional de comissão (%) no cadastro do item (RF52).
+    - [ ] Permitir definir o preço oficial depois do cadastro, pela Calculadora ou manualmente, sempre gravando histórico com a origem (RF64).
     - [ ] Implementar Server Actions para salvar dados no PostgreSQL via Prisma.
     - [ ] Criar componente de "Seleção de Materiais" para serviços, consumindo dados do estoque em tempo real (RF12).
     - [ ] Garantir que o Prisma inicialize a quantidade de novos produtos como zero (aplicar RN03).
     ```
 *   **Critérios de Aceitação (EARS Notation):**
-    *   **Estado + Evento (RF08):** *WHILE* o tipo do item selecionado for Produto Físico, *WHEN* o usuário submeter o formulário de cadastro, *THE SYSTEM SHALL* exigir o preenchimento de nome, custo, estoque mínimo, unidade de medida e categoria.
+    *   **Estado + Evento (RF08):** *WHILE* o tipo do item selecionado for Produto Físico, *WHEN* o usuário submeter o formulário de cadastro, *THE SYSTEM SHALL* exigir o preenchimento de nome, custo, unidade de medida e categoria, aceitando estoque mínimo como campo opcional.
     *   **Estado + Evento (RF09):** *WHILE* o tipo do item selecionado for Serviço, *WHEN* o usuário submeter o formulário de cadastro, *THE SYSTEM SHALL* exigir o preenchimento de nome, custo e categoria, e deve perguntar se há materiais/insumos associados.
     *   **Orientado a Evento (RF13):** *WHEN* um material for vinculado a um Serviço, *THE SYSTEM SHALL* preencher automaticamente a quantidade padrão de 1 unidade por execução, permitindo que o usuário edite esse valor.
     *   **Orientado a Evento (RN03):** *WHEN* um Produto Físico for criado, *THE SYSTEM SHALL* inicializar seu estoque com quantidade igual a zero.
@@ -135,8 +143,8 @@ Para atender ao rigor acadêmico e técnico da disciplina, as issues estão divi
     Tarefas:
     - [ ] Implementar tela de lançamento de entrada de estoque (informando quantidade e data) (RF15).
     - [ ] Implementar formulário de baixa manual de ajuste de estoque (perda, quebra, uso interno, etc.) com motivo obrigatório (RF17).
-    - [ ] Implementar validação impeditiva (Gatekeeper) dentro da transação de venda. A Server Action deve verificar o saldo de cada item e lançar uma exceção de negócio caso a quantidade seja insuficiente, impedindo o `COMMIT` da venda. (RF16, RN05).
-    - [ ] Implementar o cálculo dinâmico de sugestão de estoque mínimo após o 1º ciclo completo (RF20, RN08).
+    - [ ] Implementar validação impeditiva (Gatekeeper) dentro da transação de venda. A Server Action deve verificar o saldo de cada item e lançar uma exceção de negócio caso a quantidade seja insuficiente, impedindo o `COMMIT` da venda (RF18, RN06).
+    - [ ] Implementar a sugestão de estoque mínimo após o 1º ciclo (1 entrada + 1 saída): ⌈consumo médio diário dos últimos 90 dias × dias de cobertura (padrão 7)⌉, com teste automatizado (ex.: 45 unidades saídas em 30 dias, cobertura 7 → mínimo 11) (RF20, RN07, RN08).
     - [ ] Adicionar indicadores visuais de estoque baixo no dashboard e no cadastro de produtos (RF19, RF21).
     ```
 *   **Critérios de Aceitação (EARS Notation):**
@@ -150,7 +158,7 @@ Para atender ao rigor acadêmico e técnico da disciplina, as issues estão divi
 ### Issue #07 [Feature]: Fluxo de Vendas (Registros, Formas de Pagamento e Parcelamento)
 *   **Título:** `[US04] Registro de Vendas Multi-itens, Pagamentos Mistos e Agendamento de Parcelas`
 *   **Tipo/Label:** `feature`
-*   **Requisitos Mapeados:** RF22, RF22b, RF23, RF24, RF25, RF26, RF27, RF28, RN09, RN10, RN11, RN12
+*   **Requisitos Mapeados:** RF22, RF22b, RF23, RF24, RF25, RF26, RF27, RF28, RF62, RF65, RF66, RN09, RN10, RN11, RN12, RN23, RN25, RN26
 *   **Descrição:**
     ```text
     Como operador do caixa (Dono ou Colaborador),
@@ -162,7 +170,13 @@ Para atender ao rigor acadêmico e técnico da disciplina, as issues estão divi
     - [ ] Criar campos opcionais de identificação do cliente (RF22).
     - [ ] Implementar módulo de pagamentos mistos (Dinheiro, PIX, Débito e Crédito) (RF25).
     - [ ] Implementar motor matemático de parcelamento para cartão de crédito (limite de 12 parcelas, gerando vencimentos mensais futuros) (RF27, RF28).
-    - [ ] Configurar lógica que impede a finalização se a soma dos pagamentos não bater com o total da venda (RF26).
+    - [ ] Configurar lógica que impede a finalização se a soma dos pagamentos não bater com o total da venda, na interface e no servidor (RF26).
+    - [ ] Bloquear a inclusão no carrinho de itens sem preço oficial (RN23).
+    - [ ] Implementar cancelamento de venda (Dono/Gerente, motivo obrigatório) em transação única: status CANCELADA, estoque devolvido (ENTRADA_ESTORNO), contas abertas canceladas e estorno do recebido (RF65, RN25).
+    - [ ] Implementar troca no cancelamento: nova venda vinculada, crédito de troca limitado ao recebido, reembolso da diferença (RF66, RN26).
+    - [ ] Criar teste automatizado: venda de R$ 100,00 em PIX trocada por item de R$ 70,00 → crédito R$ 70,00 sem lançamento, estorno de R$ 30,00, saldo final R$ 70,00 e venda original fora do RBT12 (RN25, RN26).
+    - [ ] Gravar `precoUnitario` e `custoUnitario` de cada item vendido, definidos pelo servidor (RF62).
+    - [ ] Arredondar parcelas em centavos com a diferença na 1ª parcela, com teste automatizado (ex.: R$ 100,00 em 3x = 33,34 + 33,33 + 33,33) (RN11).
     ```
 *   **Critérios de Aceitação (EARS Notation):**
     *   **Comportamento Indesejado (RF26):** *IF* a soma dos valores informados nas formas de pagamento for diferente do valor total da venda, *THEN* *THE SYSTEM SHALL* impedir a conclusão do registro da venda.
@@ -175,7 +189,7 @@ Para atender ao rigor acadêmico e técnico da disciplina, as issues estão divi
 ### Issue #08 [Feature]: Módulo Financeiro e Fluxo de Caixa (Lançamentos e Contas a Pagar/Receber)
 *   **Título:** `[US05] Gestão Financeira, Fluxo de Caixa Consolidado e Controle de Contas a Pagar/Receber`
 *   **Tipo/Label:** `feature`
-*   **Requisitos Mapeados:** RF29, RF30, RF31, RF32, RF33, RN13, RN14
+*   **Requisitos Mapeados:** RF29, RF30, RF31, RF32, RF33, RF67, RN13, RN14, RN22
 *   **Descrição:**
     ```text
     Como gestor financeiro,
@@ -185,9 +199,11 @@ Para atender ao rigor acadêmico e técnico da disciplina, as issues estão divi
     Tarefas:
     - [ ] Implementar módulo de fluxo de caixa mostrando Entradas, Saídas e Saldo Operacional consolidado (RF29).
     - [ ] Desenvolver CRUD para Contas a Pagar e Contas a Receber com datas de vencimento e categorias (RF30).
-    - [ ] Adicionar funcionalidade para registrar pagamentos ou recebimentos parciais em contas (RF31).
+    - [ ] Adicionar funcionalidade para registrar pagamentos ou recebimentos parciais em contas (RF31), gerando um lançamento no caixa vinculado à conta a cada pagamento/recebimento (RN22).
+    - [ ] Criar teste automatizado: recebimento parcial de R$ 40,00 em uma conta de R$ 100,00 gera lançamento de entrada de R$ 40,00, deixa a conta PARCIAL e o saldo de caixa sobe R$ 40,00 (RN22, RN14).
     - [ ] Vincular a gravação automática de lançamentos financeiros de categoria "Vendas" ao fechar uma venda (RF33, RN13).
     - [ ] Aplicar a regra de que transações de cartão de crédito só entram no caixa operacional na data do recebimento (RN14).
+    - [ ] Gerar automaticamente, todo mês, uma conta a pagar por despesa fixa ativa (inclusive o DAS do MEI), sem duplicar a competência (RF67).
     ```
 *   **Critérios de Aceitação (EARS Notation):**
     *   **Orientado a Evento (RF31):** *WHEN* o usuário registrar um pagamento ou recebimento parcial de uma conta, *THE SYSTEM SHALL* manter o valor restante em aberto.
@@ -199,23 +215,33 @@ Para atender ao rigor acadêmico e técnico da disciplina, as issues estão divi
 ### Issue #09 [Feature]: Calculadora de Precificação Inteligente (Motor TypeScript)
 *   **Título:** `[US06] Calculadora de Precificação, Margem por Categoria e Cálculo Tributário por RBT12`
 *   **Tipo/Label:** `feature`
-*   **Requisitos Mapeados:** RF34, RF35, RF36, RF37, RF38, RF39, RF40, RF41, RN15, RN16, RN17, RNF06, RNF08
+*   **Requisitos Mapeados:** RF34, RF35, RF36, RF37, RF38, RF39, RF40, RF41, RF48, RF49, RF50, RF51, RF52, RF53, RF54, RN15, RN16, RN17, RN19, RN20, RN21, RNF06, RNF08
 *   **Descrição:**
     ```text
     Como gestor do negócio,
-    Eu quero calcular meus preços sugeridos de venda com base em custos reais, impostos federais configuráveis e margem de lucro por categoria,
+    Eu quero calcular meus preços sugeridos de venda com base em custos reais, rateio das despesas fixas, despesas variáveis (taxa de cartão e comissão), impostos configuráveis e margem de lucro por categoria,
     Para precificar meus produtos de forma matematicamente viável e sem perdas financeiras.
 
     Tarefas:
-    - [ ] Implementar função auxiliar em TS para a fórmula Markup (Preço = Custo / (1 - Margem)) (RF34).
+    - [ ] Implementar função pura em TS para o markup completo: Preço = Custo Total ÷ (1 − (Desp. Fixas% + Desp. Variáveis% + Imposto% + Margem%)) (RF34, ADR-005), bloqueando quando a soma for ≥ 100% (RN19).
+    - [ ] Implementar CRUD de despesas fixas mensais e cálculo de Desp. Fixas% sobre o faturamento médio (RF48, RF49).
+    - [ ] Implementar estimativa de faturamento por capacidade × ticket médio para negócios sem histórico (RF50).
+    - [ ] Adicionar parâmetro de taxa média de cartão do negócio e somar a comissão opcional do item como despesa variável (RF51, RF52, RN20).
+    - [ ] Exibir aviso de que a margem é o ganho líquido por venda e alerta de faturamento estimado abaixo do ponto de equilíbrio (RF53, RF54).
     - [ ] Desenvolver lógica no Prisma para somar custos de materiais vinculados ao serviço (RF35).
-    - [ ] Desenvolver interface que solicita o regime de tributação (MEI ou Simples Nacional) (RF37).
-    - [ ] Criar motor que lê o histórico financeiro, calcula o RBT12 e determina a alíquota de imposto proporcional (RF38, RF39).
+    - [ ] Exibir o regime e o anexo do negócio (obtidos no cadastro) para conferência na Calculadora (RF37).
+    - [ ] Calcular a alíquota efetiva do Simples pelo Anexo do negócio: (RBT12 × alíquota − parcela a deduzir) ÷ RBT12 (RF38, RN24).
+    - [ ] Para MEI: somar o DAS às despesas fixas, usar Imposto% = 0 e alertar quando o RBT12 passar do limite anual (RF60, RF61).
+    - [ ] Sugerir a margem padrão pela tabela `MargemPadraoCategoria` (percentuais de presunção) (RF36).
+    - [ ] Criar motor que soma todas as vendas registradas nos últimos 12 meses (inclusive crédito não recebido), calcula o RBT12 e determina a alíquota de imposto proporcional (RF38, RF39, RN21).
+    - [ ] Criar teste automatizado do RBT12: dada uma venda de R$ 1.000,00 em cartão de crédito 10x sem nenhuma parcela recebida e uma venda de R$ 500,00 em PIX, o RBT12 deve ser R$ 1.500,00 (e o saldo de caixa, R$ 500,00 — RN14). Vendas com mais de 12 meses não devem entrar na soma.
     - [ ] Implementar tela de histórico de preços para auditoria técnica (RF41, RN16).
-    - [ ] Configurar tabela de parâmetros tributários editável no banco para evitar hard-coding (RN17, RNF08).
+    - [ ] Carregar as tabelas de parâmetros fiscais oficiais com fonte legal e vigência: `FaixaTributaria` (Anexos I–V), `CnaeAnexo`, `ParametroMei`, `MargemPadraoCategoria` (RN17, RNF08).
     ```
 *   **Critérios de Aceitação (EARS Notation):**
-    *   **Orientado a Evento (RF34):** *WHEN* o usuário solicitar o cálculo de preço de um item, *THE SYSTEM SHALL* calcular o preço de venda sugerido utilizando a fórmula `Preço = Custo ÷ (1 − Margem%)`.
+    *   **Orientado a Evento (RF34):** *WHEN* o usuário solicitar o cálculo de preço de um item, *THE SYSTEM SHALL* calcular o preço de venda sugerido utilizando a fórmula `Preço = Custo Total ÷ (1 − (Desp. Fixas% + Desp. Variáveis% + Imposto% + Margem%))`.
+    *   **Orientado a Evento (RN21):** *WHEN* uma venda for registrada, inclusive com cartão de crédito ainda não recebido, *THE SYSTEM SHALL* considerar seu valor total no RBT12 — verificado por teste automatizado.
+    *   **Comportamento Indesejado (RN19):** *IF* a soma de Desp. Fixas% + Desp. Variáveis% + Imposto% + Margem% for maior ou igual a 100%, *THEN* *THE SYSTEM SHALL* bloquear o cálculo e informar que o preço é inviável.
     *   **Orientado a Estado (RF35):** *WHILE* o item calculado for um Serviço com materiais vinculados, *THE SYSTEM SHALL* somar ao custo base o custo dos materiais vinculados, considerando a quantidade configurada de cada material.
     *   **Orientado a Evento (RF40):** *WHEN* o cálculo de preço for concluído, *THE SYSTEM SHALL* exibir o resultado ao usuário e aguardar confirmação explícita antes de salvar o valor como preço de venda oficial.
     *   **Orientado a Evento (RF41):** *WHEN* um novo preço for confirmado pelo usuário, *THE SYSTEM SHALL* registrar essa alteração no histórico de preços do produto/serviço.
@@ -225,7 +251,7 @@ Para atender ao rigor acadêmico e técnico da disciplina, as issues estão divi
 ### Issue #10 [Feature]: Dashboard de Vendas, Resumo de Caixa e Alertas Visuais do Negócio
 *   **Título:** `[US07] Dashboard Inicial, Gráficos de Histórico de Vendas e Resumo Consolidado do Dia`
 *   **Tipo/Label:** `feature`
-*   **Requisitos Mapeados:** RF42, RF43, RF44, RNF10
+*   **Requisitos Mapeados:** RF42, RF43, RF44, RF55, RF56, RF57, RF62, RF63, RF68, RNF10
 *   **Descrição:**
     ```text
     Como proprietário do negócio,
@@ -235,10 +261,16 @@ Para atender ao rigor acadêmico e técnico da disciplina, as issues estão divi
     Tarefas:
     - [ ] Implementar tela inicial com widgets rápidos: Faturamento do Dia, Saldo em Caixa e Cards de Alertas de Estoque Baixo (RF42).
     - [ ] Integrar biblioteca de gráficos (ex: Chart.js ou Plotly) para renderizar o faturamento consolidado diário/mensal (RF43).
+    - [ ] Calcular o CMV% pelo custo gravado nas vendas (ou o CMV% estimado, sem histórico) (RF62).
+    - [ ] Implementar o semáforo de saúde financeira (Vermelho < ponto de equilíbrio ≤ Amarelo < faturamento meta ≤ Verde), com PE e Meta descontando o CMV%; sem margem meta, mostrar só a posição frente ao PE (RF55, RF56, RF57).
+    - [ ] Criar teste automatizado do PE: despesas fixas R$ 6.000, CMV 41%, imposto 6% e taxa 3% → PE = R$ 12.000; nesse faturamento o lucro simulado deve ser zero (RF55).
+    - [ ] Implementar o Dashboard restrito do Colaborador: só vendas do dia e alertas de estoque (RF63).
+    - [ ] Implementar a projeção de caixa dos próximos 6 meses para Dono e Gerente (RF68).
     - [ ] Estruturar a arquitetura do Dashboard como uma malha modular que suporte expansão futura para novos componentes de inteligência artificial (RF44, RNF10).
     ```
 *   **Critérios de Aceitação (EARS Notation):**
     *   **Ubíquo (RF42):** *THE SYSTEM SHALL* exibir na tela inicial um resumo do dia contendo vendas do dia, saldo em caixa e alertas de estoque baixo.
+    *   **Orientado a Estado (RF57):** *WHILE* o faturamento bruto do mês for menor que o ponto de equilíbrio, *THE SYSTEM SHALL* exibir o semáforo em Vermelho; entre o ponto de equilíbrio e a meta, em Amarelo; igual ou acima da meta, em Verde.
 
 ---
 
@@ -256,6 +288,7 @@ Para atender ao rigor acadêmico e técnico da disciplina, as issues estão divi
     - [ ] Adicionar flag `plano_pago` ao modelo do Negócio.
     - [ ] Implementar decorações e Middleware de autorização para bloquear as rotas de Multi-Colaboradores e Relatórios Avançados para contas gratuitas (RF47).
     - [ ] Garantir que o plano gratuito continue com registros de vendas, produtos e lançamentos sem nenhuma limitação de volume (RF46, RN18).
+    - [ ] Permitir no plano gratuito o Dono + 1 colaborador; exigir upgrade a partir do 2º convite (RF47).
     - [ ] Adicionar tela de convite para upgrade de plano quando o usuário tentar usar recursos restritos.
     ```
 *   **Critérios de Aceitação (EARS Notation):**
@@ -269,7 +302,7 @@ Para atender ao rigor acadêmico e técnico da disciplina, as issues estão divi
 ### Issue #12 [Technical]: Log de Auditoria via Prisma Middleware e LGPD
 *   **Título:** `Auditoria de Estoque/Preços e Exportação de Dados LGPD`
 *   **Tipo/Label:** `security`, `technical`
-*   **Requisitos Mapeados:** RNF04, RNF05
+*   **Requisitos Mapeados:** RNF04, RNF05, RN27
 *   **Descrição:**
     ```text
     Implementar os logs de segurança para auditoria e os processos técnicos necessários para garantir que o sistema respeite integralmente os requisitos de privacidade da LGPD.
@@ -278,7 +311,7 @@ Para atender ao rigor acadêmico e técnico da disciplina, as issues estão divi
     - [ ] Implementar Prisma Middleware (ou Extension) para interceptar updates em Itens e Estoque e salvar logs na tabela de Auditoria (RNF05)
     - [ ] Implementar o termo de consentimento explícito de uso de dados no cadastro inicial.
     - [ ] Desenvolver rota exclusiva para que o usuário possa realizar o download de seus dados cadastrais (Mecanismo de Exportação de Dados em formato JSON/CSV).
-    - [ ] Desenvolver o botão de encerramento de conta, que realize a deleção lógica ou anonimização de dados pessoais identificáveis (Mecanismo de Exclusão).
+    - [ ] Desenvolver o encerramento de conta: bloquear acesso, anonimizar dados pessoais do usuário e dos clientes dos negócios em que é o único Dono, encerrar esses negócios e manter os registros fiscais/financeiros por 5 anos sem identificação (RN27).
     ```
 *   **Critérios de Aceitação (EARS Notation):**
     *   **Orientado a Evento (RNF05):** *WHEN* houver alteração em estoque ou em preço, *THE SYSTEM SHALL* registrar um log auditável contendo data, usuário responsável e motivo (quando aplicável).

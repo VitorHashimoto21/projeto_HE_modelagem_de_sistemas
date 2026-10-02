@@ -1,144 +1,135 @@
 <mxfile host="app.diagrams.net">
   <diagram name="Modelo de Dominio" id="dominio1">
-    <mxGraphModel dx="1400" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="1400" math="0" shadow="0">
+    <mxGraphModel dx="1400" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1540" pageHeight="968" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
-        <mxCell id="id3" value="Negocio" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=1;resizeParent=0;resizeParentMax=0;collapsible=0;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
-  <mxGeometry x="40" y="40" width="240" height="86" as="geometry" />
-</mxCell><mxCell id="id4" value="nome
+                <mxCell id="c2" value="Negocio" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=1;resizeParent=0;resizeParentMax=0;collapsible=0;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1"><mxGeometry x="40" y="40" width="260" height="282" as="geometry" /></mxCell>
+        <mxCell id="c3" value="nome
 regimeTributario: MEI | Simples
-plano: Gratuito | Pago" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=6;spacingRight=6;overflow=hidden;whiteSpace=wrap;" vertex="1" parent="id3">
-  <mxGeometry y="30" width="240" height="56" as="geometry" />
-</mxCell><mxCell id="id5" value="Usuario" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=1;resizeParent=0;resizeParentMax=0;collapsible=0;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
-  <mxGeometry x="300" y="40" width="240" height="86" as="geometry" />
-</mxCell><mxCell id="id6" value="nome
+plano: Gratuito | Pago
+cnpj: opcional
+cnaePrincipal
+anexoSimples: I a V, so Simples
+atividadeMei: so MEI
+diasCoberturaEstoque: padrao 7
+encerradoEm: LGPD
+taxaCartaoMedia
+margemLucroMeta
+capacidadeMensal
+ticketMedioEstimado
+faturamentoMensalEstimado
+cmvEstimado" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=6;spacingRight=6;overflow=hidden;whiteSpace=wrap;" vertex="1" parent="c2"><mxGeometry y="30" width="260" height="252" as="geometry" /></mxCell>
+        <mxCell id="c4" value="DespesaFixa" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=1;resizeParent=0;resizeParentMax=0;collapsible=0;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1"><mxGeometry x="340" y="40" width="260" height="138" as="geometry" /></mxCell>
+        <mxCell id="c5" value="descricao
+valorMensal
+diaVencimento
+categoria
+origem: Manual | DAS MEI
+ativo" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=6;spacingRight=6;overflow=hidden;whiteSpace=wrap;" vertex="1" parent="c4"><mxGeometry y="30" width="260" height="108" as="geometry" /></mxCell>
+        <mxCell id="c6" value="Usuario" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=1;resizeParent=0;resizeParentMax=0;collapsible=0;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1"><mxGeometry x="640" y="40" width="260" height="90" as="geometry" /></mxCell>
+        <mxCell id="c7" value="nome
 email
-senha" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=6;spacingRight=6;overflow=hidden;whiteSpace=wrap;" vertex="1" parent="id5">
-  <mxGeometry y="30" width="240" height="56" as="geometry" />
-</mxCell><mxCell id="id7" value="MembroNegocio" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=1;resizeParent=0;resizeParentMax=0;collapsible=0;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
-  <mxGeometry x="560" y="40" width="240" height="70" as="geometry" />
-</mxCell><mxCell id="id8" value="papel: Dono | Gerente | Colaborador
-permissoesCustomizadas" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=6;spacingRight=6;overflow=hidden;whiteSpace=wrap;" vertex="1" parent="id7">
-  <mxGeometry y="30" width="240" height="40" as="geometry" />
-</mxCell><mxCell id="id9" value="Item (abstrato)" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=1;resizeParent=0;resizeParentMax=0;collapsible=0;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
-  <mxGeometry x="820" y="40" width="240" height="102" as="geometry" />
-</mxCell><mxCell id="id10" value="nome
+senha" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=6;spacingRight=6;overflow=hidden;whiteSpace=wrap;" vertex="1" parent="c6"><mxGeometry y="30" width="260" height="60" as="geometry" /></mxCell>
+        <mxCell id="c8" value="MembroNegocio" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=1;resizeParent=0;resizeParentMax=0;collapsible=0;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1"><mxGeometry x="940" y="40" width="260" height="74" as="geometry" /></mxCell>
+        <mxCell id="c9" value="papel: Dono | Gerente | Colaborador
+permissoesCustomizadas" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=6;spacingRight=6;overflow=hidden;whiteSpace=wrap;" vertex="1" parent="c8"><mxGeometry y="30" width="260" height="44" as="geometry" /></mxCell>
+        <mxCell id="c10" value="Categoria" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=1;resizeParent=0;resizeParentMax=0;collapsible=0;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1"><mxGeometry x="1240" y="40" width="260" height="202" as="geometry" /></mxCell>
+        <mxCell id="c11" value="&lt;&lt;lista fixa&gt;&gt;
+Servicos
+Produtos
+Alimentacao
+Vestuario
+Beleza
+Saude
+Casa
+Tecnologia
+Outros" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=6;spacingRight=6;overflow=hidden;whiteSpace=wrap;" vertex="1" parent="c10"><mxGeometry y="30" width="260" height="172" as="geometry" /></mxCell>
+        <mxCell id="c12" value="Item (abstrato)" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=1;resizeParent=0;resizeParentMax=0;collapsible=0;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1"><mxGeometry x="40" y="382" width="260" height="122" as="geometry" /></mxCell>
+        <mxCell id="c13" value="nome
 custo
-precoAtual
-categoria" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=6;spacingRight=6;overflow=hidden;whiteSpace=wrap;" vertex="1" parent="id9">
-  <mxGeometry y="30" width="240" height="72" as="geometry" />
-</mxCell><mxCell id="id11" value="ProdutoFisico" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=1;resizeParent=0;resizeParentMax=0;collapsible=0;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
-  <mxGeometry x="40" y="260" width="240" height="86" as="geometry" />
-</mxCell><mxCell id="id12" value="quantidadeEstoque
+precoAtual: opcional, sem preco nao vende
+comissaoPercentual: opcional" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=6;spacingRight=6;overflow=hidden;whiteSpace=wrap;" vertex="1" parent="c12"><mxGeometry y="30" width="260" height="92" as="geometry" /></mxCell>
+        <mxCell id="c14" value="ProdutoFisico" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=1;resizeParent=0;resizeParentMax=0;collapsible=0;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1"><mxGeometry x="340" y="238" width="260" height="90" as="geometry" /></mxCell>
+        <mxCell id="c15" value="quantidadeEstoque
 estoqueMinimo
-unidadeMedida" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=6;spacingRight=6;overflow=hidden;whiteSpace=wrap;" vertex="1" parent="id11">
-  <mxGeometry y="30" width="240" height="56" as="geometry" />
-</mxCell><mxCell id="id13" value="Servico" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=1;resizeParent=0;resizeParentMax=0;collapsible=0;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
-  <mxGeometry x="300" y="260" width="240" height="54" as="geometry" />
-</mxCell><mxCell id="id14" value="unidadeMedida" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=6;spacingRight=6;overflow=hidden;whiteSpace=wrap;" vertex="1" parent="id13">
-  <mxGeometry y="30" width="240" height="24" as="geometry" />
-</mxCell><mxCell id="id15" value="MaterialServico" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=1;resizeParent=0;resizeParentMax=0;collapsible=0;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
-  <mxGeometry x="560" y="260" width="240" height="54" as="geometry" />
-</mxCell><mxCell id="id16" value="quantidade (padrao=1, editavel)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=6;spacingRight=6;overflow=hidden;whiteSpace=wrap;" vertex="1" parent="id15">
-  <mxGeometry y="30" width="240" height="24" as="geometry" />
-</mxCell><mxCell id="id17" value="MovimentacaoEstoque" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=1;resizeParent=0;resizeParentMax=0;collapsible=0;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
-  <mxGeometry x="820" y="260" width="240" height="102" as="geometry" />
-</mxCell><mxCell id="id18" value="tipo: Entrada | SaidaVenda | SaidaManual
+unidadeMedida" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=6;spacingRight=6;overflow=hidden;whiteSpace=wrap;" vertex="1" parent="c14"><mxGeometry y="30" width="260" height="60" as="geometry" /></mxCell>
+        <mxCell id="c16" value="Servico" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=1;resizeParent=0;resizeParentMax=0;collapsible=0;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1"><mxGeometry x="640" y="190" width="260" height="58" as="geometry" /></mxCell>
+        <mxCell id="c17" value="unidadeMedida" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=6;spacingRight=6;overflow=hidden;whiteSpace=wrap;" vertex="1" parent="c16"><mxGeometry y="30" width="260" height="28" as="geometry" /></mxCell>
+        <mxCell id="c18" value="MaterialServico" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=1;resizeParent=0;resizeParentMax=0;collapsible=0;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1"><mxGeometry x="940" y="174" width="260" height="58" as="geometry" /></mxCell>
+        <mxCell id="c19" value="quantidade: padrao = 1, editavel" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=6;spacingRight=6;overflow=hidden;whiteSpace=wrap;" vertex="1" parent="c18"><mxGeometry y="30" width="260" height="28" as="geometry" /></mxCell>
+        <mxCell id="c20" value="MovimentacaoEstoque" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=1;resizeParent=0;resizeParentMax=0;collapsible=0;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1"><mxGeometry x="1240" y="302" width="260" height="106" as="geometry" /></mxCell>
+        <mxCell id="c21" value="tipo: Entrada | SaidaVenda | SaidaManual | EntradaEstorno
 quantidade
 data
-motivo (obrig. se SaidaManual)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=6;spacingRight=6;overflow=hidden;whiteSpace=wrap;" vertex="1" parent="id17">
-  <mxGeometry y="30" width="240" height="72" as="geometry" />
-</mxCell><mxCell id="id19" value="HistoricoPreco" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=1;resizeParent=0;resizeParentMax=0;collapsible=0;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
-  <mxGeometry x="40" y="480" width="240" height="102" as="geometry" />
-</mxCell><mxCell id="id20" value="preco
+motivo: obrigatorio se SaidaManual" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=6;spacingRight=6;overflow=hidden;whiteSpace=wrap;" vertex="1" parent="c20"><mxGeometry y="30" width="260" height="76" as="geometry" /></mxCell>
+        <mxCell id="c22" value="HistoricoPreco" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=1;resizeParent=0;resizeParentMax=0;collapsible=0;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1"><mxGeometry x="40" y="564" width="260" height="154" as="geometry" /></mxCell>
+        <mxCell id="c23" value="preco
+origem: Calculadora | Manual
 margemAplicada
+despesasFixasPercentual
+despesasVariaveisPercentual
 impostoAplicado
-dataConfirmacao" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=6;spacingRight=6;overflow=hidden;whiteSpace=wrap;" vertex="1" parent="id19">
-  <mxGeometry y="30" width="240" height="72" as="geometry" />
-</mxCell><mxCell id="id21" value="Cliente" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=1;resizeParent=0;resizeParentMax=0;collapsible=0;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
-  <mxGeometry x="300" y="480" width="240" height="70" as="geometry" />
-</mxCell><mxCell id="id22" value="nome
-contato" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=6;spacingRight=6;overflow=hidden;whiteSpace=wrap;" vertex="1" parent="id21">
-  <mxGeometry y="30" width="240" height="40" as="geometry" />
-</mxCell><mxCell id="id23" value="Venda" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=1;resizeParent=0;resizeParentMax=0;collapsible=0;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
-  <mxGeometry x="560" y="480" width="240" height="70" as="geometry" />
-</mxCell><mxCell id="id24" value="data
-valorTotal" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=6;spacingRight=6;overflow=hidden;whiteSpace=wrap;" vertex="1" parent="id23">
-  <mxGeometry y="30" width="240" height="40" as="geometry" />
-</mxCell><mxCell id="id25" value="ItemVenda" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=1;resizeParent=0;resizeParentMax=0;collapsible=0;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
-  <mxGeometry x="820" y="480" width="240" height="70" as="geometry" />
-</mxCell><mxCell id="id26" value="quantidade
-precoUnitarioNaVenda" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=6;spacingRight=6;overflow=hidden;whiteSpace=wrap;" vertex="1" parent="id25">
-  <mxGeometry y="30" width="240" height="40" as="geometry" />
-</mxCell><mxCell id="id27" value="Pagamento" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=1;resizeParent=0;resizeParentMax=0;collapsible=0;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
-  <mxGeometry x="40" y="700" width="240" height="86" as="geometry" />
-</mxCell><mxCell id="id28" value="formaPagamento: Dinheiro|PIX|Debito|Credito
+dataConfirmacao" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=6;spacingRight=6;overflow=hidden;whiteSpace=wrap;" vertex="1" parent="c22"><mxGeometry y="30" width="260" height="124" as="geometry" /></mxCell>
+        <mxCell id="c24" value="Cliente" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=1;resizeParent=0;resizeParentMax=0;collapsible=0;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1"><mxGeometry x="340" y="388" width="260" height="74" as="geometry" /></mxCell>
+        <mxCell id="c25" value="nome
+contato" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=6;spacingRight=6;overflow=hidden;whiteSpace=wrap;" vertex="1" parent="c24"><mxGeometry y="30" width="260" height="44" as="geometry" /></mxCell>
+        <mxCell id="c26" value="Venda" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=1;resizeParent=0;resizeParentMax=0;collapsible=0;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1"><mxGeometry x="640" y="308" width="260" height="122" as="geometry" /></mxCell>
+        <mxCell id="c27" value="data
+valorTotal
+status: Concluida | Cancelada
+motivoCancelamento
+canceladaEm" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=6;spacingRight=6;overflow=hidden;whiteSpace=wrap;" vertex="1" parent="c26"><mxGeometry y="30" width="260" height="92" as="geometry" /></mxCell>
+        <mxCell id="c28" value="ItemVenda" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=1;resizeParent=0;resizeParentMax=0;collapsible=0;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1"><mxGeometry x="940" y="292" width="260" height="90" as="geometry" /></mxCell>
+        <mxCell id="c29" value="quantidade
+precoUnitarioNaVenda
+custoUnitarioNaVenda" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=6;spacingRight=6;overflow=hidden;whiteSpace=wrap;" vertex="1" parent="c28"><mxGeometry y="30" width="260" height="60" as="geometry" /></mxCell>
+        <mxCell id="c30" value="Pagamento" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=1;resizeParent=0;resizeParentMax=0;collapsible=0;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1"><mxGeometry x="1240" y="468" width="260" height="90" as="geometry" /></mxCell>
+        <mxCell id="c31" value="formaPagamento: Dinheiro | PIX | Debito | Credito | CreditoTroca
 valor
-numeroParcelas (1-12, so Credito)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=6;spacingRight=6;overflow=hidden;whiteSpace=wrap;" vertex="1" parent="id27">
-  <mxGeometry y="30" width="240" height="56" as="geometry" />
-</mxCell><mxCell id="id29" value="Parcela" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=1;resizeParent=0;resizeParentMax=0;collapsible=0;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
-  <mxGeometry x="300" y="700" width="240" height="102" as="geometry" />
-</mxCell><mxCell id="id30" value="numero
+numeroParcelas: 1 a 12, so Credito" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=6;spacingRight=6;overflow=hidden;whiteSpace=wrap;" vertex="1" parent="c30"><mxGeometry y="30" width="260" height="60" as="geometry" /></mxCell>
+        <mxCell id="c32" value="Parcela" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=1;resizeParent=0;resizeParentMax=0;collapsible=0;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1"><mxGeometry x="40" y="778" width="260" height="90" as="geometry" /></mxCell>
+        <mxCell id="c33" value="numero
 valor
-vencimento
-status: Pendente|Pago|Parcial" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=6;spacingRight=6;overflow=hidden;whiteSpace=wrap;" vertex="1" parent="id29">
-  <mxGeometry y="30" width="240" height="72" as="geometry" />
-</mxCell><mxCell id="id31" value="LancamentoFinanceiro" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=1;resizeParent=0;resizeParentMax=0;collapsible=0;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
-  <mxGeometry x="560" y="700" width="240" height="118" as="geometry" />
-</mxCell><mxCell id="id32" value="tipo: Entrada | Saida
-categoria: Vendas|Fornecedores|Impostos|Salario|Outros
+vencimento" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=6;spacingRight=6;overflow=hidden;whiteSpace=wrap;" vertex="1" parent="c32"><mxGeometry y="30" width="260" height="60" as="geometry" /></mxCell>
+        <mxCell id="c34" value="LancamentoFinanceiro" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=1;resizeParent=0;resizeParentMax=0;collapsible=0;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1"><mxGeometry x="340" y="522" width="260" height="122" as="geometry" /></mxCell>
+        <mxCell id="c35" value="tipo: Entrada | Saida
+categoria: Vendas | Fornecedores | Impostos | Salario | Outros
 valor
 data
-origem: Venda | Manual" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=6;spacingRight=6;overflow=hidden;whiteSpace=wrap;" vertex="1" parent="id31">
-  <mxGeometry y="30" width="240" height="88" as="geometry" />
-</mxCell><mxCell id="id33" value="ContaPagarReceber" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=1;resizeParent=0;resizeParentMax=0;collapsible=0;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
-  <mxGeometry x="820" y="700" width="240" height="118" as="geometry" />
-</mxCell><mxCell id="id34" value="tipo: Pagar | Receber
+origem: Venda | Conta | Manual" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=6;spacingRight=6;overflow=hidden;whiteSpace=wrap;" vertex="1" parent="c34"><mxGeometry y="30" width="260" height="92" as="geometry" /></mxCell>
+        <mxCell id="c36" value="ContaPagarReceber" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=1;resizeParent=0;resizeParentMax=0;collapsible=0;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1"><mxGeometry x="640" y="490" width="260" height="154" as="geometry" /></mxCell>
+        <mxCell id="c37" value="tipo: Pagar | Receber
+categoria
 valorTotal
 valorPago
 vencimento
-status: Aberta|Parcial|Quitada" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=6;spacingRight=6;overflow=hidden;whiteSpace=wrap;" vertex="1" parent="id33">
-  <mxGeometry y="30" width="240" height="88" as="geometry" />
-</mxCell><mxCell id="id35" value="possui  (1..N)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;elbow=vertical;fontSize=10;" edge="1" parent="1" source="id3" target="id7">
-  <mxGeometry relative="1" as="geometry" />
-</mxCell><mxCell id="id36" value="participa como  (1..N)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;elbow=vertical;fontSize=10;" edge="1" parent="1" source="id5" target="id7">
-  <mxGeometry relative="1" as="geometry" />
-</mxCell><mxCell id="id37" value="cadastra  (1..N)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;elbow=vertical;fontSize=10;" edge="1" parent="1" source="id3" target="id9">
-  <mxGeometry relative="1" as="geometry" />
-</mxCell><mxCell id="id38" value="registra  (1..N)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;elbow=vertical;fontSize=10;" edge="1" parent="1" source="id3" target="id23">
-  <mxGeometry relative="1" as="geometry" />
-</mxCell><mxCell id="id39" value="mantem  (1..N)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;elbow=vertical;fontSize=10;" edge="1" parent="1" source="id3" target="id31">
-  <mxGeometry relative="1" as="geometry" />
-</mxCell><mxCell id="id40" value="mantem  (1..N)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;elbow=vertical;fontSize=10;" edge="1" parent="1" source="id3" target="id33">
-  <mxGeometry relative="1" as="geometry" />
-</mxCell><mxCell id="id41" value="acumula  (1..N)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;elbow=vertical;fontSize=10;" edge="1" parent="1" source="id9" target="id19">
-  <mxGeometry relative="1" as="geometry" />
-</mxCell><mxCell id="id42" value="consome  (1..N)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;elbow=vertical;fontSize=10;" edge="1" parent="1" source="id13" target="id15">
-  <mxGeometry relative="1" as="geometry" />
-</mxCell><mxCell id="id43" value="referencia  (N..1)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;elbow=vertical;fontSize=10;" edge="1" parent="1" source="id15" target="id11">
-  <mxGeometry relative="1" as="geometry" />
-</mxCell><mxCell id="id44" value="sofre  (1..N)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;elbow=vertical;fontSize=10;" edge="1" parent="1" source="id11" target="id17">
-  <mxGeometry relative="1" as="geometry" />
-</mxCell><mxCell id="id45" value="associada a  (0..1..1)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;elbow=vertical;fontSize=10;" edge="1" parent="1" source="id23" target="id21">
-  <mxGeometry relative="1" as="geometry" />
-</mxCell><mxCell id="id46" value="contem  (1..N)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;elbow=vertical;fontSize=10;" edge="1" parent="1" source="id23" target="id25">
-  <mxGeometry relative="1" as="geometry" />
-</mxCell><mxCell id="id47" value="refere-se a  (N..1)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;elbow=vertical;fontSize=10;" edge="1" parent="1" source="id25" target="id9">
-  <mxGeometry relative="1" as="geometry" />
-</mxCell><mxCell id="id48" value="e paga por  (1..N)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;elbow=vertical;fontSize=10;" edge="1" parent="1" source="id23" target="id27">
-  <mxGeometry relative="1" as="geometry" />
-</mxCell><mxCell id="id49" value="gera se Credito  (1..N)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;elbow=vertical;fontSize=10;" edge="1" parent="1" source="id27" target="id29">
-  <mxGeometry relative="1" as="geometry" />
-</mxCell><mxCell id="id50" value="dispara  (1..1)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;elbow=vertical;fontSize=10;" edge="1" parent="1" source="id23" target="id31">
-  <mxGeometry relative="1" as="geometry" />
-</mxCell><mxCell id="id51" value="origina  (1..1)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;elbow=vertical;fontSize=10;" edge="1" parent="1" source="id29" target="id33">
-  <mxGeometry relative="1" as="geometry" />
-</mxCell><mxCell id="id52" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=0;endSize=16;" edge="1" parent="1" source="id11" target="id9">
-  <mxGeometry relative="1" as="geometry" />
-</mxCell><mxCell id="id53" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=0;endSize=16;" edge="1" parent="1" source="id13" target="id9">
-  <mxGeometry relative="1" as="geometry" />
-</mxCell>
+status: Aberta | Parcial | Quitada | Cancelada
+competencia: se gerada por despesa fixa" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=6;spacingRight=6;overflow=hidden;whiteSpace=wrap;" vertex="1" parent="c36"><mxGeometry y="30" width="260" height="124" as="geometry" /></mxCell>
+        <mxCell id="c38" value="possui (1 : N)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;elbow=vertical;fontSize=10;" edge="1" parent="1" source="c2" target="c8"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="c39" value="participa como (1 : N)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;elbow=vertical;fontSize=10;" edge="1" parent="1" source="c6" target="c8"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="c40" value="cadastra (1 : N)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;elbow=vertical;fontSize=10;" edge="1" parent="1" source="c2" target="c12"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="c41" value="registra (1 : N)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;elbow=vertical;fontSize=10;" edge="1" parent="1" source="c2" target="c26"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="c42" value="mantem (1 : N)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;elbow=vertical;fontSize=10;" edge="1" parent="1" source="c2" target="c34"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="c43" value="mantem (1 : N)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;elbow=vertical;fontSize=10;" edge="1" parent="1" source="c2" target="c36"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="c44" value="possui (1 : N)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;elbow=vertical;fontSize=10;" edge="1" parent="1" source="c2" target="c4"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="c45" value="gera mensalmente (1 : N)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;elbow=vertical;fontSize=10;" edge="1" parent="1" source="c4" target="c36"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="c46" value="troca de (0..1 : 0..1)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;elbow=vertical;fontSize=10;" edge="1" parent="1" source="c26" target="c26"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="c47" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=0;endSize=16;" edge="1" parent="1" source="c14" target="c12"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="c48" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=0;endSize=16;" edge="1" parent="1" source="c16" target="c12"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="c49" value="pertence a (N : 1)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;elbow=vertical;fontSize=10;" edge="1" parent="1" source="c12" target="c10"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="c50" value="acumula (1 : N)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;elbow=vertical;fontSize=10;" edge="1" parent="1" source="c12" target="c22"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="c51" value="consome (1 : N)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;elbow=vertical;fontSize=10;" edge="1" parent="1" source="c16" target="c18"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="c52" value="referencia (N : 1)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;elbow=vertical;fontSize=10;" edge="1" parent="1" source="c18" target="c14"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="c53" value="sofre (1 : N)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;elbow=vertical;fontSize=10;" edge="1" parent="1" source="c14" target="c20"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="c54" value="associada a (N : 0..1)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;elbow=vertical;fontSize=10;" edge="1" parent="1" source="c26" target="c24"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="c55" value="contem (1 : N)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;elbow=vertical;fontSize=10;" edge="1" parent="1" source="c26" target="c28"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="c56" value="refere-se a (N : 1)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;elbow=vertical;fontSize=10;" edge="1" parent="1" source="c28" target="c12"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="c57" value="e paga por (1 : N)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;elbow=vertical;fontSize=10;" edge="1" parent="1" source="c26" target="c30"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="c58" value="gera quando Credito (1 : N)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;elbow=vertical;fontSize=10;" edge="1" parent="1" source="c30" target="c32"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="c59" value="dispara (1 : N)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;elbow=vertical;fontSize=10;" edge="1" parent="1" source="c26" target="c34"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="c60" value="origina (1 : 1)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;elbow=vertical;fontSize=10;" edge="1" parent="1" source="c32" target="c36"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="c61" value="quitada por (1 : N)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;elbow=vertical;fontSize=10;" edge="1" parent="1" source="c36" target="c34"><mxGeometry relative="1" as="geometry" /></mxCell>
       </root>
     </mxGraphModel>
   </diagram>
