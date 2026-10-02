@@ -16,7 +16,7 @@ Este documento reúne o conjunto inicial de **ADRs (Architecture Decision Record
 |-|-|-|-|
 |**ADR-001**|Framework Fullstack Next.js (App Router) + TypeScript|Reescrever a apresentação e as rotas da aplicação em caso de troca de framework.|**Aceita**|
 |**ADR-002**|Camada de Persistência com Prisma ORM e PostgreSQL Multi-tenant|Reestruturar todos os schemas de dados, migrations e queries de isolamento.|**Aceita**|
-|**ADR-003**|Autenticação via Supabase Auth com Autorização no Backend|Alterar o mecanismo de gerenciamento de sessões e migrar credenciais registradas.|**Aceita**|
+|**ADR-003**|Autenticação via Supabase Auth (definitivo) com Autorização no Backend|Alterar o mecanismo de gerenciamento de sessões e migrar credenciais registradas.|**Aceita**|
 |**ADR-004**|Parametrização Tributária em Banco de Dados e Motor de RBT12|Reescrever a lógica de cálculo de impostos e a integração do módulo financeiro.|**Aceita**|
 |**ADR-005**|Motor de Precificação Determinístico (Markup Completo) em TypeScript Puro|Reescrever o motor de cálculo, seus testes e o formato do histórico de preços.|**Aceita**|
 |**ADR-006**|Consulta de CNPJ em Base Pública da Receita via Adaptador com Fallback Manual|Trocar o provedor afeta o cadastro de negócios e a origem dos dados fiscais (CNAE, regime, anexo).|**Aceita**|
@@ -28,7 +28,7 @@ Este documento reúne o conjunto inicial de **ADRs (Architecture Decision Record
 |Tema|Motivo para Não Ter ADR|
 |-|-|
 |**TailwindCSS / shadcn/ui**|Escolha de estilização visual; pode ser substituída sem alterar os contratos da API ou a lógica de domínio do ERP.|
-|**Provedor de Hospedagem (Vercel / Supabase / Neon)**|A conexão com o banco ocorre via string de conexão padrão do PostgreSQL tratada pelo Prisma, permitindo migração de infraestrutura sem reescrever código.|
+|**Provedor de Hospedagem (Vercel + Supabase)**|Escolhido para o MVP (Vercel para a aplicação e rotinas agendadas; Supabase para banco e autenticação). Não tem ADR porque a conexão com o banco é uma string PostgreSQL padrão tratada pelo Prisma, permitindo migrar de infraestrutura sem reescrever código.|
 |**Biblioteca de Gráficos do Dashboard**|Componente visual que pode ser trocado na camada de apresentação sem impacto nos dados financeiros.|
 
 ---
@@ -97,7 +97,7 @@ O ERP lida com dados financeiros, registros de vendas e movimentações de estoq
 
 ##### Decisão
 
-A autenticação será gerenciada via serviço de identidade (**Supabase Auth** ou solução similar de sessão segura), e a autorização baseada em papéis -  (RBAC - Role-Based Access Control) - (Dono, Gerente, Colaborador) e permissões customizadas será validada exclusivamente no servidor em cada requisição de API ou Server Action, utilizando uma tabela intermediária `MembroNegocio`. Toda e qualquer consulta ao banco de dados deverá obrigatoriamente incluir a cláusula de filtro `where: { negocioId }` validada pelo middleware de sessão.
+A autenticação será gerenciada pelo **Supabase Auth** (decisão definitiva; Auth.js permanece como alternativa rejeitada), e a autorização baseada em papéis -  (RBAC - Role-Based Access Control) - (Dono, Gerente, Colaborador) e permissões customizadas será validada exclusivamente no servidor em cada requisição de API ou Server Action, utilizando uma tabela intermediária `MembroNegocio`. Toda e qualquer consulta ao banco de dados deverá obrigatoriamente incluir a cláusula de filtro `where: { negocioId }` validada pelo middleware de sessão.
 
 ##### Contexto e Problema
 
@@ -127,7 +127,7 @@ O sistema precisa proteger operações estratégicas (como alterar preços, visu
 
 ##### Decisão
 
-Os parâmetros fiscais oficiais serão armazenados em tabelas de parâmetros no banco de dados, cada registro com fonte legal e data de vigência: faixas, alíquotas nominais e parcelas a deduzir por Anexo do Simples Nacional (`FaixaTributaria`), tabela CNAE → Anexo (`CnaeAnexo`), valor do DAS e limite anual do MEI (`ParametroMei`) e margens padrão por categoria baseadas nos percentuais de presunção (`MargemPadraoCategoria`). O faturamento bruto dos últimos 12 meses (RBT12) será calculado por competência, via consultas agregadas temporais na tabela `Venda` (todas as vendas, inclusive as ainda não recebidas — RN21). No Simples, a alíquota efetiva é `(RBT12 × alíquota nominal − parcela a deduzir) ÷ RBT12`, usando o Anexo do negócio (RN24); no MEI, o imposto entra como despesa fixa (DAS) e não como percentual (RF60).
+Os parâmetros fiscais oficiais serão armazenados em tabelas de parâmetros no banco de dados, cada registro com fonte legal e data de vigência: faixas, alíquotas nominais e parcelas a deduzir por Anexo do Simples Nacional (`FaixaTributaria`), tabela CNAE → Anexo (`CnaeAnexo`), valor do DAS e limite anual do MEI (`ParametroMei`) e margens padrão por categoria baseadas nos percentuais de presunção (`MargemPadraoCategoria`). Os valores iniciais ficam em um arquivo de dados versionado no repositório (`docs/prisma_base/parametros_fiscais_seed.json`) e são carregados no banco por um comando de carga: atualizar um parâmetro exige editar o arquivo e rodar a carga, sem alterar código nem fazer deploy da aplicação. Uma tela de administração fica para depois do MVP. Para CNAEs sujeitos ao Fator R, o anexo efetivo (III ou V) é calculado pela folha de salários ÷ RBT12 (RF69, RN28). O faturamento bruto dos últimos 12 meses (RBT12) será calculado por competência, via consultas agregadas temporais na tabela `Venda` (todas as vendas, inclusive as ainda não recebidas — RN21). No Simples, a alíquota efetiva é `(RBT12 × alíquota nominal − parcela a deduzir) ÷ RBT12`, usando o Anexo do negócio (RN24); no MEI, o imposto entra como despesa fixa (DAS) e não como percentual (RF60).
 
 ##### Contexto e Problema
 
@@ -189,7 +189,7 @@ A Calculadora de Precificação é o diferencial central do HE. O sistema precis
 
 ##### Decisão
 
-No cadastro do negócio, o sistema consultará o CNPJ em uma base pública derivada dos **dados abertos de CNPJ da Receita Federal** (ex.: BrasilAPI), obtendo razão social, CNAE principal e opção pelo Simples Nacional/MEI (RF58). A consulta ficará atrás de uma interface própria (adaptador `ConsultaCnpj`), de modo que o provedor possa ser trocado sem afetar o domínio. A partir do CNAE, o Anexo do Simples é sugerido pela tabela `CnaeAnexo` (ADR-004). Se a consulta falhar, ou se o usuário for autônomo sem CNPJ, os dados são preenchidos manualmente (RF59).
+No cadastro do negócio, o sistema consultará o CNPJ na **BrasilAPI**, base pública derivada dos dados abertos de CNPJ da Receita Federal (gratuita e sem cadastro), com tempo limite e fallback manual, obtendo razão social, CNAE principal e opção pelo Simples Nacional/MEI (RF58). A consulta ficará atrás de uma interface própria (adaptador `ConsultaCnpj`), de modo que o provedor possa ser trocado sem afetar o domínio. A partir do CNAE, o Anexo do Simples é sugerido pela tabela `CnaeAnexo` (ADR-004). Se a consulta falhar, ou se o usuário for autônomo sem CNPJ, os dados são preenchidos manualmente (RF59).
 
 ##### Contexto e Problema
 

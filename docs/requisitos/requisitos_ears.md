@@ -15,12 +15,14 @@
 | RF03 | Orientado a evento | **QUANDO** o usuário selecionar outro negócio vinculado à sua conta, o sistema deve alternar o contexto ativo mantendo a sessão de login corrente. |
 | RF04 | Ubíquo | O sistema deve permitir que o Dono do negócio convide colaboradores para acessar o sistema. |
 | RF05 | Ubíquo | O sistema deve disponibilizar três papéis de acesso para atribuição a colaboradores: Dono (acesso total), Gerente (acesso total exceto configurações) e Colaborador (acesso restrito a Vendas, Estoque e Dashboard restrito). |
-| RF06 | Feature opcional | **ONDE** o Dono configurar permissões granulares customizadas para um colaborador (ex.: liberar apenas o lançamento de despesas operacionais), o sistema deve aplicar essas permissões em vez do papel fixo padrão. |
+| RF06 | Feature opcional | **ONDE** o Dono configurar permissões granulares customizadas para um colaborador (matriz módulo × ação: ver, criar, editar, excluir/cancelar), o sistema deve aplicar essas permissões em vez do papel fixo padrão. |
 | RN01 | Ubíquo | O sistema deve restringir o acesso de cada colaborador exclusivamente aos negócios aos quais ele foi convidado. |
 | RN02 | Comportamento indesejado | **SE** um usuário sem o papel de Dono tentar convidar/remover colaboradores ou alterar permissões, **ENTÃO** o sistema deve impedir a ação e manter as permissões inalteradas. |
 | RF58 | Orientado a evento | **QUANDO** o usuário informar o CNPJ no cadastro de um negócio, o sistema deve consultar a base pública de CNPJ da Receita Federal e preencher razão social, CNAE principal e regime tributário (Simples Nacional/MEI). |
 | RF59 | Complexo (Evento + resposta condicional) | **QUANDO** o CNAE principal for obtido, o sistema deve sugerir o Anexo do Simples (ou o tipo de atividade, para MEI) e permitir edição; **SE** o usuário não possuir CNPJ ou a consulta estiver indisponível, **ENTÃO** o sistema deve permitir o preenchimento manual desses dados. |
 | RN24 | Ubíquo | O sistema deve aplicar um único Anexo do Simples por negócio sobre todo o faturamento (RBT12) do negócio. |
+| RF69 | Complexo (Estado + Evento) | **ENQUANTO** o CNAE do negócio do Simples for sujeito ao Fator R, **QUANDO** o cálculo de preço for solicitado, o sistema deve calcular Fator R = folha de salários de 12 meses ÷ RBT12, aplicar o Anexo III se Fator R ≥ 28% ou o Anexo V caso contrário, e avisar quando o anexo efetivo mudar. |
+| RN28 | Comportamento indesejado | **SE** um negócio sujeito ao Fator R ainda não tiver RBT12, **ENTÃO** o sistema deve usar o Anexo V até haver histórico de vendas. |
 
 ---
 
@@ -95,7 +97,7 @@
 | RN14 | Orientado a estado | **ENQUANTO** uma conta a receber de cartão de crédito não tiver sido recebida, o sistema deve manter esse valor fora do saldo de caixa atual. |
 | RN13 | Orientado a evento | **QUANDO** um lançamento ou conta a receber for gerado automaticamente por uma venda, o sistema deve classificá-lo na categoria Vendas. |
 | RN22 | Orientado a evento | **QUANDO** o usuário registrar um pagamento ou recebimento (total ou parcial) de uma conta, o sistema deve gerar um lançamento no fluxo de caixa vinculado à conta, com a categoria da conta, e atualizar o status da conta. |
-| RF67 | Orientado a evento | **QUANDO** um novo mês iniciar, o sistema deve gerar uma conta a pagar para cada despesa fixa ativa (e para o DAS, se MEI), com vencimento e categoria definidos na despesa, sem duplicar contas do mesmo mês. |
+| RF67 | Orientado a evento | **QUANDO** a rotina agendada diária executar ou o usuário acessar o Financeiro ou o Dashboard, o sistema deve gerar a conta a pagar do mês para cada despesa fixa ativa (e para o DAS, se MEI) ainda sem conta naquela competência, com vencimento e categoria definidos na despesa. |
 
 ---
 
@@ -134,7 +136,7 @@
 | ID | Padrão | Requisito EARS |
 |---|---|---|
 | RF42 | Orientado a estado | **ENQUANTO** o usuário for Dono ou Gerente, o sistema deve exibir na tela inicial um resumo do dia contendo vendas do dia, saldo em caixa e alertas de estoque baixo. |
-| RF43 | Ubíquo | O sistema deve exibir um gráfico com o histórico de vendas dos últimos dias/mês. |
+| RF43 | Ubíquo | O sistema deve exibir um gráfico de vendas por dia dos últimos 30 dias e permitir alternar para vendas por mês dos últimos 12 meses. |
 | RF44 | Ubíquo | O sistema deve estruturar o dashboard de forma extensível, permitindo a adição de novos indicadores sem redesenho completo da tela. |
 | RF55 | Ubíquo | O sistema deve calcular e exibir o ponto de equilíbrio mensal PE = Despesas fixas ÷ (1 − CMV% − Imposto% − Taxa média de cartão%). |
 | RF56 | Ubíquo | O sistema deve calcular o faturamento meta mensal = Despesas fixas ÷ (1 − CMV% − Imposto% − Taxa média de cartão% − Margem meta%). |
@@ -153,6 +155,8 @@
 | RF46 | Ubíquo | O sistema deve permitir uso ilimitado de produtos, vendas e lançamentos financeiros para negócios no plano gratuito. |
 | RF47 | Complexo (Opcional + Indesejado) | **ONDE** o negócio estiver no plano pago, o sistema deve disponibilizar relatórios avançados e gestão de múltiplos colaboradores; **SE** um negócio do plano gratuito tentar convidar um segundo colaborador, **ENTÃO** o sistema deve exigir o upgrade para o plano pago. |
 | RN18 | Comportamento indesejado | **SE** um negócio do plano gratuito atingir qualquer volume de produtos, vendas ou lançamentos, **ENTÃO** o sistema não deve bloquear novos registros por esse motivo, restringindo apenas funcionalidades exclusivas do plano pago. |
+| RF70 | Feature opcional | **ONDE** o negócio estiver no plano pago, o sistema deve exibir o relatório de rentabilidade por item com faturamento, custo e margem real no período. |
+| RF71 | Feature opcional | **ONDE** o negócio estiver no plano pago, o sistema deve permitir exportar relatórios de vendas, fluxo de caixa e contas por período em CSV e PDF. |
 
 ---
 
@@ -163,11 +167,12 @@
 | RNF01 | Ubíquo | O sistema deve ser uma aplicação web acessível via navegador, com layout responsivo para desktop e mobile. |
 | RNF02 | Ubíquo | O sistema deve isolar logicamente os dados de cada negócio, impedindo acesso cruzado entre contas (arquitetura multi-tenant). |
 | RNF03 | Ubíquo | O sistema deve armazenar as senhas dos usuários utilizando hash seguro. |
-| RNF04 | Ubíquo | O sistema deve estar em conformidade com a LGPD, incluindo política de privacidade, consentimento explícito e mecanismos de exportação/exclusão de dados pessoais. |
+| RNF04 | Orientado a evento | **QUANDO** o titular solicitar a exportação dos seus dados, o sistema deve gerar um arquivo .zip com os dados em JSON (completo) e CSV (por tabela); o sistema deve ainda manter política de privacidade e consentimento explícito. |
 | RN27 | Orientado a evento | **QUANDO** o usuário solicitar a exclusão da conta, o sistema deve bloquear o acesso, anonimizar seus dados pessoais e os dos clientes dos negócios em que for o único Dono, e manter por 5 anos os registros fiscais e financeiros sem identificação pessoal. |
+| RN29 | Ubíquo | O sistema deve armazenar datas em UTC e calcular dia, mês e competência no fuso America/Sao_Paulo. |
 | RNF05 | Orientado a evento | **QUANDO** houver alteração em estoque ou em preço, o sistema deve registrar um log auditável contendo data, usuário responsável e motivo (quando aplicável). |
 | RNF06 | Ubíquo | O sistema deve responder ao cálculo de precificação e do RBT12 em tempo adequado, mesmo com histórico extenso de vendas. |
 | RNF07 | Orientado a evento | **QUANDO** o usuário alternar entre negócios vinculados à sua conta, o sistema deve manter a sessão ativa. |
 | RNF08 | Ubíquo | O sistema deve manter as faixas e percentuais de alíquota de MEI e Simples Nacional como configuração parametrizável. |
-| RNF09 | Ubíquo | O sistema deve executar rotina de backup dos dados financeiros e de estoque. |
+| RNF09 | Ubíquo | O sistema deve manter backup diário automático do banco (Supabase) e uma cópia semanal exportada pela equipe. |
 | RNF10 | Ubíquo | O sistema deve manter uma arquitetura extensível nos módulos e no dashboard, suportando novos indicadores e integrações (Nota Fiscal, PIX) sem reestruturação do core. |
