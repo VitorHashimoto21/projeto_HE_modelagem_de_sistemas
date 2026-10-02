@@ -136,6 +136,7 @@ flowchart LR
 ### 2.2 Detalhamento
 
 #### SPEC-001 — Fundação técnica e isolamento multi-tenant
+- **Spec:** [`specs/SPEC-001.md`](./specs/SPEC-001.md) (proposta, aguardando aprovação)
 - **Objetivo:** estabelecer o projeto Next.js + TypeScript, o Prisma conectado ao PostgreSQL com o schema da baseline, o mecanismo obrigatório de filtro por `negocioId` e o pipeline de CI (lint, `prisma validate`, testes).
 - **Valor entregue:** base única e segura para todas as Specs; vazamento entre negócios impedido por construção.
 - **RF:** — · **RN:** RN01, RN29 (datas em UTC e competência em America/Sao_Paulo) · **RNF:** RNF01, RNF02, RNF09 (backup Supabase), RNF10
