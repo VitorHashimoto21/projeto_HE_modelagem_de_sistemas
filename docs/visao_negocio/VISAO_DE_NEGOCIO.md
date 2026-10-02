@@ -111,7 +111,7 @@ Concorrentes diretos mapeados: **Bling, Omie e Granatum**.
 
 Critério de sucesso do MVP definido pelo time do projeto: ter os três módulos funcionando de forma integrada e estável — a integração entre eles (não apenas a existência isolada de cada um) é o principal indicador de que o MVP cumpriu seu propósito.
 
-A ordem de construção segue o Mapa de Specs (a ser gerado), entregando cada spec individualmente:
+A ordem de construção segue o [Mapa de Specs](../MAPA_DE_SPECS.md), entregando cada spec individualmente:
 
 | Etapa | Foco |
 |---|---|
