@@ -1,48 +1,90 @@
-# HealthEnterprise (HE)
+# Health Enterprise (HE)
+> Vitor Hashimoto, Rafael Katahira, Rafael Di Santi
 
-> A saúde da sua empresa de maneira visual e sob controle.
+*A saúde da sua empresa de maneira visual e sob controle.*
 
 ## Sobre
 
-ERP web simplificado para microempreendedores (MEI) e autônomos, que integra três módulos — **Estoque**, **Calculadora de Precificação** e **Financeiro** — e um **Dashboard** com semáforo de saúde financeira e ponto de equilíbrio.
+Projeto que busca ajudar aos diferentes níveis de empresários a manterem a saúde de sua empresa, calculando o valor necessário para que sua empresa esteja saudável e rendendo lucros, gerir a empresa e entender de maneira mais visual como está o rendimento da empresa.
+
+O produto é um **ERP simplificado + Calculadora de Precificação**, voltado para microempreendedores (MEI) e autônomos, que integra três módulos no MVP — **Financeiro**, **Estoque** e **Calculadora de Precificação** — e um **Dashboard** com semáforo de saúde financeira e ponto de equilíbrio.
 
 O diferencial é a precificação integrada: o produto é cadastrado uma vez e a calculadora sugere o preço de venda pelo markup completo, usando o custo real (inclusive insumos de serviços), o rateio das despesas fixas, taxas de cartão, comissão, o imposto do Simples Nacional/MEI (a partir do faturamento dos últimos 12 meses) e a margem desejada.
 
 Projeto acadêmico desenvolvido com **Spec-Driven Development (SDD)**: requisitos em notação EARS, modelagem versionada em Markdown/Mermaid e implementação incremental, spec a spec.
 
-## Tecnologias (definidas nos ADRs)
+## Tecnologias
 
-* **Next.js (App Router) + TypeScript** — interface e Server Actions no mesmo projeto (ADR-001)
-* **PostgreSQL + Prisma ORM** — multi-tenant lógico por `negocioId` (ADR-002)
+* **Next.js** (App Router) + **TypeScript** — frontend e backend (Server Actions) na mesma aplicação (ADR-001)
+* **Prisma** — ORM, schema-first a partir do modelo de domínio (ADR-002)
+* **PostgreSQL** (via Supabase ou Neon) — banco relacional, multi-tenant lógico por `negocioId` (ADR-002)
 * **Supabase Auth** — autenticação, com autorização por papel validada no servidor (ADR-003)
-* **TailwindCSS + shadcn/ui** — interface responsiva
+* **TailwindCSS + shadcn/ui** — estilização e componentes
 * **Consulta pública de CNPJ** (dados abertos da Receita Federal) — enquadramento fiscal do negócio (ADR-006)
+* **Vercel** — hospedagem do frontend/backend
+* **Supabase / Neon** — hospedagem do banco de dados
 
-## Documentação
+## Documentação do Projeto
 
-| Assunto | Arquivo |
-|---|---|
-| Visão de negócio | [`docs/visao_negocio/VISAO_DE_NEGOCIO.md`](docs/visao_negocio/VISAO_DE_NEGOCIO.md) |
-| Requisitos (RF, RN, RNF) | [`docs/requisitos/requisitos.md`](docs/requisitos/requisitos.md) |
-| Requisitos em EARS | [`docs/requisitos/requisitos_ears.md`](docs/requisitos/requisitos_ears.md) |
-| Personas | [`docs/personas/`](docs/personas/) |
-| Domínio, jornadas e casos de uso | [`docs/dominio_fluxogramas/`](docs/dominio_fluxogramas/) |
-| Diagramas de sequência e de estados | [`docs/dominio_fluxogramas/DIAGRAMAS_COMPORTAMENTAIS.md`](docs/dominio_fluxogramas/DIAGRAMAS_COMPORTAMENTAIS.md) |
-| Modelo lógico do banco | [`docs/dominio_fluxogramas/MODELO_LOGICO_BANCO.md`](docs/dominio_fluxogramas/MODELO_LOGICO_BANCO.md) |
-| Schema Prisma (fonte da verdade do banco) | [`docs/prisma_base/schema.prisma`](docs/prisma_base/schema.prisma) |
-| Drivers arquiteturais e ADRs | [`docs/definicoes_arquitetura/`](docs/definicoes_arquitetura/) |
-| Guia de issues | [`docs/guia_issues/issues_guide.md`](docs/guia_issues/issues_guide.md) |
+Toda a especificação do produto está documentada na pasta [`docs/`](./docs):
 
-As imagens em `docs/img/` são geradas a partir dos blocos Mermaid; ao alterar um diagrama, gere a imagem novamente (ex.: `npx @mermaid-js/mermaid-cli -i diagrama.mmd -o docs/img/nome.png`).
+| Pasta | Documento | Conteúdo |
+|---|---|---|
+| [`visao_negocio/`](./docs/visao_negocio) | [`VISAO_DE_NEGOCIO.md`](./docs/visao_negocio/VISAO_DE_NEGOCIO.md) | Problema, proposta de valor, público-alvo, validação de mercado, análise competitiva, modelo de negócio e cronograma do MVP (entrega ao final do semestre) |
+| [`personas/`](./docs/personas) | `persona-camila-silva-v2.md`, `persona-gisele-mendes-v2.md`, `persona-lucas-ramos-v2.md`, `persona-thiago-rocha-v2.md` | Personas representativas do público-alvo |
+| [`requisitos/`](./docs/requisitos) | [`requisitos.md`](./docs/requisitos/requisitos.md) | Requisitos Funcionais (RF), Não Funcionais (RNF) e Regras de Negócio (RN), organizados por módulo |
+| [`requisitos/`](./docs/requisitos) | [`requisitos_ears.md`](./docs/requisitos/requisitos_ears.md) | Os mesmos requisitos reescritos na notação EARS |
+| [`dominio_fluxogramas/`](./docs/dominio_fluxogramas) | [`MODELO_DOMINIO_E_JORNADAS.md`](./docs/dominio_fluxogramas/MODELO_DOMINIO_E_JORNADAS.md) | Diagrama de domínio e jornadas de usuário tela a tela, por papel de acesso |
+| [`dominio_fluxogramas/`](./docs/dominio_fluxogramas) | [`DIAGRAMA_CASO_DE_USO.md`](./docs/dominio_fluxogramas/DIAGRAMA_CASO_DE_USO.md) | Diagrama de caso de uso (atores, casos de uso, `include`/`extend`) |
+| [`dominio_fluxogramas/`](./docs/dominio_fluxogramas) | [`FLUXOGRAMAS.md`](./docs/dominio_fluxogramas/FLUXOGRAMAS.md) | Todos os fluxogramas em texto puro (Mermaid), para leitura por ferramentas/IA sem depender de imagem |
+| [`dominio_fluxogramas/`](./docs/dominio_fluxogramas) | [`DIAGRAMAS_COMPORTAMENTAIS.md`](./docs/dominio_fluxogramas/DIAGRAMAS_COMPORTAMENTAIS.md) | Diagramas de sequência (calculadora, venda, cancelamento/troca) e de estados das contas |
+| [`dominio_fluxogramas/`](./docs/dominio_fluxogramas) | [`MODELO_LOGICO_BANCO.md`](./docs/dominio_fluxogramas/MODELO_LOGICO_BANCO.md) | Modelo lógico do banco (diagrama ER) |
+| [`prisma_base/`](./docs/prisma_base) | [`schema.prisma`](./docs/prisma_base/schema.prisma) | Schema Prisma — fonte da verdade do banco |
+| [`definicoes_arquitetura/`](./docs/definicoes_arquitetura) | `drivers-arquiteturais-he.md`, `adrs-he.md` | Drivers arquiteturais e ADRs (ADR-001 a ADR-006) |
+| [`guia_issues/`](./docs/guia_issues) | [`issues_guide.md`](./docs/guia_issues/issues_guide.md) | Issues do GitHub com critérios de aceitação em EARS e testes |
+
+As imagens renderizadas dos diagramas ficam em [`docs/img/`](./docs/img) e são geradas a partir dos blocos Mermaid; ao alterar um diagrama, gere a imagem novamente (ex.: `npx @mermaid-js/mermaid-cli -i diagrama.mmd -o docs/img/nome.png`). A versão editável do diagrama de domínio está em [`docs/dominio_fluxogramas/modelo_dominio.drawio`](./docs/dominio_fluxogramas/modelo_dominio.drawio) (abrir em [app.diagrams.net](https://app.diagrams.net)).
+
+## Instalação
+
+> A aplicação ainda não foi iniciada — por enquanto o repositório contém a documentação de modelagem. Os comandos abaixo valerão após a spec de fundação (Issue #01 do guia de issues).
+
+```bash
+git clone <url-do-repositorio>
+cd health-enterprise
+
+# instalar dependências
+npm install
+
+# configurar variáveis de ambiente (banco de dados, auth)
+cp .env.example .env
+
+# rodar as migrations do Prisma
+npx prisma migrate dev
+```
+
+## Uso
+```bash
+# ambiente de desenvolvimento
+npm run dev
+
+# build de produção
+npm run build
+npm run start
+```
 
 ## Estrutura
-
 ```text
 .
-├── docs/                  # Documentação de modelagem (fonte das specs)
+├── app/                          # (planejado) Rotas, páginas e Server Actions (Next.js App Router)
+├── components/                   # (planejado) Componentes shadcn/ui e reutilizáveis
+├── lib/                          # (planejado) Configurações Prisma/Supabase e regras de domínio
+├── prisma/                       # (planejado) schema.prisma e migrations
+├── test/                         # (planejado) Testes automatizados
+├── docs/                         # Documentação de modelagem (fonte das specs)
 │   ├── visao_negocio/
-│   ├── requisitos/
 │   ├── personas/
+│   ├── requisitos/
 │   ├── dominio_fluxogramas/
 │   ├── definicoes_arquitetura/
 │   ├── guia_issues/
@@ -51,17 +93,11 @@ As imagens em `docs/img/` são geradas a partir dos blocos Mermaid; ao alterar u
 └── README.md
 ```
 
-A estrutura da aplicação (`src/`, `prisma/`, `.github/workflows/`) será criada na spec de fundação, conforme a Issue #01 do guia de issues.
-
-## Instalação e uso
-
-A aplicação ainda não foi iniciada — o repositório contém, por enquanto, a documentação de modelagem. Os comandos de instalação e execução serão adicionados junto com o setup do Next.js.
-
-## Fluxo de contribuição
+## Contribuição
 
 1. Cada spec/issue é desenvolvida em uma branch própria, criada a partir da `DEVELOP`.
 2. Commits referenciam a spec ou issue correspondente.
-3. Pull Requests são abertos para a `DEVELOP`; a `main` recebe apenas versões estáveis.
+3. Pull Requests são abertos para a `DEVELOP`; a `main` recebe apenas versões estáveis vindas da `DEVELOP`.
 4. Alterações em requisitos, drivers ou ADRs exigem revisão do grupo.
 
 ## Licença
