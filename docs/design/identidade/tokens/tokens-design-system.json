@@ -1,0 +1,590 @@
+{
+ "name": "Health Enterprise",
+ "version": 1,
+ "color": {
+  "themes": [
+   {
+    "id": "light",
+    "name": "Claro"
+   },
+   {
+    "id": "dark",
+    "name": "Escuro"
+   }
+  ],
+  "tokens": [
+   {
+    "name": "background",
+    "value": {
+     "light": "#faf9f7",
+     "dark": "#0b1714"
+    },
+    "usage": "Fundo das telas. Ground de `foreground` e `muted-foreground`."
+   },
+   {
+    "name": "foreground",
+    "value": {
+     "light": "#0d1f1a",
+     "dark": "#ecebe7"
+    },
+    "usage": "Texto principal sobre `background` (16,3:1 claro · 15,4:1 escuro) e `card`."
+   },
+   {
+    "name": "card",
+    "value": {
+     "light": "#ffffff",
+     "dark": "#12241f"
+    },
+    "usage": "Cartões, campos, menus e popovers."
+   },
+   {
+    "name": "card-foreground",
+    "value": {
+     "light": "#0d1f1a",
+     "dark": "#ecebe7"
+    },
+    "usage": "Texto sobre `card` (17,1:1 · 13,6:1)."
+   },
+   {
+    "name": "muted",
+    "value": {
+     "light": "#f1efeb",
+     "dark": "#1a2e28"
+    },
+    "usage": "Fundos discretos: botão secundário, alerta informativo, linhas zebradas."
+   },
+   {
+    "name": "muted-foreground",
+    "value": {
+     "light": "#5f6670",
+     "dark": "#a7b0ab"
+    },
+    "usage": "Texto secundário e rodapés sobre `background` (5,5:1 · 8,2:1) e `card` (5,8:1 · 7,3:1)."
+   },
+   {
+    "name": "primary",
+    "value": {
+     "light": "#b45309",
+     "dark": "#f59e0b"
+    },
+    "usage": "Ação principal: botão primário e links. Links sobre `background` 4,8:1 · 11,0:1."
+   },
+   {
+    "name": "primary-hover",
+    "value": {
+     "light": "#92400e",
+     "dark": "#fbbf24"
+    },
+    "usage": "Hover e estado pressionado de `primary`."
+   },
+   {
+    "name": "primary-foreground",
+    "value": {
+     "light": "#ffffff",
+     "dark": "#0d1f1a"
+    },
+    "usage": "Texto sobre `primary` (5,0:1 claro · 8,0:1 escuro) e `primary-hover` (7,1:1 · 10,2:1). No escuro o texto é escuro, nunca branco."
+   },
+   {
+    "name": "border",
+    "value": {
+     "light": "#e5e2dc",
+     "dark": "#24392f"
+    },
+    "usage": "Divisórias e contornos decorativos de cartões. Não serve como borda de campo."
+   },
+   {
+    "name": "input",
+    "value": {
+     "light": "#8a8f98",
+     "dark": "#6f817a"
+    },
+    "usage": "Borda de campos de formulário e controles (3,3:1 sobre `card` claro · 3,9:1 escuro)."
+   },
+   {
+    "name": "ring",
+    "value": {
+     "light": "#b45309",
+     "dark": "#fbbf24"
+    },
+    "usage": "Anel de foco do teclado, sólido, 2px com 2px de afastamento (4,8:1 · 11,0:1)."
+   },
+   {
+    "name": "destructive",
+    "value": {
+     "light": "#b91c1c",
+     "dark": "#f87171"
+    },
+    "usage": "Erros, mensagens de validação e ações destrutivas (6,5:1 sobre `card` claro · 5,9:1 escuro)."
+   },
+   {
+    "name": "destructive-foreground",
+    "value": {
+     "light": "#ffffff",
+     "dark": "#0d1f1a"
+    },
+    "usage": "Texto sobre `destructive`."
+   },
+   {
+    "name": "brand",
+    "value": {
+     "light": "#163028",
+     "dark": "#163028"
+    },
+    "usage": "Verde da marca: fundo do símbolo e áreas institucionais. Texto branco sobre ele 14,1:1."
+   },
+   {
+    "name": "brand-deep",
+    "value": {
+     "light": "#0d1f1a",
+     "dark": "#0d1f1a"
+    },
+    "usage": "Painel institucional do login e fundos de marca escuros."
+   },
+   {
+    "name": "brand-foreground",
+    "value": {
+     "light": "#ffffff",
+     "dark": "#ffffff"
+    },
+    "usage": "Texto sobre `brand` e `brand-deep`."
+   },
+   {
+    "name": "brand-amber",
+    "value": {
+     "light": "#f59e0b",
+     "dark": "#f59e0b"
+    },
+    "usage": "Folhas do broto e destaques SOMENTE sobre `brand`/`brand-deep` (8,0:1). Nunca como texto sobre fundo claro."
+   },
+   {
+    "name": "brand-amber-light",
+    "value": {
+     "light": "#fbbf24",
+     "dark": "#fbbf24"
+    },
+    "usage": "Folha esquerda do broto; detalhe sobre fundos verdes."
+   },
+   {
+    "name": "status-ok",
+    "value": {
+     "light": "#166534",
+     "dark": "#4ade80"
+    },
+    "usage": "Semáforo Saudável: texto e ícone (6,4:1 sobre `status-ok-bg` · 7,7:1). Sempre com ícone ✓ e rótulo."
+   },
+   {
+    "name": "status-ok-bg",
+    "value": {
+     "light": "#e8f5ec",
+     "dark": "#123524"
+    },
+    "usage": "Fundo do selo e do alerta Saudável/sucesso."
+   },
+   {
+    "name": "status-warn",
+    "value": {
+     "light": "#8a5a00",
+     "dark": "#facc15"
+    },
+    "usage": "Semáforo Atenção: texto e ícone (5,5:1 · 8,4:1). Sempre com ícone ⚠ e rótulo. Diferente do âmbar da marca."
+   },
+   {
+    "name": "status-warn-bg",
+    "value": {
+     "light": "#fdf6d8",
+     "dark": "#3a3110"
+    },
+    "usage": "Fundo do selo e do alerta Atenção."
+   },
+   {
+    "name": "status-danger",
+    "value": {
+     "light": "#b91c1c",
+     "dark": "#f87171"
+    },
+    "usage": "Semáforo Déficit: texto e ícone (5,7:1 · 5,8:1). Sempre com ícone ↓ e rótulo."
+   },
+   {
+    "name": "status-danger-bg",
+    "value": {
+     "light": "#fdeceb",
+     "dark": "#3b1717"
+    },
+    "usage": "Fundo do selo e do alerta Déficit/erro."
+   },
+   {
+    "name": "chart-1",
+    "value": {
+     "light": "#0b8a68",
+     "dark": "#1fae86"
+    },
+    "usage": "Série 1 dos gráficos, sempre nesta posição. Validada para daltonismo e ≥3:1 sobre `card`. Máximo de 5 séries."
+   },
+   {
+    "name": "chart-2",
+    "value": {
+     "light": "#cf6d0c",
+     "dark": "#c97212"
+    },
+    "usage": "Série 2 dos gráficos, sempre nesta posição. Validada para daltonismo e ≥3:1 sobre `card`. Máximo de 5 séries."
+   },
+   {
+    "name": "chart-3",
+    "value": {
+     "light": "#2a78d6",
+     "dark": "#3987e5"
+    },
+    "usage": "Série 3 dos gráficos, sempre nesta posição. Validada para daltonismo e ≥3:1 sobre `card`. Máximo de 5 séries."
+   },
+   {
+    "name": "chart-4",
+    "value": {
+     "light": "#d55181",
+     "dark": "#d55181"
+    },
+    "usage": "Série 4 dos gráficos, sempre nesta posição. Validada para daltonismo e ≥3:1 sobre `card`. Máximo de 5 séries."
+   },
+   {
+    "name": "chart-5",
+    "value": {
+     "light": "#4a3aa7",
+     "dark": "#9085e9"
+    },
+    "usage": "Série 5 dos gráficos, sempre nesta posição. Validada para daltonismo e ≥3:1 sobre `card`. Máximo de 5 séries."
+   },
+   {
+    "name": "verde-50",
+    "value": "#f4f8f6",
+    "usage": "Pré-paleta Verde 50. Fundos de destaque muito suaves."
+   },
+   {
+    "name": "verde-100",
+    "value": "#e5edea",
+    "usage": "Pré-paleta Verde 100. Fundo de seção institucional clara."
+   },
+   {
+    "name": "verde-200",
+    "value": "#cbdcd6",
+    "usage": "Pré-paleta Verde 200. Bordas e divisórias em áreas verdes."
+   },
+   {
+    "name": "verde-300",
+    "value": "#a9c5bb",
+    "usage": "Pré-paleta Verde 300. Ilustrações, estados desabilitados sobre verde."
+   },
+   {
+    "name": "verde-400",
+    "value": "#7fa99b",
+    "usage": "Pré-paleta Verde 400. Ícones decorativos."
+   },
+   {
+    "name": "verde-500",
+    "value": "#558d7b",
+    "usage": "Pré-paleta Verde 500. Ícones e elementos gráficos; texto só sobre fundo escuro."
+   },
+   {
+    "name": "verde-600",
+    "value": "#347461",
+    "usage": "Pré-paleta Verde 600. Texto e ícones verdes sobre fundo claro (≥4,5:1)."
+   },
+   {
+    "name": "verde-700",
+    "value": "#1f5c4b",
+    "usage": "Pré-paleta Verde 700. Texto de ênfase verde."
+   },
+   {
+    "name": "verde-800",
+    "value": "#084536",
+    "usage": "Pré-paleta Verde 800. Fundos escuros alternativos."
+   },
+   {
+    "name": "verde-900",
+    "value": "#163028",
+    "usage": "Pré-paleta Verde 900. = `brand`. Fundo do símbolo."
+   },
+   {
+    "name": "verde-950",
+    "value": "#0d1f1a",
+    "usage": "Pré-paleta Verde 950. = `brand-deep`. Painel institucional."
+   },
+   {
+    "name": "ambar-50",
+    "value": "#fffbeb",
+    "usage": "Pré-paleta Âmbar 50. Fundo de destaque suave."
+   },
+   {
+    "name": "ambar-100",
+    "value": "#fef3c7",
+    "usage": "Pré-paleta Âmbar 100. Fundo de badge/realce."
+   },
+   {
+    "name": "ambar-200",
+    "value": "#fde68a",
+    "usage": "Pré-paleta Âmbar 200. Realce de busca, seleção."
+   },
+   {
+    "name": "ambar-300",
+    "value": "#fcd34d",
+    "usage": "Pré-paleta Âmbar 300. Ilustrações."
+   },
+   {
+    "name": "ambar-400",
+    "value": "#fbbf24",
+    "usage": "Pré-paleta Âmbar 400. = `brand-amber-light`. Só sobre fundos verdes."
+   },
+   {
+    "name": "ambar-500",
+    "value": "#f59e0b",
+    "usage": "Pré-paleta Âmbar 500. = `brand-amber` e `primary` escuro."
+   },
+   {
+    "name": "ambar-600",
+    "value": "#d97706",
+    "usage": "Pré-paleta Âmbar 600. Cor original do protótipo; NÃO usar como fundo de texto branco (3,2:1)."
+   },
+   {
+    "name": "ambar-700",
+    "value": "#b45309",
+    "usage": "Pré-paleta Âmbar 700. = `primary` claro. Texto e botões sobre fundo claro."
+   },
+   {
+    "name": "ambar-800",
+    "value": "#92400e",
+    "usage": "Pré-paleta Âmbar 800. = `primary-hover` claro."
+   },
+   {
+    "name": "ambar-900",
+    "value": "#78350f",
+    "usage": "Pré-paleta Âmbar 900. Texto âmbar de alta ênfase."
+   },
+   {
+    "name": "ambar-950",
+    "value": "#451a03",
+    "usage": "Pré-paleta Âmbar 950. Fundos escuros quentes."
+   },
+   {
+    "name": "neutro-50",
+    "value": "#faf9f7",
+    "usage": "Pré-paleta Neutro 50. = `background` claro."
+   },
+   {
+    "name": "neutro-100",
+    "value": "#f1efeb",
+    "usage": "Pré-paleta Neutro 100. = `muted` claro."
+   },
+   {
+    "name": "neutro-200",
+    "value": "#e5e2dc",
+    "usage": "Pré-paleta Neutro 200. = `border` claro."
+   },
+   {
+    "name": "neutro-300",
+    "value": "#c0bdb8",
+    "usage": "Pré-paleta Neutro 300. Divisórias mais fortes, trilhos de gráfico."
+   },
+   {
+    "name": "neutro-400",
+    "value": "#a19e99",
+    "usage": "Pré-paleta Neutro 400. Ícones desabilitados."
+   },
+   {
+    "name": "neutro-500",
+    "value": "#82807b",
+    "usage": "Pré-paleta Neutro 500. Ícones neutros."
+   },
+   {
+    "name": "neutro-600",
+    "value": "#686661",
+    "usage": "Pré-paleta Neutro 600. Texto secundário alternativo sobre fundo claro (≥4,5:1)."
+   },
+   {
+    "name": "neutro-700",
+    "value": "#524f4b",
+    "usage": "Pré-paleta Neutro 700. Texto de corpo alternativo."
+   },
+   {
+    "name": "neutro-800",
+    "value": "#3c3a36",
+    "usage": "Pré-paleta Neutro 800. Superfícies escuras neutras."
+   },
+   {
+    "name": "neutro-900",
+    "value": "#2d2b27",
+    "usage": "Pré-paleta Neutro 900. Fundo escuro neutro."
+   },
+   {
+    "name": "neutro-950",
+    "value": "#1c1a16",
+    "usage": "Pré-paleta Neutro 950. Texto quase preto neutro."
+   }
+  ]
+ },
+ "type": {
+  "fonts": [],
+  "families": {
+   "display": "\"Fraunces\", Georgia, serif",
+   "sans": "\"Outfit\", system-ui, sans-serif"
+  },
+  "groups": [
+   {
+    "name": "Títulos e valores",
+    "family": "display",
+    "styles": [
+     {
+      "name": "titulo-tela",
+      "fontSize": "32px",
+      "lineHeight": "38px",
+      "fontWeight": 600,
+      "sample": "Bem-vindo de volta",
+      "usage": "Título principal de cada tela."
+     },
+     {
+      "name": "titulo-secao",
+      "fontSize": "20px",
+      "lineHeight": "26px",
+      "fontWeight": 600,
+      "sample": "Contas a receber",
+      "usage": "Título de seção e de cartão."
+     },
+     {
+      "name": "valor-kpi",
+      "fontSize": "28px",
+      "lineHeight": "32px",
+      "fontWeight": 600,
+      "sample": "R$ 1.284,00",
+      "usage": "Valores de destaque do Dashboard; algarismos tabulares."
+     },
+     {
+      "name": "display",
+      "fontSize": "48px",
+      "lineHeight": "52px",
+      "fontWeight": 600,
+      "sample": "A saúde do seu negócio",
+      "usage": "Chamadas institucionais (painel do login)."
+     }
+    ]
+   },
+   {
+    "name": "Texto e interface",
+    "family": "sans",
+    "styles": [
+     {
+      "name": "corpo",
+      "fontSize": "15px",
+      "lineHeight": "22px",
+      "fontWeight": 400,
+      "sample": "Controle o estoque e acompanhe cada centavo do seu caixa.",
+      "usage": "Texto corrido."
+     },
+     {
+      "name": "corpo-pequeno",
+      "fontSize": "13px",
+      "lineHeight": "18px",
+      "fontWeight": 400,
+      "sample": "Atualizado agora",
+      "usage": "Textos auxiliares, rodapés."
+     },
+     {
+      "name": "rotulo",
+      "fontSize": "13px",
+      "lineHeight": "18px",
+      "fontWeight": 500,
+      "sample": "Custo (R$)",
+      "usage": "Rótulos de campos e colunas."
+     },
+     {
+      "name": "botao",
+      "fontSize": "14px",
+      "lineHeight": "20px",
+      "fontWeight": 600,
+      "sample": "Salvar venda",
+      "usage": "Texto de botões."
+     },
+     {
+      "name": "sobrelinha",
+      "fontSize": "12px",
+      "lineHeight": "16px",
+      "fontWeight": 500,
+      "letterSpacing": "0.12em",
+      "sample": "RECURSOS INCLUÍDOS",
+      "usage": "Rótulos em caixa alta acima de títulos."
+     }
+    ]
+   }
+  ]
+ },
+ "spacing": {
+  "tokens": [
+   {
+    "name": "space-1",
+    "value": "4px",
+    "usage": "Espaço entre ícone e texto."
+   },
+   {
+    "name": "space-2",
+    "value": "8px",
+    "usage": "Espaço entre pílulas e itens compactos."
+   },
+   {
+    "name": "space-3",
+    "value": "12px",
+    "usage": "Espaço entre campos relacionados."
+   },
+   {
+    "name": "space-4",
+    "value": "16px",
+    "usage": "Margem lateral mínima no celular; padding de alerta."
+   },
+   {
+    "name": "space-5",
+    "value": "20px",
+    "usage": "Espaço entre campos de formulário."
+   },
+   {
+    "name": "space-6",
+    "value": "24px",
+    "usage": "Padding de cartão."
+   },
+   {
+    "name": "space-8",
+    "value": "32px",
+    "usage": "Espaço entre seções."
+   },
+   {
+    "name": "space-12",
+    "value": "48px",
+    "usage": "Padding do painel institucional."
+   }
+  ]
+ },
+ "radius": {
+  "tokens": [
+   {
+    "name": "radius-sm",
+    "value": "8px",
+    "usage": "Selos pequenos, amostras de cor."
+   },
+   {
+    "name": "radius-md",
+    "value": "10px",
+    "usage": "Menus e popovers."
+   },
+   {
+    "name": "radius-lg",
+    "value": "12px",
+    "usage": "Botões e campos (`--radius`)."
+   },
+   {
+    "name": "radius-xl",
+    "value": "16px",
+    "usage": "Cartões e símbolo do logo (14/64 do lado)."
+   },
+   {
+    "name": "radius-full",
+    "value": "9999px",
+    "usage": "Pílulas e selos do semáforo."
+   }
+  ]
+ }
+}

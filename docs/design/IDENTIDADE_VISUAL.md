@@ -2,6 +2,8 @@
 
 > *A saúde do seu negócio, visual e sob controle.*
 
+Versão navegável deste guia (com prévias ao vivo nos temas claro e escuro): https://claude.ai/artifact/U4zYRjfWbCHKVb3VHGV43e — privada até ser compartilhada pelo menu *Share*.
+
 Guia da identidade visual do produto, construído a partir do protótipo da equipe no Figma (`docs/design/prototipo/`) e das decisões tomadas em entrevista em 02/10/2026. Todos os arquivos citados estão em `docs/design/`.
 
 ![Variações do logo](identidade/logo/folha-de-variacoes.png)
@@ -92,6 +94,23 @@ Correções em relação ao protótipo:
 | Mensagens de erro | `#ef4444` → 3,76:1 ✗ | `#b91c1c` → 6,47:1 ✓ |
 | Rodapé e textos apagados (opacidade) | ~2,3:1 ✗ | `muted-foreground` → 5,51:1 ✓ |
 | Borda dos campos | 1,47:1 ✗ | `#8a8f98` → 3,25:1 ✓ |
+
+### 3.4 Pré-paleta
+
+![Pré-paleta](identidade/tokens/pre-paleta.png)
+
+Escalas de 50 (mais claro) a 950 (mais escuro) nas famílias **Verde**, **Âmbar** e **Neutro**, ancoradas nas cores já aprovadas. São a fonte de onde novos tons devem sair (fundos de seção, ilustrações, estados), sem inventar cores fora delas.
+
+| Família | Tons que já são tokens | Texto sobre fundo claro | Texto sobre fundo escuro |
+|---|---|---|---|
+| Verde | 900 = `brand`, 950 = `brand-deep` | a partir de 600 | até 500 |
+| Âmbar | 400/500 = folhas do broto, 500 = `primary` escuro, 700 = `primary` claro, 800 = hover | a partir de 700 | até 600 |
+| Neutro | 50 = `background`, 100 = `muted`, 200 = `border` | a partir de 600 | até 500 |
+
+- No código: classes do Tailwind como `bg-verde-100`, `text-ambar-700`, `border-neutro-300` (definidas em `tokens.css`).
+- Arquivos: [`pre-paleta.json`](identidade/tokens/pre-paleta.json) (valores) e [`tokens-design-system.json`](identidade/tokens/tokens-design-system.json) (todos os tokens, com nota de uso).
+- O âmbar `600` (`#d97706`, a cor do protótipo original) **não** serve de fundo para texto branco (3,2:1).
+- Quando um tom passar a ter papel fixo na interface, crie um token semântico para ele e rode `validar_contraste.py`.
 
 ---
 

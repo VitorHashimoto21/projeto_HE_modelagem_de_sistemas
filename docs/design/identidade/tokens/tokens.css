@@ -160,6 +160,11 @@
   --color-chart-3: var(--chart-3);
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
+
+  /* Pré-paleta — escalas 50–950 (classes bg-verde-100, text-ambar-700, border-neutro-300…) */
+  --color-verde-50: #f4f8f6; --color-verde-100: #e5edea; --color-verde-200: #cbdcd6; --color-verde-300: #a9c5bb; --color-verde-400: #7fa99b; --color-verde-500: #558d7b; --color-verde-600: #347461; --color-verde-700: #1f5c4b; --color-verde-800: #084536; --color-verde-900: #163028; --color-verde-950: #0d1f1a;
+  --color-ambar-50: #fffbeb; --color-ambar-100: #fef3c7; --color-ambar-200: #fde68a; --color-ambar-300: #fcd34d; --color-ambar-400: #fbbf24; --color-ambar-500: #f59e0b; --color-ambar-600: #d97706; --color-ambar-700: #b45309; --color-ambar-800: #92400e; --color-ambar-900: #78350f; --color-ambar-950: #451a03;
+  --color-neutro-50: #faf9f7; --color-neutro-100: #f1efeb; --color-neutro-200: #e5e2dc; --color-neutro-300: #c0bdb8; --color-neutro-400: #a19e99; --color-neutro-500: #82807b; --color-neutro-600: #686661; --color-neutro-700: #524f4b; --color-neutro-800: #3c3a36; --color-neutro-900: #2d2b27; --color-neutro-950: #1c1a16;
 }
 
 @layer base {
