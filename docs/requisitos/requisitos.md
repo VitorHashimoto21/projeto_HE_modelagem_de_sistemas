@@ -32,15 +32,17 @@
 | RF03 | O usuário deve poder alternar entre negócios sem precisar realizar novo login (sessão única). |
 | RF04 | O dono do negócio deve poder convidar colaboradores para acessar o sistema. |
 | RF05 | O sistema deve oferecer 3 papéis fixos de acesso: **Dono** (acesso total), **Gerente** (acesso total exceto configurações) e **Colaborador** (acesso restrito a Vendas, Estoque e Dashboard restrito — RF63 —, sem Financeiro). |
-| RF06 | O dono deve poder configurar permissões granulares customizadas por módulo para um colaborador, além dos 3 papéis fixos (ex.: liberar a um Colaborador apenas o lançamento de despesas operacionais no Financeiro, sem acesso a saldo, relatórios, custos fixos ou margens). |
+| RF06 | O dono deve poder configurar permissões granulares customizadas por módulo para um colaborador, além dos 3 papéis fixos (ex.: liberar a um Colaborador apenas o lançamento de despesas operacionais no Financeiro, sem acesso a saldo, relatórios, custos fixos ou margens). A granularidade é **módulo × ação**: para cada módulo (Catálogo, Estoque, Vendas, Calculadora, Financeiro, Dashboard), as ações ver, criar, editar e excluir/cancelar; os 3 papéis fixos são predefinições dessa matriz. |
 | RF58 | Ao cadastrar um negócio, o sistema deve solicitar o CNPJ e consultar a base pública de CNPJ da Receita Federal para preencher automaticamente razão social, CNAE principal e opção pelo Simples Nacional/MEI (regime tributário). |
+| RF69 | Para negócios do Simples Nacional cujo CNAE seja sujeito ao **Fator R**, o sistema deve calcular Fator R = folha de salários dos últimos 12 meses (lançamentos da categoria Salário) ÷ RBT12 e aplicar o Anexo III quando Fator R ≥ 28% ou o Anexo V caso contrário, avisando o usuário quando o anexo efetivo mudar. |
 | RF59 | A partir do CNAE principal, o sistema deve sugerir o **Anexo do Simples Nacional** do negócio (tabela oficial CNAE → Anexo) ou, para MEI, o tipo de atividade (comércio/indústria, serviços ou ambos), permitindo edição. Para autônomos sem CNPJ ou quando a consulta estiver indisponível, esses dados devem ser preenchidos manualmente. |
 
 ### Regras de Negócio
 
 - **RN01** — Todos os dados (produtos, estoque, vendas, financeiro) são isolados por negócio; um colaborador só acessa os dados do(s) negócio(s) ao qual foi convidado.
 - **RN02** — Apenas o papel Dono pode convidar/remover colaboradores e alterar permissões.
-- **RN24** — O Anexo do Simples é definido **por negócio** e aplicado a todo o faturamento (RBT12) do negócio.
+- **RN24** — O Anexo do Simples é definido **por negócio** e aplicado a todo o faturamento (RBT12) do negócio. A separação do imposto por atividade (negócios com produto e serviço em anexos diferentes) fica fora do MVP, e o sistema exibe um aviso sobre essa simplificação.
+- **RN28** — O anexo efetivo de um negócio sujeito ao Fator R é recalculado a cada cálculo de preço; sem RBT12 (negócio sem vendas), usa-se o Anexo V até haver histórico.
 
 ---
 
@@ -129,7 +131,7 @@
 | RF31 | Contas a pagar/receber devem poder ser marcadas como pagas/recebidas parcialmente, mantendo o valor restante em aberto. |
 | RF32 | Lançamentos financeiros devem ser classificados em categorias fixas do sistema: Vendas, Fornecedores, Impostos, Salário, Outros. |
 | RF33 | Toda venda registrada deve gerar lançamento automático no Financeiro, sem necessidade de lançamento manual duplicado. |
-| RF67 | Cada despesa fixa ativa (RF48), incluindo o DAS para MEI (RF60), deve gerar automaticamente uma conta a pagar por mês, com o dia de vencimento e a categoria definidos na despesa, sem duplicar a conta de um mesmo mês. O usuário apenas registra o pagamento (RN22). |
+| RF67 | Cada despesa fixa ativa (RF48), incluindo o DAS para MEI (RF60), deve gerar automaticamente uma conta a pagar por mês, com o dia de vencimento e a categoria definidos na despesa, sem duplicar a conta de um mesmo mês. A geração ocorre por rotina agendada diária e é conferida novamente ao acessar o Financeiro ou o Dashboard. O usuário apenas registra o pagamento (RN22). |
 
 ### Regras de Negócio
 
@@ -181,7 +183,7 @@
 | ID | Descrição |
 |---|---|
 | RF42 | O sistema deve exibir na tela inicial, para Dono e Gerente, um resumo do dia: vendas do dia, saldo em caixa e alertas de estoque baixo. |
-| RF43 | O sistema deve exibir um gráfico simples de vendas dos últimos dias/mês. |
+| RF43 | O sistema deve exibir um gráfico simples de vendas: por padrão, vendas por dia dos últimos 30 dias, com opção de vendas por mês dos últimos 12 meses. |
 | RF44 | A estrutura do Dashboard deve ser pensada para comportar novos indicadores/widgets no futuro, sem redesenho completo da tela. |
 | RF55 | O sistema deve calcular e exibir o ponto de equilíbrio mensal: **PE = Total de despesas fixas mensais ÷ (1 − CMV% − Imposto% − Taxa média de cartão%)**. |
 | RF62 | O sistema deve calcular o **CMV%** (custo das mercadorias/insumos vendidos sobre o faturamento) como Σ (custo unitário registrado no item da venda × quantidade) ÷ faturamento bruto dos últimos 12 meses. O custo unitário de cada item (incluindo materiais de serviços) deve ser gravado no momento da venda. Sem histórico de vendas, usa-se um CMV% estimado informado pelo usuário junto da capacidade e do ticket médio (RF50). |
@@ -200,11 +202,13 @@
 |---|---|
 | RF45 | O sistema deve diferenciar funcionalidades disponíveis no plano gratuito das disponíveis apenas no plano pago. |
 | RF46 | O plano gratuito não deve impor limite de quantidade de produtos, vendas ou lançamentos financeiros. |
-| RF47 | Funcionalidades como relatórios avançados e gestão de múltiplos colaboradores devem ser exclusivas do plano pago. O plano gratuito permite o Dono e **1 colaborador** convidado; a partir do segundo convidado, é necessário o plano pago. |
+| RF47 | Funcionalidades como relatórios avançados (RF70, RF71 e histórico acima de 12 meses) e gestão de múltiplos colaboradores devem ser exclusivas do plano pago. O plano gratuito permite o Dono e **1 colaborador** convidado; a partir do segundo convidado, é necessário o plano pago. |
+| RF70 | No plano pago, o sistema deve oferecer o relatório de **rentabilidade por item**: para cada produto/serviço, faturamento, custo (custo unitário gravado nas vendas) e margem real no período. |
+| RF71 | No plano pago, o sistema deve permitir **exportar relatórios** de vendas, fluxo de caixa e contas por período, em CSV e PDF. |
 
 ### Regras de Negócio
 
-- **RN18** — A limitação do plano Freemium é sempre por **funcionalidade disponível**, nunca por volume de uso (quantidade de produtos, vendas ou registros). O número de usuários do negócio (RF47) é tratado como funcionalidade de multiusuário, não como volume de dados.
+- **RN18** — A limitação do plano Freemium é sempre por **funcionalidade disponível**, nunca por volume de uso (quantidade de produtos, vendas ou registros). O número de usuários do negócio (RF47) é tratado como funcionalidade de multiusuário, não como volume de dados. No plano gratuito, gráficos e filtros mostram até os últimos 12 meses; os dados mais antigos nunca são apagados e voltam a ficar visíveis no plano pago.
 
 ---
 
@@ -215,18 +219,19 @@
 | RNF01 | A aplicação deve ser web, acessível via navegador, com layout responsivo para desktop e mobile. |
 | RNF02 | Os dados de cada negócio devem ser isolados logicamente dos demais (arquitetura multi-tenant), impedindo acesso cruzado entre contas. |
 | RNF03 | Senhas de usuário devem ser armazenadas com hash seguro, nunca em texto plano. |
-| RNF04 | O sistema deve estar em conformidade com a LGPD, incluindo política de privacidade, consentimento explícito e mecanismos de exportação/exclusão de dados pessoais. A exclusão de conta segue a RN27. |
+| RNF04 | O sistema deve estar em conformidade com a LGPD, incluindo política de privacidade, consentimento explícito e mecanismos de exportação/exclusão de dados pessoais. A exportação gera um arquivo .zip com os dados do titular em JSON (completo) e CSV (por tabela). A exclusão de conta segue a RN27. |
 | RNF05 | Alterações em estoque (entrada, saída manual) e em preço devem manter registro auditável (data, usuário responsável, motivo quando aplicável). |
 | RNF06 | O cálculo de precificação e do RBT12 deve responder de forma performática, mesmo com histórico extenso de vendas. |
 | RNF07 | A sessão do usuário deve persistir ao alternar entre negócios, sem exigir novo login. |
 | RNF08 | Os percentuais/faixas de alíquota de MEI e Simples Nacional devem ser mantidos de forma parametrizável (configuração, não código), para facilitar atualização conforme mudanças na legislação. |
-| RNF09 | O sistema deve manter rotina de backup dos dados financeiros e de estoque. |
+| RNF09 | O sistema deve manter rotina de backup dos dados financeiros e de estoque: backup diário automático do provedor do banco (Supabase) e uma cópia (dump) semanal exportada pela equipe. |
 | RNF10 | A arquitetura do Dashboard e dos módulos deve ser extensível, suportando a adição de novos indicadores e integrações (Nota Fiscal, PIX) sem necessidade de reestruturação do core. |
 
 ---
 
 ### Regras de Negócio
 
+- **RN29** — Datas são armazenadas em UTC; "dia", "mês" e "competência" (vendas do dia, RBT12, faturamento do mês, semáforo, contas mensais, gráficos) são sempre calculados no fuso **America/Sao_Paulo**.
 - **RN27** — A exclusão de conta (LGPD) bloqueia o acesso e **anonimiza** os dados pessoais (nome, e-mail e senha do usuário; nome e contato de clientes dos negócios em que ele é o único Dono). Os registros fiscais e financeiros desses negócios (vendas, lançamentos, contas, movimentações) são mantidos por 5 anos, sem identificação pessoal, para cumprimento de obrigações legais, e os negócios ficam encerrados.
 
 ---
@@ -258,17 +263,19 @@
 | RN21 | RBT12 e faturamento bruto somam todas as vendas registradas no período (competência), inclusive as ainda não recebidas. |
 | RN22 | Todo pagamento/recebimento de conta (total ou parcial) gera lançamento no caixa; o status da conta é a fonte única de verdade. |
 | RN23 | Item sem preço oficial confirmado não pode ser vendido. |
-| RN24 | O Anexo do Simples é definido por negócio e aplicado a todo o faturamento. |
+| RN24 | O Anexo do Simples é definido por negócio e aplicado a todo o faturamento; separação por atividade fora do MVP. |
 | RN25 | Cancelamento de venda em transação única: estoque devolvido, contas abertas canceladas, recebidos estornados (exceto crédito de troca); venda cancelada sai do RBT12, faturamento e CMV%. |
 | RN26 | Crédito de troca limitado ao já recebido; não gera novo lançamento; reembolso = recebido − crédito usado. |
 | RN27 | Exclusão de conta anonimiza dados pessoais e mantém registros fiscais/financeiros por 5 anos sem identificação. |
+| RN28 | Anexo efetivo sujeito ao Fator R recalculado a cada cálculo; sem RBT12, usa o Anexo V. |
+| RN29 | Datas em UTC; dia, mês e competência calculados em America/Sao_Paulo. |
 
 ---
 
 ## Próximos Passos Técnicos
 
-- [ ] Carregar os parâmetros fiscais oficiais vigentes para a parametrização inicial (RNF08 / RN17): faixas e parcelas a deduzir dos Anexos I a V (LC 123/2006), tabela CNAE → Anexo (Resolução CGSN 140/2018), valores do DAS e limite anual do MEI, percentuais de presunção (Lei 9.249/1995, art. 15).
-- [ ] Avaliar o tratamento do **Fator R** (Anexo III × V) e de negócios com receitas de atividades em anexos diferentes — pela LC 123/2006 cada receita é tributada no seu anexo, com o RBT12 global; o MVP adota um anexo por negócio (RN24).
+- [ ] Conferir nas fontes oficiais os parâmetros fiscais de `docs/prisma_base/parametros_fiscais_seed.json` (faixas dos Anexos I–V, DAS e limite do MEI do ano vigente, amostra CNAE → Anexo, margens padrão) antes da SPEC-003.
+- [x] ~~Tratamento do Fator R e de negócios multi-anexo~~ — Fator R automático (RF69, RN28); anexo único por negócio no MVP, com aviso (RN24).
 - [ ] Detalhar wireframes das telas de: cadastro de produto/serviço, registro de venda (com pagamento misto), calculadora de precificação e dashboard.
-- [ ] Definir a matriz de permissões granulares por módulo (RF06) para o papel customizado.
-- [ ] Validar com o time de negócio o mapeamento categoria → percentual de presunção usado como margem padrão inicial (RF36).
+- [x] ~~Definir a matriz de permissões granulares (RF06)~~ — módulo × ação; a tabela completa é detalhada na SPEC-005.
+- [x] ~~Validar o mapeamento categoria → presunção (RF36)~~ — Serviços, Beleza, Saúde e Tecnologia: 32%; Produtos, Alimentação, Vestuário, Casa e Outros: 8%.

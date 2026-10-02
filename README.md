@@ -1,4 +1,11 @@
 # Health Enterprise (HE)
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/design/identidade/logo/he-logo-horizontal-negativo.svg">
+  <source media="(prefers-color-scheme: light)" srcset="docs/design/identidade/logo/he-logo-horizontal.svg">
+  <img src="docs/design/identidade/logo/he-logo-horizontal.svg" alt="Health Enterprise" height="48">
+</picture>
+
 > Vitor Hashimoto, Rafael Katahira, Rafael Di Santi
 
 *A saúde da sua empresa de maneira visual e sob controle.*
@@ -17,12 +24,12 @@ Projeto acadêmico desenvolvido com **Spec-Driven Development (SDD)**: requisito
 
 * **Next.js** (App Router) + **TypeScript** — frontend e backend (Server Actions) na mesma aplicação (ADR-001)
 * **Prisma** — ORM, schema-first a partir do modelo de domínio (ADR-002)
-* **PostgreSQL** (via Supabase ou Neon) — banco relacional, multi-tenant lógico por `negocioId` (ADR-002)
-* **Supabase Auth** — autenticação, com autorização por papel validada no servidor (ADR-003)
+* **PostgreSQL** (Supabase) — banco relacional, multi-tenant lógico por `negocioId` (ADR-002), com backup diário automático e cópia semanal (RNF09)
+* **Supabase Auth** (definitivo) — autenticação, com autorização por papel validada no servidor (ADR-003)
 * **TailwindCSS + shadcn/ui** — estilização e componentes
-* **Consulta pública de CNPJ** (dados abertos da Receita Federal) — enquadramento fiscal do negócio (ADR-006)
-* **Vercel** — hospedagem do frontend/backend
-* **Supabase / Neon** — hospedagem do banco de dados
+* **BrasilAPI** (dados abertos de CNPJ da Receita Federal) — enquadramento fiscal do negócio (ADR-006)
+* **Vercel** — hospedagem do frontend/backend e rotinas agendadas (Vercel Cron)
+* **Supabase** — hospedagem do banco de dados e da autenticação
 
 ## Documentação do Projeto
 
@@ -39,8 +46,10 @@ Toda a especificação do produto está documentada na pasta [`docs/`](./docs):
 | [`dominio_fluxogramas/`](./docs/dominio_fluxogramas) | [`FLUXOGRAMAS.md`](./docs/dominio_fluxogramas/FLUXOGRAMAS.md) | Todos os fluxogramas em texto puro (Mermaid), para leitura por ferramentas/IA sem depender de imagem |
 | [`dominio_fluxogramas/`](./docs/dominio_fluxogramas) | [`DIAGRAMAS_COMPORTAMENTAIS.md`](./docs/dominio_fluxogramas/DIAGRAMAS_COMPORTAMENTAIS.md) | Diagramas de sequência (calculadora, venda, cancelamento/troca) e de estados das contas |
 | [`dominio_fluxogramas/`](./docs/dominio_fluxogramas) | [`MODELO_LOGICO_BANCO.md`](./docs/dominio_fluxogramas/MODELO_LOGICO_BANCO.md) | Modelo lógico do banco (diagrama ER) |
-| [`prisma_base/`](./docs/prisma_base) | [`schema.prisma`](./docs/prisma_base/schema.prisma) | Schema Prisma — fonte da verdade do banco |
+| [`prisma_base/`](./docs/prisma_base) | [`schema.prisma`](./docs/prisma_base/schema.prisma), [`parametros_fiscais_seed.json`](./docs/prisma_base/parametros_fiscais_seed.json) | Schema Prisma (fonte da verdade do banco) e parâmetros fiscais iniciais |
 | [`definicoes_arquitetura/`](./docs/definicoes_arquitetura) | `drivers-arquiteturais-he.md`, `adrs-he.md` | Drivers arquiteturais e ADRs (ADR-001 a ADR-006) |
+| [`design/`](./docs/design) | [`IDENTIDADE_VISUAL.md`](./docs/design/IDENTIDADE_VISUAL.md) | Identidade visual: logo, favicon, cores (tokens claro/escuro com contraste verificado), tipografia, semáforo, componentes base e login revisado |
+| [`docs/`](./docs) | [`MAPA_DE_SPECS.md`](./docs/MAPA_DE_SPECS.md), [`Prompt_SDD_Specs.pdf`](./docs/Prompt_SDD_Specs.pdf) | Mapa ordenado das Specs e prompt de apoio do SDD |
 | [`guia_issues/`](./docs/guia_issues) | [`issues_guide.md`](./docs/guia_issues/issues_guide.md) | Issues do GitHub com critérios de aceitação em EARS e testes |
 
 As imagens renderizadas dos diagramas ficam em [`docs/img/`](./docs/img) e são geradas a partir dos blocos Mermaid; ao alterar um diagrama, gere a imagem novamente (ex.: `npx @mermaid-js/mermaid-cli -i diagrama.mmd -o docs/img/nome.png`). A versão editável do diagrama de domínio está em [`docs/dominio_fluxogramas/modelo_dominio.drawio`](./docs/dominio_fluxogramas/modelo_dominio.drawio) (abrir em [app.diagrams.net](https://app.diagrams.net)).

@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Componentes base — Health Enterprise</title>
+<link rel="stylesheet" href="../tokens/tokens.css">
+<style>
+  body { margin: 0; }
+  .tema { background: var(--background); color: var(--foreground); padding: 32px; font-family: 'Outfit', system-ui, sans-serif; }
+  .cabecalho { display: flex; align-items: center; gap: 12px; margin-bottom: 28px; }
+  .cabecalho h1 { font-family: 'Fraunces', Georgia, serif; font-weight: 600; font-size: 26px; margin: 0; }
+  .cabecalho span { color: var(--muted-foreground); font-size: 14px; }
+  h2 { font-family: 'Fraunces', Georgia, serif; font-weight: 600; font-size: 18px; margin: 28px 0 12px; }
+  .linha { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+  .grade { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+
+  .btn { font: 600 14px 'Outfit', sans-serif; border-radius: var(--radius); padding: 11px 18px; border: 1px solid transparent; cursor: pointer; }
+  .btn-primario { background: var(--primary); color: var(--primary-foreground); }
+  .btn-primario.hover { background: var(--primary-hover); }
+  .btn-secundario { background: var(--secondary); color: var(--secondary-foreground); border-color: var(--border); }
+  .btn-contorno { background: transparent; color: var(--foreground); border-color: var(--input); }
+  .btn-destrutivo { background: var(--destructive); color: var(--destructive-foreground); }
+  .btn:disabled { opacity: .55; cursor: not-allowed; }
+  .btn.foco { outline: 2px solid var(--ring); outline-offset: 2px; }
+
+  .campo { display: flex; flex-direction: column; gap: 6px; min-width: 220px; }
+  .campo label { font-size: 13px; font-weight: 500; }
+  .campo input { font: 400 14px 'Outfit', sans-serif; padding: 11px 14px; border-radius: var(--radius); border: 1px solid var(--input); background: var(--card); color: var(--foreground); }
+  .campo input::placeholder { color: var(--muted-foreground); }
+  .campo input.foco { border-color: var(--ring); box-shadow: 0 0 0 4px color-mix(in srgb, var(--ring) 18%, transparent); outline: none; }
+  .campo input.erro { border-color: var(--destructive); box-shadow: 0 0 0 4px color-mix(in srgb, var(--destructive) 12%, transparent); }
+  .campo .msg-erro { font-size: 12px; color: var(--destructive); }
+  .campo input:disabled { background: var(--muted); }
+
+  .cartao { background: var(--card); color: var(--card-foreground); border: 1px solid var(--border); border-radius: calc(var(--radius) + 4px); padding: 18px; }
+  .kpi-rotulo { font-size: 13px; color: var(--muted-foreground); }
+  .kpi-valor { font-family: 'Fraunces', serif; font-weight: 600; font-size: 28px; margin: 6px 0 10px; font-variant-numeric: tabular-nums; }
+
+  .selo { display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; padding: 5px 12px; font-size: 13px; font-weight: 600; border: 1px solid; }
+  .selo svg { width: 16px; height: 16px; }
+  .ok { background: var(--status-ok-bg); color: var(--status-ok); border-color: color-mix(in srgb, var(--status-ok) 30%, transparent); }
+  .warn { background: var(--status-warn-bg); color: var(--status-warn); border-color: color-mix(in srgb, var(--status-warn) 30%, transparent); }
+  .danger { background: var(--status-danger-bg); color: var(--status-danger); border-color: color-mix(in srgb, var(--status-danger) 30%, transparent); }
+
+  .alerta { display: flex; gap: 10px; align-items: flex-start; border-radius: var(--radius); padding: 12px 14px; font-size: 14px; border: 1px solid; }
+  .alerta strong { display: block; margin-bottom: 2px; }
+  .alerta svg { flex: none; width: 18px; height: 18px; margin-top: 1px; }
+
+  .link { color: var(--primary); font-weight: 600; text-decoration: none; }
+  .link:hover { color: var(--primary-hover); text-decoration: underline; }
+
+  .amostras { display: flex; flex-wrap: wrap; gap: 8px; }
+  .amostra { width: 92px; font-size: 11px; color: var(--muted-foreground); }
+  .amostra i { display: block; height: 40px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 4px; }
+
+  .lado-a-lado { display: grid; grid-template-columns: 1fr 1fr; }
+</style>
+</head>
+<body>
+<div class="lado-a-lado">
+  <!-- O mesmo conteúdo é renderizado nos temas claro e escuro -->
+  <template id="conteudo">
+    <div class="cabecalho">
+      <img src="../logo/he-simbolo.svg" width="40" height="40" alt="">
+      <div><h1>Componentes base</h1><span class="nome-tema"></span></div>
+    </div>
+
+    <h2>Botões</h2>
+    <div class="linha">
+      <button class="btn btn-primario">Salvar venda</button>
+      <button class="btn btn-primario hover">Hover</button>
+      <button class="btn btn-primario foco">Foco</button>
+      <button class="btn btn-secundario">Cancelar</button>
+      <button class="btn btn-contorno">Exportar</button>
+      <button class="btn btn-destrutivo">Cancelar venda</button>
+      <button class="btn btn-primario" disabled>Desabilitado</button>
+    </div>
+
+    <h2>Campos</h2>
+    <div class="linha">
+      <div class="campo"><label>Nome do item</label><input placeholder="Ex.: Corte feminino"></div>
+      <div class="campo"><label>Custo (R$)</label><input class="foco" value="42,50"></div>
+      <div class="campo"><label>Quantidade</label><input class="erro" value="12"><span class="msg-erro">Estoque insuficiente para o item Esmalte (disponível: 3)</span></div>
+    </div>
+
+    <h2>Semáforo de saúde financeira</h2>
+    <div class="linha">
+      <span class="selo ok" role="status"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4 4 10-10"/></svg>Saudável</span>
+      <span class="selo warn" role="status"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4l9 16H3z"/><path d="M12 10v4M12 17h.01"/></svg>Atenção</span>
+      <span class="selo danger" role="status"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M6 13l6 6 6-6"/></svg>Déficit</span>
+    </div>
+
+    <h2>Cartões de indicador</h2>
+    <div class="grade">
+      <div class="cartao"><div class="kpi-rotulo">Vendas do dia</div><div class="kpi-valor">R$ 1.284,00</div><span class="kpi-rotulo">14 vendas</span></div>
+      <div class="cartao"><div class="kpi-rotulo">Saldo em caixa</div><div class="kpi-valor">R$ 8.930,45</div><span class="kpi-rotulo">Atualizado agora</span></div>
+      <div class="cartao"><div class="kpi-rotulo">Faturamento do mês</div><div class="kpi-valor">R$ 9.870,00</div>
+        <span class="selo warn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4l9 16H3z"/><path d="M12 10v4M12 17h.01"/></svg>Atenção · faltam R$ 2.130 para a meta</span></div>
+    </div>
+
+    <h2>Alertas</h2>
+    <div class="grade" style="grid-template-columns:1fr 1fr">
+      <div class="alerta ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4 4 10-10"/></svg><div><strong>Preço confirmado</strong>O novo preço foi salvo no histórico.</div></div>
+      <div class="alerta warn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4l9 16H3z"/><path d="M12 10v4M12 17h.01"/></svg><div><strong>Estoque baixo</strong>3 produtos abaixo do estoque mínimo.</div></div>
+      <div class="alerta danger"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg><div><strong>Preço inviável</strong>A soma dos percentuais passa de 100%.</div></div>
+      <div class="alerta" style="background:var(--muted);color:var(--foreground);border-color:var(--border)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg><div><strong>A margem é o seu ganho por venda</strong>Não é o lucro total do negócio. <a class="link" href="#">Saiba mais</a></div></div>
+    </div>
+
+    <h2>Cores dos gráficos (ordem fixa)</h2>
+    <div class="amostras">
+      <div class="amostra"><i style="background:var(--chart-1)"></i>Série 1</div>
+      <div class="amostra"><i style="background:var(--chart-2)"></i>Série 2</div>
+      <div class="amostra"><i style="background:var(--chart-3)"></i>Série 3</div>
+      <div class="amostra"><i style="background:var(--chart-4)"></i>Série 4</div>
+      <div class="amostra"><i style="background:var(--chart-5)"></i>Série 5</div>
+    </div>
+  </template>
+
+  <section class="tema" data-nome="Tema claro"></section>
+  <section class="tema dark" data-nome="Tema escuro"></section>
+</div>
+<script>
+  const t = document.getElementById('conteudo')
+  document.querySelectorAll('section.tema').forEach(s => {
+    s.appendChild(t.content.cloneNode(true))
+    s.querySelector('.nome-tema').textContent = s.dataset.nome
+  })
+  document.querySelectorAll('.alerta.ok, .alerta.warn, .alerta.danger').forEach(a => a.classList.add('alerta'))
+</script>
+</body>
+</html>

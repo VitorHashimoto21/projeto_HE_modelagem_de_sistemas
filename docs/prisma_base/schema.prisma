@@ -13,6 +13,8 @@
 // preço opcional com origem (RF64, RN23), quitação de conta gera lançamento (RN22).
 // v5: cancelamento/troca de venda (RF65, RF66, RN25, RN26), contas mensais de
 // despesas fixas e DAS (RF67), estoque mínimo por cobertura (RF20), LGPD (RN27).
+// v6: Fator R (RF69, RN28), permissões módulo × ação (RF06), datas em UTC com
+// competência em America/Sao_Paulo (RN29).
 // ==========================================================
 
 datasource db {
@@ -179,6 +181,7 @@ model Negocio {
   razaoSocial   String?
   cnaePrincipal String?
   anexoSimples  AnexoSimples? // RN24: um anexo por negócio (Simples Nacional)
+  sujeitoFatorR Boolean       @default(false) // RF69: herdado do CNAE; anexo efetivo III/V calculado pelo Fator R
   atividadeMei  AtividadeMei? // RF60: usado quando regimeTributario = MEI
 
   // Parâmetros de precificação (RF49–RF51, RF56, RF62)
@@ -208,7 +211,7 @@ model MembroNegocio {
   usuarioId        String       @db.Uuid
   negocioId        String       @db.Uuid
   papel            PapelUsuario @default(COLABORADOR) // RF05
-  permissoesCustom Json? // RF06: permissões granulares por módulo
+  permissoesCustom Json? // RF06: matriz módulo × ação, ex. {"financeiro": {"ver": false, "criar": true}}
 
   usuario Usuario @relation(fields: [usuarioId], references: [id])
   negocio Negocio @relation(fields: [negocioId], references: [id])
@@ -360,11 +363,12 @@ model FaixaTributaria {
 
 // RF59: tabela oficial CNAE → Anexo (Resolução CGSN 140/2018), usada para sugerir o anexo do negócio
 model CnaeAnexo {
-  cnae         String       @id // código CNAE (subclasse)
-  descricao    String
-  anexo        AnexoSimples
-  fonteLegal   String
-  vigenteDesde DateTime     @default(now())
+  cnae          String       @id // código CNAE (subclasse)
+  descricao     String
+  anexo         AnexoSimples // anexo base (V para CNAEs sujeitos ao Fator R)
+  sujeitoFatorR Boolean      @default(false) // RF69
+  fonteLegal    String
+  vigenteDesde  DateTime     @default(now())
 }
 
 // RF60/RF61: valor mensal do DAS e limite anual do MEI

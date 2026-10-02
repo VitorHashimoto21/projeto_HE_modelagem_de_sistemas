@@ -1,0 +1,438 @@
+{
+  "_aviso": "Valores montados para conferência da equipe (OPEN-01). Conferir nas fontes oficiais (Planalto, Portal do Simples Nacional, Resolução CGSN 140/2018) antes da SPEC-003. Itens marcados com 'conferir' dependem de valores do ano vigente.",
+  "_verificacao": "Teste de consistência: em todos os anexos, o imposto é contínuo nas fronteiras das faixas 1→2 até 5→6 exceto 5→6 (R$ 3,6 milhões), onde a descontinuidade é esperada pelo sublimite do Simples; indica ausência de erro de digitação nas alíquotas e parcelas a deduzir das faixas 1 a 5.",
+  "faixaTributaria": [
+    {
+      "anexo": "I",
+      "faixaOrdem": 1,
+      "rbt12De": 0,
+      "rbt12Ate": 180000,
+      "aliquota": 4.0,
+      "parcelaDeduzir": 0,
+      "fonteLegal": "LC 123/2006, Anexo I (redação da LC 155/2016)"
+    },
+    {
+      "anexo": "I",
+      "faixaOrdem": 2,
+      "rbt12De": 180000.01,
+      "rbt12Ate": 360000,
+      "aliquota": 7.3,
+      "parcelaDeduzir": 5940,
+      "fonteLegal": "LC 123/2006, Anexo I (redação da LC 155/2016)"
+    },
+    {
+      "anexo": "I",
+      "faixaOrdem": 3,
+      "rbt12De": 360000.01,
+      "rbt12Ate": 720000,
+      "aliquota": 9.5,
+      "parcelaDeduzir": 13860,
+      "fonteLegal": "LC 123/2006, Anexo I (redação da LC 155/2016)"
+    },
+    {
+      "anexo": "I",
+      "faixaOrdem": 4,
+      "rbt12De": 720000.01,
+      "rbt12Ate": 1800000,
+      "aliquota": 10.7,
+      "parcelaDeduzir": 22500,
+      "fonteLegal": "LC 123/2006, Anexo I (redação da LC 155/2016)"
+    },
+    {
+      "anexo": "I",
+      "faixaOrdem": 5,
+      "rbt12De": 1800000.01,
+      "rbt12Ate": 3600000,
+      "aliquota": 14.3,
+      "parcelaDeduzir": 87300,
+      "fonteLegal": "LC 123/2006, Anexo I (redação da LC 155/2016)"
+    },
+    {
+      "anexo": "I",
+      "faixaOrdem": 6,
+      "rbt12De": 3600000.01,
+      "rbt12Ate": 4800000,
+      "aliquota": 19.0,
+      "parcelaDeduzir": 378000,
+      "fonteLegal": "LC 123/2006, Anexo I (redação da LC 155/2016)"
+    },
+    {
+      "anexo": "II",
+      "faixaOrdem": 1,
+      "rbt12De": 0,
+      "rbt12Ate": 180000,
+      "aliquota": 4.5,
+      "parcelaDeduzir": 0,
+      "fonteLegal": "LC 123/2006, Anexo II (redação da LC 155/2016)"
+    },
+    {
+      "anexo": "II",
+      "faixaOrdem": 2,
+      "rbt12De": 180000.01,
+      "rbt12Ate": 360000,
+      "aliquota": 7.8,
+      "parcelaDeduzir": 5940,
+      "fonteLegal": "LC 123/2006, Anexo II (redação da LC 155/2016)"
+    },
+    {
+      "anexo": "II",
+      "faixaOrdem": 3,
+      "rbt12De": 360000.01,
+      "rbt12Ate": 720000,
+      "aliquota": 10.0,
+      "parcelaDeduzir": 13860,
+      "fonteLegal": "LC 123/2006, Anexo II (redação da LC 155/2016)"
+    },
+    {
+      "anexo": "II",
+      "faixaOrdem": 4,
+      "rbt12De": 720000.01,
+      "rbt12Ate": 1800000,
+      "aliquota": 11.2,
+      "parcelaDeduzir": 22500,
+      "fonteLegal": "LC 123/2006, Anexo II (redação da LC 155/2016)"
+    },
+    {
+      "anexo": "II",
+      "faixaOrdem": 5,
+      "rbt12De": 1800000.01,
+      "rbt12Ate": 3600000,
+      "aliquota": 14.7,
+      "parcelaDeduzir": 85500,
+      "fonteLegal": "LC 123/2006, Anexo II (redação da LC 155/2016)"
+    },
+    {
+      "anexo": "II",
+      "faixaOrdem": 6,
+      "rbt12De": 3600000.01,
+      "rbt12Ate": 4800000,
+      "aliquota": 30.0,
+      "parcelaDeduzir": 720000,
+      "fonteLegal": "LC 123/2006, Anexo II (redação da LC 155/2016)"
+    },
+    {
+      "anexo": "III",
+      "faixaOrdem": 1,
+      "rbt12De": 0,
+      "rbt12Ate": 180000,
+      "aliquota": 6.0,
+      "parcelaDeduzir": 0,
+      "fonteLegal": "LC 123/2006, Anexo III (redação da LC 155/2016)"
+    },
+    {
+      "anexo": "III",
+      "faixaOrdem": 2,
+      "rbt12De": 180000.01,
+      "rbt12Ate": 360000,
+      "aliquota": 11.2,
+      "parcelaDeduzir": 9360,
+      "fonteLegal": "LC 123/2006, Anexo III (redação da LC 155/2016)"
+    },
+    {
+      "anexo": "III",
+      "faixaOrdem": 3,
+      "rbt12De": 360000.01,
+      "rbt12Ate": 720000,
+      "aliquota": 13.5,
+      "parcelaDeduzir": 17640,
+      "fonteLegal": "LC 123/2006, Anexo III (redação da LC 155/2016)"
+    },
+    {
+      "anexo": "III",
+      "faixaOrdem": 4,
+      "rbt12De": 720000.01,
+      "rbt12Ate": 1800000,
+      "aliquota": 16.0,
+      "parcelaDeduzir": 35640,
+      "fonteLegal": "LC 123/2006, Anexo III (redação da LC 155/2016)"
+    },
+    {
+      "anexo": "III",
+      "faixaOrdem": 5,
+      "rbt12De": 1800000.01,
+      "rbt12Ate": 3600000,
+      "aliquota": 21.0,
+      "parcelaDeduzir": 125640,
+      "fonteLegal": "LC 123/2006, Anexo III (redação da LC 155/2016)"
+    },
+    {
+      "anexo": "III",
+      "faixaOrdem": 6,
+      "rbt12De": 3600000.01,
+      "rbt12Ate": 4800000,
+      "aliquota": 33.0,
+      "parcelaDeduzir": 648000,
+      "fonteLegal": "LC 123/2006, Anexo III (redação da LC 155/2016)"
+    },
+    {
+      "anexo": "IV",
+      "faixaOrdem": 1,
+      "rbt12De": 0,
+      "rbt12Ate": 180000,
+      "aliquota": 4.5,
+      "parcelaDeduzir": 0,
+      "fonteLegal": "LC 123/2006, Anexo IV (redação da LC 155/2016)"
+    },
+    {
+      "anexo": "IV",
+      "faixaOrdem": 2,
+      "rbt12De": 180000.01,
+      "rbt12Ate": 360000,
+      "aliquota": 9.0,
+      "parcelaDeduzir": 8100,
+      "fonteLegal": "LC 123/2006, Anexo IV (redação da LC 155/2016)"
+    },
+    {
+      "anexo": "IV",
+      "faixaOrdem": 3,
+      "rbt12De": 360000.01,
+      "rbt12Ate": 720000,
+      "aliquota": 10.2,
+      "parcelaDeduzir": 12420,
+      "fonteLegal": "LC 123/2006, Anexo IV (redação da LC 155/2016)"
+    },
+    {
+      "anexo": "IV",
+      "faixaOrdem": 4,
+      "rbt12De": 720000.01,
+      "rbt12Ate": 1800000,
+      "aliquota": 14.0,
+      "parcelaDeduzir": 39780,
+      "fonteLegal": "LC 123/2006, Anexo IV (redação da LC 155/2016)"
+    },
+    {
+      "anexo": "IV",
+      "faixaOrdem": 5,
+      "rbt12De": 1800000.01,
+      "rbt12Ate": 3600000,
+      "aliquota": 22.0,
+      "parcelaDeduzir": 183780,
+      "fonteLegal": "LC 123/2006, Anexo IV (redação da LC 155/2016)"
+    },
+    {
+      "anexo": "IV",
+      "faixaOrdem": 6,
+      "rbt12De": 3600000.01,
+      "rbt12Ate": 4800000,
+      "aliquota": 33.0,
+      "parcelaDeduzir": 828000,
+      "fonteLegal": "LC 123/2006, Anexo IV (redação da LC 155/2016)"
+    },
+    {
+      "anexo": "V",
+      "faixaOrdem": 1,
+      "rbt12De": 0,
+      "rbt12Ate": 180000,
+      "aliquota": 15.5,
+      "parcelaDeduzir": 0,
+      "fonteLegal": "LC 123/2006, Anexo V (redação da LC 155/2016)"
+    },
+    {
+      "anexo": "V",
+      "faixaOrdem": 2,
+      "rbt12De": 180000.01,
+      "rbt12Ate": 360000,
+      "aliquota": 18.0,
+      "parcelaDeduzir": 4500,
+      "fonteLegal": "LC 123/2006, Anexo V (redação da LC 155/2016)"
+    },
+    {
+      "anexo": "V",
+      "faixaOrdem": 3,
+      "rbt12De": 360000.01,
+      "rbt12Ate": 720000,
+      "aliquota": 19.5,
+      "parcelaDeduzir": 9900,
+      "fonteLegal": "LC 123/2006, Anexo V (redação da LC 155/2016)"
+    },
+    {
+      "anexo": "V",
+      "faixaOrdem": 4,
+      "rbt12De": 720000.01,
+      "rbt12Ate": 1800000,
+      "aliquota": 20.5,
+      "parcelaDeduzir": 17100,
+      "fonteLegal": "LC 123/2006, Anexo V (redação da LC 155/2016)"
+    },
+    {
+      "anexo": "V",
+      "faixaOrdem": 5,
+      "rbt12De": 1800000.01,
+      "rbt12Ate": 3600000,
+      "aliquota": 23.0,
+      "parcelaDeduzir": 62100,
+      "fonteLegal": "LC 123/2006, Anexo V (redação da LC 155/2016)"
+    },
+    {
+      "anexo": "V",
+      "faixaOrdem": 6,
+      "rbt12De": 3600000.01,
+      "rbt12Ate": 4800000,
+      "aliquota": 30.5,
+      "parcelaDeduzir": 540000,
+      "fonteLegal": "LC 123/2006, Anexo V (redação da LC 155/2016)"
+    }
+  ],
+  "cnaeAnexo": [
+    {
+      "cnae": "4772-5/00",
+      "descricao": "Comércio varejista de cosméticos, perfumaria e higiene pessoal",
+      "anexo": "I",
+      "sujeitoFatorR": false,
+      "fonteLegal": "Resolução CGSN 140/2018 / LC 123/2006, art. 18 (amostra: CNAEs das personas e frequentes; demais CNAEs usam preenchimento manual - RF59)"
+    },
+    {
+      "cnae": "4781-4/00",
+      "descricao": "Comércio varejista de artigos do vestuário e acessórios",
+      "anexo": "I",
+      "sujeitoFatorR": false,
+      "fonteLegal": "Resolução CGSN 140/2018 / LC 123/2006, art. 18 (amostra: CNAEs das personas e frequentes; demais CNAEs usam preenchimento manual - RF59)"
+    },
+    {
+      "cnae": "4712-1/00",
+      "descricao": "Comércio varejista de mercadorias em geral - minimercados",
+      "anexo": "I",
+      "sujeitoFatorR": false,
+      "fonteLegal": "Resolução CGSN 140/2018 / LC 123/2006, art. 18 (amostra: CNAEs das personas e frequentes; demais CNAEs usam preenchimento manual - RF59)"
+    },
+    {
+      "cnae": "5611-2/03",
+      "descricao": "Lanchonetes, casas de chá, de sucos e similares",
+      "anexo": "I",
+      "sujeitoFatorR": false,
+      "fonteLegal": "Resolução CGSN 140/2018 / LC 123/2006, art. 18 (amostra: CNAEs das personas e frequentes; demais CNAEs usam preenchimento manual - RF59)"
+    },
+    {
+      "cnae": "1091-1/02",
+      "descricao": "Fabricação de produtos de padaria e confeitaria com predominância de produção própria",
+      "anexo": "II",
+      "sujeitoFatorR": false,
+      "fonteLegal": "Resolução CGSN 140/2018 / LC 123/2006, art. 18 (amostra: CNAEs das personas e frequentes; demais CNAEs usam preenchimento manual - RF59)"
+    },
+    {
+      "cnae": "9602-5/01",
+      "descricao": "Cabeleireiros, manicure e pedicure",
+      "anexo": "III",
+      "sujeitoFatorR": false,
+      "fonteLegal": "Resolução CGSN 140/2018 / LC 123/2006, art. 18 (amostra: CNAEs das personas e frequentes; demais CNAEs usam preenchimento manual - RF59)"
+    },
+    {
+      "cnae": "9602-5/02",
+      "descricao": "Atividades de estética e outros serviços de cuidados com a beleza",
+      "anexo": "III",
+      "sujeitoFatorR": false,
+      "fonteLegal": "Resolução CGSN 140/2018 / LC 123/2006, art. 18 (amostra: CNAEs das personas e frequentes; demais CNAEs usam preenchimento manual - RF59)"
+    },
+    {
+      "cnae": "8121-4/00",
+      "descricao": "Limpeza em prédios e em domicílios",
+      "anexo": "IV",
+      "sujeitoFatorR": false,
+      "fonteLegal": "Resolução CGSN 140/2018 / LC 123/2006, art. 18 (amostra: CNAEs das personas e frequentes; demais CNAEs usam preenchimento manual - RF59)"
+    },
+    {
+      "cnae": "6911-7/01",
+      "descricao": "Serviços advocatícios",
+      "anexo": "IV",
+      "sujeitoFatorR": false,
+      "fonteLegal": "Resolução CGSN 140/2018 / LC 123/2006, art. 18 (amostra: CNAEs das personas e frequentes; demais CNAEs usam preenchimento manual - RF59)"
+    },
+    {
+      "cnae": "8650-0/03",
+      "descricao": "Atividades de psicologia e psicanálise",
+      "anexo": "V",
+      "sujeitoFatorR": true,
+      "fonteLegal": "Resolução CGSN 140/2018 / LC 123/2006, art. 18 (amostra: CNAEs das personas e frequentes; demais CNAEs usam preenchimento manual - RF59)"
+    },
+    {
+      "cnae": "6201-5/01",
+      "descricao": "Desenvolvimento de programas de computador sob encomenda",
+      "anexo": "V",
+      "sujeitoFatorR": true,
+      "fonteLegal": "Resolução CGSN 140/2018 / LC 123/2006, art. 18 (amostra: CNAEs das personas e frequentes; demais CNAEs usam preenchimento manual - RF59)"
+    },
+    {
+      "cnae": "7020-4/00",
+      "descricao": "Atividades de consultoria em gestão empresarial",
+      "anexo": "V",
+      "sujeitoFatorR": true,
+      "fonteLegal": "Resolução CGSN 140/2018 / LC 123/2006, art. 18 (amostra: CNAEs das personas e frequentes; demais CNAEs usam preenchimento manual - RF59)"
+    }
+  ],
+  "parametroMei": [
+    {
+      "atividade": "COMERCIO_INDUSTRIA",
+      "valorDasMensal": 76.9,
+      "limiteFaturamentoAnual": 81000,
+      "fonteLegal": "LC 123/2006, art. 18-A; DAS = 5% do salário mínimo (INSS) + R$ 1,00 (ICMS)",
+      "conferir": "valores com salário mínimo de 2025 (R$ 1.518,00); atualizar para o ano vigente e confirmar o limite anual"
+    },
+    {
+      "atividade": "SERVICOS",
+      "valorDasMensal": 80.9,
+      "limiteFaturamentoAnual": 81000,
+      "fonteLegal": "LC 123/2006, art. 18-A; DAS = 5% do salário mínimo (INSS) + R$ 5,00 (ISS)",
+      "conferir": "valores com salário mínimo de 2025 (R$ 1.518,00); atualizar para o ano vigente e confirmar o limite anual"
+    },
+    {
+      "atividade": "COMERCIO_E_SERVICOS",
+      "valorDasMensal": 81.9,
+      "limiteFaturamentoAnual": 81000,
+      "fonteLegal": "LC 123/2006, art. 18-A; DAS = 5% do salário mínimo (INSS) + R$ 1,00 (ICMS) + R$ 5,00 (ISS)",
+      "conferir": "valores com salário mínimo de 2025 (R$ 1.518,00); atualizar para o ano vigente e confirmar o limite anual"
+    }
+  ],
+  "margemPadraoCategoria": [
+    {
+      "categoria": "SERVICOS",
+      "margemPadrao": 32,
+      "fonteLegal": "Lei 9.249/1995, art. 15 (percentual de presunção: 32% serviços em geral)"
+    },
+    {
+      "categoria": "BELEZA",
+      "margemPadrao": 32,
+      "fonteLegal": "Lei 9.249/1995, art. 15 (percentual de presunção: 32% serviços em geral)"
+    },
+    {
+      "categoria": "SAUDE",
+      "margemPadrao": 32,
+      "fonteLegal": "Lei 9.249/1995, art. 15 (percentual de presunção: 32% serviços em geral)"
+    },
+    {
+      "categoria": "TECNOLOGIA",
+      "margemPadrao": 32,
+      "fonteLegal": "Lei 9.249/1995, art. 15 (percentual de presunção: 32% serviços em geral)"
+    },
+    {
+      "categoria": "PRODUTOS",
+      "margemPadrao": 8,
+      "fonteLegal": "Lei 9.249/1995, art. 15 (percentual de presunção: 8% comércio e indústria)"
+    },
+    {
+      "categoria": "ALIMENTACAO",
+      "margemPadrao": 8,
+      "fonteLegal": "Lei 9.249/1995, art. 15 (percentual de presunção: 8% comércio e indústria)"
+    },
+    {
+      "categoria": "VESTUARIO",
+      "margemPadrao": 8,
+      "fonteLegal": "Lei 9.249/1995, art. 15 (percentual de presunção: 8% comércio e indústria)"
+    },
+    {
+      "categoria": "CASA",
+      "margemPadrao": 8,
+      "fonteLegal": "Lei 9.249/1995, art. 15 (percentual de presunção: 8% comércio e indústria)"
+    },
+    {
+      "categoria": "OUTROS",
+      "margemPadrao": 8,
+      "fonteLegal": "Lei 9.249/1995, art. 15 (percentual de presunção: 8% comércio e indústria)"
+    }
+  ],
+  "fatorR": {
+    "limiteMinimo": 28.0,
+    "anexoSeAtingir": "III",
+    "anexoSeNaoAtingir": "V",
+    "fonteLegal": "LC 123/2006, art. 18, §§ 5º-J e 5º-M"
+  }
+}

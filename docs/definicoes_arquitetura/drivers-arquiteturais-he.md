@@ -34,6 +34,7 @@ Um requisito, regra ou restrição entra neste documento quando atende a pelo me
 |**AD-QA05**|Negócio|Modelo Freemium limitado por funcionalidade sem restrição de volume (RF45-RF47, RN18)|Guardas de acesso por plano no backend sem travas de contagem de registros no banco.|Média|
 |**AD-CEN01**|Cenário|Venda de serviço composto por múltiplos materiais de estoque (RF12, RN05)|Baixa iterativa transacional de múltiplos itens no estoque ao fechar uma venda.|Alta|
 |**AD-RF05**|Requisito|Cadastro fiscal do negócio pela consulta de CNPJ na base pública da Receita, com sugestão de Anexo pelo CNAE e fallback manual (RF58, RF59, RN24)|Adaptador de integração externa isolado do domínio (ADR-006) e tabelas oficiais parametrizadas (ADR-004).|Alta|
+|**AD-QA06**|Qualidade|Isolamento e proteção de dados por perfil e por negócio (RNF02, RN01, RN02)|Autorização por papel e por matriz módulo × ação validada no servidor em toda requisição.|Alta|
 |**AD-CEN03**|Cenário|Cancelamento e troca de venda já registrada (RF65, RF66, RN25, RN26)|Reversão transacional de estoque, contas e caixa sem apagar registros; crédito de troca limitado ao valor já recebido para não distorcer o saldo.|Alta|
 |**AD-CEN02**|Cenário|Venda realizada com quantidade de estoque insuficiente (RF18, RN06)|O sistema deve bloquear a conclusão da venda, notificando o usuário sobre a indisponibilidade física do item para evitar pedidos com estoque falso e problemas de sincronia.|Alta|
 
@@ -94,16 +95,7 @@ A Calculadora de Precificação não pode utilizar valores fixos de alíquotas (
 * **Resposta:** O sistema agrega o faturamento dos últimos 12 meses (RBT12), identifica a alíquota aplicável e retorna o preço sugerido.
 * **Medida:** Tempo de resposta exibido na interface em menos de 2 segundos.
 
-##### AD-QA02 — Isolamento e Proteção de Dados por Perfil (RNF02, RNF05, RN01, RN02)
-
-* **Fonte:** Colaborador autenticado.
-* **Estímulo:** Tentativa de acessar relatórios financeiros, configurações da empresa ou dados de outros negócios.
-* **Artefato:** Middleware de roteamento e Server Actions de dados.
-* **Ambiente:** Operação regular do sistema.
-* **Resposta:** A requisição é negada no backend e o acesso é bloqueado.
-* **Medida:** Nenhuma informação financeira ou de terceiros vaza no payload da API ou na interface.
-
-##### AD-QA03 — Auditoria Imutável de Estoque e Preços (RNF05)
+##### AD-QA02 — Auditoria Imutável de Estoque e Preços (RNF05)
 
 * **Fonte:** Qualquer usuário com permissão de escrita.
 * **Estímulo:** Lançamento de ajuste manual de estoque ou confirmação de novo preço.
@@ -111,6 +103,24 @@ A Calculadora de Precificação não pode utilizar valores fixos de alíquotas (
 * **Ambiente:** Alteração de dados cadastrais/operacionais.
 * **Resposta:** Registro gravado com data, hora, ID do usuário, valor anterior, valor novo e motivo.
 * **Medida:** Logs persistidos de forma permanente, sem permissão de alteração ou exclusão.
+
+##### AD-QA03 — Conformidade com a LGPD na Exclusão e Exportação de Dados (RNF04, RN27)
+
+* **Fonte:** Titular da conta.
+* **Estímulo:** Solicitação de exportação dos dados ou de exclusão da conta.
+* **Artefato:** Serviços de exportação e de anonimização.
+* **Ambiente:** Operação regular do sistema.
+* **Resposta:** Exportação gera um .zip com JSON e CSV; exclusão bloqueia o acesso, anonimiza dados pessoais e mantém registros fiscais sem identificação.
+* **Medida:** Nenhum dado pessoal identificável permanece após a exclusão; registros fiscais retidos por 5 anos.
+
+##### AD-QA06 — Isolamento e Proteção de Dados por Perfil (RNF02, RN01, RN02)
+
+* **Fonte:** Colaborador autenticado.
+* **Estímulo:** Tentativa de acessar relatórios financeiros, configurações da empresa ou dados de outros negócios.
+* **Artefato:** Middleware de roteamento e Server Actions de dados.
+* **Ambiente:** Operação regular do sistema.
+* **Resposta:** A requisição é negada no backend e o acesso é bloqueado.
+* **Medida:** Nenhuma informação financeira ou de terceiros vaza no payload da API ou na interface.
 
 ---
 
@@ -137,6 +147,7 @@ A Calculadora de Precificação não pode utilizar valores fixos de alíquotas (
 |**AD-QA01**|RNF06|—|Consultas do Prisma / Banco PostgreSQL.|
 |**AD-QA02**|RNF05|—|Tabelas `MovimentacaoEstoque` e `HistoricoPreco`.|
 |**AD-QA03**|RNF04|—|Endpoints de Exportação e Deleção de Conta.|
+|**AD-QA06**|RNF02, RF06|RN01, RN02|Middleware de autorização, `MembroNegocio.permissoesCustom`.|
 |**AD-RF05**|RF58, RF59, RF60, RF61|RN17, RN24|Adaptador `ConsultaCnpj`, tabelas `CnaeAnexo` e `ParametroMei`, cadastro de `Negocio`.|
 
 ---

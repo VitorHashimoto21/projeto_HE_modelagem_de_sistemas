@@ -90,7 +90,7 @@ Para atender ao rigor acadêmico e técnico da disciplina, as issues estão divi
     Para gerenciar com segurança o acesso aos dados operacionais e financeiros.
 
     Tarefas:
-    - [ ] Configurar Supabase Auth (ou Auth.js) para login social e e-mail/senha.
+    - [ ] Configurar Supabase Auth (ADR-003) para login com e-mail e senha.
     - [ ] Implementar Middleware do Next.js para proteger rotas e garantir o isolamento por Negócio (RN01.
     - [ ] Desenvolver o seletor de Negócio no Header da aplicação (RF03).
     - [ ] Implementar lógica de convite de colaboradores via e-mail.
