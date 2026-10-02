@@ -1,6 +1,6 @@
 # Mapa de Specs — HealthEnterprise (HE)
 
-> **Status:** revisão 2 — escolhas de ordenação confirmadas, inconsistências corrigidas na baseline e questões em aberto decididas pela equipe (seção 1.7). Aguarda aprovação final para a geração das Specs individuais. Gerado conforme `docs/Prompt_SDD_Specs.pdf` (etapa 1, decomposição); nenhuma Spec individual foi escrita e nenhum código foi gerado.
+> **Status:** ✅ **Aprovado pela equipe em 02/10/2026** (revisão 2 — escolhas de ordenação confirmadas, inconsistências corrigidas e questões em aberto decididas, seção 1.7). As Specs individuais serão geradas uma por vez, sob pedido. Gerado conforme `docs/Prompt_SDD_Specs.pdf`.
 >
 > **Baseline utilizada:** `VISAO_DE_NEGOCIO.md`, personas v2, `requisitos.md` (RF01–RF71, RN01–RN29, RNF01–RNF10), `requisitos_ears.md`, modelo de domínio e jornadas, casos de uso, diagramas comportamentais, modelo lógico, `schema.prisma`, drivers arquiteturais, ADR-001 a ADR-006, guia de issues e README.
 >
@@ -296,6 +296,6 @@ Todos os 110 requisitos (RF01–RF71, RN01–RN29, RNF01–RNF10) estão associa
 
 ## 4. Próximo passo
 
-**Parada obrigatória:** com as escolhas confirmadas e as questões decididas, o mapa aguarda **aprovação final** da equipe. Depois de aprovado, cada Spec será gerada **individualmente**, sob pedido ("Gerar SPEC-XXX"), seguindo as 14 seções do prompt complementar, sem implementação no mesmo pedido.
+**Mapa aprovado.** Cada Spec será gerada **individualmente**, sob pedido ("Gerar SPEC-XXX"), seguindo as 14 seções do prompt complementar, sem implementação no mesmo pedido.
 
 A única pendência que condiciona uma Spec é a **conferência dos valores do seed fiscal** pela equipe, necessária antes de concluir a SPEC-003.
