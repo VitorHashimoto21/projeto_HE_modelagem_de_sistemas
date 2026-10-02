@@ -1,6 +1,10 @@
 # Health Enterprise (HE)
 
-<img src="docs/design/identidade/logo/he-logo-horizontal.svg" alt="Health Enterprise" height="48">
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/design/identidade/logo/he-logo-horizontal-negativo.svg">
+  <source media="(prefers-color-scheme: light)" srcset="docs/design/identidade/logo/he-logo-horizontal.svg">
+  <img src="docs/design/identidade/logo/he-logo-horizontal.svg" alt="Health Enterprise" height="48">
+</picture>
 > Vitor Hashimoto, Rafael Katahira, Rafael Di Santi
 
 *A saúde da sua empresa de maneira visual e sob controle.*
