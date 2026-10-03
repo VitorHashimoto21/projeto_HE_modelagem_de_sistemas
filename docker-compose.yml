@@ -1,0 +1,23 @@
+# PostgreSQL local para desenvolvimento e testes (SPEC-001, ambiente de desenvolvimento).
+# Uso: docker compose up -d   →   bancos he_dev, he_shadow e he_test em localhost:5432.
+services:
+  postgres:
+    image: postgres:17
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: he_dev
+    ports:
+      - "5432:5432"
+    volumes:
+      - he-postgres:/var/lib/postgresql/data
+      - ./scripts/docker-criar-bancos.sql:/docker-entrypoint-initdb.d/criar-bancos.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  he-postgres:

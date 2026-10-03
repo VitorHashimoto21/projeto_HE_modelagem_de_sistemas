@@ -1,0 +1,56 @@
+# Backup diário (SPEC-001, RNF09, OPEN-29): dump do banco guardado como artefato privado.
+# Segredos necessários (Settings → Secrets → Actions):
+#   BACKUP_HOMOL_DATABASE_URL — conexão direta do Supabase de homologação
+#   BACKUP_PROD_DATABASE_URL  — conexão direta do Supabase de produção (quando existir)
+# Sem o segredo, o ambiente correspondente é pulado.
+name: Backup diário
+
+on:
+  schedule:
+    - cron: "0 6 * * *" # 03:00 em Brasília
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  dump:
+    name: Dump (${{ matrix.ambiente }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - ambiente: homologacao
+            segredo: BACKUP_HOMOL_DATABASE_URL
+          - ambiente: producao
+            segredo: BACKUP_PROD_DATABASE_URL
+    env:
+      DATABASE_URL: ${{ secrets[matrix.segredo] }}
+    steps:
+      - name: Verificar se o ambiente está configurado
+        id: config
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "Segredo ${{ matrix.segredo }} não definido: ${{ matrix.ambiente }} pulado."
+            echo "pular=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Gerar dump (pg_dump 17, formato custom)
+        if: steps.config.outputs.pular != 'true'
+        run: |
+          mkdir -p backup
+          arquivo="backup/he-${{ matrix.ambiente }}-$(date -u +%Y%m%dT%H%M%SZ).dump"
+          docker run --rm --network host -v "$PWD/backup:/backup" postgres:17 \
+            pg_dump --format=custom --no-owner --no-privileges --schema=public \
+            --dbname="$DATABASE_URL" --file="/$arquivo"
+          ls -lh backup
+
+      - name: Guardar como artefato privado
+        if: steps.config.outputs.pular != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: backup-${{ matrix.ambiente }}-${{ github.run_id }}
+          path: backup/*.dump
+          retention-days: 90
+          if-no-files-found: error
