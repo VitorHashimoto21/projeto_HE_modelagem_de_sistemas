@@ -23,13 +23,15 @@ Projeto acadêmico desenvolvido com **Spec-Driven Development (SDD)**: requisito
 ## Tecnologias
 
 * **Next.js** (App Router) + **TypeScript** — frontend e backend (Server Actions) na mesma aplicação (ADR-001)
-* **Prisma** — ORM, schema-first a partir do modelo de domínio (ADR-002)
-* **PostgreSQL** (Supabase) — banco relacional, multi-tenant lógico por `negocioId` (ADR-002), com backup diário automático e cópia semanal (RNF09)
-* **Supabase Auth** (definitivo) — autenticação, com autorização por papel validada no servidor (ADR-003)
+* **Prisma** — ORM, schema-first a partir do modelo de domínio (ADR-002); isolamento por negócio aplicado por uma extensão do Prisma Client
+* **PostgreSQL** (Supabase) — banco relacional, multi-tenant lógico por `negocioId` em todas as tabelas operacionais, com RLS ligado para bloquear a API pública (ADR-002) e dump diário automatizado (RNF09)
+* **Supabase Auth** (definitivo) — autenticação e guarda da senha; `Usuario.id` = id do Supabase Auth, com autorização por papel validada no servidor (ADR-003)
 * **TailwindCSS + shadcn/ui** — estilização e componentes
 * **BrasilAPI** (dados abertos de CNPJ da Receita Federal) — enquadramento fiscal do negócio (ADR-006)
+* **Vitest** — testes automatizados
 * **Vercel** — hospedagem do frontend/backend e rotinas agendadas (Vercel Cron)
 * **Supabase** — hospedagem do banco de dados e da autenticação
+* **Stripe** (planejado — ADR-007, proposta) — cobrança real do plano pago; no MVP a troca de plano é simulada
 
 ## Documentação do Projeto
 
@@ -49,14 +51,15 @@ Toda a especificação do produto está documentada na pasta [`docs/`](./docs):
 | [`prisma_base/`](./docs/prisma_base) | [`schema.prisma`](./docs/prisma_base/schema.prisma), [`parametros_fiscais_seed.json`](./docs/prisma_base/parametros_fiscais_seed.json) | Schema Prisma (fonte da verdade do banco) e parâmetros fiscais iniciais |
 | [`definicoes_arquitetura/`](./docs/definicoes_arquitetura) | `drivers-arquiteturais-he.md`, `adrs-he.md` | Drivers arquiteturais e ADRs (ADR-001 a ADR-006) |
 | [`design/`](./docs/design) | [`IDENTIDADE_VISUAL.md`](./docs/design/IDENTIDADE_VISUAL.md) | Identidade visual: logo, favicon, cores (tokens claro/escuro com contraste verificado), tipografia, semáforo, componentes base e login revisado |
-| [`docs/`](./docs) | [`MAPA_DE_SPECS.md`](./docs/MAPA_DE_SPECS.md), [`Prompt_SDD_Specs.pdf`](./docs/Prompt_SDD_Specs.pdf) | Mapa ordenado das Specs e prompt de apoio do SDD |
+| [`docs/`](./docs) | [`MAPA_DE_SPECS.md`](./docs/MAPA_DE_SPECS.md), [`Prompt_SDD_Specs.pdf`](./docs/Prompt_SDD_Specs.pdf) | Mapa ordenado das Specs (com as decisões da baseline) e prompt de apoio do SDD |
+| [`specs/`](./docs/specs) | `SPEC-001.md`, … | Specs individuais aprovadas para implementação, uma por arquivo |
 | [`guia_issues/`](./docs/guia_issues) | [`issues_guide.md`](./docs/guia_issues/issues_guide.md) | Issues do GitHub com critérios de aceitação em EARS e testes |
 
 As imagens renderizadas dos diagramas ficam em [`docs/img/`](./docs/img) e são geradas a partir dos blocos Mermaid; ao alterar um diagrama, gere a imagem novamente (ex.: `npx @mermaid-js/mermaid-cli -i diagrama.mmd -o docs/img/nome.png`). A versão editável do diagrama de domínio está em [`docs/dominio_fluxogramas/modelo_dominio.drawio`](./docs/dominio_fluxogramas/modelo_dominio.drawio) (abrir em [app.diagrams.net](https://app.diagrams.net)).
 
 ## Instalação
 
-> A aplicação ainda não foi iniciada — por enquanto o repositório contém a documentação de modelagem. Os comandos abaixo valerão após a spec de fundação (Issue #01 do guia de issues).
+> A aplicação ainda não foi iniciada — por enquanto o repositório contém a documentação de modelagem. Os comandos abaixo valerão após a [SPEC-001](./docs/specs/SPEC-001.md) (fundação).
 
 ```bash
 git clone <url-do-repositorio>
@@ -77,20 +80,37 @@ npx prisma migrate dev
 # ambiente de desenvolvimento
 npm run dev
 
+# testes
+npm test
+
 # build de produção
 npm run build
 npm run start
 ```
 
+## Ambientes
+
+| Ambiente | Onde roda | Banco | Atualiza quando |
+|---|---|---|---|
+| **Desenvolvimento** | Máquina de cada integrante (`npm run dev`) | PostgreSQL local | A cada alteração |
+| **Preview** | Vercel, link temporário por Pull Request | Banco de homologação | A cada push no PR |
+| **Homologação** | Vercel, endereço fixo | Projeto Supabase de homologação (dados fictícios) | A cada merge na `DEVELOP` |
+| **Produção** | Vercel, domínio final | Projeto Supabase de produção (dados reais) | A cada merge na `main` |
+
+Cada ambiente tem variáveis e credenciais próprias (RNF11); chaves de serviços externos em modo de teste fora de produção. A produção é ativada quando o projeto for publicado.
+
 ## Estrutura
 ```text
 .
-├── app/                          # (planejado) Rotas, páginas e Server Actions (Next.js App Router)
-├── components/                   # (planejado) Componentes shadcn/ui e reutilizáveis
-├── lib/                          # (planejado) Configurações Prisma/Supabase e regras de domínio
-├── prisma/                       # (planejado) schema.prisma e migrations
-├── test/                         # (planejado) Testes automatizados
+├── src/
+│   ├── app/                      # (planejado) Rotas, páginas e Server Actions (Next.js App Router)
+│   ├── components/               # (planejado) Componentes shadcn/ui e reutilizáveis
+│   ├── lib/                      # (planejado) Prisma/Supabase, cliente do negócio e regras de domínio
+│   └── hooks/                    # (planejado) Custom hooks do front
+├── prisma/                       # (planejado) schema.prisma (fonte da verdade a partir da SPEC-001), migrations e seed
+├── test/                         # (planejado) Testes automatizados (Vitest)
 ├── docs/                         # Documentação de modelagem (fonte das specs)
+│   ├── specs/
 │   ├── visao_negocio/
 │   ├── personas/
 │   ├── requisitos/
