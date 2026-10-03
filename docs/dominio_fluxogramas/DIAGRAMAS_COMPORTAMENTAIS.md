@@ -9,12 +9,19 @@ Preço = Custo Total ÷ (1 − (Desp. Fixas% + Desp. Variáveis% + Imposto% + Ma
 
 Custo Total       = custoBase + Σ (custo do material × quantidade)          (RF35)
 Desp. Fixas%      = (Σ despesas fixas mensais + DAS se MEI) ÷ faturamento médio mensal (RF49, RF60)
-RBT12             = Σ Venda.valorTotal dos últimos 12 meses — todas as vendas não canceladas, inclusive crédito não recebido (RF39, RN21, RN25)
-Faturamento médio = RBT12 ÷ meses com vendas (até 12)
+RBT12             = Σ Venda.valorTotal dos 12 meses anteriores ao mês do cálculo — todas as vendas não canceladas,
+                    inclusive crédito não recebido (RF39, RN21, RN25)
+                    1 a 11 meses anteriores com vendas → média mensal desses meses × 12 (RN21)
+                    nenhum mês anterior com vendas    → faturamento estimado × 12 (RN21, RF50) — RBT12 nunca é zero
+Faturamento médio = RBT12 ÷ 12 (já proporcionalizado)
                     sem histórico → faturamento estimado (capacidade × ticket médio, editável) (RF50)
 Desp. Variáveis%  = taxa média de cartão do negócio + comissão do item (opcional, padrão 0%) (RF51, RF52, RN20)
-Imposto%          = Simples: (RBT12 × alíquota nominal − parcela a deduzir) ÷ RBT12, pela FaixaTributaria do Anexo do negócio (RF38, RN24)
+Imposto%          = Simples: (RBT12 × alíquota nominal − parcela a deduzir) ÷ RBT12, pela FaixaTributaria do Anexo efetivo,
+                             na faixa em que rbt12De < RBT12 ≤ rbt12Ate (RF38, RN24)
+                             Anexo efetivo: CNAE sujeito ao Fator R → Fator R = folha (Salário) ÷ vendas, no mesmo período do RBT12;
+                             ≥ ParametroFatorR.limiteMinimo (28%) → Anexo III, senão V (RF69, RN28)
                     MEI: 0% — o DAS já está nas despesas fixas (RF60)
+                    Autônomo: percentual informado no cadastro (RF59)
 Margem%           = sugerida pela MargemPadraoCategoria da categoria do item, editável (RF36)
 Restrição         = Desp. Fixas% + Desp. Variáveis% + Imposto% + Margem% < 100% (RN19)
 ```
@@ -50,12 +57,12 @@ sequenceDiagram
     end
 
     rect rgb(255, 240, 240)
-        note right of Action: RBT12 por competência: todas as vendas, pagas ou não (RF39, RN21, RF49)
-        Action->>ORM: Venda.aggregate(_sum: valorTotal, status: CONCLUIDA, data >= hoje − 12 meses)
-        ORM->>DB: SELECT SUM(valorTotal), COUNT(DISTINCT mês) FROM Venda WHERE negocioId = ... AND data >= ...
-        DB-->>ORM: RBT12 + meses com vendas
-        ORM-->>Action: RBT12 (R$), meses com vendas
-        Action->>ORM: ItemVenda.aggregate(_sum: custoUnitario × quantidade, últimos 12 meses)
+        note right of Action: RBT12 por competência: 12 meses anteriores ao mês atual, todas as vendas pagas ou não (RF39, RN21, RN29)
+        Action->>ORM: Venda.aggregate(_sum: valorTotal, status: CONCLUIDA, início do mês − 12 meses <= data < início do mês)
+        ORM->>DB: SELECT SUM(valorTotal), COUNT(DISTINCT mês) FROM Venda WHERE negocioId = ... AND data no período
+        DB-->>ORM: Soma + meses com vendas
+        ORM-->>Action: Soma (R$), meses com vendas
+        Action->>ORM: ItemVenda.aggregate(_sum: custoUnitario × quantidade, mesmo período, vendas CONCLUIDA)
         ORM-->>Action: Custo das vendas → CMV% (RF62)
     end
 
@@ -67,21 +74,31 @@ sequenceDiagram
         ORM-->>Action: Parâmetros de precificação
     end
 
+    alt Nenhum mês anterior com vendas (RN21, RF50)
+        Action->>Action: RBT12 = faturamentoMensalEstimado × 12, CMV% = cmvEstimado
+    else 1 a 11 meses anteriores com vendas (RN21)
+        Action->>Action: RBT12 = (soma ÷ meses com vendas) × 12, CMV% = custo das vendas ÷ soma
+    else 12 meses
+        Action->>Action: RBT12 = soma, CMV% = custo das vendas ÷ soma
+    end
+    Action->>Action: Faturamento médio = RBT12 ÷ 12
+
     alt Regime MEI (RF60, RF61)
         Action->>ORM: ParametroMei.findFirst(atividadeMei, ativo)
         ORM-->>Action: valorDasMensal, limiteFaturamentoAnual
         Action->>Action: Total fixo += DAS, Imposto% = 0
         Action->>Action: Se RBT12 > limite anual → alerta de desenquadramento do MEI
     else Simples Nacional (RF38, RN24)
-        Action->>ORM: FaixaTributaria.findFirst(anexo do negócio, rbt12De <= RBT12 < rbt12Ate, ativo)
+        opt CNAE sujeito ao Fator R (RF69, RN28)
+            Action->>ORM: LancamentoFinanceiro.aggregate(categoria SALARIO, mesmo período) + ParametroFatorR.findFirst(ativo)
+            ORM-->>Action: Folha 12 meses, limiteMinimo, anexos
+            Action->>Action: Fator R = folha ÷ soma das vendas do período (sem vendas → Anexo V, RN28) → Anexo efetivo III ou V (avisa se mudou)
+        end
+        Action->>ORM: FaixaTributaria.findFirst(anexo efetivo, rbt12De < RBT12 <= rbt12Ate, ativo)
         ORM-->>Action: Alíquota nominal + parcela a deduzir
         Action->>Action: Imposto% = (RBT12 × alíquota − parcela a deduzir) ÷ RBT12
-    end
-
-    alt Negócio sem histórico de vendas
-        Action->>Action: Faturamento médio = faturamentoMensalEstimado (capacidade × ticket médio, editável), CMV% = cmvEstimado
-    else Com histórico
-        Action->>Action: Faturamento médio = RBT12 ÷ meses com vendas, CMV% = custo das vendas ÷ RBT12
+    else Autônomo (RF59)
+        Action->>Action: Imposto% = Negocio.impostoPercentualManual
     end
 
     Action->>Action: Desp. Fixas% = Total fixo ÷ Faturamento médio
@@ -139,12 +156,12 @@ sequenceDiagram
         note right of Action: Transação ACID de Venda no Banco de Dados
         Action->>ORM: Iniciar Transação (prisma.$transaction)
 
-        note right of Action: Validação estrita de estoque (RF18 / RN06)
-        Action->>ORM: Item.findMany(produtos físicos + materiais dos serviços do carrinho)
-        ORM->>DB: SELECT quantidadeEstoque ... FOR UPDATE
-        DB-->>ORM: Saldos atuais
+        note right of Action: Validação estrita de estoque (RF18 / RN06) — baixa condicional e atômica por item:<br/>UPDATE Item SET quantidadeEstoque = quantidadeEstoque − qtd WHERE id = ... AND quantidadeEstoque >= qtd<br/>(0 linhas afetadas = estoque insuficiente — evita corrida entre vendas simultâneas sem SELECT ... FOR UPDATE)
+        Action->>ORM: Item.updateMany(decrement, where quantidadeEstoque >= qtd) para produtos físicos + materiais dos serviços do carrinho
+        ORM->>DB: UPDATE condicional por item
+        DB-->>ORM: Linhas afetadas por item
 
-        alt Algum item/material com quantidade solicitada > quantidadeEstoque
+        alt Algum item/material com 0 linhas afetadas (quantidade solicitada > quantidadeEstoque)
             Action->>ORM: ROLLBACK
             Action-->>UI: Erro "Estoque insuficiente para o item [Nome do Item]"
             UI-->>Operador: Exibe alerta e mantém o carrinho (nenhuma baixa, nenhum lançamento)
@@ -153,14 +170,14 @@ sequenceDiagram
             ORM->>DB: INSERT INTO Venda, ItemVenda
             DB-->>ORM: vendaId gerado
 
-            loop Para cada Item do carrinho
+            loop Para cada Item do carrinho (o saldo já foi baixado no passo condicional)
                 alt Produto Físico
-                    Action->>ORM: MovimentacaoEstoque.create(tipo: SAIDA_VENDA) + Item.update(decrement)
-                    ORM->>DB: INSERT INTO MovimentacaoEstoque, UPDATE Item SET quantidadeEstoque
+                    Action->>ORM: MovimentacaoEstoque.create(tipo: SAIDA_VENDA, vendaId, saldoAnterior, saldoPosterior)
+                    ORM->>DB: INSERT INTO MovimentacaoEstoque
                 else Serviço com materiais (RN05)
                     loop Para cada material vinculado
-                        Action->>ORM: MovimentacaoEstoque.create(SAIDA_VENDA, qtd × quantidade do material)
-                        ORM->>DB: INSERT INTO MovimentacaoEstoque, UPDATE Item (material)
+                        Action->>ORM: MovimentacaoEstoque.create(SAIDA_VENDA, vendaId, qtd × quantidade do material, saldos)
+                        ORM->>DB: INSERT INTO MovimentacaoEstoque
                     end
                 end
             end
@@ -245,9 +262,10 @@ sequenceDiagram
         Action->>ORM: Venda.findUnique(itens, pagamentos, contas, lançamentos) — status deve ser CONCLUIDA
         Action->>ORM: Venda.update(status: CANCELADA, canceladaEm, canceladaPorId, motivoCancelamento)
 
-        loop Para cada item vendido (e materiais de serviços)
-            Action->>ORM: MovimentacaoEstoque.create(ENTRADA_ESTORNO) + Item.update(increment)
+        loop Para cada MovimentacaoEstoque SAIDA_VENDA desta venda (vendaId) — inclui materiais de serviços
+            Action->>ORM: MovimentacaoEstoque.create(ENTRADA_ESTORNO, vendaId, mesma quantidade, saldos) + Item.update(increment)
         end
+        note right of Action: Devolve exatamente o que foi baixado, mesmo que a receita do serviço tenha mudado depois da venda (RN25)
 
         Action->>ORM: ContaPagarReceber.updateMany(contas abertas/parciais da venda → CANCELADA)
         Action->>Action: Recebido = lançamentos de entrada da venda + recebimentos das suas contas

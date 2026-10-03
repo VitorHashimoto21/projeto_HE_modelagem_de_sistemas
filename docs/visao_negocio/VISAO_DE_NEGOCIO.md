@@ -115,11 +115,15 @@ A ordem de construção segue o [Mapa de Specs](../MAPA_DE_SPECS.md), entregando
 
 | Etapa | Foco |
 |---|---|
-| 1 | Fundação: setup, autenticação, multi-tenant e cadastro do negócio com consulta de CNPJ |
-| 2 | Catálogo de itens e Estoque |
-| 3 | Calculadora de Precificação (markup completo, parâmetros fiscais) |
-| 4 | Vendas e Financeiro (caixa, contas a pagar/receber, parcelamento) |
-| 5 | Dashboard (resumo, semáforo e ponto de equilíbrio), testes de ponta a ponta e ajustes de usabilidade |
+| 1 | Fundação: setup, ambientes, autenticação, multi-tenant, parâmetros fiscais, cadastro do negócio com consulta de CNPJ e equipe (SPECs 001–005) |
+| 2 | Catálogo de itens e Estoque (SPECs 006–007) |
+| 3 | Vendas e Financeiro: caixa, contas a pagar/receber, parcelamento (SPECs 008–009) |
+| 4 | Calculadora de Precificação: markup completo, RBT12 e CMV% a partir das vendas (SPEC-010) e cancelamento/troca (SPEC-011) |
+| 5 | Dashboard (resumo, semáforo e ponto de equilíbrio), plano gratuito × pago, LGPD, testes de ponta a ponta e ajustes de usabilidade (SPECs 012–014) |
+
+A Calculadora vem depois de Vendas e Financeiro porque usa o histórico de vendas (RBT12 e CMV%) e as despesas fixas; antes dela, o preço pode ser definido manualmente (RF64). A cobrança real do plano pago (SPEC-015) é opcional no semestre.
+
+**Depois do MVP:** o projeto segue para homologação e produção (RNF11), com a cobrança real do plano pago (ADR-007) entre as primeiras evoluções.
 
 ---
 
@@ -127,7 +131,9 @@ A ordem de construção segue o [Mapa de Specs](../MAPA_DE_SPECS.md), entregando
 
 ### 8.1 Estrutura de Monetização
 
-Modelo recomendado: **Freemium com trial guiado**. Uma camada gratuita permanente (Financeiro básico + Estoque básico + Calculadora limitada) reduz a barreira de entrada — fator crítico para um público sensível a preço — enquanto funcionalidades avançadas (relatórios, múltiplos usuários, integrações externas) ficam no plano pago.
+Modelo recomendado: **Freemium**. Uma camada gratuita permanente com todos os módulos do MVP — Financeiro, Estoque, **Calculadora completa** e Dashboard — e o Dono mais 1 colaborador reduz a barreira de entrada, fator crítico para um público sensível a preço; a Calculadora completa é o principal gancho de adoção. O plano pago libera relatórios avançados (rentabilidade por item, exportação CSV/PDF, histórico acima de 12 meses) e múltiplos colaboradores (RF47), e futuramente integrações externas. A limitação é sempre por funcionalidade, nunca por volume (RN18).
+
+**Cobrança:** no MVP, a troca de plano é simulada pelo Dono, sem cobrança (RF73). A cobrança real por gateway de pagamento está planejada (ADR-007, proposta) e pode ser ativada sem refazer as regras de plano.
 
 **Status:** modelo validado como direção com o responsável pelo projeto; os valores de preço do plano pago ainda precisam ser definidos em uma etapa futura de precificação do próprio produto.
 
@@ -140,6 +146,7 @@ Modelo recomendado: **Freemium com trial guiado**. Uma camada gratuita permanent
 
 - Emissão de Nota Fiscal (NFS-e / MEI).
 - Pagamentos (PIX).
+- Cobrança da assinatura do plano pago por gateway (Stripe — ADR-007; opcional ainda no semestre, como SPEC-015).
 
 ---
 

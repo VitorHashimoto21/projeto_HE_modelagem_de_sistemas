@@ -15,6 +15,10 @@
 // despesas fixas e DAS (RF67), estoque mínimo por cobertura (RF20), LGPD (RN27).
 // v6: Fator R (RF69, RN28), permissões módulo × ação (RF06), datas em UTC com
 // competência em America/Sao_Paulo (RN29).
+// v7 (decisões OPEN-12 a OPEN-31 do Mapa de Specs): negocioId em todas as tabelas
+// operacionais (ADR-002); Usuario.id = id do Supabase Auth, sem senha local (ADR-003);
+// ParametroFatorR (RN17); Convite (RF72); regime AUTONOMO com imposto informado (RF59);
+// vendaId e saldos na MovimentacaoEstoque (RN25, RNF05); registro da troca de plano (RF73).
 // ==========================================================
 
 datasource db {
@@ -39,11 +43,20 @@ enum PapelUsuario {
 enum RegimeTributario {
   MEI
   SIMPLES_NACIONAL
+  AUTONOMO // RF59: autônomo sem CNPJ; Imposto% informado pelo usuário (Negocio.impostoPercentualManual)
 }
 
 enum PlanoNegocio {
   GRATUITO
   PAGO
+}
+
+// RF72: ciclo de vida do convite de colaborador
+enum StatusConvite {
+  PENDENTE
+  ACEITO
+  EXPIRADO
+  CANCELADO
 }
 
 enum TipoItem {
@@ -151,11 +164,12 @@ enum StatusConta {
 // Multi-tenancy
 // ==========================================================
 
+// ADR-003: a credencial (senha com hash — RNF03) fica somente no Supabase Auth.
+// Usuario.id recebe o mesmo UUID de auth.users.id, gravado no cadastro (SPEC-002).
 model Usuario {
-  id    String @id @default(uuid()) @db.Uuid
+  id    String @id @db.Uuid // = auth.users.id (sem default)
   nome  String
   email String @unique
-  senha String // RNF03: armazenar com hash seguro (Argon2/Bcrypt)
 
   // RNF04: consentimento explícito de uso de dados (LGPD)
   consentimentoLgpdEm DateTime?
@@ -166,6 +180,8 @@ model Usuario {
   movimentacoes    MovimentacaoEstoque[] // RNF05: auditoria (quem fez a alteração)
   historicoPrecos  HistoricoPreco[] // RNF05: auditoria (quem confirmou o preço)
   vendasCanceladas Venda[]               @relation("VendaCanceladaPor") // RF65: auditoria do cancelamento
+  convitesEnviados Convite[]             @relation("ConviteEnviadoPor") // RF72
+  planosAlterados  Negocio[]             @relation("PlanoAlteradoPor") // RF73
   createdAt        DateTime              @default(now())
 }
 
@@ -176,6 +192,10 @@ model Negocio {
   plano            PlanoNegocio     @default(GRATUITO) // RF45
   createdAt        DateTime         @default(now())
 
+  // RF73: troca de plano (MVP: simulada pelo Dono, sem cobrança; gateway real = SPEC-015 opcional, ADR-007)
+  planoAlteradoEm    DateTime?
+  planoAlteradoPorId String?   @db.Uuid
+
   // Dados fiscais obtidos pela consulta de CNPJ ou informados manualmente (RF58, RF59)
   cnpj          String?       @unique
   razaoSocial   String?
@@ -183,6 +203,8 @@ model Negocio {
   anexoSimples  AnexoSimples? // RN24: um anexo por negócio (Simples Nacional)
   sujeitoFatorR Boolean       @default(false) // RF69: herdado do CNAE; anexo efetivo III/V calculado pelo Fator R
   atividadeMei  AtividadeMei? // RF60: usado quando regimeTributario = MEI
+
+  impostoPercentualManual Decimal? @db.Decimal(5, 2) // RF59/RF38: Imposto% informado quando regimeTributario = AUTONOMO
 
   // Parâmetros de precificação (RF49–RF51, RF56, RF62)
   taxaCartaoMedia           Decimal  @default(0) @db.Decimal(5, 2) // RF51: % médio da maquininha
@@ -195,13 +217,22 @@ model Negocio {
 
   encerradoEm DateTime? // RN27: negócio encerrado após exclusão do único Dono (dados fiscais retidos 5 anos)
 
-  membros       MembroNegocio[]
-  itens         Item[]
-  vendas        Venda[]
-  lancamentos   LancamentoFinanceiro[]
-  contas        ContaPagarReceber[]
-  clientes      Cliente[]
-  despesasFixas DespesaFixa[]
+  planoAlteradoPor Usuario? @relation("PlanoAlteradoPor", fields: [planoAlteradoPorId], references: [id])
+
+  membros          MembroNegocio[]
+  convites         Convite[]
+  itens            Item[]
+  materiaisServico MaterialServico[]
+  movimentacoes    MovimentacaoEstoque[]
+  historicoPrecos  HistoricoPreco[]
+  vendas           Venda[]
+  itensVenda       ItemVenda[]
+  pagamentos       Pagamento[]
+  parcelas         Parcela[]
+  lancamentos      LancamentoFinanceiro[]
+  contas           ContaPagarReceber[]
+  clientes         Cliente[]
+  despesasFixas    DespesaFixa[]
 
   @@index([id])
 }
@@ -217,6 +248,29 @@ model MembroNegocio {
   negocio Negocio @relation(fields: [negocioId], references: [id])
 
   @@unique([usuarioId, negocioId])
+}
+
+// RF72: convite de colaborador (o convidado pode ainda não ter conta).
+// Ao aceitar, cria o MembroNegocio com o papel e as permissões do convite.
+// Convites PENDENTE contam no limite do plano gratuito (RF47).
+model Convite {
+  id               String        @id @default(uuid()) @db.Uuid
+  negocioId        String        @db.Uuid
+  email            String
+  papel            PapelUsuario  @default(COLABORADOR)
+  permissoesCustom Json?
+  tokenHash        String        @unique // hash do token enviado no link do e-mail (o token em si não é guardado)
+  status           StatusConvite @default(PENDENTE)
+  expiraEm         DateTime
+  convidadoPorId   String        @db.Uuid // RN02: sempre um Dono
+  createdAt        DateTime      @default(now())
+  respondidoEm     DateTime?
+
+  negocio      Negocio @relation(fields: [negocioId], references: [id])
+  convidadoPor Usuario @relation("ConviteEnviadoPor", fields: [convidadoPorId], references: [id])
+
+  @@index([negocioId, status])
+  @@index([email])
 }
 
 // ==========================================================
@@ -271,36 +325,51 @@ model Item {
 
 model MaterialServico {
   id         String  @id @default(uuid()) @db.Uuid
+  negocioId  String  @db.Uuid // ADR-002: igual ao negocioId do serviço
   servicoId  String  @db.Uuid
   materialId String  @db.Uuid // referencia um Produto Físico já cadastrado
   quantidade Decimal @default(1) @db.Decimal(10, 3) // RF13: sugestão automática de 1, editável
 
-  servico  Item @relation("ServicoParaMaterial", fields: [servicoId], references: [id])
-  material Item @relation("MaterialParaServico", fields: [materialId], references: [id])
+  negocio  Negocio @relation(fields: [negocioId], references: [id])
+  servico  Item    @relation("ServicoParaMaterial", fields: [servicoId], references: [id])
+  material Item    @relation("MaterialParaServico", fields: [materialId], references: [id])
 
   @@unique([servicoId, materialId])
+  @@index([negocioId])
 }
 
+// RNF05/AD-QA02: a própria tabela é o log de auditoria do estoque — somente INSERT,
+// nunca UPDATE/DELETE. saldoAnterior/saldoPosterior registram o valor antes e depois.
 model MovimentacaoEstoque {
-  id         String             @id @default(uuid()) @db.Uuid
-  itemId     String             @db.Uuid
-  tipo       TipoMovimentacao
-  quantidade Decimal            @db.Decimal(10, 3)
-  motivo     MotivoSaidaManual? // RF17: obrigatório apenas quando tipo = SAIDA_MANUAL
-  usuarioId  String             @db.Uuid // RNF05: auditoria
-  data       DateTime           @default(now())
+  id             String             @id @default(uuid()) @db.Uuid
+  negocioId      String             @db.Uuid // ADR-002
+  itemId         String             @db.Uuid
+  vendaId        String?            @db.Uuid // RN25: SAIDA_VENDA e ENTRADA_ESTORNO apontam para a venda (estorno exato)
+  tipo           TipoMovimentacao
+  quantidade     Decimal            @db.Decimal(10, 3)
+  saldoAnterior  Decimal            @db.Decimal(10, 3) // RNF05: valor anterior
+  saldoPosterior Decimal            @db.Decimal(10, 3) // RNF05: valor novo
+  motivo         MotivoSaidaManual? // RF17: obrigatório apenas quando tipo = SAIDA_MANUAL
+  usuarioId      String             @db.Uuid // RNF05: auditoria
+  data           DateTime           @default(now())
 
+  negocio Negocio @relation(fields: [negocioId], references: [id])
   item    Item    @relation(fields: [itemId], references: [id])
+  venda   Venda?  @relation(fields: [vendaId], references: [id])
   usuario Usuario @relation(fields: [usuarioId], references: [id])
 
+  @@index([negocioId])
   @@index([itemId])
+  @@index([vendaId])
 }
 
 // Referenciado em Item.historicoPrecos na v1, mas nunca definido — adicionado agora.
 // Cada linha = uma confirmação explícita do usuário na Calculadora (RN15/RN16).
 // Guarda todos os componentes do markup (RF34) para auditoria (RNF05).
+// Somente INSERT; o preço anterior é o registro imediatamente anterior do mesmo item.
 model HistoricoPreco {
   id                          String            @id @default(uuid()) @db.Uuid
+  negocioId                   String            @db.Uuid // ADR-002
   itemId                      String            @db.Uuid
   usuarioId                   String            @db.Uuid // RNF05: quem confirmou
   preco                       Decimal           @db.Decimal(10, 2)
@@ -313,9 +382,11 @@ model HistoricoPreco {
   impostoAplicado             Decimal?          @db.Decimal(5, 2) // alíquota efetiva utilizada
   dataConfirmacao             DateTime          @default(now())
 
+  negocio Negocio @relation(fields: [negocioId], references: [id])
   item    Item    @relation(fields: [itemId], references: [id])
   usuario Usuario @relation(fields: [usuarioId], references: [id])
 
+  @@index([negocioId])
   @@index([itemId])
 }
 
@@ -346,12 +417,14 @@ model DespesaFixa {
 // ==========================================================
 
 // Somente Simples Nacional: faixas por Anexo (LC 123/2006). MEI usa ParametroMei.
+// Regra de faixa (RF38): rbt12De < RBT12 <= rbt12Ate, com limites contínuos
+// (ex.: faixa 2 = 180000 < RBT12 <= 360000). RBT12 > 0 sempre (RN21: proporcional sem histórico).
 model FaixaTributaria {
   id             String       @id @default(uuid()) @db.Uuid
   anexo          AnexoSimples
   faixaOrdem     Int // 1ª a 6ª faixa
-  rbt12De        Decimal      @db.Decimal(12, 2)
-  rbt12Ate       Decimal?     @db.Decimal(12, 2) // null = sem teto (última faixa)
+  rbt12De        Decimal      @db.Decimal(12, 2) // exclusivo
+  rbt12Ate       Decimal?     @db.Decimal(12, 2) // inclusivo; null = sem teto (última faixa)
   aliquota       Decimal      @db.Decimal(5, 2) // percentual nominal
   parcelaDeduzir Decimal      @db.Decimal(12, 2) // RF38: alíquota efetiva = (RBT12 × aliquota − parcelaDeduzir) ÷ RBT12
   fonteLegal     String // RN17: ex. "LC 123/2006, Anexo III"
@@ -384,6 +457,17 @@ model ParametroMei {
   @@index([atividade, ativo])
 }
 
+// RF69/RN28: parâmetros do Fator R (LC 123/2006, art. 18, §§ 5º-J e 5º-M)
+model ParametroFatorR {
+  id                String       @id @default(uuid()) @db.Uuid
+  limiteMinimo      Decimal      @db.Decimal(5, 2) // % — Fator R >= limite → anexoSeAtingir
+  anexoSeAtingir    AnexoSimples // III
+  anexoSeNaoAtingir AnexoSimples // V
+  fonteLegal        String
+  vigenteDesde      DateTime     @default(now())
+  ativo             Boolean      @default(true)
+}
+
 // RF36: margem padrão por categoria, inicializada com percentuais de presunção (Lei 9.249/1995, art. 15)
 model MargemPadraoCategoria {
   categoria    CategoriaItem @id
@@ -410,14 +494,15 @@ model Venda {
   motivoCancelamento String?
   vendaOrigemId      String?     @unique @db.Uuid // RF66: troca — nova venda aponta para a venda cancelada
 
-  negocio      Negocio                @relation(fields: [negocioId], references: [id])
-  cliente      Cliente?               @relation(fields: [clienteId], references: [id])
-  canceladaPor Usuario?               @relation("VendaCanceladaPor", fields: [canceladaPorId], references: [id])
-  vendaOrigem  Venda?                 @relation("TrocaDeVenda", fields: [vendaOrigemId], references: [id])
-  vendaTroca   Venda?                 @relation("TrocaDeVenda")
-  itens        ItemVenda[]
-  pagamentos   Pagamento[]
-  lancamentos  LancamentoFinanceiro[] // RN12 — 1:N: pagamento misto pode gerar mais de um lançamento imediato
+  negocio       Negocio                @relation(fields: [negocioId], references: [id])
+  cliente       Cliente?               @relation(fields: [clienteId], references: [id])
+  canceladaPor  Usuario?               @relation("VendaCanceladaPor", fields: [canceladaPorId], references: [id])
+  vendaOrigem   Venda?                 @relation("TrocaDeVenda", fields: [vendaOrigemId], references: [id])
+  vendaTroca    Venda?                 @relation("TrocaDeVenda")
+  itens         ItemVenda[]
+  movimentacoes MovimentacaoEstoque[] // RN25: baixas e estornos desta venda
+  pagamentos    Pagamento[]
+  lancamentos   LancamentoFinanceiro[] // RN12 — 1:N: pagamento misto pode gerar mais de um lançamento imediato
 
   @@index([negocioId])
   @@index([negocioId, data, status]) // AD-QA01/RN21/RN25: RBT12 e faturamento somam só vendas CONCLUIDA
@@ -425,40 +510,53 @@ model Venda {
 
 model ItemVenda {
   id            String  @id @default(uuid()) @db.Uuid
+  negocioId     String  @db.Uuid // ADR-002
   vendaId       String  @db.Uuid
   itemId        String  @db.Uuid
   quantidade    Decimal @db.Decimal(10, 3)
   precoUnitario Decimal @db.Decimal(10, 2)
   custoUnitario Decimal @db.Decimal(10, 2) // RF62: custo total do item (inclui materiais) no momento da venda
 
-  venda Venda @relation(fields: [vendaId], references: [id])
-  item  Item  @relation(fields: [itemId], references: [id])
+  negocio Negocio @relation(fields: [negocioId], references: [id])
+  venda   Venda   @relation(fields: [vendaId], references: [id])
+  item    Item    @relation(fields: [itemId], references: [id])
+
+  @@index([negocioId])
+  @@index([vendaId])
 }
 
 model Pagamento {
-  id       String         @id @default(uuid()) @db.Uuid
-  vendaId  String         @db.Uuid
-  forma    FormaPagamento
-  valor    Decimal        @db.Decimal(10, 2)
-  parcelas Int            @default(1) // RF27: até 12x, só relevante para CREDITO
+  id        String         @id @default(uuid()) @db.Uuid
+  negocioId String         @db.Uuid // ADR-002
+  vendaId   String         @db.Uuid
+  forma     FormaPagamento
+  valor     Decimal        @db.Decimal(10, 2)
+  parcelas  Int            @default(1) // RF27: até 12x, só relevante para CREDITO
 
+  negocio         Negocio   @relation(fields: [negocioId], references: [id])
   venda           Venda     @relation(fields: [vendaId], references: [id])
   detalheParcelas Parcela[]
+
+  @@index([negocioId])
+  @@index([vendaId])
 }
 
 // Referenciado em Pagamento.detalheParcelas na v1, mas nunca definido — adicionado agora.
 // Só é populado quando forma = CREDITO (Dinheiro/PIX/Débito não geram Parcela).
 model Parcela {
   id          String   @id @default(uuid()) @db.Uuid
+  negocioId   String   @db.Uuid // ADR-002
   pagamentoId String   @db.Uuid
   numero      Int
   valor       Decimal  @db.Decimal(10, 2)
   vencimento  DateTime // RF28: mensal, a partir da data da venda; RN11: centavos de diferença na 1ª parcela
   // Sem status próprio: a situação de pagamento é o status da ContaPagarReceber (RN22)
 
+  negocio   Negocio            @relation(fields: [negocioId], references: [id])
   pagamento Pagamento          @relation(fields: [pagamentoId], references: [id])
   conta     ContaPagarReceber? // RN10: cada parcela origina uma conta a receber
 
+  @@index([negocioId])
   @@index([pagamentoId])
 }
 

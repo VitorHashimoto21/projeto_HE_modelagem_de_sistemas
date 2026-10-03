@@ -28,7 +28,7 @@ Um requisito, regra ou restrição entra neste documento quando atende a pelo me
 |**AD-RF03**|Requisito|Automação do fluxo de vendas: pagamentos mistos, parcelamento e baixa de estoque (RN05, RN09, RN10, RN12)|Transações distribuídas no banco de dados para estoque, contas a receber e fluxo de caixa.|Alta|
 |**AD-RF04**|Requisito|Precificação inteligente por markup completo (despesas fixas, despesas variáveis, imposto e margem), com RBT12 dinâmico e parametrização tributária (RF34-RF39, RF48-RF54, RN17, RN19, RN20, RNF08)|Motor de cálculo desacoplado do código, alimentado por agregações de histórico e tabelas dinâmicas.|Alta|
 |**AD-QA01**|Qualidade|Desempenho performático no cálculo de preços e RBT12 (RNF06)|Otimização de consultas agregadas no PostgreSQL com índices em dados temporais e de negócio.|Alta|
-|**AD-QA02**|Qualidade|Registro auditável imutável de movimentações de estoque e alterações de preço (RNF05)|Middleware de auditoria via Prisma/PostgreSQL para gravação automática de histórico sem permissão de exclusão.|Alta|
+|**AD-QA02**|Qualidade|Registro auditável imutável de movimentações de estoque e alterações de preço (RNF05)|As próprias tabelas `MovimentacaoEstoque` (com saldo anterior e posterior) e `HistoricoPreco` são o log: somente inserção, sem alteração nem exclusão pela aplicação.|Alta|
 |**AD-QA03**|Qualidade|Conformidade com LGPD para retenção, exportação e exclusão de dados (RNF04)|Serviços de exportação estruturada (JSON/CSV) e anonimização/deleção lógica de contas.|Alta|
 |**AD-QA04**|Qualidade|Interface web única e responsiva para múltiplos dispositivos (RNF01)|Construção de interface em componentes reativos (TailwindCSS/shadcn/ui) adaptáveis a mobile e desktop.|Média|
 |**AD-QA05**|Negócio|Modelo Freemium limitado por funcionalidade sem restrição de volume (RF45-RF47, RN18)|Guardas de acesso por plano no backend sem travas de contagem de registros no banco.|Média|
@@ -36,6 +36,7 @@ Um requisito, regra ou restrição entra neste documento quando atende a pelo me
 |**AD-RF05**|Requisito|Cadastro fiscal do negócio pela consulta de CNPJ na base pública da Receita, com sugestão de Anexo pelo CNAE e fallback manual (RF58, RF59, RN24)|Adaptador de integração externa isolado do domínio (ADR-006) e tabelas oficiais parametrizadas (ADR-004).|Alta|
 |**AD-QA06**|Qualidade|Isolamento e proteção de dados por perfil e por negócio (RNF02, RN01, RN02)|Autorização por papel e por matriz módulo × ação validada no servidor em toda requisição.|Alta|
 |**AD-CEN03**|Cenário|Cancelamento e troca de venda já registrada (RF65, RF66, RN25, RN26)|Reversão transacional de estoque, contas e caixa sem apagar registros; crédito de troca limitado ao valor já recebido para não distorcer o saldo.|Alta|
+|**AD-C05**|Restrição|Ambientes separados de desenvolvimento, homologação e produção (RNF11)|Variáveis de ambiente e credenciais por ambiente; banco e chaves de serviços externos (ex.: gateway em modo de teste) isolados de produção.|Média|
 |**AD-CEN02**|Cenário|Venda realizada com quantidade de estoque insuficiente (RF18, RN06)|O sistema deve bloquear a conclusão da venda, notificando o usuário sobre a indisponibilidade física do item para evitar pedidos com estoque falso e problemas de sincronia.|Alta|
 
 ---
@@ -48,7 +49,7 @@ O sistema atende a múltiplos microempreendedores que não podem ter seus dados 
 
 * **Entidades Afetadas:** `Negocio`, `Usuario`, `MembroNegocio`, `Item`, `Venda`, `LancamentoFinanceiro`.
 * **Regras Vinculadas:** RN01 e RNF02.
-* **Decisão que o driver força:** Todas as tabelas operacionais do banco relacional devem conter uma chave estrangeira de relacionamento obrigatória com `NegocioID`. Todas as queries executadas pelo Prisma ORM devem incluir o contexto ativo de `NegocioID` obtido da sessão autenticada.
+* **Decisão que o driver força:** Todas as tabelas operacionais do banco relacional — inclusive as tabelas filhas — devem conter uma chave estrangeira de relacionamento obrigatória com `NegocioID`. Todas as queries executadas pelo Prisma ORM devem passar pelo cliente do negócio (extensão do Prisma Client), que inclui o contexto ativo de `NegocioID` obtido da sessão autenticada. Como o provedor (Supabase) publica uma API REST sobre o banco, o RLS fica ligado em todas as tabelas, sem policies, bloqueando o acesso direto (ADR-002).
 
 ##### 3.2 AD-RF03 — Automação Transacional da Venda
 
@@ -67,7 +68,7 @@ A Calculadora de Precificação não pode utilizar valores fixos de alíquotas (
 
 * **Entidades Afetadas:** `Item`, `MaterialServico`, `HistoricoPreco`, `FaixaTributaria`, `CnaeAnexo`, `ParametroMei`, `MargemPadraoCategoria`, `DespesaFixa`, `ItemVenda` (custo unitário para o CMV%), `Negocio` (dados fiscais e parâmetros de precificação).
 * **Regras Vinculadas:** RF34 ao RF41, RF48 ao RF54, RN15, RN17, RN19, RN20 e RNF08.
-* **Decisão que o driver força:** As faixas e alíquotas de imposto devem ser armazenadas em tabelas de configuração editáveis no banco de dados. O cálculo do RBT12 deve realizar agregação dinâmica da receita bruta dos últimos 12 meses filtrada por `NegocioID`. O motor aplica `Preço = Custo Total ÷ (1 − (Desp. Fixas% + Desp. Variáveis% + Imposto% + Margem%))` como função pura (ADR-005), recebendo os percentuais já resolvidos pela camada de dados.
+* **Decisão que o driver força:** As faixas e alíquotas de imposto devem ser armazenadas em tabelas de configuração editáveis no banco de dados. O cálculo do RBT12 deve realizar agregação dinâmica da receita bruta dos 12 meses anteriores ao mês do cálculo, filtrada por `NegocioID` e proporcionalizada quando houver menos histórico (RN21). O motor aplica `Preço = Custo Total ÷ (1 − (Desp. Fixas% + Desp. Variáveis% + Imposto% + Margem%))` como função pura (ADR-005), recebendo os percentuais já resolvidos pela camada de dados.
 
 ---
 
@@ -75,6 +76,7 @@ A Calculadora de Precificação não pode utilizar valores fixos de alíquotas (
 
 * **AD-C01 (Next.js + Prisma + TypeScript):** O sistema deve ser estruturado em Next.js (App Router) utilizando TypeScript em todo o ciclo, utilizando o Prisma ORM para acesso tipado ao banco PostgreSQL.
 * **AD-C02 (Multi-tenancy Lógico):** O isolamento entre empresas é lógico, operando em um único banco relacional compartilhado onde todas as consultas são filtradas pela chave da empresa (`NegocioID`).
+* **AD-C05 (Ambientes Separados):** desenvolvimento local, homologação publicada a partir da `DEVELOP` e produção publicada a partir da `main`, cada um com banco e credenciais próprios; dados reais de clientes só existem em produção (RNF11).
 * **AD-C03 (Entrega Web Responsiva):** A aplicação deve ser acessada via navegador web, sem necessidade de instalação local, com layout adaptável tanto para telas de desktop quanto dispositivos móveis.
 * **AD-C04 (Invariantes de Dados do Domínio):**
 
@@ -92,7 +94,7 @@ A Calculadora de Precificação não pode utilizar valores fixos de alíquotas (
 * **Estímulo:** Solicitado o cálculo de preço de um item com histórico longo de vendas.
 * **Artefato:** Motor da Calculadora e banco de dados PostgreSQL.
 * **Ambiente:** Operação normal com faturamento ativo.
-* **Resposta:** O sistema agrega o faturamento dos últimos 12 meses (RBT12), identifica a alíquota aplicável e retorna o preço sugerido.
+* **Resposta:** O sistema agrega o faturamento dos 12 meses anteriores ao mês do cálculo (RBT12), identifica a alíquota aplicável e retorna o preço sugerido.
 * **Medida:** Tempo de resposta exibido na interface em menos de 2 segundos.
 
 ##### AD-QA02 — Auditoria Imutável de Estoque e Preços (RNF05)
@@ -101,7 +103,7 @@ A Calculadora de Precificação não pode utilizar valores fixos de alíquotas (
 * **Estímulo:** Lançamento de ajuste manual de estoque ou confirmação de novo preço.
 * **Artefato:** Módulo de Auditoria (`MovimentacaoEstoque` / `HistoricoPreco`).
 * **Ambiente:** Alteração de dados cadastrais/operacionais.
-* **Resposta:** Registro gravado com data, hora, ID do usuário, valor anterior, valor novo e motivo.
+* **Resposta:** Registro gravado com data, hora, ID do usuário, valor anterior, valor novo e motivo — na movimentação, `saldoAnterior`/`saldoPosterior`; no preço, o registro anterior do histórico do mesmo item.
 * **Medida:** Logs persistidos de forma permanente, sem permissão de alteração ou exclusão.
 
 ##### AD-QA03 — Conformidade com a LGPD na Exclusão e Exportação de Dados (RNF04, RN27)
@@ -145,7 +147,8 @@ A Calculadora de Precificação não pode utilizar valores fixos de alíquotas (
 |**AD-RF03**|RF23, RF25, RF27, RF28|RN09, RN10, RN11, RN12|Motor de Vendas e Transações Financeiras.|
 |**AD-RF04**|RF34, RF37, RF38, RF39, RF40, RF48–RF57|RN15, RN16, RN17, RN19, RN20|Calculadora de Precificação, `FaixaTributaria`, `DespesaFixa`, Dashboard (semáforo).|
 |**AD-QA01**|RNF06|—|Consultas do Prisma / Banco PostgreSQL.|
-|**AD-QA02**|RNF05|—|Tabelas `MovimentacaoEstoque` e `HistoricoPreco`.|
+|**AD-QA02**|RNF05|—|Tabelas `MovimentacaoEstoque` e `HistoricoPreco` (somente inserção).|
+|**AD-C05**|RNF11|—|Configuração de ambientes (Vercel, Supabase), variáveis por ambiente.|
 |**AD-QA03**|RNF04|—|Endpoints de Exportação e Deleção de Conta.|
 |**AD-QA06**|RNF02, RF06|RN01, RN02|Middleware de autorização, `MembroNegocio.permissoesCustom`.|
 |**AD-RF05**|RF58, RF59, RF60, RF61|RN17, RN24|Adaptador `ConsultaCnpj`, tabelas `CnaeAnexo` e `ParametroMei`, cadastro de `Negocio`.|

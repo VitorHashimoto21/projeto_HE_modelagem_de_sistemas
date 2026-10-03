@@ -18,6 +18,9 @@ erDiagram
     NEGOCIO ||--o{ LANCAMENTO_FINANCEIRO : "mantem"
     NEGOCIO ||--o{ CONTA_PAGAR_RECEBER : "mantem"
     NEGOCIO ||--o{ DESPESA_FIXA : "possui"
+    NEGOCIO ||--o{ CONVITE : "envia"
+    USUARIO ||--o{ CONVITE : "convida"
+    USUARIO |o--o{ NEGOCIO : "altera_plano"
 
     ITEM ||--o{ HISTORICO_PRECO : "acumula"
     USUARIO ||--o{ HISTORICO_PRECO : "confirma"
@@ -25,6 +28,7 @@ erDiagram
     ITEM ||--o{ MATERIAL_SERVICO : "material_utilizado_em"
     ITEM ||--o{ MOVIMENTACAO_ESTOQUE : "registra"
     USUARIO ||--o{ MOVIMENTACAO_ESTOQUE : "executa"
+    VENDA |o--o{ MOVIMENTACAO_ESTOQUE : "baixa_e_estorna"
 
     CLIENTE |o--o{ VENDA : "associa"
     VENDA ||--|{ ITEM_VENDA : "contem"
@@ -42,13 +46,17 @@ erDiagram
     NEGOCIO {
         uuid id PK
         string nome
-        enum regime_tributario "MEI | SIMPLES_NACIONAL"
+        enum regime_tributario "MEI | SIMPLES_NACIONAL | AUTONOMO"
         enum plano "GRATUITO | PAGO"
+        datetime plano_alterado_em
+        uuid plano_alterado_por_id FK
         string cnpj UK "opcional"
         string razao_social
         string cnae_principal
         enum anexo_simples "I..V, so Simples"
+        boolean sujeito_fator_r
         enum atividade_mei "so MEI"
+        decimal imposto_percentual_manual "so AUTONOMO"
         decimal taxa_cartao_media
         decimal margem_lucro_meta
         decimal capacidade_mensal
@@ -61,10 +69,9 @@ erDiagram
     }
 
     USUARIO {
-        uuid id PK
+        uuid id PK "= auth.users.id (Supabase)"
         string nome
         string email UK
-        string senha_hash
         datetime consentimento_lgpd_em
         datetime excluido_em
         datetime anonimizado_em
@@ -76,6 +83,19 @@ erDiagram
         uuid negocio_id FK
         enum papel "DONO | GERENTE | COLABORADOR"
         json permissoes_custom
+    }
+
+    CONVITE {
+        uuid id PK
+        uuid negocio_id FK
+        string email
+        enum papel "DONO | GERENTE | COLABORADOR"
+        json permissoes_custom
+        string token_hash UK
+        enum status "PENDENTE | ACEITO | EXPIRADO | CANCELADO"
+        datetime expira_em
+        uuid convidado_por_id FK
+        datetime respondido_em
     }
 
     CLIENTE {
@@ -102,6 +122,7 @@ erDiagram
 
     MATERIAL_SERVICO {
         uuid id PK
+        uuid negocio_id FK
         uuid servico_id FK
         uuid material_id FK
         decimal quantidade
@@ -109,16 +130,21 @@ erDiagram
 
     MOVIMENTACAO_ESTOQUE {
         uuid id PK
+        uuid negocio_id FK
         uuid item_id FK
+        uuid venda_id FK "opcional"
         uuid usuario_id FK
         enum tipo "ENTRADA | SAIDA_VENDA | SAIDA_MANUAL | ENTRADA_ESTORNO"
         decimal quantidade
+        decimal saldo_anterior
+        decimal saldo_posterior
         enum motivo "so SAIDA_MANUAL"
         datetime data
     }
 
     HISTORICO_PRECO {
         uuid id PK
+        uuid negocio_id FK
         uuid item_id FK
         uuid usuario_id FK
         decimal preco
@@ -136,8 +162,8 @@ erDiagram
         uuid id PK
         enum anexo "I..V"
         int faixa_ordem
-        decimal rbt12_de
-        decimal rbt12_ate
+        decimal rbt12_de "exclusivo"
+        decimal rbt12_ate "inclusivo"
         decimal aliquota
         decimal parcela_deduzir
         string fonte_legal
@@ -149,7 +175,19 @@ erDiagram
         string cnae PK
         string descricao
         enum anexo
+        boolean sujeito_fator_r
         string fonte_legal
+        datetime vigente_desde
+    }
+
+    PARAMETRO_FATOR_R {
+        uuid id PK
+        decimal limite_minimo
+        enum anexo_se_atingir
+        enum anexo_se_nao_atingir
+        string fonte_legal
+        datetime vigente_desde
+        boolean ativo
     }
 
     PARAMETRO_MEI {
@@ -158,6 +196,7 @@ erDiagram
         decimal valor_das_mensal
         decimal limite_faturamento_anual
         string fonte_legal
+        datetime vigente_desde
         boolean ativo
     }
 
@@ -165,6 +204,7 @@ erDiagram
         enum categoria PK
         decimal margem_padrao
         string fonte_legal
+        datetime vigente_desde
     }
 
     DESPESA_FIXA {
@@ -176,6 +216,7 @@ erDiagram
         enum categoria
         enum origem "MANUAL | DAS_MEI"
         boolean ativo
+        datetime created_at
     }
 
     VENDA {
@@ -193,6 +234,7 @@ erDiagram
 
     ITEM_VENDA {
         uuid id PK
+        uuid negocio_id FK
         uuid venda_id FK
         uuid item_id FK
         decimal quantidade
@@ -202,6 +244,7 @@ erDiagram
 
     PAGAMENTO {
         uuid id PK
+        uuid negocio_id FK
         uuid venda_id FK
         enum forma "DINHEIRO | PIX | DEBITO | CREDITO | CREDITO_TROCA"
         decimal valor
@@ -210,6 +253,7 @@ erDiagram
 
     PARCELA {
         uuid id PK
+        uuid negocio_id FK
         uuid pagamento_id FK
         int numero
         decimal valor
@@ -248,6 +292,8 @@ erDiagram
 
 | Decisão | Justificativa |
 |---|---|
+| `negocio_id` em **todas** as tabelas operacionais, inclusive as filhas (`MATERIAL_SERVICO`, `MOVIMENTACAO_ESTOQUE`, `HISTORICO_PRECO`, `ITEM_VENDA`, `PAGAMENTO`, `PARCELA`) | Filtro uniforme pela extensão do Prisma Client e RLS ligado no banco (ADR-002, OPEN-12); o valor é sempre igual ao do registro pai. |
+| `USUARIO.id` = `auth.users.id`, sem senha | A credencial fica só no Supabase Auth (ADR-003, OPEN-14). |
 | `ITEM` em tabela única com coluna `tipo` (sem tabelas `PRODUTO_FISICO`/`SERVICO`) | Simplifica consultas de catálogo e vendas; campos de estoque só são válidos quando `tipo = PRODUTO_FISICO` (RN04, validado na aplicação). |
 | `categoria` como enum (sem tabela `CATEGORIA`) | A lista de categorias é fixa do sistema (RF11). |
 | `MATERIAL_SERVICO` referencia `ITEM` duas vezes | `servico_id` aponta para um item `SERVICO` e `material_id` para um item `PRODUTO_FISICO` (RF12). |
@@ -260,6 +306,11 @@ erDiagram
 | `ITEM.preco_atual` opcional + `HISTORICO_PRECO.origem` | Preço nasce de confirmação via Calculadora ou manual (RF64); item sem preço não é vendável (RN23). |
 | `ITEM_VENDA.custo_unitario` | Custo gravado na venda para apurar o CMV% (RF62) usado no PE e na Meta (RF55, RF56). |
 | Tabelas de parâmetros fiscais (`FAIXA_TRIBUTARIA`, `CNAE_ANEXO`, `PARAMETRO_MEI`, `MARGEM_PADRAO_CATEGORIA`) | Valores oficiais parametrizáveis com fonte legal e vigência, sem `negocio_id` (globais do sistema) — RN17, RF36, RF59, RF60. |
+| `MOVIMENTACAO_ESTOQUE.venda_id` + `saldo_anterior`/`saldo_posterior` | O cancelamento devolve exatamente o que a venda baixou (RN25); a tabela é o próprio log de auditoria, somente INSERT (RNF05, OPEN-20/21). |
+| `CONVITE` | Convidado pode ainda não ter conta; pendentes contam no limite do plano gratuito (RF72, RF47). |
+| `PARAMETRO_FATOR_R` | Limite de 28% e anexos III/V parametrizados como os demais dados fiscais (RN17, RF69). |
+| Faixa: `rbt12_de` exclusivo, `rbt12_ate` inclusivo | Limites contínuos, sem buraco de centavos entre faixas (RF38, OPEN-16). |
+| Regime `AUTONOMO` + `imposto_percentual_manual` | Autônomo sem CNPJ informa o próprio Imposto% (RF59, OPEN-18). |
 | Status "Atrasada" não persistido | É derivado: `vencimento < hoje` e `valor_pago < valor_total`. |
 | `DESPESA_FIXA` + parâmetros no `NEGOCIO` | Base do markup completo (RF34, RF48–RF51) e do ponto de equilíbrio/semáforo (RF55–RF57). |
 

@@ -1,8 +1,8 @@
 # Mapa de Specs — HealthEnterprise (HE)
 
-> **Status:** ✅ **Aprovado pela equipe em 02/10/2026** (revisão 2 — escolhas de ordenação confirmadas, inconsistências corrigidas e questões em aberto decididas, seção 1.7). As Specs individuais serão geradas uma por vez, sob pedido. Gerado conforme `docs/Prompt_SDD_Specs.pdf`.
+> **Status:** ✅ **Aprovado pela equipe em 02/10/2026** (revisão 2 — escolhas de ordenação confirmadas, inconsistências corrigidas e questões em aberto decididas, seção 1.7). **Revisão 3 (03/10/2026):** revisão de consistência da baseline antes da implementação, com as decisões OPEN-12 a OPEN-31 (seção 1.8) — **aguardando revisão do grupo**. As Specs individuais serão geradas uma por vez, sob pedido. Gerado conforme `docs/Prompt_SDD_Specs.pdf`.
 >
-> **Baseline utilizada:** `VISAO_DE_NEGOCIO.md`, personas v2, `requisitos.md` (RF01–RF71, RN01–RN29, RNF01–RNF10), `requisitos_ears.md`, modelo de domínio e jornadas, casos de uso, diagramas comportamentais, modelo lógico, `schema.prisma`, drivers arquiteturais, ADR-001 a ADR-006, guia de issues e README.
+> **Baseline utilizada:** `VISAO_DE_NEGOCIO.md`, personas v2, `requisitos.md` (RF01–RF73, RN01–RN29, RNF01–RNF11), `requisitos_ears.md`, modelo de domínio e jornadas, casos de uso, diagramas comportamentais, modelo lógico, `schema.prisma`, drivers arquiteturais, ADR-001 a ADR-006, guia de issues e README.
 >
 > **Convenção:** a baseline usa **RN** (Regra de Negócio) para o que o prompt chama de **RB**.
 
@@ -78,6 +78,35 @@ ADR-001 (Next.js App Router + TypeScript), ADR-002 (Prisma + PostgreSQL, multi-t
 | OPEN-10 | Relatórios avançados (plano pago) | Rentabilidade por item, exportação de relatórios (CSV/PDF) e histórico acima de 12 meses (dados nunca apagados) | RF47, RF70, RF71, RN18 |
 | OPEN-11 | Gráfico e exportação LGPD | Gráfico: 30 dias por dia, com opção de 12 meses por mês. Exportação LGPD: .zip com JSON + CSV | RF43, RNF04 |
 
+### 1.8 Revisão de consistência da baseline — decisões (03/10/2026)
+
+Antes da implementação, a baseline foi cruzada com o `schema.prisma` em busca de pontos que quebrariam a implementação. As decisões abaixo foram tomadas em entrevista com a equipe e aplicadas nos documentos indicados.
+
+| ID | Questão | Decisão | Onde foi registrada |
+|---|---|---|---|
+| OPEN-12 | Tabelas filhas sem `negocioId` (`MaterialServico`, `MovimentacaoEstoque`, `HistoricoPreco`, `ItemVenda`, `Pagamento`, `Parcela`) contrariavam o ADR-002/AD-C02 | `negocioId` em **todas** as tabelas operacionais, sempre igual ao do pai | Schema, modelo lógico, ADR-002, AD-C02 |
+| OPEN-13 | A API REST automática do Supabase expõe o schema `public` com a chave pública | **RLS ligado em todas as tabelas, sem policies**; o Prisma (papel privilegiado) segue funcionando | ADR-002, RNF02, SPEC-001 |
+| OPEN-14 | `Usuario.senha` duplicava a credencial do Supabase Auth | Sem senha local; `Usuario.id` = `auth.users.id` | Schema, ADR-003 |
+| OPEN-15 | README e a Issue #01 do guia antigo divergiam na estrutura de pastas; local das Specs indefinido | `src/{app,components,lib,hooks}`, `prisma/`, `test/`; Specs em `docs/specs/` | README, IDENTIDADE_VISUAL, guia de issues, SPEC-001 |
+| OPEN-16 | Buraco de centavos entre faixas do Simples (`180000` / `180000.01`) com a busca `rbt12De <= RBT12 < rbt12Ate` | Regra `rbt12De < RBT12 ≤ rbt12Ate` com limites contínuos no seed | RF38, schema, seed, ADR-004, diagrama 1 |
+| OPEN-17 | Parâmetros do Fator R no seed sem tabela no schema | Nova tabela `ParametroFatorR` | Schema, seed, ADR-004 |
+| OPEN-18 | Autônomo sem CNPJ sem regime tributário | Novo regime **Autônomo**, com Imposto% informado pelo usuário | RF37, RF38, RF59, schema |
+| OPEN-19 | Convite de quem ainda não tem conta sem onde ser guardado | Nova tabela `Convite` (pendente/aceito/expirado/cancelado); pendentes contam no limite do gratuito | RF72, RF47, schema |
+| OPEN-20 | Movimentação de estoque sem vínculo com a venda (estorno reconstruído pela receita atual do serviço) | `vendaId` na `MovimentacaoEstoque`; o cancelamento devolve exatamente o que foi baixado | Schema, diagrama 4 |
+| OPEN-21 | Auditoria: a Issue #12 do guia antigo citava "tabela de Auditoria" via middleware inexistente; AD-QA02 pedia valor anterior/novo | As próprias `MovimentacaoEstoque` (com `saldoAnterior`/`saldoPosterior`) e `HistoricoPreco` são o log, somente inserção | RNF05, AD-QA02, schema |
+| OPEN-22 | Imposto do Simples dividia por zero com RBT12 = 0 (negócio novo) | RBT12 proporcional (LC 123/2006, art. 18, § 2º): média dos meses × 12 ou faturamento estimado × 12 | RN21, RF39, diagrama 1 |
+| OPEN-23 | Período do RBT12 (janela móvel × lei) | **12 meses anteriores ao mês do cálculo**; Fator R e CMV% usam o mesmo período | RN21, RF39, RF62, RF69 |
+| OPEN-24 | Visão citava "Calculadora limitada" e "trial guiado" no gratuito, contra o RF47 | Vale o RF47: Calculadora completa no gratuito, sem trial | Visão §8.1, RF47 |
+| OPEN-25 | Como o negócio passa ao plano pago (UC15) sem gateway previsto | Troca **simulada** pelo Dono no MVP (RF73), num único ponto de troca; cobrança real por adaptador (Stripe) na SPEC-015 opcional | RF73, ADR-007 (proposta), SPEC-013, SPEC-015 |
+| OPEN-26 | Guia de issues agrupava o trabalho diferente das Specs | Reescrito com **uma issue por Spec** | Guia de issues |
+| OPEN-27 | Ambientes de publicação não definidos (OPEN-007 da SPEC-001) | Desenvolvimento, preview por PR, homologação (`DEVELOP`) e produção (`main`), cada um com banco e credenciais próprios; produção pronta para ativar | RNF11, AD-C05, README, SPEC-001 |
+| OPEN-28 | Mecanismo do "cliente do negócio" (OPEN-002 da SPEC-001) | Extensão do Prisma Client | ADR-002, SPEC-001 |
+| OPEN-29 | Plano gratuito do Supabase sem backup diário restaurável (OPEN-003 da SPEC-001) | Dump diário via GitHub Actions; backup nativo do plano pago quando for para produção | RNF09, SPEC-001 |
+| OPEN-30 | Fonte da verdade do schema após a SPEC-001 (OPEN-005 da SPEC-001) | `prisma/schema.prisma`; a cópia em `docs/prisma_base/` é removida na implementação da SPEC-001, com aviso do novo local | SPEC-001 |
+| OPEN-31 | Ferramenta de testes (OPEN-006 da SPEC-001) | Vitest | README, ADRs (sem ADR), SPEC-001 |
+
+Também foram corrigidos, sem decisão nova: a ordem do cronograma da Visão (Calculadora depois de Vendas e Financeiro), o nome do campo de plano no guia de issues (`plano_pago` → enum `plano`), o modelo lógico desatualizado em relação ao schema, o diagrama da calculadora sem o Fator R e o uso de `SELECT ... FOR UPDATE` (não suportado diretamente pelo Prisma) no diagrama de venda, substituído por baixa condicional atômica.
+
 **Escolhas de ordenação confirmadas pela equipe:** (1) a Calculadora permanece depois da Venda e do Financeiro, com preço manual (RF64) disponível antes; (2) os RNFs ficam distribuídos pelas Specs, e apenas a fundação técnica é Spec própria.
 
 ---
@@ -102,6 +131,7 @@ ADR-001 (Next.js App Router + TypeScript), ADR-002 (Prisma + PostgreSQL, multi-t
 | SPEC-012 | Dashboard e saúde financeira | 009, 010, 011 |
 | SPEC-013 | Plano gratuito × pago | 005, 012 |
 | SPEC-014 | LGPD: exportação e exclusão de conta | 002, 004, 008 |
+| SPEC-015 *(opcional)* | Cobrança real do plano pago | 013 |
 
 ```mermaid
 flowchart LR
@@ -131,17 +161,19 @@ flowchart LR
     S2 --> S14[SPEC-014 LGPD]
     S4 --> S14
     S8 --> S14
+    S13 -.-> S15[SPEC-015 Cobrança real - opcional]
 ```
 
 ### 2.2 Detalhamento
 
 #### SPEC-001 — Fundação técnica e isolamento multi-tenant
+- **Spec:** [`specs/SPEC-001.md`](./specs/SPEC-001.md) (proposta, aguardando aprovação)
 - **Objetivo:** estabelecer o projeto Next.js + TypeScript, o Prisma conectado ao PostgreSQL com o schema da baseline, o mecanismo obrigatório de filtro por `negocioId` e o pipeline de CI (lint, `prisma validate`, testes).
 - **Valor entregue:** base única e segura para todas as Specs; vazamento entre negócios impedido por construção.
-- **RF:** — · **RN:** RN01, RN29 (datas em UTC e competência em America/Sao_Paulo) · **RNF:** RNF01, RNF02, RNF09 (backup Supabase), RNF10
-- **Caso de uso / fluxo:** — (Spec técnica; Issues #01 e #02)
+- **RF:** — · **RN:** RN01, RN29 (datas em UTC e competência em America/Sao_Paulo) · **RNF:** RNF01, RNF02 (inclui RLS — OPEN-13), RNF09 (dump diário — OPEN-29), RNF10, RNF11 (ambientes — OPEN-27)
+- **Caso de uso / fluxo:** — (Spec técnica; Issue #01)
 - **Entidades:** Negocio (base de tenant); demais entidades apenas como schema
-- **Drivers:** AD-C01, AD-C02, AD-C03, AD-QA06 · **ADRs:** ADR-001, ADR-002
+- **Drivers:** AD-C01, AD-C02, AD-C03, AD-C05, AD-QA06 · **ADRs:** ADR-001, ADR-002
 - **Dependências:** nenhuma
 - **Justificativa da ordem:** decisão estrutural exigida por ADR-001/002 e AD-C02; toda Spec posterior depende dela.
 
@@ -160,13 +192,13 @@ flowchart LR
 - **Valor entregue:** enquadramento e cálculo de imposto corretos e atualizáveis sem deploy.
 - **RF:** RF36 (dados das margens padrão) · **RN:** RN17 · **RNF:** RNF08
 - **Caso de uso / fluxo:** — (insumo dos fluxos de cadastro do negócio e da calculadora)
-- **Entidades:** FaixaTributaria, CnaeAnexo (com `sujeitoFatorR`), ParametroMei, MargemPadraoCategoria
+- **Entidades:** FaixaTributaria, CnaeAnexo (com `sujeitoFatorR`), ParametroMei, ParametroFatorR, MargemPadraoCategoria
 - **Drivers:** AD-RF04 · **ADRs:** ADR-004
 - **Dependências:** SPEC-001
 - **Justificativa da ordem:** a SPEC-004 precisa da tabela CNAE → Anexo, e a SPEC-010 precisa das faixas, do DAS, das margens e da regra do Fator R. Os dados vêm de `docs/prisma_base/parametros_fiscais_seed.json`, carregados por comando de carga (ADR-004). **Pré-requisito:** conferência dos valores do seed pela equipe.
 
 #### SPEC-004 — Cadastro do negócio e enquadramento fiscal
-- **Objetivo:** criar negócios por CNPJ (consulta à BrasilAPI com fallback manual), sugerir Anexo/atividade MEI pelo CNAE e alternar entre negócios sem novo login.
+- **Objetivo:** criar negócios por CNPJ (consulta à BrasilAPI com fallback manual) ou no regime Autônomo (sem CNPJ, com Imposto% informado), sugerir Anexo/atividade MEI pelo CNAE e alternar entre negócios sem novo login.
 - **Valor entregue:** o empreendedor tem seu negócio configurado fiscalmente sem precisar conhecer o próprio enquadramento.
 - **RF:** RF02, RF03, RF58, RF59 · **RN:** RN24 · **RNF:** RNF02, RNF07
 - **Caso de uso / fluxo:** UC0 Cadastrar Negócio, UC2 Alternar entre Negócios; jornada do Dono (B1–B5)
@@ -176,11 +208,11 @@ flowchart LR
 - **Justificativa da ordem:** o negócio é o tenant de todos os dados seguintes. Registra se o CNAE é sujeito ao Fator R, usado depois pela SPEC-010.
 
 #### SPEC-005 — Equipe, papéis e permissões
-- **Objetivo:** convidar colaboradores, atribuir os papéis Dono/Gerente/Colaborador e permissões granulares, validadas no servidor, respeitando o limite de 1 convidado no plano gratuito.
+- **Objetivo:** convidar colaboradores (inclusive quem ainda não tem conta), atribuir os papéis Dono/Gerente/Colaborador e permissões granulares, validadas no servidor, respeitando o limite de 1 colaborador (membro ou convite pendente) no plano gratuito.
 - **Valor entregue:** o dono delega a operação sem expor dados estratégicos (persona Lucas).
-- **RF:** RF04, RF05, RF06, RF47 (limite de convites) · **RN:** RN01, RN02 · **RNF:** RNF02
+- **RF:** RF04, RF05, RF06, RF47 (limite de convites), RF72 · **RN:** RN01, RN02 · **RNF:** RNF02
 - **Caso de uso / fluxo:** UC3 Convidar Colaborador, UC4 Definir Permissões; jornadas do Gerente e do Colaborador
-- **Entidades:** MembroNegocio, Usuario, Negocio (plano)
+- **Entidades:** MembroNegocio, Convite, Usuario, Negocio (plano)
 - **Drivers:** AD-RF02, AD-QA06 · **ADRs:** ADR-003
 - **Dependências:** SPEC-004
 - **Justificativa da ordem:** as guardas de papel e a matriz módulo × ação são pré-condição de todos os módulos operacionais.
@@ -196,7 +228,7 @@ flowchart LR
 - **Justificativa da ordem:** estoque, vendas e calculadora operam sobre itens. O preço manual (RF64) permite vender antes da calculadora existir.
 
 #### SPEC-007 — Estoque: movimentações, alertas e mínimo sugerido
-- **Objetivo:** registrar entradas e saídas manuais (com motivo), manter auditoria imutável, sugerir o estoque mínimo e alertar quando o estoque estiver baixo.
+- **Objetivo:** registrar entradas e saídas manuais (com motivo), manter auditoria imutável na própria movimentação (saldo anterior e posterior), sugerir o estoque mínimo e alertar quando o estoque estiver baixo.
 - **Valor entregue:** o estoque digital reflete o físico e a reposição é antecipada.
 - **RF:** RF15, RF17, RF19, RF20, RF21 · **RN:** RN07, RN08 · **RNF:** RNF05
 - **Caso de uso / fluxo:** UC7, UC8, UC9; jornadas do Dono e do Colaborador (Estoque)
@@ -206,7 +238,7 @@ flowchart LR
 - **Justificativa da ordem:** a venda (SPEC-008) só pode validar e baixar estoque que já é controlado.
 
 #### SPEC-008 — Registro de venda integrado
-- **Objetivo:** registrar vendas multi-itens com cliente opcional e pagamento misto/parcelado, validando estoque e preço; dar baixa no estoque (incluindo materiais) e gerar lançamentos ou contas a receber na mesma transação, gravando o custo unitário.
+- **Objetivo:** registrar vendas multi-itens com cliente opcional e pagamento misto/parcelado, validando estoque (baixa condicional atômica) e preço; dar baixa no estoque (incluindo materiais, com movimentações ligadas à venda) e gerar lançamentos ou contas a receber na mesma transação, gravando o custo unitário.
 - **Valor entregue:** o fluxo central de operação, integrado ao estoque e ao financeiro sem lançamento duplicado.
 - **RF:** RF16, RF18, RF22–RF28, RF33, RF62 (gravação do custo unitário) · **RN:** RN05, RN06, RN09–RN13, RN23, RN29 · **RNF:** RNF01, RNF02
 - **Caso de uso / fluxo:** UC11, UC11a–d; Diagrama 2 (sequência de venda); jornadas (Nova Venda)
@@ -226,17 +258,17 @@ flowchart LR
 - **Justificativa da ordem:** recebe as contas geradas pelas vendas e fornece as despesas fixas (com contas mensais geradas por rotina diária + conferência ao acessar) para a calculadora e o dashboard.
 
 #### SPEC-010 — Calculadora de precificação
-- **Objetivo:** sugerir o preço de venda pelo markup completo (custo + materiais, despesas fixas %, despesas variáveis %, imposto por RBT12 e Anexo efetivo — com Fator R —, margem), exibir o ponto de equilíbrio e confirmar o preço oficial com histórico.
+- **Objetivo:** sugerir o preço de venda pelo markup completo (custo + materiais, despesas fixas %, despesas variáveis %, imposto por RBT12 — 12 meses anteriores, proporcional com pouco histórico — e Anexo efetivo — com Fator R —, ou Imposto% informado no regime Autônomo, margem), exibir o ponto de equilíbrio e confirmar o preço oficial com histórico.
 - **Valor entregue:** o diferencial central do produto — precificação correta e auditável.
 - **RF:** RF34–RF40, RF41, RF49, RF50, RF51, RF53, RF54, RF55 (cálculo do PE), RF60 (Imposto% = 0 para MEI), RF61, RF62 (cálculo do CMV%), RF69 · **RN:** RN15, RN16, RN19, RN20, RN21, RN28, RN29 · **RNF:** RNF05, RNF06, RNF08
 - **Caso de uso / fluxo:** UC10, UC10a, UC10b, UC16 (parâmetros de precificação); Diagrama 1 (sequência da calculadora)
-- **Entidades:** Item, MaterialServico, HistoricoPreco, Negocio (parâmetros), DespesaFixa, FaixaTributaria, ParametroMei, MargemPadraoCategoria, Venda/ItemVenda (RBT12 e CMV%)
+- **Entidades:** Item, MaterialServico, HistoricoPreco, Negocio (parâmetros), DespesaFixa, FaixaTributaria, ParametroMei, ParametroFatorR, MargemPadraoCategoria, Venda/ItemVenda (RBT12 e CMV%)
 - **Drivers:** AD-RF04, AD-QA01 · **ADRs:** ADR-004, ADR-005
 - **Dependências:** SPEC-003, SPEC-004, SPEC-006, SPEC-008, SPEC-009
 - **Justificativa da ordem:** precisa de vendas (RBT12 e CMV%), de despesas fixas e lançamentos de salário (Fator R) e de parâmetros fiscais já estabelecidos.
 
 #### SPEC-011 — Cancelamento e troca de venda
-- **Objetivo:** cancelar uma venda com motivo, revertendo estoque, contas abertas e valores recebidos em uma transação; opcionalmente, fazer a troca por itens de valor menor ou igual, com crédito de troca.
+- **Objetivo:** cancelar uma venda com motivo, revertendo estoque (exatamente as movimentações da venda), contas abertas e valores recebidos em uma transação; opcionalmente, fazer a troca por itens de valor menor ou igual, com crédito de troca.
 - **Valor entregue:** correção de erros e devoluções sem corromper estoque, caixa ou faturamento.
 - **RF:** RF65, RF66 · **RN:** RN25, RN26 · **RNF:** RNF05
 - **Caso de uso / fluxo:** UC18; Diagrama 4 (sequência de cancelamento e troca)
@@ -256,9 +288,9 @@ flowchart LR
 - **Justificativa da ordem:** agrega dados de todos os módulos anteriores.
 
 #### SPEC-013 — Plano gratuito × pago
-- **Objetivo:** diferenciar as funcionalidades por plano (sem limite de volume), entregar os relatórios avançados do plano pago (rentabilidade por item, exportação CSV/PDF, histórico acima de 12 meses), bloqueá-los no gratuito e oferecer o upgrade.
+- **Objetivo:** diferenciar as funcionalidades por plano (sem limite de volume), entregar os relatórios avançados do plano pago (rentabilidade por item, exportação CSV/PDF, histórico acima de 12 meses), bloqueá-los no gratuito e oferecer o upgrade, com troca de plano simulada pelo Dono num único ponto de troca (`alterarPlano`), preparado para a cobrança real (SPEC-015).
 - **Valor entregue:** viabiliza o modelo freemium sem afastar o público sensível a preço.
-- **RF:** RF45, RF46, RF47 (relatórios avançados), RF70, RF71 · **RN:** RN18 · **RNF:** —
+- **RF:** RF45, RF46, RF47 (relatórios avançados), RF70, RF71, RF73 · **RN:** RN18 · **RNF:** RNF10
 - **Caso de uso / fluxo:** UC15 Gerenciar Plano do Negócio
 - **Entidades:** Negocio (plano), MembroNegocio, Venda/ItemVenda (rentabilidade), LancamentoFinanceiro, ContaPagarReceber (exportação)
 - **Drivers:** AD-QA05 · **ADRs:** ADR-003
@@ -269,17 +301,27 @@ flowchart LR
 - **Objetivo:** exportar os dados do titular (.zip com JSON e CSV) e excluir a conta por anonimização, encerrando os negócios em que ele é o único Dono e mantendo os registros fiscais por 5 anos sem identificação.
 - **Valor entregue:** conformidade legal e confiança do usuário.
 - **RF:** — · **RN:** RN27 · **RNF:** RNF04
-- **Caso de uso / fluxo:** — (Issue #12)
+- **Caso de uso / fluxo:** — (Issue #14)
 - **Entidades:** Usuario, Cliente, Negocio, MembroNegocio
 - **Drivers:** AD-QA03 · **ADRs:** ADR-003
 - **Dependências:** SPEC-002, SPEC-004, SPEC-008
 - **Justificativa da ordem:** a anonimização precisa cobrir usuários, negócios e clientes (criados nas vendas). Pode ser feita em paralelo à SPEC-009 em diante.
 
+#### SPEC-015 — Cobrança real do plano pago *(opcional)*
+- **Objetivo:** substituir a troca de plano simulada pela cobrança de assinatura via gateway (Stripe), com checkout hospedado, portal do cliente, webhooks verificados e idempotentes e período de tolerância na inadimplência.
+- **Valor entregue:** o modelo freemium passa a gerar receita real; em dev e homologação roda sempre em modo de teste.
+- **RF:** RF73 (troca de plano pelo gateway) · **RN:** RN18 · **RNF:** RNF10, RNF11
+- **Caso de uso / fluxo:** UC15 Gerenciar Plano do Negócio
+- **Entidades:** Negocio (plano e dados da assinatura no gateway)
+- **Drivers:** AD-QA05, AD-C05 · **ADRs:** ADR-007 (proposta — aprovar antes de gerar a Spec)
+- **Dependências:** SPEC-013
+- **Justificativa da ordem:** fora do caminho crítico do MVP; só substitui o ponto de troca de plano criado na SPEC-013. Feita se sobrar tempo no semestre ou na continuação rumo à produção.
+
 ---
 
 ## 3. Cobertura da baseline
 
-Todos os 110 requisitos (RF01–RF71, RN01–RN29, RNF01–RNF10) estão associados a pelo menos uma Spec. Requisitos compartilhados aparecem em mais de uma Spec com escopos complementares:
+Todos os 113 requisitos (RF01–RF73, RN01–RN29, RNF01–RNF11) estão associados a pelo menos uma Spec. Requisitos compartilhados aparecem em mais de uma Spec com escopos complementares:
 
 | Requisito | Specs | Divisão |
 |---|---|---|
@@ -291,6 +333,8 @@ Todos os 110 requisitos (RF01–RF71, RN01–RN29, RNF01–RNF10) estão associa
 | RF62 | 008, 010 | Gravação do custo unitário na venda (008); cálculo do CMV% (010) |
 | RN21 / RN25 | 010–012 | Regra aplicada nas agregações de cada Spec |
 | RN29 | 001, 008, 010, 012 | Utilitário de datas (001); aplicado nas vendas do dia, RBT12, competência e gráficos |
+| RF73 | 013, 015 | Troca de plano simulada (013); troca pelo gateway de pagamento (015, opcional) |
+| RNF11 | 001, 015 | Ambientes e variáveis por ambiente (001); chaves de teste × produção do gateway (015) |
 
 ---
 
@@ -298,4 +342,4 @@ Todos os 110 requisitos (RF01–RF71, RN01–RN29, RNF01–RNF10) estão associa
 
 **Mapa aprovado.** Cada Spec será gerada **individualmente**, sob pedido ("Gerar SPEC-XXX"), seguindo as 14 seções do prompt complementar, sem implementação no mesmo pedido.
 
-A única pendência que condiciona uma Spec é a **conferência dos valores do seed fiscal** pela equipe, necessária antes de concluir a SPEC-003.
+A única pendência que condiciona uma Spec é a **conferência dos valores do seed fiscal** pela equipe, necessária antes de concluir a SPEC-003. A SPEC-015 depende também da aprovação do ADR-007.

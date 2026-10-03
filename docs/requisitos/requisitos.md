@@ -33,9 +33,10 @@
 | RF04 | O dono do negócio deve poder convidar colaboradores para acessar o sistema. |
 | RF05 | O sistema deve oferecer 3 papéis fixos de acesso: **Dono** (acesso total), **Gerente** (acesso total exceto configurações) e **Colaborador** (acesso restrito a Vendas, Estoque e Dashboard restrito — RF63 —, sem Financeiro). |
 | RF06 | O dono deve poder configurar permissões granulares customizadas por módulo para um colaborador, além dos 3 papéis fixos (ex.: liberar a um Colaborador apenas o lançamento de despesas operacionais no Financeiro, sem acesso a saldo, relatórios, custos fixos ou margens). A granularidade é **módulo × ação**: para cada módulo (Catálogo, Estoque, Vendas, Calculadora, Financeiro, Dashboard), as ações ver, criar, editar e excluir/cancelar; os 3 papéis fixos são predefinições dessa matriz. |
+| RF72 | O convite de colaborador (RF04) deve ser enviado por e-mail com link de uso único e prazo de validade, informando o papel (e as permissões customizadas, se houver) que o convidado receberá. O convidado pode ainda não ter conta: ao aceitar, cadastra-se (ou entra) e passa a ser membro do negócio. O Dono pode cancelar um convite pendente; convites pendentes contam no limite de colaboradores do plano gratuito (RF47). |
 | RF58 | Ao cadastrar um negócio, o sistema deve solicitar o CNPJ e consultar a base pública de CNPJ da Receita Federal para preencher automaticamente razão social, CNAE principal e opção pelo Simples Nacional/MEI (regime tributário). |
-| RF69 | Para negócios do Simples Nacional cujo CNAE seja sujeito ao **Fator R**, o sistema deve calcular Fator R = folha de salários dos últimos 12 meses (lançamentos da categoria Salário) ÷ RBT12 e aplicar o Anexo III quando Fator R ≥ 28% ou o Anexo V caso contrário, avisando o usuário quando o anexo efetivo mudar. |
-| RF59 | A partir do CNAE principal, o sistema deve sugerir o **Anexo do Simples Nacional** do negócio (tabela oficial CNAE → Anexo) ou, para MEI, o tipo de atividade (comércio/indústria, serviços ou ambos), permitindo edição. Para autônomos sem CNPJ ou quando a consulta estiver indisponível, esses dados devem ser preenchidos manualmente. |
+| RF69 | Para negócios do Simples Nacional cujo CNAE seja sujeito ao **Fator R**, o sistema deve calcular Fator R = folha de salários (lançamentos da categoria Salário) ÷ receita bruta, ambas no mesmo período usado no RBT12 (RN21), e aplicar o Anexo III quando Fator R ≥ 28% ou o Anexo V caso contrário (limite e anexos parametrizáveis — RN17), avisando o usuário quando o anexo efetivo mudar. |
+| RF59 | A partir do CNAE principal, o sistema deve sugerir o **Anexo do Simples Nacional** do negócio (tabela oficial CNAE → Anexo) ou, para MEI, o tipo de atividade (comércio/indústria, serviços ou ambos), permitindo edição. Quando a consulta estiver indisponível, esses dados devem ser preenchidos manualmente. Para **autônomos sem CNPJ**, o regime do negócio é **Autônomo** e o usuário informa o percentual de imposto que paga (ex.: ISS e IR estimados), usado como Imposto% na Calculadora (RF38). |
 
 ### Regras de Negócio
 
@@ -150,9 +151,9 @@
 | RF34 | O sistema deve calcular o preço de venda sugerido usando a fórmula de markup completo: **Preço = Custo Total ÷ (1 − (Desp. Fixas% + Desp. Variáveis% + Imposto% + Margem%))**. |
 | RF35 | Para Serviços com materiais vinculados, o custo utilizado no cálculo deve ser a soma do custo do serviço com o custo dos materiais vinculados (considerando a quantidade de cada material). |
 | RF36 | O sistema deve sugerir uma margem de lucro padrão de acordo com a categoria do produto/serviço, permitindo edição pelo usuário. As margens padrão ficam em tabela parametrizável por categoria, com valores iniciais baseados nos percentuais de presunção de lucro definidos pela legislação federal (Lei 9.249/1995, art. 15 — ex.: 8% comércio/indústria, 32% serviços em geral). |
-| RF37 | O sistema deve utilizar o regime tributário do negócio (MEI ou Simples Nacional), obtido no cadastro (RF58/RF59), exibindo-o na Calculadora para conferência do usuário. |
-| RF38 | Para o Simples Nacional, o sistema deve calcular a alíquota efetiva com base no Anexo do negócio e na faixa de faturamento (RBT12 — Receita Bruta dos últimos 12 meses): **Alíquota efetiva = (RBT12 × Alíquota nominal − Parcela a deduzir) ÷ RBT12**. Para o MEI, Imposto% = 0 no markup (RF60). |
-| RF39 | O RBT12 deve ser calculado automaticamente pelo sistema, somando o valor total de **todas** as vendas registradas nos últimos 12 meses (data da venda), independentemente da forma de pagamento ou de já terem sido recebidas (RN21), exceto vendas canceladas (RN25). |
+| RF37 | O sistema deve utilizar o regime tributário do negócio (MEI, Simples Nacional ou Autônomo), obtido no cadastro (RF58/RF59), exibindo-o na Calculadora para conferência do usuário. |
+| RF38 | Para o Simples Nacional, o sistema deve calcular a alíquota efetiva com base no Anexo do negócio e na faixa de faturamento (RBT12 — RN21): **Alíquota efetiva = (RBT12 × Alíquota nominal − Parcela a deduzir) ÷ RBT12**. A faixa aplicável é aquela em que **limite inicial < RBT12 ≤ limite final** (limites contínuos entre faixas). Para o MEI, Imposto% = 0 no markup (RF60). Para o Autônomo, Imposto% = percentual informado no cadastro (RF59). |
+| RF39 | O RBT12 deve ser calculado automaticamente pelo sistema, somando o valor total de **todas** as vendas registradas nos **12 meses anteriores ao mês do cálculo** (competência da data da venda), independentemente da forma de pagamento ou de já terem sido recebidas (RN21), exceto vendas canceladas (RN25). Com menos de 12 meses de histórico, aplica-se a proporcionalização do RN21. |
 | RF40 | O resultado do cálculo (preço sugerido) deve ser exibido ao usuário, que deve confirmar explicitamente antes de o valor ser salvo como preço de venda oficial do produto/serviço. |
 | RF41 | O sistema deve manter histórico de alterações de preço de cada produto/serviço. |
 | RF48 | O sistema deve permitir cadastrar as despesas fixas mensais do negócio (descrição e valor mensal — ex.: aluguel, energia, licenças de software, pró-labore). |
@@ -172,7 +173,7 @@
 - **RN17** — Os parâmetros fiscais devem ser parametrizáveis no sistema, permitindo atualização sem alteração de código, já que a legislação pode mudar: faixas, alíquotas e parcelas a deduzir por Anexo do Simples, tabela CNAE → Anexo, valores do DAS e limite anual do MEI e margens padrão por categoria. Cada parâmetro registra sua fonte legal e data de vigência.
 - **RN19** — A soma Desp. Fixas% + Desp. Variáveis% + Imposto% + Margem% deve ser menor que 100%; caso contrário, o sistema bloqueia o cálculo e informa ao usuário que o preço é inviável com os parâmetros atuais.
 - **RN20** — Despesas Variáveis% = taxa média de cartão do negócio (RF51) + comissão do item (RF52). Esses percentuais são usados **apenas** na formação do preço: no MVP não geram desconto nos lançamentos/contas a receber (RN11 permanece válida) nem repasse automático de comissão.
-- **RN21** — O RBT12 e o faturamento bruto são apurados por **regime de competência**: somam o valor total de todas as vendas registradas e não canceladas no período (`Venda.valorTotal`), inclusive vendas no cartão de crédito com parcelas ainda não recebidas. Diferente do saldo de caixa (RN14), que considera apenas valores efetivamente recebidos.
+- **RN21** — O RBT12 e o faturamento bruto são apurados por **regime de competência**: somam o valor total de todas as vendas registradas e não canceladas no período (`Venda.valorTotal`), inclusive vendas no cartão de crédito com parcelas ainda não recebidas. Diferente do saldo de caixa (RN14), que considera apenas valores efetivamente recebidos. O período do RBT12 são os **12 meses anteriores ao mês do cálculo** (o mês corrente não entra), em America/Sao_Paulo (RN29). Com histórico menor (início de atividade, LC 123/2006, art. 18, § 2º): com 1 a 11 meses anteriores com vendas, RBT12 = média mensal desses meses × 12; sem nenhum mês anterior com vendas, RBT12 = faturamento mensal estimado (RF50) × 12. Assim, o RBT12 usado no cálculo do imposto é sempre maior que zero.
 
 ---
 
@@ -186,7 +187,7 @@
 | RF43 | O sistema deve exibir um gráfico simples de vendas: por padrão, vendas por dia dos últimos 30 dias, com opção de vendas por mês dos últimos 12 meses. |
 | RF44 | A estrutura do Dashboard deve ser pensada para comportar novos indicadores/widgets no futuro, sem redesenho completo da tela. |
 | RF55 | O sistema deve calcular e exibir o ponto de equilíbrio mensal: **PE = Total de despesas fixas mensais ÷ (1 − CMV% − Imposto% − Taxa média de cartão%)**. |
-| RF62 | O sistema deve calcular o **CMV%** (custo das mercadorias/insumos vendidos sobre o faturamento) como Σ (custo unitário registrado no item da venda × quantidade) ÷ faturamento bruto dos últimos 12 meses. O custo unitário de cada item (incluindo materiais de serviços) deve ser gravado no momento da venda. Sem histórico de vendas, usa-se um CMV% estimado informado pelo usuário junto da capacidade e do ticket médio (RF50). |
+| RF62 | O sistema deve calcular o **CMV%** (custo das mercadorias/insumos vendidos sobre o faturamento) como Σ (custo unitário registrado no item da venda × quantidade) ÷ faturamento bruto, ambos no mesmo período usado no RBT12 (RN21). O custo unitário de cada item (incluindo materiais de serviços) deve ser gravado no momento da venda. Sem histórico de vendas, usa-se um CMV% estimado informado pelo usuário junto da capacidade e do ticket médio (RF50). |
 | RF56 | O sistema deve calcular o faturamento meta mensal: **Meta = Total de despesas fixas mensais ÷ (1 − CMV% − Imposto% − Taxa média de cartão% − Margem meta%)**, em que a margem meta é a margem de lucro desejada informada para o negócio. |
 | RF57 | O Dashboard deve exibir um semáforo de saúde financeira comparando o faturamento bruto do mês corrente (soma de todas as vendas registradas no mês, conforme RN21) com o PE e a Meta: **Vermelho** (faturamento < PE — déficit), **Amarelo** (PE ≤ faturamento < Meta — alerta), **Verde** (faturamento ≥ Meta — saudável). Sem margem meta configurada, o semáforo indica apenas se o faturamento está abaixo ou acima do PE e solicita a configuração da meta. O semáforo é exibido apenas para Dono e Gerente. |
 | RF68 | O sistema deve exibir, para Dono e Gerente, a **projeção de caixa** dos próximos 6 meses: saldo atual + contas a receber abertas − contas a pagar abertas, agrupadas por mês de vencimento; para meses cujas contas de despesas fixas ainda não foram geradas, usa as despesas fixas ativas. |
@@ -202,7 +203,8 @@
 |---|---|
 | RF45 | O sistema deve diferenciar funcionalidades disponíveis no plano gratuito das disponíveis apenas no plano pago. |
 | RF46 | O plano gratuito não deve impor limite de quantidade de produtos, vendas ou lançamentos financeiros. |
-| RF47 | Funcionalidades como relatórios avançados (RF70, RF71 e histórico acima de 12 meses) e gestão de múltiplos colaboradores devem ser exclusivas do plano pago. O plano gratuito permite o Dono e **1 colaborador** convidado; a partir do segundo convidado, é necessário o plano pago. |
+| RF47 | Funcionalidades como relatórios avançados (RF70, RF71 e histórico acima de 12 meses) e gestão de múltiplos colaboradores devem ser exclusivas do plano pago. O plano gratuito permite o Dono e **1 colaborador** (membro ou convite pendente — RF72); a partir do segundo, é necessário o plano pago. Todos os demais módulos, inclusive a Calculadora completa, estão disponíveis no plano gratuito. |
+| RF73 | O Dono deve poder trocar o plano do negócio (gratuito ↔ pago), com registro de quem trocou e quando. No MVP a troca é **simulada**, sem cobrança; a cobrança real (gateway de pagamento) é uma evolução planejada (SPEC-015, ADR-007) que substitui apenas o ponto de troca de plano. Ao voltar para o gratuito, nenhum dado é apagado (RN18) e os colaboradores além do limite perdem o acesso até um novo upgrade. |
 | RF70 | No plano pago, o sistema deve oferecer o relatório de **rentabilidade por item**: para cada produto/serviço, faturamento, custo (custo unitário gravado nas vendas) e margem real no período. |
 | RF71 | No plano pago, o sistema deve permitir **exportar relatórios** de vendas, fluxo de caixa e contas por período, em CSV e PDF. |
 
@@ -217,15 +219,16 @@
 | ID | Descrição |
 |---|---|
 | RNF01 | A aplicação deve ser web, acessível via navegador, com layout responsivo para desktop e mobile. |
-| RNF02 | Os dados de cada negócio devem ser isolados logicamente dos demais (arquitetura multi-tenant), impedindo acesso cruzado entre contas. |
+| RNF02 | Os dados de cada negócio devem ser isolados logicamente dos demais (arquitetura multi-tenant), impedindo acesso cruzado entre contas — inclusive por acesso direto à API pública do provedor do banco. |
 | RNF03 | Senhas de usuário devem ser armazenadas com hash seguro, nunca em texto plano. |
 | RNF04 | O sistema deve estar em conformidade com a LGPD, incluindo política de privacidade, consentimento explícito e mecanismos de exportação/exclusão de dados pessoais. A exportação gera um arquivo .zip com os dados do titular em JSON (completo) e CSV (por tabela). A exclusão de conta segue a RN27. |
-| RNF05 | Alterações em estoque (entrada, saída manual) e em preço devem manter registro auditável (data, usuário responsável, motivo quando aplicável). |
+| RNF05 | Alterações em estoque (entrada, saída manual) e em preço devem manter registro auditável (data, usuário responsável, valor anterior e novo, motivo quando aplicável). Os próprios registros de movimentação de estoque e de histórico de preço são o log: nunca são alterados nem apagados. |
 | RNF06 | O cálculo de precificação e do RBT12 deve responder de forma performática, mesmo com histórico extenso de vendas. |
 | RNF07 | A sessão do usuário deve persistir ao alternar entre negócios, sem exigir novo login. |
 | RNF08 | Os percentuais/faixas de alíquota de MEI e Simples Nacional devem ser mantidos de forma parametrizável (configuração, não código), para facilitar atualização conforme mudanças na legislação. |
-| RNF09 | O sistema deve manter rotina de backup dos dados financeiros e de estoque: backup diário automático do provedor do banco (Supabase) e uma cópia (dump) semanal exportada pela equipe. |
-| RNF10 | A arquitetura do Dashboard e dos módulos deve ser extensível, suportando a adição de novos indicadores e integrações (Nota Fiscal, PIX) sem necessidade de reestruturação do core. |
+| RNF09 | O sistema deve manter rotina de backup diário dos dados: enquanto o banco estiver no plano gratuito do Supabase, um dump diário automatizado (GitHub Actions) guardado de forma privada; em produção, o backup diário nativo do plano pago do Supabase, mantendo o dump como cópia externa. |
+| RNF10 | A arquitetura do Dashboard e dos módulos deve ser extensível, suportando a adição de novos indicadores e integrações (Nota Fiscal, PIX, gateway de pagamento) sem necessidade de reestruturação do core. |
+| RNF11 | O sistema deve ter ambientes separados de **desenvolvimento**, **homologação** e **produção**, cada um com banco e credenciais próprios: homologação atualizada a cada integração na branch `DEVELOP` e produção a cada versão estável na `main`. Dados reais de clientes existem somente em produção. |
 
 ---
 
@@ -260,7 +263,7 @@
 | RN18 | Limitação do plano Freemium é por funcionalidade, nunca por volume de uso. |
 | RN19 | Soma de Desp. Fixas% + Desp. Variáveis% + Imposto% + Margem% deve ser < 100%; senão o cálculo é bloqueado. |
 | RN20 | Taxa de cartão e comissão entram só na formação do preço; não descontam lançamentos nem geram repasse no MVP. |
-| RN21 | RBT12 e faturamento bruto somam todas as vendas registradas no período (competência), inclusive as ainda não recebidas. |
+| RN21 | RBT12 e faturamento bruto somam todas as vendas registradas no período (competência), inclusive as ainda não recebidas. RBT12 = 12 meses anteriores ao mês do cálculo; proporcional (média × 12 ou estimado × 12) com histórico menor. |
 | RN22 | Todo pagamento/recebimento de conta (total ou parcial) gera lançamento no caixa; o status da conta é a fonte única de verdade. |
 | RN23 | Item sem preço oficial confirmado não pode ser vendido. |
 | RN24 | O Anexo do Simples é definido por negócio e aplicado a todo o faturamento; separação por atividade fora do MVP. |
@@ -274,6 +277,7 @@
 
 ## Próximos Passos Técnicos
 
+- [x] ~~Decisões da revisão de consistência da baseline~~ — OPEN-12 a OPEN-31 registradas no Mapa de Specs (seção 1.8).
 - [ ] Conferir nas fontes oficiais os parâmetros fiscais de `docs/prisma_base/parametros_fiscais_seed.json` (faixas dos Anexos I–V, DAS e limite do MEI do ano vigente, amostra CNAE → Anexo, margens padrão) antes da SPEC-003.
 - [x] ~~Tratamento do Fator R e de negócios multi-anexo~~ — Fator R automático (RF69, RN28); anexo único por negócio no MVP, com aviso (RN24).
 - [ ] Detalhar wireframes das telas de: cadastro de produto/serviço, registro de venda (com pagamento misto), calculadora de precificação e dashboard.
