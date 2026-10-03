@@ -4,14 +4,16 @@
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
-                <mxCell id="c2" value="Negocio" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=1;resizeParent=0;resizeParentMax=0;collapsible=0;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1"><mxGeometry x="40" y="40" width="260" height="282" as="geometry" /></mxCell>
+                <mxCell id="c2" value="Negocio" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=1;resizeParent=0;resizeParentMax=0;collapsible=0;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1"><mxGeometry x="40" y="40" width="260" height="316" as="geometry" /></mxCell>
         <mxCell id="c3" value="nome
-regimeTributario: MEI | Simples
+regimeTributario: MEI | Simples | Autonomo
 plano: Gratuito | Pago
 cnpj: opcional
 cnaePrincipal
 anexoSimples: I a V, so Simples
+sujeitoFatorR: so Simples
 atividadeMei: so MEI
+impostoPercentualManual: so Autonomo
 diasCoberturaEstoque: padrao 7
 encerradoEm: LGPD
 taxaCartaoMedia
@@ -19,7 +21,7 @@ margemLucroMeta
 capacidadeMensal
 ticketMedioEstimado
 faturamentoMensalEstimado
-cmvEstimado" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=6;spacingRight=6;overflow=hidden;whiteSpace=wrap;" vertex="1" parent="c2"><mxGeometry y="30" width="260" height="252" as="geometry" /></mxCell>
+cmvEstimado" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=6;spacingRight=6;overflow=hidden;whiteSpace=wrap;" vertex="1" parent="c2"><mxGeometry y="30" width="260" height="286" as="geometry" /></mxCell>
         <mxCell id="c4" value="DespesaFixa" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=1;resizeParent=0;resizeParentMax=0;collapsible=0;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1"><mxGeometry x="340" y="40" width="260" height="138" as="geometry" /></mxCell>
         <mxCell id="c5" value="descricao
 valorMensal
@@ -58,11 +60,13 @@ unidadeMedida" style="text;html=1;strokeColor=none;fillColor=none;align=left;ver
         <mxCell id="c17" value="unidadeMedida" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=6;spacingRight=6;overflow=hidden;whiteSpace=wrap;" vertex="1" parent="c16"><mxGeometry y="30" width="260" height="28" as="geometry" /></mxCell>
         <mxCell id="c18" value="MaterialServico" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=1;resizeParent=0;resizeParentMax=0;collapsible=0;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1"><mxGeometry x="940" y="174" width="260" height="58" as="geometry" /></mxCell>
         <mxCell id="c19" value="quantidade: padrao = 1, editavel" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=6;spacingRight=6;overflow=hidden;whiteSpace=wrap;" vertex="1" parent="c18"><mxGeometry y="30" width="260" height="28" as="geometry" /></mxCell>
-        <mxCell id="c20" value="MovimentacaoEstoque" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=1;resizeParent=0;resizeParentMax=0;collapsible=0;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1"><mxGeometry x="1240" y="302" width="260" height="106" as="geometry" /></mxCell>
+        <mxCell id="c20" value="MovimentacaoEstoque" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=1;resizeParent=0;resizeParentMax=0;collapsible=0;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1"><mxGeometry x="1240" y="302" width="260" height="140" as="geometry" /></mxCell>
         <mxCell id="c21" value="tipo: Entrada | SaidaVenda | SaidaManual | EntradaEstorno
 quantidade
+saldoAnterior
+saldoPosterior
 data
-motivo: obrigatorio se SaidaManual" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=6;spacingRight=6;overflow=hidden;whiteSpace=wrap;" vertex="1" parent="c20"><mxGeometry y="30" width="260" height="76" as="geometry" /></mxCell>
+motivo: obrigatorio se SaidaManual" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=6;spacingRight=6;overflow=hidden;whiteSpace=wrap;" vertex="1" parent="c20"><mxGeometry y="30" width="260" height="110" as="geometry" /></mxCell>
         <mxCell id="c22" value="HistoricoPreco" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=1;resizeParent=0;resizeParentMax=0;collapsible=0;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1"><mxGeometry x="40" y="564" width="260" height="154" as="geometry" /></mxCell>
         <mxCell id="c23" value="preco
 origem: Calculadora | Manual
@@ -130,6 +134,15 @@ competencia: se gerada por despesa fixa" style="text;html=1;strokeColor=none;fil
         <mxCell id="c59" value="dispara (1 : N)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;elbow=vertical;fontSize=10;" edge="1" parent="1" source="c26" target="c34"><mxGeometry relative="1" as="geometry" /></mxCell>
         <mxCell id="c60" value="origina (1 : 1)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;elbow=vertical;fontSize=10;" edge="1" parent="1" source="c32" target="c36"><mxGeometry relative="1" as="geometry" /></mxCell>
         <mxCell id="c61" value="quitada por (1 : N)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;elbow=vertical;fontSize=10;" edge="1" parent="1" source="c36" target="c34"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="c62" value="Convite" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=1;resizeParent=0;resizeParentMax=0;collapsible=0;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1"><mxGeometry x="940" y="420" width="260" height="122" as="geometry" /></mxCell>
+        <mxCell id="c63" value="email
+papel
+permissoesCustomizadas
+status: Pendente | Aceito | Expirado | Cancelado
+expiraEm" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=6;spacingRight=6;overflow=hidden;whiteSpace=wrap;" vertex="1" parent="c62"><mxGeometry y="30" width="260" height="92" as="geometry" /></mxCell>
+        <mxCell id="c64" value="envia (1 : N)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;elbow=vertical;fontSize=10;" edge="1" parent="1" source="c2" target="c62"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="c65" value="convida (1 : N)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;elbow=vertical;fontSize=10;" edge="1" parent="1" source="c6" target="c62"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="c66" value="baixa e estorna (0..1 : N)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;elbow=vertical;fontSize=10;" edge="1" parent="1" source="c26" target="c20"><mxGeometry relative="1" as="geometry" /></mxCell>
       </root>
     </mxGraphModel>
   </diagram>

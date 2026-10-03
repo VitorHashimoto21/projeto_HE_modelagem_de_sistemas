@@ -1,5 +1,5 @@
 {
-  "_aviso": "Valores montados para conferência da equipe (OPEN-01). Conferir nas fontes oficiais (Planalto, Portal do Simples Nacional, Resolução CGSN 140/2018) antes da SPEC-003. Itens marcados com 'conferir' dependem de valores do ano vigente.",
+  "_aviso": "Valores conferidos em 03/10/2026 (OPEN-01): faixas dos Anexos I–V conforme LC 123/2006 (redação da LC 155/2016); DAS do MEI com o salário mínimo de 2026 (R$ 1.621,00 — Decreto 12.797/2025); limite anual do MEI de R$ 81.000,00 (LC 155/2016; o PLP 186/2026, que o eleva, ainda não foi aprovado). Revisar todo mês de janeiro (novo salário mínimo) e a cada mudança na legislação.",
   "_regraFaixa": "RF38: a faixa vale para rbt12De < RBT12 <= rbt12Ate (limites contínuos, sem buraco de centavos). O RBT12 é sempre > 0 (RN21: proporcional ao faturamento estimado quando não há histórico).",
   "_verificacao": "Teste de consistência: em todos os anexos, o imposto é contínuo nas fronteiras das faixas 1→2 até 5→6 exceto 5→6 (R$ 3,6 milhões), onde a descontinuidade é esperada pelo sublimite do Simples; indica ausência de erro de digitação nas alíquotas e parcelas a deduzir das faixas 1 a 5.",
   "faixaTributaria": [
@@ -363,24 +363,24 @@
   "parametroMei": [
     {
       "atividade": "COMERCIO_INDUSTRIA",
-      "valorDasMensal": 76.9,
+      "valorDasMensal": 82.05,
       "limiteFaturamentoAnual": 81000,
       "fonteLegal": "LC 123/2006, art. 18-A; DAS = 5% do salário mínimo (INSS) + R$ 1,00 (ICMS)",
-      "conferir": "valores com salário mínimo de 2025 (R$ 1.518,00); atualizar para o ano vigente e confirmar o limite anual"
+      "vigencia": "2026 — salário mínimo de R$ 1.621,00 (Decreto 12.797/2025); INSS = 5% = R$ 81,05; limite anual de R$ 81.000,00 vigente"
     },
     {
       "atividade": "SERVICOS",
-      "valorDasMensal": 80.9,
+      "valorDasMensal": 86.05,
       "limiteFaturamentoAnual": 81000,
       "fonteLegal": "LC 123/2006, art. 18-A; DAS = 5% do salário mínimo (INSS) + R$ 5,00 (ISS)",
-      "conferir": "valores com salário mínimo de 2025 (R$ 1.518,00); atualizar para o ano vigente e confirmar o limite anual"
+      "vigencia": "2026 — salário mínimo de R$ 1.621,00 (Decreto 12.797/2025); INSS = 5% = R$ 81,05; limite anual de R$ 81.000,00 vigente"
     },
     {
       "atividade": "COMERCIO_E_SERVICOS",
-      "valorDasMensal": 81.9,
+      "valorDasMensal": 87.05,
       "limiteFaturamentoAnual": 81000,
       "fonteLegal": "LC 123/2006, art. 18-A; DAS = 5% do salário mínimo (INSS) + R$ 1,00 (ICMS) + R$ 5,00 (ISS)",
-      "conferir": "valores com salário mínimo de 2025 (R$ 1.518,00); atualizar para o ano vigente e confirmar o limite anual"
+      "vigencia": "2026 — salário mínimo de R$ 1.621,00 (Decreto 12.797/2025); INSS = 5% = R$ 81,05; limite anual de R$ 81.000,00 vigente"
     }
   ],
   "margemPadraoCategoria": [
