@@ -48,7 +48,7 @@ Toda a especificação do produto está documentada na pasta [`docs/`](./docs):
 | [`dominio_fluxogramas/`](./docs/dominio_fluxogramas) | [`FLUXOGRAMAS.md`](./docs/dominio_fluxogramas/FLUXOGRAMAS.md) | Todos os fluxogramas em texto puro (Mermaid), para leitura por ferramentas/IA sem depender de imagem |
 | [`dominio_fluxogramas/`](./docs/dominio_fluxogramas) | [`DIAGRAMAS_COMPORTAMENTAIS.md`](./docs/dominio_fluxogramas/DIAGRAMAS_COMPORTAMENTAIS.md) | Diagramas de sequência (calculadora, venda, cancelamento/troca) e de estados das contas |
 | [`dominio_fluxogramas/`](./docs/dominio_fluxogramas) | [`MODELO_LOGICO_BANCO.md`](./docs/dominio_fluxogramas/MODELO_LOGICO_BANCO.md) | Modelo lógico do banco (diagrama ER) |
-| [`prisma_base/`](./docs/prisma_base) | [`schema.prisma`](./docs/prisma_base/schema.prisma), [`parametros_fiscais_seed.json`](./docs/prisma_base/parametros_fiscais_seed.json) | Schema Prisma (fonte da verdade do banco) e parâmetros fiscais iniciais |
+| [`prisma_base/`](./docs/prisma_base) | [`parametros_fiscais_seed.json`](./docs/prisma_base/parametros_fiscais_seed.json) | Parâmetros fiscais iniciais (o schema do banco está em [`prisma/schema.prisma`](./prisma/schema.prisma)) |
 | [`definicoes_arquitetura/`](./docs/definicoes_arquitetura) | `drivers-arquiteturais-he.md`, `adrs-he.md` | Drivers arquiteturais e ADRs (ADR-001 a ADR-006) |
 | [`design/`](./docs/design) | [`IDENTIDADE_VISUAL.md`](./docs/design/IDENTIDADE_VISUAL.md) | Identidade visual: logo, favicon, cores (tokens claro/escuro com contraste verificado), tipografia, semáforo, componentes base e login revisado |
 | [`docs/`](./docs) | [`MAPA_DE_SPECS.md`](./docs/MAPA_DE_SPECS.md), [`Prompt_SDD_Specs.pdf`](./docs/Prompt_SDD_Specs.pdf) | Mapa ordenado das Specs (com as decisões da baseline) e prompt de apoio do SDD |
@@ -59,56 +59,100 @@ As imagens renderizadas dos diagramas ficam em [`docs/img/`](./docs/img) e são 
 
 ## Instalação
 
-> A aplicação ainda não foi iniciada — por enquanto o repositório contém a documentação de modelagem. Os comandos abaixo valerão após a [SPEC-001](./docs/specs/SPEC-001.md) (fundação).
+**Pré-requisitos:** [Node.js 24 LTS](https://nodejs.org) (no Windows: `winget install OpenJS.NodeJS.LTS`) e um PostgreSQL local — o jeito mais simples é o [Docker](https://www.docker.com/products/docker-desktop/) com o `docker-compose.yml` do projeto.
 
 ```bash
-git clone <url-do-repositorio>
-cd health-enterprise
+git clone https://github.com/VitorHashimoto21/projeto_HE_modelagem_de_sistemas.git
+cd projeto_HE_modelagem_de_sistemas
 
-# instalar dependências
+# 1. Dependências (o postinstall já gera o Prisma Client em src/generated/)
 npm install
 
-# configurar variáveis de ambiente (banco de dados, auth)
+# 2. Variáveis de ambiente
 cp .env.example .env
 
-# rodar as migrations do Prisma
-npx prisma migrate dev
+# 3. PostgreSQL local com os bancos he_dev, he_shadow e he_test
+docker compose up -d
+
+# 4. Migrações (cria as tabelas, os gatilhos de isolamento e liga o RLS)
+npx prisma migrate deploy
 ```
+
+> O npm 11 só executa scripts de instalação de pacotes aprovados. Os do Prisma e do ESLint já estão aprovados em `allowScripts` no `package.json`; se o npm avisar de um pacote novo, revise e aprove com `npm approve-scripts <pacote>`.
 
 ## Uso
-```bash
-# ambiente de desenvolvimento
-npm run dev
 
-# testes
-npm test
+| Comando | O que faz |
+|---|---|
+| `npm run dev` | Aplicação em desenvolvimento em http://localhost:3000 |
+| `npm run lint` | ESLint, incluindo as regras de fronteira entre camadas |
+| `npm run typecheck` | Gera os tipos de rotas do Next.js e roda o TypeScript |
+| `npm test` | Testes unitários (Vitest) |
+| `npm run test:integracao` | Testes de integração contra o banco de `TEST_DATABASE_URL` (só aceita PostgreSQL local com "test" no nome) |
+| `npm run db:migrate` | Cria uma migração nova a partir do `prisma/schema.prisma` (desenvolvimento) |
+| `npm run db:deploy` | Aplica as migrações pendentes |
+| `npm run build` / `npm run start` | Build e servidor de produção |
 
-# build de produção
-npm run build
-npm run start
-```
+A rota `GET /api/saude` responde `{ "aplicacao": "ok", "banco": "ok" }` — ou `"indisponivel"` com status 503 quando o banco não responde. Sem `DATABASE_URL`, a aplicação não sobe e informa a variável ausente.
+
+### Regras do código (SPEC-001)
+
+- **Acesso a dados só pelo cliente do negócio:** `clienteDoNegocio({ negocioId })` de `@/lib/db`. Ele filtra toda consulta pelo negócio, grava o `negocioId` nas criações (inclusive aninhadas) e recusa operações sem contexto. Páginas e componentes não podem importar o Prisma bruto (o lint bloqueia).
+- **Toda tabela nova** precisa: `negocioId` se for operacional, entrada em `src/lib/db/modelos.ts`, RLS ligado na migração e, se tiver FK para outra tabela operacional, o gatilho `he_mesmo_negocio`. Os testes falham se faltar algo.
+- **Datas:** gravadas em UTC; dia, mês e competência sempre por `@/lib/dominio/datas` (America/Sao_Paulo).
+- **Domínio puro:** `src/lib/dominio/` não importa Next.js, React nem banco.
 
 ## Ambientes
 
 | Ambiente | Onde roda | Banco | Atualiza quando |
 |---|---|---|---|
-| **Desenvolvimento** | Máquina de cada integrante (`npm run dev`) | PostgreSQL local | A cada alteração |
-| **Preview** | Vercel, link temporário por Pull Request | Banco de homologação | A cada push no PR |
+| **Desenvolvimento** | Máquina de cada integrante (`npm run dev`) | PostgreSQL local (`docker compose`) | A cada alteração |
+| **Preview** | Vercel, link temporário por Pull Request | Banco de homologação | A cada push no PR (sem migrações) |
 | **Homologação** | Vercel, endereço fixo | Projeto Supabase de homologação (dados fictícios) | A cada merge na `DEVELOP` |
 | **Produção** | Vercel, domínio final | Projeto Supabase de produção (dados reais) | A cada merge na `main` |
 
-Cada ambiente tem variáveis e credenciais próprias (RNF11); chaves de serviços externos em modo de teste fora de produção. A produção é ativada quando o projeto for publicado.
+Cada ambiente tem variáveis e credenciais próprias (RNF11); chaves de serviços externos ficam em modo de teste fora de produção. As migrações rodam pelo workflow **Migrações** (`.github/workflows/migracoes.yml`): homologação a cada push na `DEVELOP`, produção a cada push na `main`.
+
+### Configurar a homologação (uma vez)
+
+1. **Supabase:** criar o projeto `he-homol` (plano gratuito). Em *Connect*, copiar a string do **Transaction pooler** (porta 6543) e a **Direct connection** (porta 5432).
+2. **Vercel:** importar o repositório; em *Settings → Git*, definir `DEVELOP` como branch de produção do projeto de homologação (ou usar um projeto Vercel só para homologação). Em *Environment Variables*, cadastrar `DATABASE_URL` (string do Transaction pooler) para *Production* e *Preview*.
+3. **GitHub:** em *Settings → Environments*, criar `homologacao` com o segredo `DIRECT_URL` (conexão direta). Em *Settings → Secrets → Actions*, criar `BACKUP_HOMOL_DATABASE_URL` (conexão direta) para o backup.
+4. **Proteção de branch:** exigir o check **CI** verde antes do merge em `DEVELOP` e `main`.
+
+### Checklist de produção (quando for publicar)
+
+- [ ] Projeto Supabase `he-prod` (plano pago, com backup diário nativo e sem pausa por inatividade)
+- [ ] Vercel com a `main` como produção e o plano Pro (uso comercial)
+- [ ] Ambiente `producao` no GitHub com o segredo `DIRECT_URL`; segredo `BACKUP_PROD_DATABASE_URL`
+- [ ] Domínio próprio e variáveis de *Production* na Vercel apontando só para o `he-prod`
+- [ ] Revisão do RLS e dos segredos: nenhuma credencial de produção fora do ambiente de produção
+
+## Backup
+
+O workflow **Backup diário** (`.github/workflows/backup.yml`) roda às 03:00 (Brasília), faz `pg_dump` do schema `public` (dados da aplicação) de cada ambiente configurado e guarda o arquivo como **artefato privado** do GitHub Actions por 90 dias. Também pode ser disparado manualmente em *Actions → Backup diário → Run workflow*.
+
+**Restaurar** (num PostgreSQL vazio, nunca direto em produção sem revisão):
+
+```bash
+# baixar o artefato em Actions → execução → Artifacts, depois:
+pg_restore --no-owner --no-privileges --dbname "postgresql://postgres:postgres@localhost:5432/he_restaurado" he-homologacao-AAAAMMDDTHHMMSSZ.dump
+```
+
+> As contas de login ficam no schema `auth` do Supabase Auth e não entram nesse dump. Em produção, o backup nativo do plano pago do Supabase cobre o banco inteiro.
 
 ## Estrutura
 ```text
 .
 ├── src/
-│   ├── app/                      # (planejado) Rotas, páginas e Server Actions (Next.js App Router)
-│   ├── components/               # (planejado) Componentes shadcn/ui e reutilizáveis
-│   ├── lib/                      # (planejado) Prisma/Supabase, cliente do negócio e regras de domínio
-│   └── hooks/                    # (planejado) Custom hooks do front
-├── prisma/                       # (planejado) schema.prisma (fonte da verdade a partir da SPEC-001), migrations e seed
-├── test/                         # (planejado) Testes automatizados (Vitest)
+│   ├── app/                      # Rotas, páginas e Server Actions (Next.js App Router)
+│   ├── components/               # Componentes shadcn/ui e reutilizáveis
+│   ├── lib/                      # Prisma/Supabase, cliente do negócio e regras de domínio
+│   ├── hooks/                    # Custom hooks do front (a partir da SPEC-002)
+│   └── generated/                # Prisma Client gerado (fora do Git)
+├── prisma/                       # schema.prisma (fonte da verdade), migrations e, a partir da SPEC-003, o seed
+├── test/                         # Testes unitários e de integração (Vitest)
+├── .github/workflows/            # CI, migrações por ambiente e backup diário
 ├── docs/                         # Documentação de modelagem (fonte das specs)
 │   ├── specs/
 │   ├── visao_negocio/
