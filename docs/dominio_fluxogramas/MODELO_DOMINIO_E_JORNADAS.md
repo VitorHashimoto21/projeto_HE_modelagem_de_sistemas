@@ -16,12 +16,14 @@ Representa os conceitos centrais do negócio, seus atributos, relacionamentos e 
 classDiagram
     class Negocio {
         +nome
-        +regimeTributario  MEI | Simples
+        +regimeTributario  MEI | Simples | Autonomo
         +plano  Gratuito | Pago
         +cnpj  opcional
         +cnaePrincipal
         +anexoSimples  I a V, so Simples
+        +sujeitoFatorR  so Simples
         +atividadeMei  so MEI
+        +impostoPercentualManual  so Autonomo
         +diasCoberturaEstoque  padrao 7
         +encerradoEm  LGPD
         +taxaCartaoMedia
@@ -50,6 +52,14 @@ classDiagram
     class MembroNegocio {
         +papel  Dono | Gerente | Colaborador
         +permissoesCustomizadas
+    }
+
+    class Convite {
+        +email
+        +papel
+        +permissoesCustomizadas
+        +status  Pendente | Aceito | Expirado | Cancelado
+        +expiraEm
     }
 
     class Categoria {
@@ -90,6 +100,8 @@ classDiagram
     class MovimentacaoEstoque {
         +tipo  Entrada | SaidaVenda | SaidaManual | EntradaEstorno
         +quantidade
+        +saldoAnterior
+        +saldoPosterior
         +data
         +motivo  obrigatorio se SaidaManual
     }
@@ -155,6 +167,8 @@ classDiagram
 
     Negocio "1" --> "N" MembroNegocio : possui
     Usuario "1" --> "N" MembroNegocio : participa como
+    Negocio "1" --> "N" Convite : envia
+    Usuario "1" --> "N" Convite : convida
     Negocio "1" --> "N" Item : cadastra
     Negocio "1" --> "N" Venda : registra
     Negocio "1" --> "N" LancamentoFinanceiro : mantem
@@ -172,6 +186,7 @@ classDiagram
     MaterialServico "N" --> "1" ProdutoFisico : referencia
 
     ProdutoFisico "1" --> "N" MovimentacaoEstoque : sofre
+    Venda "0..1" --> "N" MovimentacaoEstoque : baixa e estorna
 
     Venda "N" --> "0..1" Cliente : associada a
     Venda "1" --> "N" ItemVenda : contem
@@ -189,7 +204,7 @@ classDiagram
 | Classe | Regra |
 |---|---|
 | `ProdutoFisico` | Nasce com `quantidadeEstoque = 0`; a quantidade só é alterada via `MovimentacaoEstoque` (RN03). |
-| `MovimentacaoEstoque` | Alerta de estoque baixo só é calculado após o item completar 1 ciclo de Entrada + Saída (RN07). |
+| `MovimentacaoEstoque` | Alerta de estoque baixo só é calculado após o item completar 1 ciclo de Entrada + Saída (RN07). É o próprio registro de auditoria do estoque: nunca é alterada nem apagada e guarda o saldo antes e depois (RNF05). Baixas e estornos de venda apontam para a `Venda`, e o cancelamento devolve exatamente o que foi baixado (RN25). |
 | `MaterialServico` | Quantidade sugerida automaticamente como 1, editável pelo usuário (RF13). |
 | `HistoricoPreco` | Cada novo registro representa uma confirmação explícita do usuário; o mais recente é o `precoAtual` do `Item` (RN15, RN16). |
 | `Pagamento` | Dinheiro/PIX/Débito geram `LancamentoFinanceiro` imediato; Cartão de Crédito gera `Parcela(s)` → `ContaPagarReceber` (RN09, RN10). |
@@ -203,6 +218,8 @@ classDiagram
 | `LancamentoFinanceiro` | Relação 1:N com `Venda`: pagamento misto pode gerar mais de um lançamento imediato. |
 | `Venda` | Nunca é apagada; cancelamento muda o status, devolve estoque, cancela contas abertas e estorna o recebido (RN25). Troca gera nova venda ligada à original, paga com crédito de troca limitado ao recebido (RN26). |
 | `DespesaFixa` (contas) | Gera uma conta a pagar por mês (competência), sem duplicar; o DAS do MEI é uma despesa fixa mantida pelo sistema (RF60, RF67). |
+| `Convite` | O convidado pode ainda não ter conta; ao aceitar, vira `MembroNegocio` com o papel do convite. Convites pendentes contam no limite do plano gratuito (RF72, RF47). |
+| `Negocio` (Autônomo) | Autônomo sem CNPJ informa o próprio Imposto% usado na Calculadora (RF59, RF38). |
 | `MembroNegocio` | Isola o acesso: um `Usuario` só enxerga dados dos `Negocio`s onde tem `MembroNegocio` (RN01). |
 
 ---

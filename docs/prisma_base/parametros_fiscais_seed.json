@@ -1,5 +1,6 @@
 {
   "_aviso": "Valores montados para conferência da equipe (OPEN-01). Conferir nas fontes oficiais (Planalto, Portal do Simples Nacional, Resolução CGSN 140/2018) antes da SPEC-003. Itens marcados com 'conferir' dependem de valores do ano vigente.",
+  "_regraFaixa": "RF38: a faixa vale para rbt12De < RBT12 <= rbt12Ate (limites contínuos, sem buraco de centavos). O RBT12 é sempre > 0 (RN21: proporcional ao faturamento estimado quando não há histórico).",
   "_verificacao": "Teste de consistência: em todos os anexos, o imposto é contínuo nas fronteiras das faixas 1→2 até 5→6 exceto 5→6 (R$ 3,6 milhões), onde a descontinuidade é esperada pelo sublimite do Simples; indica ausência de erro de digitação nas alíquotas e parcelas a deduzir das faixas 1 a 5.",
   "faixaTributaria": [
     {
@@ -14,7 +15,7 @@
     {
       "anexo": "I",
       "faixaOrdem": 2,
-      "rbt12De": 180000.01,
+      "rbt12De": 180000,
       "rbt12Ate": 360000,
       "aliquota": 7.3,
       "parcelaDeduzir": 5940,
@@ -23,7 +24,7 @@
     {
       "anexo": "I",
       "faixaOrdem": 3,
-      "rbt12De": 360000.01,
+      "rbt12De": 360000,
       "rbt12Ate": 720000,
       "aliquota": 9.5,
       "parcelaDeduzir": 13860,
@@ -32,7 +33,7 @@
     {
       "anexo": "I",
       "faixaOrdem": 4,
-      "rbt12De": 720000.01,
+      "rbt12De": 720000,
       "rbt12Ate": 1800000,
       "aliquota": 10.7,
       "parcelaDeduzir": 22500,
@@ -41,7 +42,7 @@
     {
       "anexo": "I",
       "faixaOrdem": 5,
-      "rbt12De": 1800000.01,
+      "rbt12De": 1800000,
       "rbt12Ate": 3600000,
       "aliquota": 14.3,
       "parcelaDeduzir": 87300,
@@ -50,7 +51,7 @@
     {
       "anexo": "I",
       "faixaOrdem": 6,
-      "rbt12De": 3600000.01,
+      "rbt12De": 3600000,
       "rbt12Ate": 4800000,
       "aliquota": 19.0,
       "parcelaDeduzir": 378000,
@@ -68,7 +69,7 @@
     {
       "anexo": "II",
       "faixaOrdem": 2,
-      "rbt12De": 180000.01,
+      "rbt12De": 180000,
       "rbt12Ate": 360000,
       "aliquota": 7.8,
       "parcelaDeduzir": 5940,
@@ -77,7 +78,7 @@
     {
       "anexo": "II",
       "faixaOrdem": 3,
-      "rbt12De": 360000.01,
+      "rbt12De": 360000,
       "rbt12Ate": 720000,
       "aliquota": 10.0,
       "parcelaDeduzir": 13860,
@@ -86,7 +87,7 @@
     {
       "anexo": "II",
       "faixaOrdem": 4,
-      "rbt12De": 720000.01,
+      "rbt12De": 720000,
       "rbt12Ate": 1800000,
       "aliquota": 11.2,
       "parcelaDeduzir": 22500,
@@ -95,7 +96,7 @@
     {
       "anexo": "II",
       "faixaOrdem": 5,
-      "rbt12De": 1800000.01,
+      "rbt12De": 1800000,
       "rbt12Ate": 3600000,
       "aliquota": 14.7,
       "parcelaDeduzir": 85500,
@@ -104,7 +105,7 @@
     {
       "anexo": "II",
       "faixaOrdem": 6,
-      "rbt12De": 3600000.01,
+      "rbt12De": 3600000,
       "rbt12Ate": 4800000,
       "aliquota": 30.0,
       "parcelaDeduzir": 720000,
@@ -122,7 +123,7 @@
     {
       "anexo": "III",
       "faixaOrdem": 2,
-      "rbt12De": 180000.01,
+      "rbt12De": 180000,
       "rbt12Ate": 360000,
       "aliquota": 11.2,
       "parcelaDeduzir": 9360,
@@ -131,7 +132,7 @@
     {
       "anexo": "III",
       "faixaOrdem": 3,
-      "rbt12De": 360000.01,
+      "rbt12De": 360000,
       "rbt12Ate": 720000,
       "aliquota": 13.5,
       "parcelaDeduzir": 17640,
@@ -140,7 +141,7 @@
     {
       "anexo": "III",
       "faixaOrdem": 4,
-      "rbt12De": 720000.01,
+      "rbt12De": 720000,
       "rbt12Ate": 1800000,
       "aliquota": 16.0,
       "parcelaDeduzir": 35640,
@@ -149,7 +150,7 @@
     {
       "anexo": "III",
       "faixaOrdem": 5,
-      "rbt12De": 1800000.01,
+      "rbt12De": 1800000,
       "rbt12Ate": 3600000,
       "aliquota": 21.0,
       "parcelaDeduzir": 125640,
@@ -158,7 +159,7 @@
     {
       "anexo": "III",
       "faixaOrdem": 6,
-      "rbt12De": 3600000.01,
+      "rbt12De": 3600000,
       "rbt12Ate": 4800000,
       "aliquota": 33.0,
       "parcelaDeduzir": 648000,
@@ -176,7 +177,7 @@
     {
       "anexo": "IV",
       "faixaOrdem": 2,
-      "rbt12De": 180000.01,
+      "rbt12De": 180000,
       "rbt12Ate": 360000,
       "aliquota": 9.0,
       "parcelaDeduzir": 8100,
@@ -185,7 +186,7 @@
     {
       "anexo": "IV",
       "faixaOrdem": 3,
-      "rbt12De": 360000.01,
+      "rbt12De": 360000,
       "rbt12Ate": 720000,
       "aliquota": 10.2,
       "parcelaDeduzir": 12420,
@@ -194,7 +195,7 @@
     {
       "anexo": "IV",
       "faixaOrdem": 4,
-      "rbt12De": 720000.01,
+      "rbt12De": 720000,
       "rbt12Ate": 1800000,
       "aliquota": 14.0,
       "parcelaDeduzir": 39780,
@@ -203,7 +204,7 @@
     {
       "anexo": "IV",
       "faixaOrdem": 5,
-      "rbt12De": 1800000.01,
+      "rbt12De": 1800000,
       "rbt12Ate": 3600000,
       "aliquota": 22.0,
       "parcelaDeduzir": 183780,
@@ -212,7 +213,7 @@
     {
       "anexo": "IV",
       "faixaOrdem": 6,
-      "rbt12De": 3600000.01,
+      "rbt12De": 3600000,
       "rbt12Ate": 4800000,
       "aliquota": 33.0,
       "parcelaDeduzir": 828000,
@@ -230,7 +231,7 @@
     {
       "anexo": "V",
       "faixaOrdem": 2,
-      "rbt12De": 180000.01,
+      "rbt12De": 180000,
       "rbt12Ate": 360000,
       "aliquota": 18.0,
       "parcelaDeduzir": 4500,
@@ -239,7 +240,7 @@
     {
       "anexo": "V",
       "faixaOrdem": 3,
-      "rbt12De": 360000.01,
+      "rbt12De": 360000,
       "rbt12Ate": 720000,
       "aliquota": 19.5,
       "parcelaDeduzir": 9900,
@@ -248,7 +249,7 @@
     {
       "anexo": "V",
       "faixaOrdem": 4,
-      "rbt12De": 720000.01,
+      "rbt12De": 720000,
       "rbt12Ate": 1800000,
       "aliquota": 20.5,
       "parcelaDeduzir": 17100,
@@ -257,7 +258,7 @@
     {
       "anexo": "V",
       "faixaOrdem": 5,
-      "rbt12De": 1800000.01,
+      "rbt12De": 1800000,
       "rbt12Ate": 3600000,
       "aliquota": 23.0,
       "parcelaDeduzir": 62100,
@@ -266,7 +267,7 @@
     {
       "anexo": "V",
       "faixaOrdem": 6,
-      "rbt12De": 3600000.01,
+      "rbt12De": 3600000,
       "rbt12Ate": 4800000,
       "aliquota": 30.5,
       "parcelaDeduzir": 540000,
@@ -429,10 +430,12 @@
       "fonteLegal": "Lei 9.249/1995, art. 15 (percentual de presunção: 8% comércio e indústria)"
     }
   ],
-  "fatorR": {
-    "limiteMinimo": 28.0,
-    "anexoSeAtingir": "III",
-    "anexoSeNaoAtingir": "V",
-    "fonteLegal": "LC 123/2006, art. 18, §§ 5º-J e 5º-M"
-  }
+  "parametroFatorR": [
+    {
+      "limiteMinimo": 28.0,
+      "anexoSeAtingir": "III",
+      "anexoSeNaoAtingir": "V",
+      "fonteLegal": "LC 123/2006, art. 18, §§ 5º-J e 5º-M"
+    }
+  ]
 }
