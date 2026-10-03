@@ -20,6 +20,7 @@ Este documento reúne o conjunto inicial de **ADRs (Architecture Decision Record
 |**ADR-004**|Parametrização Tributária em Banco de Dados e Motor de RBT12|Reescrever a lógica de cálculo de impostos e a integração do módulo financeiro.|**Aceita**|
 |**ADR-005**|Motor de Precificação Determinístico (Markup Completo) em TypeScript Puro|Reescrever o motor de cálculo, seus testes e o formato do histórico de preços.|**Aceita**|
 |**ADR-006**|Consulta de CNPJ em Base Pública da Receita via Adaptador com Fallback Manual|Trocar o provedor afeta o cadastro de negócios e a origem dos dados fiscais (CNAE, regime, anexo).|**Aceita**|
+|**ADR-007**|Cobrança do Plano Pago via Adaptador de Gateway de Pagamento (Stripe)|Trocar o gateway afeta assinaturas ativas, webhooks e dados de cobrança dos clientes.|**Proposta**|
 
 ---
 
@@ -28,7 +29,8 @@ Este documento reúne o conjunto inicial de **ADRs (Architecture Decision Record
 |Tema|Motivo para Não Ter ADR|
 |-|-|
 |**TailwindCSS / shadcn/ui**|Escolha de estilização visual; pode ser substituída sem alterar os contratos da API ou a lógica de domínio do ERP.|
-|**Provedor de Hospedagem (Vercel + Supabase)**|Escolhido para o MVP (Vercel para a aplicação e rotinas agendadas; Supabase para banco e autenticação). Não tem ADR porque a conexão com o banco é uma string PostgreSQL padrão tratada pelo Prisma, permitindo migrar de infraestrutura sem reescrever código.|
+|**Provedor de Hospedagem (Vercel + Supabase)**|Escolhido para o MVP (Vercel para a aplicação e rotinas agendadas; Supabase para banco e autenticação), com ambientes separados de desenvolvimento, homologação (`DEVELOP`) e produção (`main`), cada um com banco e credenciais próprios (RNF11). Não tem ADR porque a conexão com o banco é uma string PostgreSQL padrão tratada pelo Prisma, permitindo migrar de infraestrutura sem reescrever código.|
+|**Ferramenta de Testes (Vitest)**|Escolha local e barata de trocar; não altera contratos, dados nem segurança.|
 |**Biblioteca de Gráficos do Dashboard**|Componente visual que pode ser trocado na camada de apresentação sem impacto nos dados financeiros.|
 
 ---
@@ -67,7 +69,9 @@ O sistema HealthEnterprise (HE) necessita de uma arquitetura web reativa, respon
 
 ##### Decisão
 
-A persistência de dados utilizará um banco de dados relacional **PostgreSQL**, acessado através do **Prisma ORM**. O isolamento entre diferentes empresas (*multi-tenancy*) será feito de forma lógica, incluindo a coluna `negocio_id` em todas as tabelas operacionais do sistema.
+A persistência de dados utilizará um banco de dados relacional **PostgreSQL**, acessado através do **Prisma ORM**. O isolamento entre diferentes empresas (*multi-tenancy*) será feito de forma lógica, incluindo a coluna `negocio_id` em **todas** as tabelas operacionais do sistema — inclusive as tabelas filhas (`MaterialServico`, `MovimentacaoEstoque`, `HistoricoPreco`, `ItemVenda`, `Pagamento`, `Parcela`), cujo valor é sempre igual ao do registro pai.
+
+O filtro é aplicado por uma **extensão do Prisma Client** (o "cliente do negócio"), que injeta `negocioId` em toda leitura, criação, alteração e exclusão e recusa operações sem contexto de negócio. Como o Supabase publica automaticamente uma API REST sobre o schema `public`, o **Row Level Security (RLS) fica ligado em todas as tabelas, sem nenhuma policy**: a API pública não lê nem grava nada, enquanto o Prisma, conectado com o papel privilegiado do banco, continua operando normalmente.
 
 ##### Contexto e Problema
 
@@ -87,7 +91,12 @@ O ERP lida com dados financeiros, registros de vendas e movimentações de estoq
 ##### Consequências
 
 * **Positivas:** Schema fortemente tipado; suporte seguro a migrations; garantia transacional em vendas e parcelamentos, com integridade referencial estrita por chaves estrangeiras entre `Negocio`, `Venda`, `ItemVenda`, `MovimentacaoEstoque` e `LancamentoFinanceiro`.
-* **Negativas:** Todas as consultas no backend devem ter a garantia de conter o filtro do `negocio_id` para evitar acesso indevido; necessidade de configurar Connection Pooling (pgBouncer) para evitar estourar o limite de conexões simultâneas do PostgreSQL durante picos de requisições serverless.
+* **Negativas:** Todas as consultas no backend devem passar pelo cliente do negócio para conter o filtro do `negocio_id`; a coluna redundante nas tabelas filhas precisa ser preenchida (e testada) igual à do pai; toda tabela nova precisa nascer com RLS ligado (verificado em teste); necessidade de configurar Connection Pooling (pgBouncer) para evitar estourar o limite de conexões simultâneas do PostgreSQL durante picos de requisições serverless.
+
+##### Alternativas Consideradas (isolamento das tabelas filhas)
+
+* **Isolar as tabelas filhas apenas pela relação com o pai:** rejeitado — exige disciplina em cada consulta, impede um filtro uniforme na extensão e impede RLS por negócio no futuro.
+* **Policies de RLS por negócio usando o usuário do Supabase:** adiado — defesa em profundidade, mas o Prisma não usa o JWT do usuário por padrão; pode ser adotado depois sem mudar o modelo, já que todas as tabelas têm `negocio_id`.
 
 **Drivers Relacionados:** AD-C02, AD-RF03, RN01, RNF02, RNF09.
 
@@ -97,7 +106,7 @@ O ERP lida com dados financeiros, registros de vendas e movimentações de estoq
 
 ##### Decisão
 
-A autenticação será gerenciada pelo **Supabase Auth** (decisão definitiva; Auth.js permanece como alternativa rejeitada), e a autorização baseada em papéis -  (RBAC - Role-Based Access Control) - (Dono, Gerente, Colaborador) e permissões customizadas será validada exclusivamente no servidor em cada requisição de API ou Server Action, utilizando uma tabela intermediária `MembroNegocio`. Toda e qualquer consulta ao banco de dados deverá obrigatoriamente incluir a cláusula de filtro `where: { negocioId }` validada pelo middleware de sessão.
+A autenticação será gerenciada pelo **Supabase Auth** (decisão definitiva; Auth.js permanece como alternativa rejeitada). A credencial (senha com hash seguro — RNF03) fica **somente** no Supabase Auth: a tabela `Usuario` da aplicação não tem campo de senha, e `Usuario.id` recebe o mesmo UUID de `auth.users.id`, gravado no cadastro. A autorização baseada em papéis -  (RBAC - Role-Based Access Control) - (Dono, Gerente, Colaborador) e permissões customizadas será validada exclusivamente no servidor em cada requisição de API ou Server Action, utilizando uma tabela intermediária `MembroNegocio`. Toda e qualquer consulta ao banco de dados deverá obrigatoriamente incluir a cláusula de filtro `where: { negocioId }` validada pelo middleware de sessão.
 
 ##### Contexto e Problema
 
@@ -127,7 +136,7 @@ O sistema precisa proteger operações estratégicas (como alterar preços, visu
 
 ##### Decisão
 
-Os parâmetros fiscais oficiais serão armazenados em tabelas de parâmetros no banco de dados, cada registro com fonte legal e data de vigência: faixas, alíquotas nominais e parcelas a deduzir por Anexo do Simples Nacional (`FaixaTributaria`), tabela CNAE → Anexo (`CnaeAnexo`), valor do DAS e limite anual do MEI (`ParametroMei`) e margens padrão por categoria baseadas nos percentuais de presunção (`MargemPadraoCategoria`). Os valores iniciais ficam em um arquivo de dados versionado no repositório (`docs/prisma_base/parametros_fiscais_seed.json`) e são carregados no banco por um comando de carga: atualizar um parâmetro exige editar o arquivo e rodar a carga, sem alterar código nem fazer deploy da aplicação. Uma tela de administração fica para depois do MVP. Para CNAEs sujeitos ao Fator R, o anexo efetivo (III ou V) é calculado pela folha de salários ÷ RBT12 (RF69, RN28). O faturamento bruto dos últimos 12 meses (RBT12) será calculado por competência, via consultas agregadas temporais na tabela `Venda` (todas as vendas, inclusive as ainda não recebidas — RN21). No Simples, a alíquota efetiva é `(RBT12 × alíquota nominal − parcela a deduzir) ÷ RBT12`, usando o Anexo do negócio (RN24); no MEI, o imposto entra como despesa fixa (DAS) e não como percentual (RF60).
+Os parâmetros fiscais oficiais serão armazenados em tabelas de parâmetros no banco de dados, cada registro com fonte legal e data de vigência: faixas, alíquotas nominais e parcelas a deduzir por Anexo do Simples Nacional (`FaixaTributaria`, com limites contínuos e regra `rbt12De < RBT12 ≤ rbt12Ate`), tabela CNAE → Anexo (`CnaeAnexo`), valor do DAS e limite anual do MEI (`ParametroMei`), limite e anexos do Fator R (`ParametroFatorR`) e margens padrão por categoria baseadas nos percentuais de presunção (`MargemPadraoCategoria`). Os valores iniciais ficam em um arquivo de dados versionado no repositório (`docs/prisma_base/parametros_fiscais_seed.json`) e são carregados no banco por um comando de carga: atualizar um parâmetro exige editar o arquivo e rodar a carga, sem alterar código nem fazer deploy da aplicação. Uma tela de administração fica para depois do MVP. Para CNAEs sujeitos ao Fator R, o anexo efetivo (III ou V) é calculado pela folha de salários ÷ RBT12 (RF69, RN28). O RBT12 será calculado por competência, via consultas agregadas temporais na tabela `Venda` (todas as vendas não canceladas, inclusive as ainda não recebidas — RN21), sobre os **12 meses anteriores ao mês do cálculo**; com histórico menor, é proporcionalizado (média mensal × 12, ou faturamento estimado × 12 sem histórico), de modo que nunca é zero. No Simples, a alíquota efetiva é `(RBT12 × alíquota nominal − parcela a deduzir) ÷ RBT12`, usando o Anexo do negócio (RN24); no MEI, o imposto entra como despesa fixa (DAS) e não como percentual (RF60); no regime Autônomo (sem CNPJ), o Imposto% é o percentual informado pelo usuário no cadastro (RF59).
 
 ##### Contexto e Problema
 
@@ -212,3 +221,36 @@ O imposto embutido no preço depende do regime tributário e do Anexo do Simples
 * **Negativas:** dependência de serviço externo (disponibilidade e defasagem dos dados abertos); necessidade de tratar falhas e permitir edição manual; a tabela CNAE → Anexo precisa ser mantida atualizada (RN17).
 
 **Drivers Relacionados:** AD-RF04, AD-RF05, RF58, RF59, RN17, RN24.
+
+---
+
+#### ADR-007 — Cobrança do Plano Pago via Adaptador de Gateway de Pagamento (Stripe)
+
+> **Status: Proposta.** Fora do caminho crítico do MVP. Implementação na SPEC-015 (opcional), se houver tempo no semestre ou na continuação do projeto rumo à produção.
+
+##### Decisão
+
+No MVP, a troca de plano é **simulada** (RF73): uma única função de domínio (`alterarPlano(negocioId, plano, origem)`) muda `Negocio.plano` e registra quem e quando. A cobrança real será feita pelo **Stripe**, atrás de uma interface própria (adaptador `GatewayPagamento`), usando o checkout hospedado, o portal do cliente e webhooks. O webhook é a única fonte que muda o plano quando a cobrança real estiver ativa, chamando a mesma função `alterarPlano` com `origem = GATEWAY`. Os ambientes de desenvolvimento e homologação usam sempre as chaves de **modo de teste**; somente produção usa chaves reais (RNF11).
+
+##### Contexto e Problema
+
+O modelo freemium (RF45–RF47) precisa de um caminho para o negócio passar ao plano pago. Integrar cobrança real exige assinatura, webhooks, inadimplência e cancelamento — escopo que compete com as 14 Specs do MVP. Ao mesmo tempo, o projeto deve seguir para homologação e produção depois do semestre, e a troca do mecanismo não pode exigir retrabalho nas regras de plano.
+
+##### Por que foi tomada
+
+1. **Prazo do MVP protegido:** a troca simulada custa horas; a cobrança real fica isolada numa Spec opcional.
+2. **Extensibilidade (RNF10):** um único ponto de troca de plano e um adaptador permitem trocar simulação por gateway (ou um gateway por outro) sem tocar nas guardas de plano.
+3. **Testabilidade:** o Stripe oferece modo de teste gratuito, cartões de teste, CLI para webhooks locais e simulação de tempo para renovações.
+
+##### Alternativas Consideradas
+
+* **Mercado Pago (assinaturas):** marca conhecida pelo MEI e Pix forte, mas API de assinaturas e sandbox menos estáveis; possível segunda implementação do mesmo adaptador.
+* **Asaas:** focado no Brasil (boleto e Pix recorrentes), comunidade e SDK menores.
+* **Integrar o gateway direto no MVP:** rejeitado por custo de prazo (~5–6 dias de uma pessoa, mais testes).
+
+##### Consequências
+
+* **Positivas:** MVP entrega a diferença entre planos sem risco; caminho claro para cobrança real; custo zero em teste.
+* **Negativas:** quando ativada, exige campos de assinatura no `Negocio` (id do cliente e da assinatura no gateway, status e validade), tratamento de inadimplência com período de tolerância, rota de webhook com verificação de assinatura e idempotência, e conta verificada (CNPJ) para cobrar em produção. Taxas por transação a confirmar na tabela oficial do gateway na época da ativação.
+
+**Drivers Relacionados:** AD-QA05, RF45, RF46, RF47, RF73, RN18, RNF10, RNF11.

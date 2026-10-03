@@ -193,7 +193,7 @@ Código em [`prototipo_revisado/App.tsx`](prototipo_revisado/App.tsx). Mudanças
 
 ## 9. Aplicação nas Specs
 
-- **SPEC-001 (Fundação):** copiar `tokens.css` para `app/globals.css`, configurar Fraunces e Outfit com `next/font/google`, colocar os arquivos de `favicon/` em `app/` e `public/`, e definir os metadados (nome, `theme-color` `#163028`).
+- **SPEC-001 (Fundação):** copiar `tokens.css` para `src/app/globals.css`, configurar Fraunces e Outfit com `next/font/google`, colocar os arquivos de `favicon/` em `src/app/` e `public/`, e definir os metadados (nome, `theme-color` `#163028`).
 - **SPEC-002 (Acesso):** a tela de login segue `prototipo_revisado/`.
 - **SPEC-012 (Dashboard):** semáforo com `SemaforoSaude` e gráficos com a paleta da seção 5.
 - Qualquer cor nova deve entrar como token e passar por `validar_contraste.py` antes de ser usada.
