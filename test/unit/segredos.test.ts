@@ -22,7 +22,7 @@ describe("segredos fora do repositório", () => {
 
   it("o .env.example só tem valores de exemplo locais", () => {
     const linhas = readFileSync(".env.example", "utf8")
-      .split("\n")
+      .split(/\r?\n/) // CRLF no Windows (core.autocrlf)
       .filter((l) => /^[A-Z_]+=/.test(l));
     expect(linhas.length).toBeGreaterThan(0);
     for (const linha of linhas) {
