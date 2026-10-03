@@ -278,7 +278,7 @@
 ## Próximos Passos Técnicos
 
 - [x] ~~Decisões da revisão de consistência da baseline~~ — OPEN-12 a OPEN-31 registradas no Mapa de Specs (seção 1.8).
-- [ ] Conferir nas fontes oficiais os parâmetros fiscais de `docs/prisma_base/parametros_fiscais_seed.json` (faixas dos Anexos I–V, DAS e limite do MEI do ano vigente, amostra CNAE → Anexo, margens padrão) antes da SPEC-003.
+- [x] ~~Conferir nas fontes oficiais os parâmetros fiscais de `docs/prisma_base/parametros_fiscais_seed.json` (faixas dos Anexos I–V, DAS e limite do MEI do ano vigente, amostra CNAE → Anexo, margens padrão) antes da SPEC-003.~~ — conferido em 03/10/2026: faixas corretas; DAS atualizado para o salário mínimo de 2026 (R$ 82,05 / R$ 86,05 / R$ 87,05); limite do MEI mantido em R$ 81.000,00.
 - [x] ~~Tratamento do Fator R e de negócios multi-anexo~~ — Fator R automático (RF69, RN28); anexo único por negócio no MVP, com aviso (RN24).
 - [ ] Detalhar wireframes das telas de: cadastro de produto/serviço, registro de venda (com pagamento misto), calculadora de precificação e dashboard.
 - [x] ~~Definir a matriz de permissões granulares (RF06)~~ — módulo × ação; a tabela completa é detalhada na SPEC-005.
