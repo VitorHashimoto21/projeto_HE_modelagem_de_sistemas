@@ -178,6 +178,7 @@ flowchart LR
 - **Justificativa da ordem:** decisão estrutural exigida por ADR-001/002 e AD-C02; toda Spec posterior depende dela.
 
 #### SPEC-002 — Acesso: cadastro, login e consentimento
+- **Spec:** [`specs/SPEC-002.md`](./specs/SPEC-002.md) (proposta, aguardando aprovação)
 - **Objetivo:** permitir cadastro e login por e-mail e senha, com consentimento LGPD explícito e senha protegida.
 - **Valor entregue:** o usuário passa a ter uma conta segura no sistema.
 - **RF:** RF01 · **RN:** — · **RNF:** RNF03, RNF04 (consentimento), RNF07 (sessão)
