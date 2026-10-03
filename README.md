@@ -53,6 +53,7 @@ Toda a especificação do produto está documentada na pasta [`docs/`](./docs):
 | [`design/`](./docs/design) | [`IDENTIDADE_VISUAL.md`](./docs/design/IDENTIDADE_VISUAL.md) | Identidade visual: logo, favicon, cores (tokens claro/escuro com contraste verificado), tipografia, semáforo, componentes base e login revisado |
 | [`docs/`](./docs) | [`MAPA_DE_SPECS.md`](./docs/MAPA_DE_SPECS.md), [`Prompt_SDD_Specs.pdf`](./docs/Prompt_SDD_Specs.pdf) | Mapa ordenado das Specs (com as decisões da baseline) e prompt de apoio do SDD |
 | [`specs/`](./docs/specs) | `SPEC-001.md`, … | Specs individuais aprovadas para implementação, uma por arquivo |
+| [`legal/`](./docs/legal) | [`politica-de-privacidade.md`](./docs/legal/politica-de-privacidade.md), [`termos-de-uso.md`](./docs/legal/termos-de-uso.md) | Rascunhos da política de privacidade e dos termos de uso (revisão do grupo pendente) |
 | [`guia_issues/`](./docs/guia_issues) | [`issues_guide.md`](./docs/guia_issues/issues_guide.md) | Issues do GitHub com critérios de aceitação em EARS e testes |
 
 As imagens renderizadas dos diagramas ficam em [`docs/img/`](./docs/img) e são geradas a partir dos blocos Mermaid; ao alterar um diagrama, gere a imagem novamente (ex.: `npx @mermaid-js/mermaid-cli -i diagrama.mmd -o docs/img/nome.png`). A versão editável do diagrama de domínio está em [`docs/dominio_fluxogramas/modelo_dominio.drawio`](./docs/dominio_fluxogramas/modelo_dominio.drawio) (abrir em [app.diagrams.net](https://app.diagrams.net)).
@@ -155,6 +156,7 @@ pg_restore --no-owner --no-privileges --dbname "postgresql://postgres:postgres@l
 ├── .github/workflows/            # CI, migrações por ambiente e backup diário
 ├── docs/                         # Documentação de modelagem (fonte das specs)
 │   ├── specs/
+│   ├── legal/
 │   ├── visao_negocio/
 │   ├── personas/
 │   ├── requisitos/

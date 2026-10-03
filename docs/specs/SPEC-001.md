@@ -1,6 +1,6 @@
 # SPEC-001 — Fundação técnica e isolamento multi-tenant
 
-> **Status:** proposta (revisão 2) — aguardando aprovação da equipe. Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar). A revisão 2 incorpora as decisões OPEN-12 a OPEN-31 do Mapa de Specs (seção 1.8), que fecharam as questões em aberto da revisão 1. Nenhum código foi escrito.
+> **Status:** ✅ **Aprovada e implementada em 03/10/2026** (PR #36, CI verde). Revisão 2, com as decisões OPEN-12 a OPEN-31 do Mapa de Specs (seção 1.8). Pendentes apenas os critérios que dependem do projeto Supabase de homologação e da Vercel (CA-14, CA-15 e CA-16 — ver seção 14).
 > **Mapa:** [`MAPA_DE_SPECS.md`](../MAPA_DE_SPECS.md) · **Próxima:** SPEC-002 (depende desta).
 
 ---
@@ -390,11 +390,13 @@ Nenhuma das duas impede o início da implementação.
 
 A SPEC-001 estará concluída quando:
 
-- [ ] todos os critérios de aceitação (CA-01 a CA-16) estiverem implementados;
-- [ ] todos os invariantes (INV-001 a INV-012) estiverem preservados;
-- [ ] os testes derivados (T01 a T19) estiverem aprovados, com o CI verde no PR;
-- [ ] os RNFs aplicáveis (RNF01, RNF02, RNF09, RNF10, RNF11) tiverem sido verificados como descrito na seção 10;
-- [ ] não existir divergência conhecida entre a implementação e esta Spec;
-- [ ] toda divergência em relação à baseline tiver sido explicitamente analisada e registrada nos documentos.
+- [ ] todos os critérios de aceitação (CA-01 a CA-16) estiverem implementados — **CA-01 a CA-13 ✅**; CA-14 (backup), CA-15 (API pública) e CA-16 (preview/homologação) aguardam o Supabase de homologação e a Vercel;
+- [x] todos os invariantes (INV-001 a INV-012) estiverem preservados — INV-012 a revisar na configuração da Vercel;
+- [ ] os testes derivados (T01 a T19) estiverem aprovados, com o CI verde no PR — **T01 a T16 ✅** (38 testes automatizados no CI do PR #36, capturas em `evidencias/SPEC-001/`); T17 a T19 são manuais e dependem da homologação;
+- [ ] os RNFs aplicáveis (RNF01, RNF02, RNF09, RNF10, RNF11) tiverem sido verificados como descrito na seção 10 — RNF01, RNF02 (código e banco) e RNF10 ✅; RNF09 e RNF11 dependem da homologação;
+- [x] não existir divergência conhecida entre a implementação e esta Spec;
+- [x] toda divergência em relação à baseline tiver sido explicitamente analisada e registrada nos documentos (descrição do PR #36).
+
+**Notas da implementação (PR #36):** Prisma 7.10 (URL no `prisma.config.ts`, adaptador `pg`); no Next.js 16 um erro na instrumentação não derruba o servidor, por isso a validação do ambiente encerra o processo; o `prisma migrate reset` é bloqueado para agentes de IA, e os testes de integração usam `migrate deploy`; o backup cobre o schema `public` (as contas ficam no schema `auth` do Supabase), o que se soma ao OPEN-008.
 
 **Regra fundamental:** a implementação obedece a esta Spec aprovada. Se surgir conflito entre código, Spec e documentos de modelagem, o comportamento não é alterado em silêncio: a divergência é registrada com a proposta de (1) corrigir a implementação ou (2) alterar a baseline, e a decisão é da equipe.

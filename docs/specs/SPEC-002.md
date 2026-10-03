@@ -1,6 +1,6 @@
 # SPEC-002 — Acesso: cadastro, login e consentimento
 
-> **Status:** proposta — aguardando aprovação da equipe. Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar). Nenhum código foi escrito.
+> **Status:** ✅ **Aprovada em 03/10/2026** — questões em aberto decididas pela equipe (seção 13). Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar). Implementação a seguir, depois do projeto Supabase de homologação.
 > **Mapa:** [`MAPA_DE_SPECS.md`](../MAPA_DE_SPECS.md) · **Anterior:** [SPEC-001](SPEC-001.md) · **Próximas que dependem desta:** SPEC-004 e SPEC-014.
 
 ---
@@ -43,15 +43,15 @@
 ### Incluído
 
 1. **Cadastro:** formulário com nome, e-mail, senha e confirmação da senha, e caixa de aceite da política de privacidade e dos termos de uso (desmarcada por padrão).
-2. **Criação do `Usuario`:** ao criar a conta no Supabase Auth, um registro em `Usuario` com o **mesmo id** de `auth.users.id`, o nome, o e-mail e a data do consentimento (ver OPEN-001 sobre o mecanismo).
-3. **Confirmação de e-mail:** a conta só pode entrar depois de confirmar o e-mail pelo link enviado (ver OPEN-002).
+2. **Criação do `Usuario`:** ao criar a conta no Supabase Auth, um **gatilho no banco** (OPEN-001) cria, na mesma transação, o registro em `Usuario` com o **mesmo id** de `auth.users.id`, o nome, o e-mail, a data do consentimento e a versão dos termos aceita (OPEN-005), lidos dos metadados enviados no cadastro.
+3. **Confirmação de e-mail obrigatória:** a conta só pode entrar depois de confirmar o e-mail pelo link enviado, com envio pelo Resend como SMTP do Supabase Auth (OPEN-002).
 4. **Login** por e-mail e senha, conforme o protótipo revisado (`prototipo_revisado/App.tsx`).
 5. **Logout** em qualquer tela autenticada.
 6. **Recuperação de senha:** pedido pelo e-mail ("Esqueci a senha") e definição de nova senha pelo link recebido.
 7. **Sessão:** cookies de sessão do Supabase gerenciados no servidor, renovados automaticamente, com proteção das rotas autenticadas por middleware.
 8. **Contexto da requisição:** uma função de servidor que obtém o usuário da sessão e, se houver, o negócio ativo (guardado na sessão/cookie), **confirmando no banco** que o usuário é membro desse negócio; é ela que alimenta o cliente do negócio da SPEC-001.
 9. **Destino após o login:** página "Meus negócios", que nesta Spec mostra apenas o estado vazio ("Você ainda não tem um negócio") com o caminho para o cadastro de negócio da SPEC-004; respeita um destino de retorno interno (ex.: o link de convite da SPEC-005).
-10. **Páginas de política de privacidade e termos de uso**, ligadas no cadastro e no rodapé (o texto é da equipe — ver OPEN-003).
+10. **Páginas de política de privacidade e termos de uso**, ligadas no cadastro e no rodapé, com o texto de `docs/legal/` (rascunho para revisão do grupo — OPEN-003) e a versão vigente exibida.
 11. **Configuração por ambiente** (RNF11): projeto Supabase Auth de homologação configurado, URLs de retorno de desenvolvimento, preview e homologação liberadas, e checklist de produção.
 
 ### Fora do escopo
@@ -96,7 +96,7 @@
 | Aceite não marcado | Cadastro bloqueado: "É preciso aceitar a política de privacidade e os termos de uso". |
 | Campo obrigatório vazio, e-mail inválido, senha fora da política (OPEN-004) ou confirmação diferente | Mensagem ligada ao campo (`aria-describedby`), nada é enviado ao servidor; o servidor repete as validações. |
 | E-mail já cadastrado | Mesma tela de sucesso do fluxo principal ("Enviamos um link…"), sem revelar que o e-mail existe; o dono do e-mail recebe um aviso de que já tem conta. |
-| Falha ao criar o `Usuario` depois de criar a conta no Supabase | Nenhuma conta fica pela metade: ou as duas existem, ou nenhuma (ver OPEN-001); a pessoa vê erro genérico e pode tentar de novo. |
+| Falha ao criar o `Usuario` | Nenhuma conta fica pela metade: o gatilho roda na mesma transação da criação da conta, então ou as duas existem, ou nenhuma (OPEN-001); a pessoa vê erro genérico e pode tentar de novo. |
 | Link de confirmação expirado ou já usado | Tela com opção de reenviar o e-mail de confirmação. |
 
 - **Pós-condições:** existe uma conta no Supabase Auth e um `Usuario` com o mesmo id e com `consentimentoLgpdEm` preenchido.
@@ -153,11 +153,11 @@ A sessão é encerrada no servidor e no navegador, e a pessoa volta para a tela 
 
 | Entidade | Atributos usados | Regras |
 |---|---|---|
-| `Usuario` | `id` (= `auth.users.id`), `nome`, `email` (único), `consentimentoLgpdEm`, `excluidoEm` | Criado no cadastro, junto com a conta do Supabase Auth; e-mail igual ao do Supabase Auth; `excluidoEm` só é lido nesta Spec. |
+| `Usuario` | `id` (= `auth.users.id`), `nome`, `email` (único), `consentimentoLgpdEm`, `versaoTermosAceita`, `excluidoEm` | Criado pelo gatilho junto com a conta do Supabase Auth; e-mail igual ao do Supabase Auth; `excluidoEm` só é lido nesta Spec. |
 | Conta do Supabase Auth (`auth.users`) | id, e-mail, senha (hash), confirmação do e-mail | Gerenciada pelo Supabase; fora do schema da aplicação. |
 | `MembroNegocio` | `usuarioId`, `negocioId` | Só consultado para validar o negócio ativo do contexto (criado nas SPECs 004 e 005). |
 
-Nenhuma mudança no schema v7 é necessária, salvo o que vier de OPEN-005 (versão do termo aceito).
+**Mudança no schema (OPEN-005):** novo campo `Usuario.versaoTermosAceita` (texto, ex.: `2026-10-03`), gravado no cadastro. A migração também cria a função e o gatilho em `auth.users` (OPEN-001).
 
 ---
 
@@ -182,7 +182,7 @@ Nenhuma mudança no schema v7 é necessária, salvo o que vier de OPEN-005 (vers
 
 | Contrato | Entrada | Saída | Erros |
 |---|---|---|---|
-| **Cadastrar** | nome, e-mail, senha, confirmação, aceite | "link de confirmação enviado" (sempre a mesma resposta) | `CampoInvalido` (por campo), `AceiteObrigatorio`, `FalhaInterna` |
+| **Cadastrar** | nome, e-mail, senha, confirmação, aceite (com a versão vigente dos termos) | "link de confirmação enviado" (sempre a mesma resposta) | `CampoInvalido` (por campo), `AceiteObrigatorio`, `FalhaInterna` |
 | **Confirmar e-mail** | link do e-mail | sessão criada + destino | `LinkInvalidoOuExpirado` |
 | **Entrar** | e-mail, senha, destino de retorno opcional | sessão criada + destino (interno) | `CredenciaisInvalidas`, `EmailNaoConfirmado`, `MuitasTentativas` |
 | **Sair** | sessão | sessão encerrada | — |
@@ -288,7 +288,7 @@ então seguem o protótipo revisado e os tokens da identidade, sem rolagem horiz
 | T01 | Validação dos campos de cadastro (vazio, e-mail inválido, política de senha, confirmação) | Unitário | CA-03 |
 | T02 | Cadastro completo cria conta e `Usuario` com o mesmo id e consentimento | Integração | CA-01, INV-002, INV-003 |
 | T03 | Cadastro sem aceite, pela interface e direto no servidor | Integração | CA-02, INV-003 |
-| T04 | Falha simulada na criação do `Usuario` não deixa conta pela metade | Integração | INV-002, OPEN-001 |
+| T04 | Falha simulada no gatilho de criação do `Usuario` desfaz a criação da conta (mesma transação) | Integração | INV-002, OPEN-001 |
 | T05 | Respostas iguais para e-mail existente e inexistente (cadastro e recuperação) | Integração | CA-04, CA-10, INV-004 |
 | T06 | Login antes e depois da confirmação do e-mail | Integração | CA-05 |
 | T07 | Login correto, senha errada e e-mail inexistente | Integração | CA-06, CA-07 |
@@ -308,14 +308,16 @@ Os testes de integração rodam contra uma instância local do Supabase (CLI do 
 
 ## 13. Questões em aberto
 
-- **OPEN-001 — Como o `Usuario` é criado junto com a conta do Supabase Auth.**
-  - **(a) Gatilho no banco (recomendado):** uma função no PostgreSQL cria o `Usuario` quando o Supabase insere a conta em `auth.users`, dentro da mesma transação. Garante INV-002 sem depender da aplicação, mas é SQL específico do Supabase, versionado como migração.
-  - **(b) Server Action em dois passos:** cria a conta no Supabase e depois o `Usuario`, com compensação (apagar a conta) se o segundo passo falhar. Fica todo em TypeScript, mas a compensação também pode falhar.
-- **OPEN-002 — Envio de e-mails do Supabase Auth.** O serviço de e-mail padrão do Supabase só envia para endereços da equipe do projeto e com limite baixo por hora: serve para testes internos, não para homologação com terceiros nem produção. Recomendação: configurar um SMTP próprio (ex.: Resend ou Brevo, com plano gratuito) já na homologação; o mesmo serviço atende os convites da SPEC-005. Definir também se a confirmação de e-mail é obrigatória (recomendado: sim).
-- **OPEN-003 — Textos da política de privacidade e dos termos de uso.** A baseline exige a política (RNF04), mas o texto não existe. A equipe precisa redigir (ou adaptar um modelo) antes de concluir esta Spec; até lá, as páginas podem usar um texto provisório marcado como tal **apenas em desenvolvimento e homologação**.
-- **OPEN-004 — Política de senha.** O Supabase aceita, por padrão, 6 caracteres. Recomendação: mínimo de 8 caracteres, com a verificação de senhas vazadas do Supabase ativada se o plano permitir.
-- **OPEN-005 — Versão do termo aceito.** O schema guarda só a data do consentimento (`consentimentoLgpdEm`). Se os termos mudarem, não há como saber qual versão cada pessoa aceitou. Decidir se entra um campo de versão (ex.: `versaoTermosAceita`) ou se a data basta no MVP.
-- **OPEN-006 — Tela de cadastro e recuperação.** Só a tela de login foi prototipada. Confirmar se cadastro e recuperação seguem o mesmo layout (painel institucional + formulário) sem protótipo próprio.
+Todas decididas pela equipe em 03/10/2026:
+
+| ID | Decisão |
+|---|---|
+| **OPEN-001** — Criação do `Usuario` | **Gatilho no banco:** função PostgreSQL disparada na inserção em `auth.users`, que cria o `Usuario` na mesma transação, a partir dos metadados do cadastro (nome, data do consentimento e versão dos termos). Versionada como migração. |
+| **OPEN-002** — Envio de e-mails | **Resend** como SMTP do Supabase Auth, com **confirmação de e-mail obrigatória**. Por enquanto **sem domínio próprio**: o Resend só entrega para o e-mail do dono da conta, o que basta para desenvolvimento e testes internos. Antes de testes com terceiros, registrar um domínio e verificá-lo no Resend (só configuração, sem mudar código). O mesmo serviço atende os convites da SPEC-005. |
+| **OPEN-003** — Política de privacidade e termos | Rascunhos em `docs/legal/`, escritos a partir do que o sistema realmente coleta e faz, **para revisão do grupo**. Antes da produção, recomenda-se revisão jurídica. |
+| **OPEN-004** — Política de senha | **Mínimo de 8 caracteres**, sem exigir símbolos (recomendação do NIST); verificação de senhas vazadas do Supabase ativada se o plano permitir. |
+| **OPEN-005** — Versão do termo aceito | Novo campo **`Usuario.versaoTermosAceita`**; quando os termos mudarem, quem aceitou uma versão anterior pode ser solicitado a aceitar a nova. |
+| **OPEN-006** — Telas sem protótipo | Cadastro e recuperação de senha seguem **o mesmo layout do login** (painel institucional + formulário). |
 
 ---
 
@@ -327,7 +329,7 @@ A SPEC-002 estará concluída quando:
 - [ ] todos os invariantes (INV-001 a INV-008) estiverem preservados;
 - [ ] os testes derivados (T01 a T16) estiverem aprovados, com o CI verde no PR;
 - [ ] os RNFs aplicáveis (RNF01, RNF02, RNF03, RNF04, RNF07, RNF11) tiverem sido verificados como descrito na seção 10;
-- [ ] as questões OPEN-001 a OPEN-006 tiverem sido decididas e registradas;
+- [x] as questões OPEN-001 a OPEN-006 tiverem sido decididas e registradas;
 - [ ] não existir divergência conhecida entre a implementação e esta Spec;
 - [ ] toda divergência em relação à baseline tiver sido explicitamente analisada e registrada nos documentos.
 
