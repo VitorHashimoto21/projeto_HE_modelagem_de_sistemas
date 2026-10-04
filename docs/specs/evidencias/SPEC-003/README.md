@@ -19,6 +19,14 @@
 2ª carga — Nada a mudar: todos inalterados
 ```
 
-## Pendente — verificação na homologação (T14, CA-10)
+## Verificação na homologação (T14, CA-10) — 04/10/2026
 
-Depois do merge na `DEVELOP`: o workflow **Migrações** aplica `20261004130000_parametros_fiscais` e, em seguida, a carga; o resumo deve aparecer no log, e o backup diário seguinte deve trazer as tabelas fiscais preenchidas (RNF09).
+Depois do merge do PR #44, o workflow **Migrações** (execução 37231701835) aplicou `20261004130000_parametros_fiscais` e, em seguida, a carga:
+
+```
+Applying migration `20261004130000_parametros_fiscais`
+Carga concluída:
+faixaTributaria 30 criados · cnaeAnexo 12 · parametroMei 3 · parametroFatorR 1 · margemPadraoCategoria 9
+```
+
+As tabelas fiscais estão no schema `public` e entram no backup diário (RNF09).
