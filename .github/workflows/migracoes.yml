@@ -45,3 +45,8 @@ jobs:
         run: |
           npm ci
           npx prisma migrate deploy
+
+      # SPEC-003 (OPEN-004): a carga é idempotente, então roda sempre, logo depois das migrações.
+      - name: Carregar os parâmetros fiscais
+        if: steps.config.outputs.pular != 'true'
+        run: npm run fiscal:carregar

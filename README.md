@@ -149,6 +149,22 @@ pg_restore --no-owner --no-privileges --dbname "postgresql://postgres:postgres@l
 
 > As contas de login ficam no schema `auth` do Supabase Auth e não entram nesse dump. Em produção, o backup nativo do plano pago do Supabase cobre o banco inteiro.
 
+## Parâmetros fiscais
+
+As faixas do Simples Nacional, a tabela CNAE → Anexo, o DAS e o limite do MEI, a regra do Fator R e as margens padrão ficam no banco, carregados do arquivo versionado [`docs/prisma_base/parametros_fiscais_seed.json`](docs/prisma_base/parametros_fiscais_seed.json) (SPEC-003, ADR-004). A aplicação só lê esses valores; nenhum deles fica fixo no código.
+
+- `npm run fiscal:validar` — confere o arquivo (faixas contínuas, alíquotas consistentes, fonte legal, todos os Anexos, atividades e categorias).
+- `npm run fiscal:carregar` — grava no banco só o que mudou, numa única transação (rodar de novo não muda nada). `-- --simular` mostra o que mudaria; `-- --corrigir` substitui um valor da mesma vigência (erro de digitação).
+- Na homologação e na produção, a carga roda sozinha no workflow **Migrações**, logo depois das migrações.
+
+**Como atualizar um parâmetro**
+
+1. **Mudança na lei** (ex.: novo salário mínimo em janeiro → novo DAS): inclua um **novo registro** com a nova `vigenteDesde` e a fonte legal. Não altere o registro antigo — ele continua valendo para as datas anteriores.
+2. **Erro de digitação** num valor já publicado: corrija o registro e rode a carga com `--corrigir` (o valor anterior fica no log).
+3. Abra um PR: o CI valida o arquivo e roda a carga num banco descartável. No merge, a carga chega à homologação (`DEVELOP`) e depois à produção (`main`).
+
+**Todo janeiro:** atualizar `parametroMei` com o DAS calculado sobre o novo salário mínimo (5% do salário mínimo + R$ 1,00 de ICMS e/ou R$ 5,00 de ISS). Enquanto isso não acontece, o CI e a carga mostram um aviso.
+
 ## Estrutura
 ```text
 .

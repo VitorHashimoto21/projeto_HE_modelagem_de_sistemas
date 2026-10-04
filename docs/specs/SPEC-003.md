@@ -1,6 +1,6 @@
 # SPEC-003 — Parâmetros fiscais oficiais
 
-> **Status:** 📝 **Rascunho para aprovação (04/10/2026)** — gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar). As questões em aberto da seção 13 trazem uma **recomendação**, mas a decisão é da equipe. Nenhuma implementação antes da aprovação.
+> **Status:** 🚧 **Aprovada e implementada em 04/10/2026; verificação na homologação pendente** — questões em aberto decididas pela equipe (seção 13), todas pela opção recomendada; testes T01–T13 automatizados ([evidências](evidencias/SPEC-003/README.md)). Falta o T14: a carga no workflow **Migrações** depois do merge. Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar).
 > **Mapa:** [`MAPA_DE_SPECS.md`](../MAPA_DE_SPECS.md) · **Anterior:** [SPEC-002](SPEC-002.md) · **Próximas que dependem desta:** SPEC-004 (CNAE → Anexo) e SPEC-010 (faixas, DAS, Fator R e margens).
 
 ---
@@ -131,18 +131,19 @@ Toda consulta devolve também a **fonte legal** e a **vigência** do valor usado
 
 | Entidade | Atributos usados | Regras |
 |---|---|---|
-| `FaixaTributaria` | `anexo`, `faixaOrdem`, `rbt12De`, `rbt12Ate`, `aliquota`, `parcelaDeduzir`, `fonteLegal`, `vigenteDesde`, `ativo` | Chave: (anexo, faixaOrdem, vigenteDesde). Limites contínuos (INV-002). |
-| `CnaeAnexo` | `cnae`, `descricao`, `anexo`, `sujeitoFatorR`, `fonteLegal`, `vigenteDesde` | Hoje a chave é só `cnae` (uma versão por CNAE) — ver OPEN-001. |
-| `ParametroMei` | `atividade`, `valorDasMensal`, `limiteFaturamentoAnual`, `fonteLegal`, `vigenteDesde`, `ativo` | Chave: (atividade, vigenteDesde). |
-| `ParametroFatorR` | `limiteMinimo`, `anexoSeAtingir`, `anexoSeNaoAtingir`, `fonteLegal`, `vigenteDesde`, `ativo` | Uma regra vigente por data. |
-| `MargemPadraoCategoria` | `categoria`, `margemPadrao`, `fonteLegal`, `vigenteDesde` | Hoje a chave é só `categoria` — ver OPEN-001. |
+| `FaixaTributaria` | `anexo`, `faixaOrdem`, `rbt12De`, `rbt12Ate`, `aliquota`, `parcelaDeduzir`, `fonteLegal`, `vigenteDesde` | Chave: (anexo, faixaOrdem, vigenteDesde). Limites contínuos (INV-002). |
+| `CnaeAnexo` | `cnae`, `descricao`, `anexo`, `sujeitoFatorR`, `fonteLegal`, `vigenteDesde` | Chave: (cnae, vigenteDesde) — OPEN-001. |
+| `ParametroMei` | `atividade`, `valorDasMensal`, `limiteFaturamentoAnual`, `fonteLegal`, `vigenteDesde` | Chave: (atividade, vigenteDesde). |
+| `ParametroFatorR` | `limiteMinimo`, `anexoSeAtingir`, `anexoSeNaoAtingir`, `fonteLegal`, `vigenteDesde` | Chave: (vigenteDesde) — uma regra vigente por data. |
+| `MargemPadraoCategoria` | `categoria`, `margemPadrao`, `fonteLegal`, `vigenteDesde` | Chave: (categoria, vigenteDesde) — OPEN-001. |
 
-**Mudanças previstas no schema (dependem das decisões da seção 13):**
+**Mudanças no schema (migração `20261004130000_parametros_fiscais`):**
 
-- `vigenteDesde` deixa de ter `@default(now())`: a data passa a vir sempre do arquivo (OPEN-002).
-- Restrições de unicidade por chave + vigência (INV-004); para `CnaeAnexo` e `MargemPadraoCategoria`, troca da chave primária natural por `id` + unicidade (chave, vigência), se a equipe optar pelo histórico também nessas tabelas (OPEN-001).
-- Comentário de `FaixaTributaria.rbt12Ate` alinhado com o seed: a última faixa tem teto de R$ 4,8 milhões (OPEN-003).
-- **Arquivo de parâmetros:** cada registro ganha `vigenteDesde` (data ISO). O texto livre `vigencia` do MEI vira só comentário.
+- `vigenteDesde` passa a ser **data** (`@db.Date`), sem `@default(now())`: vem sempre do arquivo (OPEN-002).
+- Unicidade por chave + vigência nas cinco tabelas (INV-004); `CnaeAnexo` e `MargemPadraoCategoria` ganham `id` (OPEN-001).
+- O campo `ativo` sai de `FaixaTributaria`, `ParametroMei` e `ParametroFatorR` (OPEN-001).
+- Comentário de `FaixaTributaria.rbt12Ate`: a última faixa tem teto de R$ 4,8 milhões (OPEN-003).
+- **Arquivo de parâmetros:** cada registro ganha `vigenteDesde` (data ISO). O texto livre `vigencia` do MEI vira o comentário `_vigencia`.
 
 ---
 
@@ -179,6 +180,14 @@ Toda consulta devolve também a **fonte legal** e a **vigência** do valor usado
 | **Alíquota efetiva** (domínio) | faixa, RBT12 | `(RBT12 × alíquota − parcela) ÷ RBT12`, em % | `RbtInvalido` |
 
 `ParametroAusente` (nenhuma versão vigente na data) indica erro de configuração: a aplicação o registra e mostra uma mensagem genérica, nunca um valor inventado.
+
+**Implementação (04/10/2026):** validação em `src/lib/fiscal/arquivo.ts`, plano de carga em `src/lib/fiscal/plano.ts`, gravação em `scripts/fiscal/carga.ts` e comando em `scripts/carregar-parametros-fiscais.ts` (`npm run fiscal:validar` e `npm run fiscal:carregar [-- --simular | --corrigir]`); consultas em `src/lib/db/parametros-fiscais.ts`, expostas por `parametrosFiscais()` de `@/lib/db`; funções puras em `src/lib/dominio/fiscal.ts`.
+
+**Divergências registradas na implementação:**
+
+- **Gravação em `scripts/`, não em `src/lib/fiscal/`:** para que o código da aplicação não tenha nenhum caminho de escrita nas tabelas fiscais (INV-006); `src/lib/fiscal/` ficou só com a validação e o plano, que são puros.
+- **T13 como teste, não como regra de lint:** o teste procura chamadas de escrita (`create`, `update`, `upsert`, `delete`…) nas tabelas fiscais em todo o `src/`, o que cobre mais casos que uma regra de importação.
+- **Valores numéricos:** as consultas devolvem `number` (convertido do `Decimal` do banco) e a função `aliquotaEfetiva` não arredonda; o arredondamento de exibição fica com a SPEC-010.
 
 ---
 
@@ -277,16 +286,16 @@ Os testes de integração rodam no PostgreSQL local de teste, nunca nos projetos
 
 ## 13. Questões em aberto
 
-Cada questão traz a **recomendação** de quem gerou a Spec; a decisão é da equipe.
+Todas decididas pela equipe em 04/10/2026:
 
-| ID | Questão | Opções | Recomendação |
-|---|---|---|---|
-| **OPEN-001** — Histórico de versões | Hoje `FaixaTributaria`, `ParametroMei` e `ParametroFatorR` têm `id` e `ativo` (permitem várias versões), mas `CnaeAnexo` e `MargemPadraoCategoria` usam a própria chave como chave primária (uma versão só). | (a) histórico em todas as cinco tabelas (migração troca a chave de `CnaeAnexo` e `MargemPadraoCategoria` por `id` + unicidade (chave, vigência)); (b) histórico só nas três primeiras, as outras duas atualizadas no lugar. | **(a)**: o preço calculado (SPEC-010) precisa ser explicável depois; se a margem ou o Anexo de um CNAE mudar, a versão antiga continua consultável. O custo é uma migração pequena agora, antes de existirem dados. |
-| **OPEN-002** — Vigência e correções | O arquivo não tem data de vigência por registro (só um texto livre no MEI), e o schema usa `@default(now())`. E se um valor publicado estiver errado (erro de digitação, não mudança de lei)? | Vigência: (a) `vigenteDesde` obrigatório em cada registro do arquivo; (b) uma data única por tabela. Correção: (c) só por nova vigência; (d) correção explícita (`--corrigir`), que substitui o valor da mesma vigência e registra no log. | **(a) + (d)**. Datas iniciais propostas: faixas do Simples e Fator R em **01/01/2018** (vigência da LC 155/2016); DAS do MEI em **01/01/2026** (salário mínimo de 2026); limite do MEI em **01/01/2018**; CNAEs e margens em **01/01/2018**. A correção explícita evita ter que inventar uma data para consertar um erro. |
-| **OPEN-003** — Teto da última faixa | O schema diz "`rbt12Ate` nulo = sem teto", mas o seed traz R$ 4,8 milhões na faixa 6 (limite do Simples). | (a) manter R$ 4,8 milhões e responder "acima do limite do Simples" acima disso; (b) usar nulo (sem teto). | **(a)**: acima de R$ 4,8 milhões a empresa sai do Simples, então calcular um imposto ali seria errado; a SPEC-010 mostra o aviso. O comentário do schema é ajustado. |
-| **OPEN-004** — Quando a carga roda nos ambientes | A carga precisa rodar na homologação e na produção. | (a) automática no workflow **Migrações**, logo depois das migrações, a cada push na `DEVELOP`/`main`; (b) workflow separado, disparado manualmente; (c) automática só quando o arquivo mudar. | **(a)**: a carga é idempotente, então rodar sempre é seguro e garante que todo ambiente novo já nasce com os parâmetros; não depende de alguém lembrar de disparar. |
-| **OPEN-005** — Tamanho da tabela CNAE → Anexo | O seed tem 12 CNAEs (personas e mais frequentes). A tabela oficial tem centenas de subclasses. | (a) manter a amostra no MVP, com preenchimento manual para os demais (RF59); (b) carregar a tabela completa agora. | **(a)**: a tabela completa exige conferência cuidadosa (muitos CNAEs têm regras específicas e alguns não podem optar pelo Simples) e não muda o código — pode ser ampliada depois só pelo arquivo. |
-| **OPEN-006** — Lembrete anual do DAS | O DAS muda todo janeiro (salário mínimo). Se ninguém atualizar, a Calculadora usa o valor do ano anterior. | (a) o CI e a carga emitem um **aviso** (sem falhar) quando a vigência mais nova do MEI é de um ano anterior ao atual; (b) uma issue aberta automaticamente em janeiro; (c) só documentar no README. | **(a) + (c)**: aviso visível no log de cada PR e de cada carga, sem bloquear o trabalho. |
+| ID | Decisão |
+|---|---|
+| **OPEN-001** — Histórico de versões | **Histórico nas cinco tabelas.** `CnaeAnexo` e `MargemPadraoCategoria` passam a ter `id` e unicidade por (chave, vigência), como as demais. Com a vigência por data, o campo `ativo` deixa de ser necessário e é removido: a versão vigente numa data é a de maior `vigenteDesde` até aquela data. |
+| **OPEN-002** — Vigência e correções | **`vigenteDesde` obrigatório em cada registro do arquivo** (data, sem hora) e **correção explícita** (`--corrigir`), que substitui um valor da mesma vigência e registra no log o valor anterior. Datas iniciais: faixas do Simples, Fator R, limite do MEI, CNAEs e margens em **01/01/2018** (LC 155/2016); DAS do MEI em **01/01/2026** (salário mínimo de 2026). |
+| **OPEN-003** — Teto da última faixa | **R$ 4,8 milhões** (limite do Simples). Acima disso, a consulta responde `AcimaDoLimiteDoSimples` e a SPEC-010 mostra o aviso. O comentário do schema é ajustado. |
+| **OPEN-004** — Quando a carga roda | **Sempre, logo depois das migrações**, no workflow **Migrações** (homologação a cada push na `DEVELOP`, produção na `main`). A carga é idempotente. |
+| **OPEN-005** — Tabela CNAE → Anexo | **Amostra no MVP** (12 CNAEs), com preenchimento manual para os demais (RF59). Ampliar é só editar o arquivo. |
+| **OPEN-006** — Lembrete anual do DAS | **Aviso no CI e na carga** (sem falhar) quando a vigência mais nova do MEI é de um ano anterior ao atual, além da instrução no README. |
 
 ---
 
@@ -294,11 +303,11 @@ Cada questão traz a **recomendação** de quem gerou a Spec; a decisão é da e
 
 A SPEC-003 estará concluída quando:
 
-- [ ] todos os critérios de aceitação (CA-01 a CA-11) estiverem implementados;
+- [ ] todos os critérios de aceitação (CA-01 a CA-11) estiverem implementados — CA-01 a CA-09 e CA-11 verificados por testes; CA-10 (carga na homologação) depois do merge;
 - [ ] todos os invariantes (INV-001 a INV-008) estiverem preservados;
-- [ ] os testes derivados (T01 a T14) estiverem aprovados, com o CI verde no PR;
+- [ ] os testes derivados (T01 a T14) estiverem aprovados, com o CI verde no PR — T01 a T13 automatizados; T14 depois do merge;
 - [ ] os RNFs aplicáveis (RNF06, RNF08, RNF09, RNF11) tiverem sido verificados como descrito na seção 10;
-- [ ] as questões OPEN-001 a OPEN-006 tiverem sido decididas e registradas;
+- [x] as questões OPEN-001 a OPEN-006 tiverem sido decididas e registradas;
 - [ ] não existir divergência conhecida entre a implementação e esta Spec;
 - [ ] toda divergência em relação à baseline tiver sido explicitamente analisada e registrada nos documentos.
 

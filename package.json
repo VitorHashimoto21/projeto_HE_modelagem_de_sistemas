@@ -15,6 +15,8 @@
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
     "db:validate": "prisma validate",
+    "fiscal:validar": "tsx scripts/carregar-parametros-fiscais.ts --validar",
+    "fiscal:carregar": "tsx scripts/carregar-parametros-fiscais.ts",
     "postinstall": "prisma generate"
   },
   "dependencies": {
@@ -47,13 +49,15 @@
     "eslint-config-next": "16.3.8",
     "prisma": "7.10.0",
     "tailwindcss": "^4",
+    "tsx": "4.23.15",
     "typescript": "^5",
     "vitest": "5.0.3"
   },
   "allowScripts": {
     "@prisma/engines@7.10.0": true,
     "prisma@7.10.0": true,
-    "unrs-resolver@1.12.2": true
+    "unrs-resolver@1.12.2": true,
+    "esbuild@0.28.2": true
   },
   "engines": {
     "node": ">=24"

@@ -1,9 +1,12 @@
 import "server-only";
 import { comNegocio, type ContextoDeNegocio } from "./cliente-do-negocio";
 import { criarConsultasDeAcesso } from "./acesso";
+import { criarConsultasFiscais } from "./parametros-fiscais";
 import { prismaBase } from "./prisma";
 
 export type { ConsultasDeAcesso } from "./acesso";
+export { AcimaDoLimiteDoSimples, ParametroAusente } from "./parametros-fiscais";
+export type { ConsultasFiscais, Origem } from "./parametros-fiscais";
 export { ContextoDeNegocioAusente, NegocioDivergente, OperacaoForaDoContexto } from "./erros";
 export type { ClienteDoNegocio, ContextoDeNegocio } from "./cliente-do-negocio";
 
@@ -19,6 +22,11 @@ export function clienteDoNegocio(contexto: ContextoDeNegocio | null | undefined)
 /** Consultas do controle de acesso (SPEC-002): conta bloqueada, filiação e perfil. */
 export function consultasDeAcesso() {
   return criarConsultasDeAcesso(prismaBase());
+}
+
+/** Parâmetros fiscais oficiais (SPEC-003): somente leitura, com a versão vigente na data. */
+export function parametrosFiscais() {
+  return criarConsultasFiscais(prismaBase());
 }
 
 /** Verificação de saúde do banco (CA-10): true se o banco responde. */
