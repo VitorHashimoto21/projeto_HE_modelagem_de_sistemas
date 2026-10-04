@@ -16,10 +16,10 @@ export function criarConsultasDeAcesso(cliente: PrismaClient) {
       return !usuario || usuario.excluidoEm !== null;
     },
 
-    /** O usuário é membro do negócio? (INV-006) */
+    /** O usuário é membro do negócio, e o negócio não está encerrado? (INV-006; SPEC-004) */
     async ehMembro(usuarioId: string, negocioId: string): Promise<boolean> {
-      const membro = await cliente.membroNegocio.findUnique({
-        where: { usuarioId_negocioId: { usuarioId, negocioId } },
+      const membro = await cliente.membroNegocio.findFirst({
+        where: { usuarioId, negocioId, negocio: { encerradoEm: null } },
         select: { id: true },
       });
       return membro !== null;

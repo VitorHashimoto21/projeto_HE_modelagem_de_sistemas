@@ -9,7 +9,7 @@ import { ambiente } from "@/lib/env";
 import { criarAdaptadorSupabase } from "./adaptador-supabase";
 import { COOKIE_NEGOCIO_ATIVO, resolverContexto, type ContextoDaRequisicao } from "./contexto";
 import { enviarAvisoDeContaExistente } from "./emails";
-import { ROTA_ENTRAR, ROTA_INICIAL } from "./rotas";
+import { ROTA_ENTRAR, ROTA_MEUS_NEGOCIOS } from "./rotas";
 import type { DependenciasDeAcesso } from "./servicos";
 
 /**
@@ -84,6 +84,6 @@ export async function exigirSessao(): Promise<ContextoDaRequisicao> {
  */
 export async function exigirNegocio(): Promise<ContextoDeNegocio> {
   const contexto = await exigirSessao();
-  if (!contexto.negocioId) redirect(ROTA_INICIAL);
+  if (!contexto.negocioId) redirect(ROTA_MEUS_NEGOCIOS);
   return { negocioId: contexto.negocioId, usuarioId: contexto.usuarioId };
 }

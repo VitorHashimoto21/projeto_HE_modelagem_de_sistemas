@@ -1,6 +1,6 @@
 # SPEC-004 — Cadastro do negócio e enquadramento fiscal
 
-> **Status:** ✅ **Aprovada em 04/10/2026** — questões em aberto decididas pela equipe (seção 13), todas pela opção recomendada. Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar).
+> **Status:** 🚧 **Aprovada e implementada em 04/10/2026; verificação no preview/homologação pendente** — questões em aberto decididas pela equipe (seção 13), todas pela opção recomendada; testes T01–T13 automatizados ([evidências](evidencias/SPEC-004/README.md)). Faltam T14 (capturas) e T15 (fluxo com a BrasilAPI real no ambiente da Vercel). Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar).
 > **Mapa:** [`MAPA_DE_SPECS.md`](../MAPA_DE_SPECS.md) · **Anteriores:** [SPEC-002](SPEC-002.md) (acesso) e [SPEC-003](SPEC-003.md) (parâmetros fiscais) · **Próximas que dependem desta:** SPEC-005 (equipe) e todas as specs operacionais (o negócio é o tenant).
 
 ---
@@ -200,6 +200,16 @@ Só o Dono vê e usa "Dados do negócio". Edita nome, regime e os campos do regi
 
 Os nomes exatos de rotas, funções e componentes são decididos na implementação, respeitando estes contratos.
 
+**Implementação (04/10/2026):** domínio em `src/lib/dominio/cnpj.ts`; adaptador `ConsultaCnpj` em `src/lib/integracoes/consulta-cnpj.ts`; validação, sugestão de enquadramento e fluxos em `src/lib/negocio/` (Server Actions em `acoes.ts`); banco em `src/lib/db/negocios.ts` (`negocios()` de `@/lib/db`). Rotas: `/negocios`, `/negocios/novo`, `/painel` e `/negocio/dados`; seletor no cabeçalho da área autenticada.
+
+**Divergências registradas na implementação:**
+
+- **`User-Agent` na chamada à BrasilAPI:** a API responde `403` ao `User-Agent` padrão do `fetch` do Node (o `curl` funcionava); o adaptador se identifica como `HealthEnterprise/1.0`. Coberto por teste de regressão.
+- **Filiação ignora negócios encerrados:** `ehMembro` (SPEC-002) passou a exigir `encerradoEm` vazio, para que o contexto e a troca recusem negócio encerrado (INV-006).
+- **CNPJ na edição:** o CNPJ cadastrado nunca muda; um negócio Autônomo (sem CNPJ) pode informá-lo ao passar para MEI ou Simples, e um negócio com CNPJ não pode voltar a Autônomo (seria contraditório com o regime).
+- **Preenchimento manual a partir do CNPJ:** quando a consulta falha, o formulário oferece MEI e Simples (o Autônomo é o caminho "não tenho CNPJ"). As regras de bloqueio da consulta (OPEN-002 e OPEN-003) orientam o cadastro, mas o preenchimento manual, que existe justamente para quando a base pública falha, não as repete.
+- **Página inicial `/painel`:** `ROTA_INICIAL` passou de `/negocios` para `/painel` (OPEN-005); `exigirNegocio()` leva a "Meus negócios" quando não há negócio ativo válido.
+
 ---
 
 ## 10. Requisitos não funcionais aplicáveis
@@ -327,9 +337,9 @@ Todas decididas pela equipe em 04/10/2026:
 
 A SPEC-004 estará concluída quando:
 
-- [ ] todos os critérios de aceitação (CA-01 a CA-13) estiverem implementados;
+- [ ] todos os critérios de aceitação (CA-01 a CA-13) estiverem implementados — CA-01 a CA-12 cobertos por testes; CA-13 (visual) e o fluxo real no ambiente da Vercel pendentes;
 - [ ] todos os invariantes (INV-001 a INV-008) estiverem preservados;
-- [ ] os testes derivados (T01 a T15) estiverem aprovados, com o CI verde no PR;
+- [ ] os testes derivados (T01 a T15) estiverem aprovados, com o CI verde no PR — T01 a T13 automatizados; T14 e T15 pendentes;
 - [ ] os RNFs aplicáveis (RNF01, RNF02, RNF04, RNF06, RNF07) tiverem sido verificados como descrito na seção 10;
 - [x] as questões OPEN-001 a OPEN-007 tiverem sido decididas e registradas;
 - [ ] não existir divergência conhecida entre a implementação e esta Spec;

@@ -3,7 +3,9 @@
  * framework: usado pelo proxy, pelas Server Actions e pelos testes.
  */
 
-export const ROTA_INICIAL = "/negocios";
+/** Página inicial do negócio ativo; sem negócio válido, ela leva a "Meus negócios" (SPEC-004, OPEN-005). */
+export const ROTA_INICIAL = "/painel";
+export const ROTA_MEUS_NEGOCIOS = "/negocios";
 export const ROTA_ENTRAR = "/entrar";
 export const ROTA_NOVA_SENHA = "/nova-senha";
 export const ROTA_LINK_INVALIDO = "/link-invalido";
