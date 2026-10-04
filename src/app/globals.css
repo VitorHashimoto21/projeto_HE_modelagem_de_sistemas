@@ -1,0 +1,175 @@
+@import "tailwindcss";
+
+/* ==========================================================================
+   Health Enterprise (HE) — CSS global
+   Tokens copiados de docs/design/identidade/tokens/tokens.css (SPEC-001, INV-009).
+   Diferenças em relação ao arquivo de origem — só fontes, nenhuma cor:
+   - sem o @import do Google Fonts: Fraunces e Outfit vêm do next/font (layout.tsx);
+   - --font-display e --font-sans apontam para as variáveis do next/font.
+   O teste test/unit/tokens.test.ts confere que todas as cores são idênticas.
+   ========================================================================== */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ---------- Tema claro (padrão) ---------- */
+:root {
+  --radius: 0.75rem;
+
+  /* Superfícies e texto */
+  --background: #faf9f7;          /* fundo off-white quente */
+  --foreground: #0d1f1a;          /* verde quase preto — 16.25:1 */
+  --card: #ffffff;
+  --card-foreground: #0d1f1a;
+  --popover: #ffffff;
+  --popover-foreground: #0d1f1a;
+  --muted: #f1efeb;
+  --muted-foreground: #5f6670;    /* texto secundário — 5.51:1 */
+
+  /* Ação principal (âmbar escurecido para contraste) */
+  --primary: #b45309;             /* botão/links — branco sobre ele 5.02:1 */
+  --primary-hover: #92400e;       /* 7.09:1 */
+  --primary-foreground: #ffffff;
+
+  /* Secundária e acento neutro */
+  --secondary: #f1efeb;
+  --secondary-foreground: #0d1f1a;
+  --accent: #f1efeb;
+  --accent-foreground: #0d1f1a;
+
+  /* Bordas e foco */
+  --border: #e5e2dc;              /* divisórias decorativas */
+  --input: #8a8f98;               /* borda de campos — 3.25:1 (UI) */
+  --ring: #b45309;                /* anel de foco — 4.77:1 */
+
+  /* Erro / ações destrutivas */
+  --destructive: #b91c1c;
+  --destructive-foreground: #ffffff;
+
+  /* Marca */
+  --brand: #163028;               /* verde da marca (fundo do símbolo) */
+  --brand-deep: #0d1f1a;          /* painel institucional */
+  --brand-foreground: #ffffff;
+  --brand-amber: #f59e0b;         /* âmbar do broto — só sobre fundos verdes */
+  --brand-amber-light: #fbbf24;
+
+  /* Semáforo de saúde financeira (RF57) — sempre com ícone + rótulo */
+  --status-ok: #166534;           /* Saudável */
+  --status-ok-bg: #e8f5ec;
+  --status-warn: #8a5a00;         /* Atenção */
+  --status-warn-bg: #fdf6d8;
+  --status-danger: #b91c1c;       /* Déficit */
+  --status-danger-bg: #fdeceb;
+
+  /* Gráficos — ordem fixa, validada (CVD, visão normal, contraste) */
+  --chart-1: #0b8a68;
+  --chart-2: #cf6d0c;
+  --chart-3: #2a78d6;
+  --chart-4: #d55181;
+  --chart-5: #4a3aa7;
+}
+
+/* ---------- Tema escuro ---------- */
+.dark {
+  --background: #0b1714;
+  --foreground: #ecebe7;          /* 15.35:1 */
+  --card: #12241f;
+  --card-foreground: #ecebe7;
+  --popover: #12241f;
+  --popover-foreground: #ecebe7;
+  --muted: #1a2e28;
+  --muted-foreground: #a7b0ab;    /* 8.23:1 */
+
+  --primary: #f59e0b;             /* texto escuro sobre ele 7.96:1 */
+  --primary-hover: #fbbf24;
+  --primary-foreground: #0d1f1a;
+
+  --secondary: #1a2e28;
+  --secondary-foreground: #ecebe7;
+  --accent: #1a2e28;
+  --accent-foreground: #ecebe7;
+
+  --border: #24392f;
+  --input: #6f817a;               /* 3.93:1 (UI) */
+  --ring: #fbbf24;
+
+  --destructive: #f87171;
+  --destructive-foreground: #0d1f1a;
+
+  --brand: #163028;
+  --brand-deep: #0d1f1a;
+  --brand-foreground: #ffffff;
+  --brand-amber: #f59e0b;
+  --brand-amber-light: #fbbf24;
+
+  --status-ok: #4ade80;
+  --status-ok-bg: #123524;
+  --status-warn: #facc15;
+  --status-warn-bg: #3a3110;
+  --status-danger: #f87171;
+  --status-danger-bg: #3b1717;
+
+  --chart-1: #1fae86;
+  --chart-2: #c97212;
+  --chart-3: #3987e5;
+  --chart-4: #d55181;
+  --chart-5: #9085e9;
+}
+
+/* ---------- Mapeamento para utilitários do Tailwind ---------- */
+@theme inline {
+  --font-display: var(--font-fraunces), Georgia, serif;
+  --font-sans: var(--font-outfit), system-ui, sans-serif;
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-brand: var(--brand);
+  --color-brand-deep: var(--brand-deep);
+  --color-brand-foreground: var(--brand-foreground);
+  --color-brand-amber: var(--brand-amber);
+  --color-brand-amber-light: var(--brand-amber-light);
+  --color-status-ok: var(--status-ok);
+  --color-status-ok-bg: var(--status-ok-bg);
+  --color-status-warn: var(--status-warn);
+  --color-status-warn-bg: var(--status-warn-bg);
+  --color-status-danger: var(--status-danger);
+  --color-status-danger-bg: var(--status-danger-bg);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  /* Pré-paleta — escalas 50–950 (classes bg-verde-100, text-ambar-700, border-neutro-300…) */
+  --color-verde-50: #f4f8f6; --color-verde-100: #e5edea; --color-verde-200: #cbdcd6; --color-verde-300: #a9c5bb; --color-verde-400: #7fa99b; --color-verde-500: #558d7b; --color-verde-600: #347461; --color-verde-700: #1f5c4b; --color-verde-800: #084536; --color-verde-900: #163028; --color-verde-950: #0d1f1a;
+  --color-ambar-50: #fffbeb; --color-ambar-100: #fef3c7; --color-ambar-200: #fde68a; --color-ambar-300: #fcd34d; --color-ambar-400: #fbbf24; --color-ambar-500: #f59e0b; --color-ambar-600: #d97706; --color-ambar-700: #b45309; --color-ambar-800: #92400e; --color-ambar-900: #78350f; --color-ambar-950: #451a03;
+  --color-neutro-50: #faf9f7; --color-neutro-100: #f1efeb; --color-neutro-200: #e5e2dc; --color-neutro-300: #c0bdb8; --color-neutro-400: #a19e99; --color-neutro-500: #82807b; --color-neutro-600: #686661; --color-neutro-700: #524f4b; --color-neutro-800: #3c3a36; --color-neutro-900: #2d2b27; --color-neutro-950: #1c1a16;
+}
+
+@layer base {
+  * { border-color: var(--border); }
+  html, body { background: var(--background); color: var(--foreground); font-family: var(--font-sans); }
+  h1, h2, h3, .font-display { font-family: var(--font-display); }
+  *:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+}

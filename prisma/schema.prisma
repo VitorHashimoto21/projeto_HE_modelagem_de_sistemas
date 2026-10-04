@@ -1,5 +1,5 @@
 // ==========================================================
-// ERP + Calculadora de Precificação — Schema Prisma (revisado)
+// ERP + Calculadora de Precificação — Schema Prisma (fonte da verdade — OPEN-30)
 // Correções em relação à v1: datasource/generator vazios,
 // models faltantes (Cliente, HistoricoPreco, Parcela,
 // ContaPagarReceber), campos livres convertidos em enum,
@@ -21,13 +21,14 @@
 // vendaId e saldos na MovimentacaoEstoque (RN25, RNF05); registro da troca de plano (RF73).
 // ==========================================================
 
+// Prisma 7: a URL de conexão fica em prisma.config.ts (CLI) e no adaptador pg (aplicação).
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 generator client {
-  provider = "prisma-client-js"
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
 }
 
 // ==========================================================

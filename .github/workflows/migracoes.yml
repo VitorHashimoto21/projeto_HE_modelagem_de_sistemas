@@ -1,0 +1,47 @@
+# Migrações por ambiente (SPEC-001, seção 5.5): homologação recebe as migrações a cada
+# integração na DEVELOP; produção, a cada versão estável na main — sempre depois da homologação.
+# Segredos (Settings → Environments):
+#   ambiente "homologacao": DIRECT_URL — conexão direta do Supabase de homologação
+#   ambiente "producao":    DIRECT_URL — conexão direta do Supabase de produção (quando existir)
+# Sem o segredo, o passo é pulado. Previews de PR nunca recebem migrações.
+name: Migrações
+
+on:
+  push:
+    branches: [DEVELOP, main]
+  workflow_dispatch:
+
+concurrency:
+  group: migracoes-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  migrar:
+    name: Migrar ${{ github.ref_name == 'main' && 'produção' || 'homologação' }}
+    runs-on: ubuntu-latest
+    environment: ${{ github.ref_name == 'main' && 'producao' || 'homologacao' }}
+    env:
+      DIRECT_URL: ${{ secrets.DIRECT_URL }}
+    steps:
+      - name: Verificar se o ambiente está configurado
+        id: config
+        run: |
+          if [ -z "$DIRECT_URL" ]; then
+            echo "Segredo DIRECT_URL não definido para este ambiente: migração pulada."
+            echo "pular=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.config.outputs.pular != 'true'
+
+      - uses: actions/setup-node@v4
+        if: steps.config.outputs.pular != 'true'
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Aplicar migrações pendentes
+        if: steps.config.outputs.pular != 'true'
+        run: |
+          npm ci
+          npx prisma migrate deploy
