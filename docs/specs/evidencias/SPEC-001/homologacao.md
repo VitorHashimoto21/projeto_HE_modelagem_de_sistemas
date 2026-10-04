@@ -23,3 +23,11 @@ Chamadas à API REST do Supabase (`/rest/v1`) com a chave pública (Publishable 
 | `DELETE ?id=not.is.null` | `Negocio`, `FaixaTributaria` | `200`, 0 linhas apagadas |
 
 A tabela `_prisma_migrations` tem 2 linhas (confirmado pelo backup acima) e a API devolveu 0: o bloqueio vem do RLS sem policies (INV-011), não de tabelas vazias.
+
+## T19 / CA-16 — Preview e homologação na Vercel
+
+Projeto Vercel `he-homol` (plano gratuito), com a `DEVELOP` como branch de produção do projeto e `DATABASE_URL` (Transaction pooler do Supabase de homologação) em *Production* e *Preview*.
+
+- **Homologação:** <https://he-homol.vercel.app>, publicada a partir da `DEVELOP` (commit `fcc74af`). `GET /api/saude` → `200 {"aplicacao":"ok","banco":"ok"}`; página de verificação respondendo (`200`, título "Health Enterprise").
+- **Preview por PR:** o PR #40 ganhou automaticamente o deploy `Preview` (commit `903c2df`), o check **Vercel** verde e o comentário do `vercel[bot]` com o link `he-homol-git-docs-evidencias-homologacao-health-enterprise.vercel.app`, protegido pelo login da Vercel.
+- **INV-012:** o projeto `he-homol` só tem credenciais do Supabase de homologação; a produção será um projeto Vercel separado (`he-prod`), conforme o checklist do README.
