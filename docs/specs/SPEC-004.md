@@ -1,6 +1,6 @@
 # SPEC-004 — Cadastro do negócio e enquadramento fiscal
 
-> **Status:** 📝 **Rascunho para aprovação (04/10/2026)** — gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar). As questões em aberto da seção 13 trazem uma **recomendação**, mas a decisão é da equipe. Nenhuma implementação antes da aprovação.
+> **Status:** ✅ **Aprovada em 04/10/2026** — questões em aberto decididas pela equipe (seção 13), todas pela opção recomendada. Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar).
 > **Mapa:** [`MAPA_DE_SPECS.md`](../MAPA_DE_SPECS.md) · **Anteriores:** [SPEC-002](SPEC-002.md) (acesso) e [SPEC-003](SPEC-003.md) (parâmetros fiscais) · **Próximas que dependem desta:** SPEC-005 (equipe) e todas as specs operacionais (o negócio é o tenant).
 
 ---
@@ -309,17 +309,17 @@ Os testes automatizados nunca chamam a BrasilAPI de verdade (fetch simulado com 
 
 ## 13. Questões em aberto
 
-Cada questão traz a **recomendação** de quem gerou a Spec; a decisão é da equipe.
+Todas decididas pela equipe em 04/10/2026:
 
-| ID | Questão | Opções | Recomendação |
-|---|---|---|---|
-| **OPEN-001** — CNPJ já cadastrado | O schema tem `Negocio.cnpj @unique`. Se outra pessoa já cadastrou o CNPJ (o verdadeiro dono, um sócio ou alguém usando um CNPJ público de terceiros), o que acontece? | (a) manter único: mensagem "Este CNPJ já está cadastrado. Peça um convite ao Dono do negócio" (SPEC-005); (b) permitir o mesmo CNPJ em negócios diferentes. | **(a)**: evita dois "donos" do mesmo negócio e dados divididos; o fato de um CNPJ (dado público) já estar no HE é pouca informação. Casos de uso indevido por terceiros vão para o contato de suporte. |
-| **OPEN-002** — Empresa fora do Simples e do MEI | O MVP atende MEI, Simples e Autônomo. Uma empresa de Lucro Presumido/Real não tem regime no enum. | (a) não suportar no MVP: mensagem explicando e sem cadastro com esse CNPJ; (b) novo regime "Outro" com Imposto% informado, como o Autônomo. | **(a)**: o público-alvo é MEI e pequenos negócios do Simples; (b) mexe no enum e na Calculadora (SPEC-010) sem uma persona que precise. Pode virar evolução. |
-| **OPEN-003** — Situação cadastral diferente de ATIVA | A base pública pode trazer BAIXADA, INAPTA, SUSPENSA ou NULA — e pode estar defasada (ADR-006). | (a) permitir com aviso; (b) bloquear BAIXADA e NULA e avisar nas demais; (c) bloquear tudo que não for ATIVA. | **(b)**: CNPJ baixado ou nulo não deveria operar; INAPTA e SUSPENSA podem ser regularizadas e a base pode estar atrasada. |
-| **OPEN-004** — CPF na razão social do MEI | A razão social de um MEI costuma terminar com o CPF do titular (ex.: "MARIA SILVA 12345678901"). | (a) guardar como veio; (b) guardar sem o CPF (retirar os 11 dígitos finais) e nunca exibi-lo. | **(b)**: minimização (RNF04/LGPD) — o CPF não é usado em nada do sistema. O nome do negócio, que aparece nas telas, já vem do nome fantasia ou da razão social sem o CPF. |
-| **OPEN-005** — Destino depois do login | A SPEC-002 leva sempre a "Meus negócios". Com negócios, quem usa um só teria um clique a mais toda vez. | (a) ir direto para o último negócio usado (cookie válido), senão "Meus negócios"; (b) sempre "Meus negócios". | **(a)**: é o que RF03/RNF07 pedem na prática; o seletor do cabeçalho continua a um clique. Registra-se como refinamento da SPEC-002. |
-| **OPEN-006** — Editar dados fiscais depois | O UC0 cobre o cadastro; mas o regime muda na vida real (MEI que vira Simples). | (a) incluir nesta Spec a tela "Dados do negócio" (só Dono); (b) deixar para uma spec futura. | **(a)**: é pequena, usa a mesma validação do cadastro, e sem ela um erro no cadastro obrigaria a criar outro negócio. |
-| **OPEN-007** — Telas sem protótipo | Não há protótipo para "Meus negócios", cadastro, painel e seletor. | (a) seguir os tokens e os componentes das telas já feitas (como na SPEC-002); (b) prototipar antes. | **(a)**, com o cadastro em duas etapas (CNPJ → confirmação) e capturas no PR para o grupo opinar. |
+| ID | Decisão |
+|---|---|
+| **OPEN-001** — CNPJ já cadastrado | **CNPJ único** (mantém o `@unique`). Mensagem: "Este CNPJ já está cadastrado no Health Enterprise. Peça um convite ao Dono do negócio." |
+| **OPEN-002** — Fora do Simples e do MEI | **Não suportado no MVP.** A consulta que indicar empresa fora do Simples e do MEI mostra a explicação e não segue para a confirmação. (Se a consulta estiver indisponível, o preenchimento manual oferece só MEI, Simples e Autônomo.) |
+| **OPEN-003** — Situação cadastral | **BAIXADA e NULA bloqueiam**; INAPTA e SUSPENSA seguem com aviso ("regularize na Receita; a base pública pode estar desatualizada"). |
+| **OPEN-004** — CPF na razão social do MEI | **Guardar sem o CPF:** os 11 dígitos finais (com ou sem pontuação) são retirados antes de gravar e nunca exibidos. |
+| **OPEN-005** — Destino depois do login | **Último negócio usado**, se o cookie ainda for válido; senão, "Meus negócios". Refina a SPEC-002: a página inicial passa a ser `/painel`, que sem negócio ativo válido leva a "Meus negócios". |
+| **OPEN-006** — Editar dados fiscais | **Incluída nesta Spec:** "Dados do negócio", só para o Dono, com a mesma validação do cadastro. |
+| **OPEN-007** — Telas sem protótipo | **Seguir os tokens e componentes já usados**, com o cadastro em duas etapas (CNPJ → confirmação) e capturas no PR. |
 
 ---
 
@@ -331,7 +331,7 @@ A SPEC-004 estará concluída quando:
 - [ ] todos os invariantes (INV-001 a INV-008) estiverem preservados;
 - [ ] os testes derivados (T01 a T15) estiverem aprovados, com o CI verde no PR;
 - [ ] os RNFs aplicáveis (RNF01, RNF02, RNF04, RNF06, RNF07) tiverem sido verificados como descrito na seção 10;
-- [ ] as questões OPEN-001 a OPEN-007 tiverem sido decididas e registradas;
+- [x] as questões OPEN-001 a OPEN-007 tiverem sido decididas e registradas;
 - [ ] não existir divergência conhecida entre a implementação e esta Spec;
 - [ ] toda divergência em relação à baseline tiver sido explicitamente analisada e registrada nos documentos.
 
