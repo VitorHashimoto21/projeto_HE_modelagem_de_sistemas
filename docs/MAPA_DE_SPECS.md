@@ -167,7 +167,7 @@ flowchart LR
 ### 2.2 Detalhamento
 
 #### SPEC-001 — Fundação técnica e isolamento multi-tenant
-- **Spec:** [`specs/SPEC-001.md`](./specs/SPEC-001.md) (proposta, aguardando aprovação)
+- **Spec:** [`specs/SPEC-001.md`](./specs/SPEC-001.md) (✅ aprovada e implementada — PR #36)
 - **Objetivo:** estabelecer o projeto Next.js + TypeScript, o Prisma conectado ao PostgreSQL com o schema da baseline, o mecanismo obrigatório de filtro por `negocioId` e o pipeline de CI (lint, `prisma validate`, testes).
 - **Valor entregue:** base única e segura para todas as Specs; vazamento entre negócios impedido por construção.
 - **RF:** — · **RN:** RN01, RN29 (datas em UTC e competência em America/Sao_Paulo) · **RNF:** RNF01, RNF02 (inclui RLS — OPEN-13), RNF09 (dump diário — OPEN-29), RNF10, RNF11 (ambientes — OPEN-27)
@@ -178,7 +178,7 @@ flowchart LR
 - **Justificativa da ordem:** decisão estrutural exigida por ADR-001/002 e AD-C02; toda Spec posterior depende dela.
 
 #### SPEC-002 — Acesso: cadastro, login e consentimento
-- **Spec:** [`specs/SPEC-002.md`](./specs/SPEC-002.md) (proposta, aguardando aprovação)
+- **Spec:** [`specs/SPEC-002.md`](./specs/SPEC-002.md) (✅ aprovada — questões em aberto decididas)
 - **Objetivo:** permitir cadastro e login por e-mail e senha, com consentimento LGPD explícito e senha protegida.
 - **Valor entregue:** o usuário passa a ter uma conta segura no sistema.
 - **RF:** RF01 · **RN:** — · **RNF:** RNF03, RNF04 (consentimento), RNF07 (sessão)
