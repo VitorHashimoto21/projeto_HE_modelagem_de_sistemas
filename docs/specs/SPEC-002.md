@@ -1,6 +1,6 @@
 # SPEC-002 — Acesso: cadastro, login e consentimento
 
-> **Status:** ✅ **Aprovada em 03/10/2026** — questões em aberto decididas pela equipe (seção 13). Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar). Implementação a seguir, depois do projeto Supabase de homologação.
+> **Status:** 🚧 **Implementada em 04/10/2026, verificação na homologação pendente** — questões em aberto decididas pela equipe (seção 13); testes automatizados T01–T15 no CI e telas verificadas ([evidências](evidencias/SPEC-002/README.md)). Faltam os fluxos com e-mail real na homologação (seção 14). Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar).
 > **Mapa:** [`MAPA_DE_SPECS.md`](../MAPA_DE_SPECS.md) · **Anterior:** [SPEC-001](SPEC-001.md) · **Próximas que dependem desta:** SPEC-004 e SPEC-014.
 
 ---
@@ -192,6 +192,15 @@ A sessão é encerrada no servidor e no navegador, e a pessoa volta para a tela 
 
 Os nomes exatos de rotas, funções e componentes são decididos na implementação, respeitando estes contratos.
 
+**Implementação (04/10/2026):** os contratos estão em `src/lib/auth/adaptador.ts` (provedor) e `src/lib/auth/servicos.ts` (fluxos), com as Server Actions em `src/lib/auth/acoes.ts`. Rotas: `/entrar`, `/cadastro`, `/esqueci-a-senha`, `/nova-senha`, `/link-invalido`, `/privacidade`, `/termos`, `/negocios`, e os links de e-mail em `/auth/confirmar` e `/auth/recuperar`.
+
+**Divergências registradas na implementação:**
+
+- **`src/proxy.ts` em vez de `src/middleware.ts` (seção 8):** no Next.js 16 o arquivo `middleware` foi renomeado para `proxy` (a convenção antiga está obsoleta). Mesmo papel: renovar a sessão e proteger as rotas.
+- **Server Actions em `src/lib/auth/acoes.ts`:** os formulários (em `src/components/acesso/`) importam as ações de `src/lib`, e não de `src/app`, para que componentes não dependam de páginas.
+- **`consentimentoLgpdEm` com a hora do banco:** o gatilho grava `now()` (em UTC) em vez de ler a data dos metadados, para que o cliente não possa enviar uma data falsa; o aceite (`aceiteTermos`) e a versão continuam vindo dos metadados do cadastro e são obrigatórios no próprio banco (INV-003 também no gatilho).
+- **Sincronização do e-mail:** um segundo gatilho mantém `Usuario.email` igual ao de `auth.users` se o e-mail mudar no Supabase Auth (a edição de perfil continua fora do escopo).
+
 ---
 
 ## 10. Requisitos não funcionais aplicáveis
@@ -325,9 +334,9 @@ Todas decididas pela equipe em 03/10/2026:
 
 A SPEC-002 estará concluída quando:
 
-- [ ] todos os critérios de aceitação (CA-01 a CA-14) estiverem implementados;
+- [ ] todos os critérios de aceitação (CA-01 a CA-14) estiverem implementados — implementados; verificação na homologação pendente para os fluxos com e-mail real (CA-01, CA-04, CA-05, CA-09, CA-10, CA-12);
 - [ ] todos os invariantes (INV-001 a INV-008) estiverem preservados;
-- [ ] os testes derivados (T01 a T16) estiverem aprovados, com o CI verde no PR;
+- [ ] os testes derivados (T01 a T16) estiverem aprovados, com o CI verde no PR — T01 a T15 automatizados; T16 com capturas em `evidencias/SPEC-002/`;
 - [ ] os RNFs aplicáveis (RNF01, RNF02, RNF03, RNF04, RNF07, RNF11) tiverem sido verificados como descrito na seção 10;
 - [x] as questões OPEN-001 a OPEN-006 tiverem sido decididas e registradas;
 - [ ] não existir divergência conhecida entre a implementação e esta Spec;

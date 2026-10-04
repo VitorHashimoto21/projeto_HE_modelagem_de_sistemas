@@ -166,7 +166,8 @@ enum StatusConta {
 // ==========================================================
 
 // ADR-003: a credencial (senha com hash — RNF03) fica somente no Supabase Auth.
-// Usuario.id recebe o mesmo UUID de auth.users.id, gravado no cadastro (SPEC-002).
+// Usuario.id recebe o mesmo UUID de auth.users.id: o registro é criado pelo gatilho
+// he_criar_usuario na mesma transação da conta do Supabase Auth (SPEC-002, OPEN-001).
 model Usuario {
   id    String @id @db.Uuid // = auth.users.id (sem default)
   nome  String
@@ -174,6 +175,7 @@ model Usuario {
 
   // RNF04: consentimento explícito de uso de dados (LGPD)
   consentimentoLgpdEm DateTime?
+  versaoTermosAceita  String? // SPEC-002, OPEN-005: versão da política e dos termos aceita (ex.: "2026-10-03")
   excluidoEm          DateTime? // RN27: acesso bloqueado
   anonimizadoEm       DateTime? // RN27: nome/e-mail/senha substituídos por valores anônimos
 

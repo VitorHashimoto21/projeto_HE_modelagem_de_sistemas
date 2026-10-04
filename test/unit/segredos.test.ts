@@ -26,11 +26,19 @@ describe("segredos fora do repositório", () => {
       .filter((l) => /^[A-Z_]+=/.test(l));
     expect(linhas.length).toBeGreaterThan(0);
     for (const linha of linhas) {
+      const nome = linha.slice(0, linha.indexOf("="));
       const valor = linha.slice(linha.indexOf("=") + 1).replace(/^"|"$/g, "");
       if (!valor) continue;
-      const url = new URL(valor);
-      expect(url.hostname, linha).toBe("localhost");
-      expect(url.password, linha).toBe("postgres");
+      if (valor.startsWith("postgres")) {
+        const url = new URL(valor);
+        expect(url.hostname, linha).toBe("localhost");
+        expect(url.password, linha).toBe("postgres");
+      } else if (nome === "NEXT_PUBLIC_SUPABASE_URL") {
+        expect(new URL(valor).hostname, linha).toBe("seu-projeto.supabase.co");
+      } else if (/KEY|SECRET|TOKEN/.test(nome)) {
+        // Chaves só como marcador (ex.: "sb_publishable_..."), nunca um valor real.
+        expect(valor, linha).toMatch(/\.\.\.$/);
+      }
     }
   });
 });
