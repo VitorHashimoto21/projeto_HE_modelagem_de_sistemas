@@ -13,6 +13,15 @@ const esquema = z.object({
     .string()
     .optional()
     .refine((v) => !v || v.startsWith("postgres://") || v.startsWith("postgresql://"), "deve ser uma URL do PostgreSQL"),
+  // Supabase Auth (SPEC-002). Ambas são públicas: vão para o navegador.
+  NEXT_PUBLIC_SUPABASE_URL: z
+    .string({ error: "obrigatória" })
+    .min(1, "obrigatória")
+    .refine((v) => v.startsWith("https://") || v.startsWith("http://localhost") || v.startsWith("http://127.0.0.1"), "deve ser a URL do projeto Supabase"),
+  NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: z.string({ error: "obrigatória" }).min(1, "obrigatória"),
+  // Aviso "você já tem conta" (SPEC-002, 5.1). Opcionais: sem elas, o aviso não é enviado.
+  RESEND_API_KEY: z.string().optional(),
+  EMAIL_REMETENTE: z.string().optional(),
 });
 
 export type Ambiente = z.infer<typeof esquema>;

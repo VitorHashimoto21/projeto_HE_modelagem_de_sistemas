@@ -1,7 +1,9 @@
 import "server-only";
 import { comNegocio, type ContextoDeNegocio } from "./cliente-do-negocio";
+import { criarConsultasDeAcesso } from "./acesso";
 import { prismaBase } from "./prisma";
 
+export type { ConsultasDeAcesso } from "./acesso";
 export { ContextoDeNegocioAusente, NegocioDivergente, OperacaoForaDoContexto } from "./erros";
 export type { ClienteDoNegocio, ContextoDeNegocio } from "./cliente-do-negocio";
 
@@ -12,6 +14,11 @@ export type { ClienteDoNegocio, ContextoDeNegocio } from "./cliente-do-negocio";
  */
 export function clienteDoNegocio(contexto: ContextoDeNegocio | null | undefined) {
   return comNegocio(prismaBase(), contexto);
+}
+
+/** Consultas do controle de acesso (SPEC-002): conta bloqueada, filiação e perfil. */
+export function consultasDeAcesso() {
+  return criarConsultasDeAcesso(prismaBase());
 }
 
 /** Verificação de saúde do banco (CA-10): true se o banco responde. */

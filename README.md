@@ -120,6 +120,12 @@ Cada ambiente tem variáveis e credenciais próprias (RNF11); chaves de serviço
 2. **Vercel:** importar o repositório num projeto **só de homologação** (`he-homol`), sem *Build Settings* customizados e sem integrações de banco (o banco é o Supabase). Em *Settings → Environments → Production → Branch Tracking*, trocar a branch para `DEVELOP` — a "produção" desse projeto é a homologação. Em *Environment Variables*, cadastrar `DATABASE_URL` (string do **Transaction pooler**, porta 6543) para *Production* e *Preview*. Em *Functions*, região **São Paulo (gru1)**. Os previews ficam protegidos pelo login da Vercel (*Deployment Protection*).
 3. **GitHub:** em *Settings → Environments*, criar `homologacao` com o segredo `DIRECT_URL` (string do Session pooler). Em *Settings → Secrets → Actions*, criar `BACKUP_HOMOL_DATABASE_URL` (a mesma string) para o backup. Os valores devem começar exatamente com `postgresql://`, sem espaços, aspas ou `#`.
 4. **Proteção de branch:** exigir o check **CI** verde antes do merge em `DEVELOP` e `main`.
+5. **Supabase Auth (SPEC-002):**
+   - *Authentication → Sign In / Providers → Email*: provedor ligado, **Confirm email** ligado e **Minimum password length = 8**.
+   - *Authentication → URL Configuration*: **Site URL** `https://he-homol.vercel.app`; em **Redirect URLs**, `http://localhost:3000/**`, `https://he-homol.vercel.app/**` e `https://he-homol-*-health-enterprise.vercel.app/**` (previews).
+   - *Authentication → Emails → Templates*: no **Confirm signup**, trocar o link por `{{ .RedirectTo }}?token_hash={{ .TokenHash }}&type=email`; no **Reset password**, por `{{ .RedirectTo }}?token_hash={{ .TokenHash }}&type=recovery`. Assim o link funciona mesmo aberto em outro aparelho.
+   - *Authentication → Emails → SMTP Settings*: Resend como SMTP (host `smtp.resend.com`, porta `465`, usuário `resend`, senha = API key do Resend, remetente `onboarding@resend.dev`). Sem domínio próprio, o Resend só entrega para o e-mail do dono da conta Resend (OPEN-002).
+   - **Vercel:** cadastrar `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (*Project Settings → API Keys* do Supabase) para *Production* e *Preview*. Opcional: `RESEND_API_KEY` e `EMAIL_REMETENTE` para o aviso de "você já tem conta".
 
 ### Checklist de produção (quando for publicar)
 
@@ -127,6 +133,7 @@ Cada ambiente tem variáveis e credenciais próprias (RNF11); chaves de serviço
 - [ ] Projeto Vercel separado (`he-prod`) com a `main` como produção e o plano Pro (uso comercial)
 - [ ] Ambiente `producao` no GitHub com o segredo `DIRECT_URL`; segredo `BACKUP_PROD_DATABASE_URL`
 - [ ] Domínio próprio e variáveis de *Production* na Vercel apontando só para o `he-prod`
+- [ ] Supabase Auth do `he-prod` configurado como no passo 5, com domínio verificado no Resend e as URLs de produção
 - [ ] Revisão do RLS e dos segredos: nenhuma credencial de produção fora do ambiente de produção
 
 ## Backup

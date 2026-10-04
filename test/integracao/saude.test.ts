@@ -3,6 +3,10 @@ import { urlDoBancoDeTeste } from "../apoio/banco-de-teste";
 
 const urlOriginal = process.env.DATABASE_URL;
 
+// A rota valida todas as variáveis obrigatórias; as do Supabase não são usadas aqui.
+process.env.NEXT_PUBLIC_SUPABASE_URL ??= "https://exemplo.supabase.co";
+process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??= "sb_publishable_teste";
+
 async function chamarSaude(databaseUrl: string) {
   process.env.DATABASE_URL = databaseUrl;
   delete (globalThis as { prismaHE?: unknown }).prismaHE;
