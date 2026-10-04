@@ -109,7 +109,7 @@ A rota `GET /api/saude` responde `{ "aplicacao": "ok", "banco": "ok" }` — ou `
 |---|---|---|---|
 | **Desenvolvimento** | Máquina de cada integrante (`npm run dev`) | PostgreSQL local (`docker compose`) | A cada alteração |
 | **Preview** | Vercel, link temporário por Pull Request | Banco de homologação | A cada push no PR (sem migrações) |
-| **Homologação** | Vercel, endereço fixo | Projeto Supabase de homologação (dados fictícios) | A cada merge na `DEVELOP` |
+| **Homologação** | Vercel, endereço fixo: <https://he-homol.vercel.app> | Projeto Supabase de homologação (dados fictícios) | A cada merge na `DEVELOP` |
 | **Produção** | Vercel, domínio final | Projeto Supabase de produção (dados reais) | A cada merge na `main` |
 
 Cada ambiente tem variáveis e credenciais próprias (RNF11); chaves de serviços externos ficam em modo de teste fora de produção. As migrações rodam pelo workflow **Migrações** (`.github/workflows/migracoes.yml`): homologação a cada push na `DEVELOP`, produção a cada push na `main`.
@@ -117,14 +117,14 @@ Cada ambiente tem variáveis e credenciais próprias (RNF11); chaves de serviço
 ### Configurar a homologação (uma vez)
 
 1. **Supabase:** criar o projeto `he-homol` (plano gratuito, região São Paulo). Em *Connect*, copiar a string do **Transaction pooler** (porta 6543, para a aplicação) e a do **Session pooler** (porta 5432, para migrações e backup), trocando `[YOUR-PASSWORD]` pela senha do banco **sem os colchetes**. No plano gratuito, a *Direct connection* só funciona por IPv6, que o GitHub Actions não tem — por isso migrações e backup usam o Session pooler.
-2. **Vercel:** importar o repositório; em *Settings → Git*, definir `DEVELOP` como branch de produção do projeto de homologação (ou usar um projeto Vercel só para homologação). Em *Environment Variables*, cadastrar `DATABASE_URL` (string do Transaction pooler) para *Production* e *Preview*.
+2. **Vercel:** importar o repositório num projeto **só de homologação** (`he-homol`), sem *Build Settings* customizados e sem integrações de banco (o banco é o Supabase). Em *Settings → Environments → Production → Branch Tracking*, trocar a branch para `DEVELOP` — a "produção" desse projeto é a homologação. Em *Environment Variables*, cadastrar `DATABASE_URL` (string do **Transaction pooler**, porta 6543) para *Production* e *Preview*. Em *Functions*, região **São Paulo (gru1)**. Os previews ficam protegidos pelo login da Vercel (*Deployment Protection*).
 3. **GitHub:** em *Settings → Environments*, criar `homologacao` com o segredo `DIRECT_URL` (string do Session pooler). Em *Settings → Secrets → Actions*, criar `BACKUP_HOMOL_DATABASE_URL` (a mesma string) para o backup. Os valores devem começar exatamente com `postgresql://`, sem espaços, aspas ou `#`.
 4. **Proteção de branch:** exigir o check **CI** verde antes do merge em `DEVELOP` e `main`.
 
 ### Checklist de produção (quando for publicar)
 
 - [ ] Projeto Supabase `he-prod` (plano pago, com backup diário nativo e sem pausa por inatividade)
-- [ ] Vercel com a `main` como produção e o plano Pro (uso comercial)
+- [ ] Projeto Vercel separado (`he-prod`) com a `main` como produção e o plano Pro (uso comercial)
 - [ ] Ambiente `producao` no GitHub com o segredo `DIRECT_URL`; segredo `BACKUP_PROD_DATABASE_URL`
 - [ ] Domínio próprio e variáveis de *Production* na Vercel apontando só para o `he-prod`
 - [ ] Revisão do RLS e dos segredos: nenhuma credencial de produção fora do ambiente de produção
