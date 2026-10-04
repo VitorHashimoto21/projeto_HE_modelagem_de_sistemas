@@ -116,9 +116,9 @@ Cada ambiente tem variáveis e credenciais próprias (RNF11); chaves de serviço
 
 ### Configurar a homologação (uma vez)
 
-1. **Supabase:** criar o projeto `he-homol` (plano gratuito). Em *Connect*, copiar a string do **Transaction pooler** (porta 6543) e a **Direct connection** (porta 5432).
+1. **Supabase:** criar o projeto `he-homol` (plano gratuito, região São Paulo). Em *Connect*, copiar a string do **Transaction pooler** (porta 6543, para a aplicação) e a do **Session pooler** (porta 5432, para migrações e backup), trocando `[YOUR-PASSWORD]` pela senha do banco **sem os colchetes**. No plano gratuito, a *Direct connection* só funciona por IPv6, que o GitHub Actions não tem — por isso migrações e backup usam o Session pooler.
 2. **Vercel:** importar o repositório; em *Settings → Git*, definir `DEVELOP` como branch de produção do projeto de homologação (ou usar um projeto Vercel só para homologação). Em *Environment Variables*, cadastrar `DATABASE_URL` (string do Transaction pooler) para *Production* e *Preview*.
-3. **GitHub:** em *Settings → Environments*, criar `homologacao` com o segredo `DIRECT_URL` (conexão direta). Em *Settings → Secrets → Actions*, criar `BACKUP_HOMOL_DATABASE_URL` (conexão direta) para o backup.
+3. **GitHub:** em *Settings → Environments*, criar `homologacao` com o segredo `DIRECT_URL` (string do Session pooler). Em *Settings → Secrets → Actions*, criar `BACKUP_HOMOL_DATABASE_URL` (a mesma string) para o backup. Os valores devem começar exatamente com `postgresql://`, sem espaços, aspas ou `#`.
 4. **Proteção de branch:** exigir o check **CI** verde antes do merge em `DEVELOP` e `main`.
 
 ### Checklist de produção (quando for publicar)
@@ -131,7 +131,7 @@ Cada ambiente tem variáveis e credenciais próprias (RNF11); chaves de serviço
 
 ## Backup
 
-O workflow **Backup diário** (`.github/workflows/backup.yml`) roda às 03:00 (Brasília), faz `pg_dump` do schema `public` (dados da aplicação) de cada ambiente configurado e guarda o arquivo como **artefato privado** do GitHub Actions por 90 dias. Também pode ser disparado manualmente em *Actions → Backup diário → Run workflow*.
+O workflow **Backup diário** (`.github/workflows/backup.yml`) roda às 03:00 (Brasília), faz `pg_dump` do schema `public` (dados da aplicação) de cada ambiente configurado, **restaura o dump num PostgreSQL temporário para conferir tabelas, RLS e migrações** (`scripts/verificar-backup.sh`) e só então guarda o arquivo como **artefato privado** do GitHub Actions por 90 dias. Também pode ser disparado manualmente em *Actions → Backup diário → Run workflow*. Como todo workflow agendado, só roda a partir da versão que está na `main`.
 
 **Restaurar** (num PostgreSQL vazio, nunca direto em produção sem revisão):
 
