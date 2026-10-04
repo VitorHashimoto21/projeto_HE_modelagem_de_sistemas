@@ -1,4 +1,6 @@
 # Backup diário (SPEC-001, RNF09, OPEN-29): dump do banco guardado como artefato privado.
+# Todo dump é restaurado num PostgreSQL temporário antes de ser guardado (CA-14):
+# se a restauração falhar ou faltar alguma tabela, o workflow falha.
 # Segredos necessários (Settings → Secrets → Actions):
 #   BACKUP_HOMOL_DATABASE_URL — conexão direta do Supabase de homologação
 #   BACKUP_PROD_DATABASE_URL  — conexão direta do Supabase de produção (quando existir)
@@ -25,6 +27,20 @@ jobs:
             segredo: BACKUP_HOMOL_DATABASE_URL
           - ambiente: producao
             segredo: BACKUP_PROD_DATABASE_URL
+    services:
+      # Banco vazio e descartável, só para testar a restauração do dump.
+      restauracao:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: restauracao
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
     env:
       DATABASE_URL: ${{ secrets[matrix.segredo] }}
     steps:
@@ -36,6 +52,12 @@ jobs:
             echo "pular=true" >> "$GITHUB_OUTPUT"
           fi
 
+      # Antes do dump: o checkout limpa a pasta de trabalho.
+      - uses: actions/checkout@v4
+        if: steps.config.outputs.pular != 'true'
+        with:
+          sparse-checkout: scripts
+
       - name: Gerar dump (pg_dump 17, formato custom)
         if: steps.config.outputs.pular != 'true'
         run: |
@@ -45,6 +67,15 @@ jobs:
             pg_dump --format=custom --no-owner --no-privileges --schema=public \
             --dbname="$DATABASE_URL" --file="/$arquivo"
           ls -lh backup
+
+      - name: Testar a restauração do dump (CA-14)
+        if: steps.config.outputs.pular != 'true'
+        run: |
+          arquivo=$(ls backup/*.dump)
+          docker run --rm --network host \
+            -v "$PWD/backup:/backup:ro" -v "$PWD/scripts:/scripts:ro" \
+            -e PGHOST=localhost -e PGUSER=postgres -e PGPASSWORD=postgres -e PGDATABASE=restauracao \
+            postgres:17 bash /scripts/verificar-backup.sh "/$arquivo"
 
       - name: Guardar como artefato privado
         if: steps.config.outputs.pular != 'true'
