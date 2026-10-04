@@ -21,6 +21,24 @@ Os testes de integração usam um dublê do Supabase Auth que grava em `auth.use
 - **CA-08:** `/negocios` sem sessão → `307` para `/entrar?proximo=%2Fnegocios`; `/nova-senha` sem o link → `/link-invalido?tipo=recuperacao`.
 - **CA-14 / T16:** login, cadastro e recuperação em 390, 768 e 1440 px, claro e escuro — **sem rolagem horizontal nas 18 combinações**; capturas representativas nesta pasta. Política de privacidade em 390 px sem rolagem horizontal (tabelas com rolagem própria).
 
-## Pendente — verificação na homologação (depois do merge e da configuração do Supabase Auth)
+## Verificação na homologação (04/10/2026)
 
-Fluxos que dependem do envio real de e-mail: CA-01 e CA-05 (link de confirmação), CA-04 (aviso de conta existente), CA-09 (logout e voltar no navegador), CA-10 (link de recuperação e encerramento das outras sessões) e CA-12 (recarregar a página).
+Depois do merge do PR #41: workflow **Migrações** aplicou `20261004120000_acesso` no Supabase de homologação (o gatilho em `auth.users` foi aceito) e a Vercel publicou <https://he-homol.vercel.app> automaticamente (`/api/saude` → `{"aplicacao":"ok","banco":"ok"}`; `/` → `/entrar`).
+
+Teste manual com um e-mail real da equipe, no mesmo navegador, com o SMTP padrão do Supabase:
+
+| Passo | Critério | Resultado |
+|---|---|---|
+| Cadastro com aceite → "Enviamos um link para seu e-mail" | CA-01 | ✅ |
+| Login antes de confirmar → "Confirme seu e-mail para entrar" | CA-05 | ✅ |
+| Link de confirmação → entra em "Meus negócios" com o nome no topo | CA-05, INV-002 | ✅ |
+| Recarregar a página → continua autenticado | CA-12 | ✅ |
+| Sair → login; "Voltar" no navegador não mostra página autenticada | CA-09 | ✅ |
+| Login com a conta confirmada | CA-06 | ✅ |
+| "Esqueci a senha" → link → nova senha → entra; senha antiga recusada, nova aceita | CA-10 | ✅ |
+| Novo cadastro com o mesmo e-mail → mesma mensagem de sucesso | CA-04 | ✅ |
+
+**Configuração ainda pendente (sem mudança de código):**
+
+- **Resend como SMTP** do Supabase Auth: libera a edição dos modelos de e-mail (link com `token_hash`, que funciona em outro aparelho — hoje o link do modelo padrão funciona no mesmo navegador do pedido) e o volume de envio além da equipe do projeto.
+- **`RESEND_API_KEY` e `EMAIL_REMETENTE`** na Vercel: ativam o aviso "você já tem conta" ao dono do e-mail (CA-04).
