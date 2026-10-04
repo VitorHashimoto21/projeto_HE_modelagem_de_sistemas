@@ -1,6 +1,6 @@
 # SPEC-001 — Fundação técnica e isolamento multi-tenant
 
-> **Status:** ✅ **Aprovada e implementada em 03/10/2026** (PR #36, CI verde). Revisão 2, com as decisões OPEN-12 a OPEN-31 do Mapa de Specs (seção 1.8). Pendentes apenas os critérios que dependem do projeto Supabase de homologação e da Vercel (CA-14, CA-15 e CA-16 — ver seção 14).
+> **Status:** ✅ **Aprovada e implementada em 03/10/2026** (PR #36, CI verde). Revisão 2, com as decisões OPEN-12 a OPEN-31 do Mapa de Specs (seção 1.8). CA-14 e CA-15 verificados na homologação em 03/10/2026 ([evidências](evidencias/SPEC-001/homologacao.md)). Pendente apenas o CA-16, que depende da Vercel (ver seção 14).
 > **Mapa:** [`MAPA_DE_SPECS.md`](../MAPA_DE_SPECS.md) · **Próxima:** SPEC-002 (depende desta).
 
 ---
@@ -390,10 +390,10 @@ Nenhuma das duas impede o início da implementação.
 
 A SPEC-001 estará concluída quando:
 
-- [ ] todos os critérios de aceitação (CA-01 a CA-16) estiverem implementados — **CA-01 a CA-13 ✅**; CA-14 (backup), CA-15 (API pública) e CA-16 (preview/homologação) aguardam o Supabase de homologação e a Vercel;
+- [ ] todos os critérios de aceitação (CA-01 a CA-16) estiverem implementados — **CA-01 a CA-15 ✅** (CA-14 e CA-15 na homologação, ver [`evidencias/SPEC-001/homologacao.md`](evidencias/SPEC-001/homologacao.md)); CA-16 (preview/homologação) aguarda a Vercel;
 - [x] todos os invariantes (INV-001 a INV-012) estiverem preservados — INV-012 a revisar na configuração da Vercel;
-- [ ] os testes derivados (T01 a T19) estiverem aprovados, com o CI verde no PR — **T01 a T16 ✅** (38 testes automatizados no CI do PR #36, capturas em `evidencias/SPEC-001/`); T17 a T19 são manuais e dependem da homologação;
-- [ ] os RNFs aplicáveis (RNF01, RNF02, RNF09, RNF10, RNF11) tiverem sido verificados como descrito na seção 10 — RNF01, RNF02 (código e banco) e RNF10 ✅; RNF09 e RNF11 dependem da homologação;
+- [ ] os testes derivados (T01 a T19) estiverem aprovados, com o CI verde no PR — **T01 a T16 ✅** (38 testes automatizados no CI do PR #36, capturas em `evidencias/SPEC-001/`); T17 e T18 ✅ na homologação; T19 depende da Vercel;
+- [ ] os RNFs aplicáveis (RNF01, RNF02, RNF09, RNF10, RNF11) tiverem sido verificados como descrito na seção 10 — RNF01, RNF02 (código e banco) e RNF10 ✅; RNF09 ✅ (backup restaurado na homologação); RNF11 depende da Vercel;
 - [x] não existir divergência conhecida entre a implementação e esta Spec;
 - [x] toda divergência em relação à baseline tiver sido explicitamente analisada e registrada nos documentos (descrição do PR #36).
 
