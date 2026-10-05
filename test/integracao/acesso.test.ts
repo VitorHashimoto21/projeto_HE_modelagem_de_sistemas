@@ -132,7 +132,7 @@ describe("login", () => {
       codigo: "EmailNaoConfirmado",
     });
     falsa.confirmar("ana@exemplo.com");
-    expect(await servicos.entrar(campos, undefined, deps)).toEqual({ status: "autenticado", destino: "/negocios" });
+    expect(await servicos.entrar(campos, undefined, deps)).toEqual({ status: "autenticado", destino: "/painel" });
   });
 
   it("T07 — senha errada e e-mail inexistente dão a mesma mensagem (CA-06, CA-07)", async () => {
@@ -150,7 +150,7 @@ describe("login", () => {
   it("T09 — destino para outro domínio é ignorado no login (INV-007)", async () => {
     falsa.confirmar("ana@exemplo.com");
     const r = await servicos.entrar({ email: "ana@exemplo.com", senha: "senha-forte-1" }, "https://malicioso.com", deps);
-    expect(r).toEqual({ status: "autenticado", destino: "/negocios" });
+    expect(r).toEqual({ status: "autenticado", destino: "/painel" });
   });
 
   it("T14 — conta com excluidoEm não entra, com a mensagem genérica, e a sessão é encerrada (CA-13, INV-008)", async () => {
@@ -181,7 +181,7 @@ describe("recuperação de senha", () => {
     expect(mesma).toMatchObject({ status: "erro", erros: { senha: M.mesmaSenha } });
 
     const r = await servicos.definirNovaSenha({ senha: "nova-senha-9", confirmacao: "nova-senha-9" }, deps);
-    expect(r).toEqual({ status: "autenticado", destino: "/negocios" });
+    expect(r).toEqual({ status: "autenticado", destino: "/painel" });
     expect(falsa.registro.outrasSessoesEncerradas).toBe(1);
 
     await falsa.adaptador.sair("local");
