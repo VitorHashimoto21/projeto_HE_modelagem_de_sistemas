@@ -31,7 +31,11 @@ Feita pela equipe com a própria conta:
 | Cadastro autônomo (Imposto% 6,5) → Painel com o enquadramento | ✅ | `preview_painel_salvo_1920_escuro.png` |
 | "Dados do negócio" pelo Dono → salvo | ✅ | `preview_dados_do_negocio_1920_escuro.png` |
 
+| Tema claro | ✅ | `preview_cnpj_fora_do_simples_1920_claro.png` |
+| CNPJ com dígito verificador errado → "CNPJ inválido" | ✅ (relatado) | — |
+| Troca entre dois negócios pelo seletor do cabeçalho (UC2) | ✅ (relatado) | — |
+| Sair e entrar de novo → direto no último negócio usado (OPEN-005) | ✅ (relatado) | — |
+
 ## Pendente
 
-- **T14 / CA-13:** capturas em 390 e 768 px e no tema claro.
-- **T15:** cadastro com um CNPJ real de MEI ou do Simples (sugestão de Anexo/atividade), troca entre dois negócios pelo seletor e entrada direta no último negócio após novo login.
+- **T14 / CA-13:** capturas em 390 e 768 px.
