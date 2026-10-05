@@ -1,6 +1,6 @@
 # SPEC-004 — Cadastro do negócio e enquadramento fiscal
 
-> **Status:** 🚧 **Aprovada e implementada em 04/10/2026; verificação no preview/homologação pendente** — questões em aberto decididas pela equipe (seção 13), todas pela opção recomendada; testes T01–T13 automatizados ([evidências](evidencias/SPEC-004/README.md)). Faltam T14 (capturas) e T15 (fluxo com a BrasilAPI real no ambiente da Vercel). Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar).
+> **Status:** ✅ **Implementada em 04/10/2026 e verificada no preview da Vercel** (PR #45, banco de homologação) — questões em aberto decididas pela equipe (seção 13), todas pela opção recomendada; testes T01–T13 no CI, fluxos e telas verificados no preview ([evidências](evidencias/SPEC-004/README.md)). Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar).
 > **Mapa:** [`MAPA_DE_SPECS.md`](../MAPA_DE_SPECS.md) · **Anteriores:** [SPEC-002](SPEC-002.md) (acesso) e [SPEC-003](SPEC-003.md) (parâmetros fiscais) · **Próximas que dependem desta:** SPEC-005 (equipe) e todas as specs operacionais (o negócio é o tenant).
 
 ---
@@ -337,12 +337,12 @@ Todas decididas pela equipe em 04/10/2026:
 
 A SPEC-004 estará concluída quando:
 
-- [ ] todos os critérios de aceitação (CA-01 a CA-13) estiverem implementados — CA-01 a CA-12 cobertos por testes; CA-13 (visual) e o fluxo real no ambiente da Vercel pendentes;
-- [ ] todos os invariantes (INV-001 a INV-008) estiverem preservados;
-- [ ] os testes derivados (T01 a T15) estiverem aprovados, com o CI verde no PR — T01 a T13 automatizados; T14 e T15 pendentes;
-- [ ] os RNFs aplicáveis (RNF01, RNF02, RNF04, RNF06, RNF07) tiverem sido verificados como descrito na seção 10;
+- [x] todos os critérios de aceitação (CA-01 a CA-13) estiverem implementados — CA-01 a CA-12 por testes e no preview; CA-13 com capturas;
+- [x] todos os invariantes (INV-001 a INV-008) estiverem preservados;
+- [x] os testes derivados (T01 a T15) estiverem aprovados, com o CI verde no PR — T01 a T13 no CI do PR #45; T14 e T15 no preview;
+- [x] os RNFs aplicáveis (RNF01, RNF02, RNF04, RNF06, RNF07) tiverem sido verificados como descrito na seção 10;
 - [x] as questões OPEN-001 a OPEN-007 tiverem sido decididas e registradas;
-- [ ] não existir divergência conhecida entre a implementação e esta Spec;
-- [ ] toda divergência em relação à baseline tiver sido explicitamente analisada e registrada nos documentos.
+- [x] não existir divergência conhecida entre a implementação e esta Spec;
+- [x] toda divergência em relação à baseline tiver sido explicitamente analisada e registrada nos documentos (seção 9).
 
 **Regra fundamental:** a implementação obedece a esta Spec aprovada. Se surgir conflito entre código, Spec e documentos de modelagem, o comportamento não é alterado em silêncio: a divergência é registrada com a proposta de (1) corrigir a implementação ou (2) alterar a baseline, e a decisão é da equipe.

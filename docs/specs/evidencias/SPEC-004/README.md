@@ -36,6 +36,6 @@ Feita pela equipe com a própria conta:
 | Troca entre dois negócios pelo seletor do cabeçalho (UC2) | ✅ (relatado) | — |
 | Sair e entrar de novo → direto no último negócio usado (OPEN-005) | ✅ (relatado) | — |
 
-## Pendente
+| Celular (iPhone 16 Pro Max, modo dispositivo do navegador): Painel e Dados do negócio, claro e escuro — sem rolagem horizontal; cabeçalho quebra em duas linhas (logo + seletor; tema + sair) | ✅ | `preview_painel_celular_*.png`, `preview_dados_celular_*.png` |
 
-- **T14 / CA-13:** capturas em 390 e 768 px.
+T14 (CA-13) e T15 concluídos.

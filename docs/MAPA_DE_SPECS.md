@@ -345,4 +345,4 @@ Todos os 113 requisitos (RF01–RF73, RN01–RN29, RNF01–RNF11) estão associa
 
 A conferência do seed fiscal foi concluída em 03/10/2026 (DAS do MEI atualizado para o salário mínimo de 2026), e a SPEC-003 não tem mais pré-requisito pendente. A SPEC-015 depende da aprovação do ADR-007.
 
-**Andamento:** [SPEC-001](specs/SPEC-001.md) e [SPEC-002](specs/SPEC-002.md) implementadas e verificadas na homologação. [SPEC-003](specs/SPEC-003.md) implementada e verificada na homologação. [SPEC-004](specs/SPEC-004.md) gerada em 04/10/2026, aguardando a decisão das questões OPEN-001 a OPEN-007.
+**Andamento:** [SPEC-001](specs/SPEC-001.md) e [SPEC-002](specs/SPEC-002.md) implementadas e verificadas na homologação. [SPEC-003](specs/SPEC-003.md) implementada e verificada na homologação. [SPEC-004](specs/SPEC-004.md) implementada e verificada no preview da Vercel (04/10/2026).
