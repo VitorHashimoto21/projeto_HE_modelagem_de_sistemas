@@ -20,7 +20,18 @@ Os testes automatizados usam uma resposta real gravada da BrasilAPI e nunca cham
 
 Na primeira tentativa a API respondeu `403` ao `fetch` do Node sem identificação; corrigido com o `User-Agent` da aplicação (ver divergências na Spec).
 
+## Verificação no preview da Vercel (PR #45, banco de homologação)
+
+Feita pela equipe com a própria conta:
+
+| Passo | Resultado | Captura |
+|---|---|---|
+| Escolha "Tenho CNPJ" / "Não tenho CNPJ" | ✅ | `preview_cadastrar_escolha_1920_escuro.png` |
+| CNPJ `00.000.000/0001-91` consultado **na BrasilAPI a partir da Vercel** → "não é MEI nem optante pelo Simples" (OPEN-002) | ✅ | `preview_cnpj_fora_do_simples_1920_escuro.png` |
+| Cadastro autônomo (Imposto% 6,5) → Painel com o enquadramento | ✅ | `preview_painel_salvo_1920_escuro.png` |
+| "Dados do negócio" pelo Dono → salvo | ✅ | `preview_dados_do_negocio_1920_escuro.png` |
+
 ## Pendente
 
-- **T14 / CA-13:** capturas das telas em 390, 768 e 1440 px, claro e escuro.
-- **T15:** fluxo completo no preview/homologação com um CNPJ real, confirmando que a BrasilAPI responde também a partir da Vercel.
+- **T14 / CA-13:** capturas em 390 e 768 px e no tema claro.
+- **T15:** cadastro com um CNPJ real de MEI ou do Simples (sugestão de Anexo/atividade), troca entre dois negócios pelo seletor e entrada direta no último negócio após novo login.
