@@ -102,6 +102,7 @@ A rota `GET /api/saude` responde `{ "aplicacao": "ok", "banco": "ok" }` — ou `
 - **Toda tabela nova** precisa: `negocioId` se for operacional, entrada em `src/lib/db/modelos.ts`, RLS ligado na migração e, se tiver FK para outra tabela operacional, o gatilho `he_mesmo_negocio`. Os testes falham se faltar algo.
 - **Datas:** gravadas em UTC; dia, mês e competência sempre por `@/lib/dominio/datas` (America/Sao_Paulo).
 - **Domínio puro:** `src/lib/dominio/` não importa Next.js, React nem banco.
+- **Autorização (SPEC-005):** toda Server Action é criada pela fábrica de `@/lib/auth/acao`, que declara o nível de acesso: `acaoPublica`, `acaoComSessao`, `acaoDoDono` ou `acaoComPermissao(modulo, acao, …)`. O teste `test/unit/acoes.test.ts` falha se alguma escapar. Nas páginas, use `exigirPermissao(modulo, acao)` ou `exigirDono()` de `@/lib/auth/servidor`. Os nomes de módulo e ação vêm de `@/lib/dominio/permissoes`. Esconder um item do menu não protege nada: a guarda no servidor é a barreira.
 
 ## Ambientes
 
@@ -125,7 +126,7 @@ Cada ambiente tem variáveis e credenciais próprias (RNF11); chaves de serviço
    - *Authentication → URL Configuration*: **Site URL** `https://he-homol.vercel.app`; em **Redirect URLs**, `http://localhost:3000/**`, `https://he-homol.vercel.app/**` e `https://he-homol-*-health-enterprise.vercel.app/**` (previews).
    - *Authentication → Emails → Templates*: no **Confirm signup**, trocar o link por `{{ .RedirectTo }}?token_hash={{ .TokenHash }}&type=email`; no **Reset password**, por `{{ .RedirectTo }}?token_hash={{ .TokenHash }}&type=recovery`. Assim o link funciona mesmo aberto em outro aparelho.
    - *Authentication → Emails → SMTP Settings*: Resend como SMTP (host `smtp.resend.com`, porta `465`, usuário `resend`, senha = API key do Resend, remetente `onboarding@resend.dev`). Sem domínio próprio, o Resend só entrega para o e-mail do dono da conta Resend (OPEN-002).
-   - **Vercel:** cadastrar `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (*Project Settings → API Keys* do Supabase) para *Production* e *Preview*. Opcional: `RESEND_API_KEY` e `EMAIL_REMETENTE` para o aviso de "você já tem conta".
+   - **Vercel:** cadastrar `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (*Project Settings → API Keys* do Supabase) para *Production* e *Preview*. Opcional: `RESEND_API_KEY` e `EMAIL_REMETENTE` para o aviso de "você já tem conta" e para o e-mail do convite de equipe (SPEC-005). Sem elas, o convite funciona pelo link copiável mostrado ao Dono.
 
 ### Checklist de produção (quando for publicar)
 

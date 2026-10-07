@@ -7,9 +7,11 @@ import { cache } from "react";
 import { consultasDeAcesso, type ContextoDeNegocio } from "@/lib/db";
 import { ambiente } from "@/lib/env";
 import { criarAdaptadorSupabase } from "./adaptador-supabase";
-import { COOKIE_NEGOCIO_ATIVO, resolverContexto, type ContextoDaRequisicao } from "./contexto";
+import type { Acao, Modulo } from "@/lib/dominio/permissoes";
+import { autorizar, type ContextoDoMembro, type MotivoDaRecusa, type NivelDeAcesso } from "./autorizacao";
+import { COOKIE_NEGOCIO_ATIVO, resolverContextoComPapel, type ContextoComPapel } from "./contexto";
 import { enviarAvisoDeContaExistente } from "./emails";
-import { ROTA_ENTRAR, ROTA_MEUS_NEGOCIOS } from "./rotas";
+import { ROTA_ENTRAR, ROTA_MEUS_NEGOCIOS, ROTA_SEM_ACESSO } from "./rotas";
 import type { DependenciasDeAcesso } from "./servicos";
 
 /**
@@ -40,7 +42,7 @@ export async function adaptadorDoServidor() {
 }
 
 /** Endereço da aplicação nesta requisição (para os links dos e-mails). */
-async function origemDaRequisicao(): Promise<string> {
+export async function origemDaRequisicao(): Promise<string> {
   const h = await headers();
   const origem = h.get("origin");
   if (origem) return origem;
@@ -63,16 +65,34 @@ export async function dependenciasDeAcesso(): Promise<DependenciasDeAcesso> {
   };
 }
 
-/** Contexto da requisição (5.5), calculado uma vez por requisição. */
-export const obterContexto = cache(async (): Promise<ContextoDaRequisicao | null> => {
+/**
+ * Contexto da requisição (5.5), calculado uma vez por requisição, com o papel e as
+ * permissões efetivas no negócio ativo lidos do banco na mesma consulta (SPEC-005, INV-004).
+ */
+export const obterContexto = cache(async (): Promise<ContextoComPapel | null> => {
   const auth = await adaptadorDoServidor();
   const usuarioId = await auth.usuarioDaSessao();
   const negocio = (await cookies()).get(COOKIE_NEGOCIO_ATIVO)?.value;
-  return resolverContexto(usuarioId, negocio, (u, n) => consultasDeAcesso().ehMembro(u, n));
+  return resolverContextoComPapel(usuarioId, negocio, (u, n) => consultasDeAcesso().filiacao(u, n));
 });
 
+/** Para onde vai quem foi recusado (SPEC-005, 5.5). */
+const DESTINO_DA_RECUSA: Record<MotivoDaRecusa, string> = {
+  SemSessao: ROTA_ENTRAR,
+  SemNegocio: ROTA_MEUS_NEGOCIOS,
+  SomenteDono: ROTA_SEM_ACESSO,
+  SemPermissao: ROTA_SEM_ACESSO,
+};
+
+/** Guarda comum de páginas e Server Actions: recusa redirecionando (nada é executado). */
+export async function exigirNivel(nivel: NivelDeAcesso) {
+  const r = autorizar(await obterContexto(), nivel);
+  if (!r.ok) redirect(DESTINO_DA_RECUSA[r.motivo]);
+  return r;
+}
+
 /** Para páginas e ações autenticadas: sem sessão válida, vai para o login (INV-005). */
-export async function exigirSessao(): Promise<ContextoDaRequisicao> {
+export async function exigirSessao(): Promise<ContextoComPapel> {
   const contexto = await obterContexto();
   if (!contexto) redirect(ROTA_ENTRAR);
   return contexto;
@@ -83,7 +103,23 @@ export async function exigirSessao(): Promise<ContextoDaRequisicao> {
  * autorizado; caso contrário, leva a "Meus negócios" (CA-11).
  */
 export async function exigirNegocio(): Promise<ContextoDeNegocio> {
-  const contexto = await exigirSessao();
-  if (!contexto.negocioId) redirect(ROTA_MEUS_NEGOCIOS);
-  return { negocioId: contexto.negocioId, usuarioId: contexto.usuarioId };
+  const { negocioId, usuarioId } = await exigirMembro();
+  return { negocioId, usuarioId };
+}
+
+/** Membro do negócio ativo, com papel e permissões efetivas (SPEC-005). */
+export async function exigirMembro(): Promise<ContextoDoMembro> {
+  const r = await exigirNivel({ tipo: "sessao" });
+  if (!r.membro) redirect(ROTA_MEUS_NEGOCIOS);
+  return r.membro;
+}
+
+/** Configurações do negócio: só o Dono (OPEN-002); os demais veem "Sem acesso". */
+export async function exigirDono(): Promise<ContextoDoMembro> {
+  return (await exigirNivel({ tipo: "dono" })).membro!;
+}
+
+/** Páginas e ações de módulo: exige a permissão (módulo, ação) no negócio ativo (5.5). */
+export async function exigirPermissao(modulo: Modulo, acao: Acao): Promise<ContextoDoMembro> {
+  return (await exigirNivel({ tipo: "permissao", modulo, acao })).membro!;
 }

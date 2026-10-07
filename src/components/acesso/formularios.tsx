@@ -17,7 +17,7 @@ import { useFormulario } from "./use-formulario";
 const link = "font-semibold text-primary underline-offset-2 hover:text-primary-hover hover:underline";
 
 /** Login (protótipo revisado; CA-05 a CA-07). */
-export function FormularioEntrar({ proximo }: { proximo?: string }) {
+export function FormularioEntrar({ proximo, email }: { proximo?: string; email?: string }) {
   const { estado, executar, erros, aoEnviar, limparErro } = useFormulario(acaoEntrar, esquemaEntrar);
   const valores = estado.status === "erro" ? estado.valores : undefined;
 
@@ -33,7 +33,7 @@ export function FormularioEntrar({ proximo }: { proximo?: string }) {
           type="email"
           autoComplete="email"
           placeholder="voce@empresa.com"
-          defaultValue={valores?.email}
+          defaultValue={valores?.email ?? email}
           erro={erros.email}
           onChange={() => limparErro("email")}
         />
@@ -76,8 +76,8 @@ export function ReenviarConfirmacao({ email }: { email: string }) {
   );
 }
 
-/** Cadastro (CA-01 a CA-04). */
-export function FormularioCadastro() {
+/** Cadastro (CA-01 a CA-04). O e-mail pode vir preenchido pelo convite (SPEC-005, 5.3). */
+export function FormularioCadastro({ email }: { email?: string }) {
   const { estado, executar, erros, aoEnviar, limparErro } = useFormulario(acaoCadastrar, esquemaCadastro);
   const valores = estado.status === "erro" ? estado.valores : undefined;
 
@@ -115,7 +115,7 @@ export function FormularioCadastro() {
           type="email"
           autoComplete="email"
           placeholder="voce@empresa.com"
-          defaultValue={valores?.email}
+          defaultValue={valores?.email ?? email}
           erro={erros.email}
           onChange={() => limparErro("email")}
         />
