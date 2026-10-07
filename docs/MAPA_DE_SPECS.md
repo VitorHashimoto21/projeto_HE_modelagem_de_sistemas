@@ -209,6 +209,7 @@ flowchart LR
 - **Justificativa da ordem:** o negócio é o tenant de todos os dados seguintes. Registra se o CNAE é sujeito ao Fator R, usado depois pela SPEC-010.
 
 #### SPEC-005 — Equipe, papéis e permissões
+- **Spec:** [`specs/SPEC-005.md`](./specs/SPEC-005.md) (rascunho — aguardando decisão das questões em aberto)
 - **Objetivo:** convidar colaboradores (inclusive quem ainda não tem conta), atribuir os papéis Dono/Gerente/Colaborador e permissões granulares, validadas no servidor, respeitando o limite de 1 colaborador (membro ou convite pendente) no plano gratuito.
 - **Valor entregue:** o dono delega a operação sem expor dados estratégicos (persona Lucas).
 - **RF:** RF04, RF05, RF06, RF47 (limite de convites), RF72 · **RN:** RN01, RN02 · **RNF:** RNF02
@@ -345,4 +346,4 @@ Todos os 113 requisitos (RF01–RF73, RN01–RN29, RNF01–RNF11) estão associa
 
 A conferência do seed fiscal foi concluída em 03/10/2026 (DAS do MEI atualizado para o salário mínimo de 2026), e a SPEC-003 não tem mais pré-requisito pendente. A SPEC-015 depende da aprovação do ADR-007.
 
-**Andamento:** [SPEC-001](specs/SPEC-001.md) e [SPEC-002](specs/SPEC-002.md) implementadas e verificadas na homologação. [SPEC-003](specs/SPEC-003.md) implementada e verificada na homologação. [SPEC-004](specs/SPEC-004.md) implementada e verificada no preview da Vercel (04/10/2026).
+**Andamento:** [SPEC-001](specs/SPEC-001.md) e [SPEC-002](specs/SPEC-002.md) implementadas e verificadas na homologação. [SPEC-003](specs/SPEC-003.md) implementada e verificada na homologação. [SPEC-004](specs/SPEC-004.md) implementada e verificada no preview da Vercel (04/10/2026). [SPEC-005](specs/SPEC-005.md) gerada (rascunho, 07/10/2026).
