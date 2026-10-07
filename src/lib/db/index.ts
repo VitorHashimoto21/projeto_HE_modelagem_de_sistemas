@@ -1,7 +1,15 @@
 import "server-only";
 import { comNegocio, type ContextoDeNegocio } from "./cliente-do-negocio";
+import { criarConsultasDeAcesso } from "./acesso";
+import { criarConsultasDeNegocios } from "./negocios";
+import { criarConsultasFiscais } from "./parametros-fiscais";
 import { prismaBase } from "./prisma";
 
+export type { ConsultasDeAcesso } from "./acesso";
+export { CnpjJaCadastrado } from "./negocios";
+export type { ConsultasDeNegocios, ResumoDoNegocio } from "./negocios";
+export { AcimaDoLimiteDoSimples, ParametroAusente } from "./parametros-fiscais";
+export type { ConsultasFiscais, Origem } from "./parametros-fiscais";
 export { ContextoDeNegocioAusente, NegocioDivergente, OperacaoForaDoContexto } from "./erros";
 export type { ClienteDoNegocio, ContextoDeNegocio } from "./cliente-do-negocio";
 
@@ -12,6 +20,21 @@ export type { ClienteDoNegocio, ContextoDeNegocio } from "./cliente-do-negocio";
  */
 export function clienteDoNegocio(contexto: ContextoDeNegocio | null | undefined) {
   return comNegocio(prismaBase(), contexto);
+}
+
+/** Consultas do controle de acesso (SPEC-002): conta bloqueada, filiação e perfil. */
+export function consultasDeAcesso() {
+  return criarConsultasDeAcesso(prismaBase());
+}
+
+/** Negócios do usuário (SPEC-004): criação com o Dono, lista, papel e dados fiscais. */
+export function negocios() {
+  return criarConsultasDeNegocios(prismaBase());
+}
+
+/** Parâmetros fiscais oficiais (SPEC-003): somente leitura, com a versão vigente na data. */
+export function parametrosFiscais() {
+  return criarConsultasFiscais(prismaBase());
 }
 
 /** Verificação de saúde do banco (CA-10): true se o banco responde. */

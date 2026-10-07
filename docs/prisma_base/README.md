@@ -7,3 +7,5 @@
 Esta pasta guarda apenas:
 
 - [`parametros_fiscais_seed.json`](parametros_fiscais_seed.json) — parâmetros fiscais oficiais (faixas do Simples, CNAE → Anexo, MEI, Fator R e margens padrão), carregados pela SPEC-003.
+
+Para atualizar um parâmetro, veja a seção **Parâmetros fiscais** do [README principal](../../README.md#parâmetros-fiscais).

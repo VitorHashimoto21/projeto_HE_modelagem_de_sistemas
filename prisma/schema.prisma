@@ -166,7 +166,8 @@ enum StatusConta {
 // ==========================================================
 
 // ADR-003: a credencial (senha com hash — RNF03) fica somente no Supabase Auth.
-// Usuario.id recebe o mesmo UUID de auth.users.id, gravado no cadastro (SPEC-002).
+// Usuario.id recebe o mesmo UUID de auth.users.id: o registro é criado pelo gatilho
+// he_criar_usuario na mesma transação da conta do Supabase Auth (SPEC-002, OPEN-001).
 model Usuario {
   id    String @id @db.Uuid // = auth.users.id (sem default)
   nome  String
@@ -174,6 +175,7 @@ model Usuario {
 
   // RNF04: consentimento explícito de uso de dados (LGPD)
   consentimentoLgpdEm DateTime?
+  versaoTermosAceita  String? // SPEC-002, OPEN-005: versão da política e dos termos aceita (ex.: "2026-10-03")
   excluidoEm          DateTime? // RN27: acesso bloqueado
   anonimizadoEm       DateTime? // RN27: nome/e-mail/senha substituídos por valores anônimos
 
@@ -425,24 +427,26 @@ model FaixaTributaria {
   anexo          AnexoSimples
   faixaOrdem     Int // 1ª a 6ª faixa
   rbt12De        Decimal      @db.Decimal(12, 2) // exclusivo
-  rbt12Ate       Decimal?     @db.Decimal(12, 2) // inclusivo; null = sem teto (última faixa)
+  rbt12Ate       Decimal      @db.Decimal(12, 2) // inclusivo; a faixa 6 vai até R$ 4,8 milhões, o limite do Simples (SPEC-003, OPEN-003)
   aliquota       Decimal      @db.Decimal(5, 2) // percentual nominal
   parcelaDeduzir Decimal      @db.Decimal(12, 2) // RF38: alíquota efetiva = (RBT12 × aliquota − parcelaDeduzir) ÷ RBT12
   fonteLegal     String // RN17: ex. "LC 123/2006, Anexo III"
-  vigenteDesde   DateTime     @default(now())
-  ativo          Boolean      @default(true)
+  vigenteDesde   DateTime     @db.Date // SPEC-003: vigente a partir desta data até a próxima versão
 
-  @@index([anexo, ativo])
+  @@unique([anexo, faixaOrdem, vigenteDesde])
 }
 
 // RF59: tabela oficial CNAE → Anexo (Resolução CGSN 140/2018), usada para sugerir o anexo do negócio
 model CnaeAnexo {
-  cnae          String       @id // código CNAE (subclasse)
+  id            String       @id @default(uuid()) @db.Uuid
+  cnae          String // código CNAE (subclasse), no formato "4772-5/00"
   descricao     String
   anexo         AnexoSimples // anexo base (V para CNAEs sujeitos ao Fator R)
   sujeitoFatorR Boolean      @default(false) // RF69
   fonteLegal    String
-  vigenteDesde  DateTime     @default(now())
+  vigenteDesde  DateTime     @db.Date
+
+  @@unique([cnae, vigenteDesde])
 }
 
 // RF60/RF61: valor mensal do DAS e limite anual do MEI
@@ -452,10 +456,9 @@ model ParametroMei {
   valorDasMensal         Decimal      @db.Decimal(10, 2)
   limiteFaturamentoAnual Decimal      @db.Decimal(12, 2)
   fonteLegal             String
-  vigenteDesde           DateTime     @default(now())
-  ativo                  Boolean      @default(true)
+  vigenteDesde           DateTime     @db.Date // o DAS muda todo janeiro (salário mínimo)
 
-  @@index([atividade, ativo])
+  @@unique([atividade, vigenteDesde])
 }
 
 // RF69/RN28: parâmetros do Fator R (LC 123/2006, art. 18, §§ 5º-J e 5º-M)
@@ -465,16 +468,18 @@ model ParametroFatorR {
   anexoSeAtingir    AnexoSimples // III
   anexoSeNaoAtingir AnexoSimples // V
   fonteLegal        String
-  vigenteDesde      DateTime     @default(now())
-  ativo             Boolean      @default(true)
+  vigenteDesde      DateTime     @unique @db.Date
 }
 
 // RF36: margem padrão por categoria, inicializada com percentuais de presunção (Lei 9.249/1995, art. 15)
 model MargemPadraoCategoria {
-  categoria    CategoriaItem @id
+  id           String        @id @default(uuid()) @db.Uuid
+  categoria    CategoriaItem
   margemPadrao Decimal       @db.Decimal(5, 2)
   fonteLegal   String
-  vigenteDesde DateTime      @default(now())
+  vigenteDesde DateTime      @db.Date
+
+  @@unique([categoria, vigenteDesde])
 }
 
 // ==========================================================

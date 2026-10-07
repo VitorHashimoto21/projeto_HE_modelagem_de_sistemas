@@ -66,6 +66,13 @@ jobs:
           npx prisma migrate deploy
           npx prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --exit-code
 
+      - name: Validar e carregar os parâmetros fiscais (SPEC-003, CA-11)
+        run: |
+          npm run fiscal:carregar
+          # Segunda carga: tem que ser "Nada a mudar" (idempotência — INV-005).
+          npm run fiscal:carregar | tee carga.log
+          grep -q "Nada a mudar" carga.log
+
       - name: Testes unitários
         run: npm test
 

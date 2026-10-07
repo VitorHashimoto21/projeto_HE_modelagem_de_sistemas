@@ -1,6 +1,6 @@
 # SPEC-002 — Acesso: cadastro, login e consentimento
 
-> **Status:** ✅ **Aprovada em 03/10/2026** — questões em aberto decididas pela equipe (seção 13). Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar). Implementação a seguir, depois do projeto Supabase de homologação.
+> **Status:** ✅ **Implementada e verificada na homologação em 04/10/2026** (PR #41) — questões em aberto decididas pela equipe (seção 13); testes T01–T15 no CI, telas e fluxos com e-mail real verificados ([evidências](evidencias/SPEC-002/README.md)). Pendências de configuração (não de código): Resend como SMTP, com os modelos de e-mail editados e o aviso de "você já tem conta" (seção 14). Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar).
 > **Mapa:** [`MAPA_DE_SPECS.md`](../MAPA_DE_SPECS.md) · **Anterior:** [SPEC-001](SPEC-001.md) · **Próximas que dependem desta:** SPEC-004 e SPEC-014.
 
 ---
@@ -192,6 +192,15 @@ A sessão é encerrada no servidor e no navegador, e a pessoa volta para a tela 
 
 Os nomes exatos de rotas, funções e componentes são decididos na implementação, respeitando estes contratos.
 
+**Implementação (04/10/2026):** os contratos estão em `src/lib/auth/adaptador.ts` (provedor) e `src/lib/auth/servicos.ts` (fluxos), com as Server Actions em `src/lib/auth/acoes.ts`. Rotas: `/entrar`, `/cadastro`, `/esqueci-a-senha`, `/nova-senha`, `/link-invalido`, `/privacidade`, `/termos`, `/negocios`, e os links de e-mail em `/auth/confirmar` e `/auth/recuperar`.
+
+**Divergências registradas na implementação:**
+
+- **`src/proxy.ts` em vez de `src/middleware.ts` (seção 8):** no Next.js 16 o arquivo `middleware` foi renomeado para `proxy` (a convenção antiga está obsoleta). Mesmo papel: renovar a sessão e proteger as rotas.
+- **Server Actions em `src/lib/auth/acoes.ts`:** os formulários (em `src/components/acesso/`) importam as ações de `src/lib`, e não de `src/app`, para que componentes não dependam de páginas.
+- **`consentimentoLgpdEm` com a hora do banco:** o gatilho grava `now()` (em UTC) em vez de ler a data dos metadados, para que o cliente não possa enviar uma data falsa; o aceite (`aceiteTermos`) e a versão continuam vindo dos metadados do cadastro e são obrigatórios no próprio banco (INV-003 também no gatilho).
+- **Sincronização do e-mail:** um segundo gatilho mantém `Usuario.email` igual ao de `auth.users` se o e-mail mudar no Supabase Auth (a edição de perfil continua fora do escopo).
+
 ---
 
 ## 10. Requisitos não funcionais aplicáveis
@@ -325,12 +334,12 @@ Todas decididas pela equipe em 03/10/2026:
 
 A SPEC-002 estará concluída quando:
 
-- [ ] todos os critérios de aceitação (CA-01 a CA-14) estiverem implementados;
-- [ ] todos os invariantes (INV-001 a INV-008) estiverem preservados;
-- [ ] os testes derivados (T01 a T16) estiverem aprovados, com o CI verde no PR;
-- [ ] os RNFs aplicáveis (RNF01, RNF02, RNF03, RNF04, RNF07, RNF11) tiverem sido verificados como descrito na seção 10;
+- [x] todos os critérios de aceitação (CA-01 a CA-14) estiverem implementados — verificados na homologação em 04/10/2026; no CA-04, o envio do aviso ao dono do e-mail depende de configurar `RESEND_API_KEY` e `EMAIL_REMETENTE` (a resposta igual e a ausência de segunda conta já estão verificadas);
+- [x] todos os invariantes (INV-001 a INV-008) estiverem preservados;
+- [x] os testes derivados (T01 a T16) estiverem aprovados, com o CI verde no PR — T01 a T15 automatizados (CI do PR #41); T16 com capturas em `evidencias/SPEC-002/`; T06, T08, T10, T11 e T13 também verificados manualmente na homologação;
+- [x] os RNFs aplicáveis (RNF01, RNF02, RNF03, RNF04, RNF07, RNF11) tiverem sido verificados como descrito na seção 10;
 - [x] as questões OPEN-001 a OPEN-006 tiverem sido decididas e registradas;
-- [ ] não existir divergência conhecida entre a implementação e esta Spec;
-- [ ] toda divergência em relação à baseline tiver sido explicitamente analisada e registrada nos documentos.
+- [x] não existir divergência conhecida entre a implementação e esta Spec;
+- [x] toda divergência em relação à baseline tiver sido explicitamente analisada e registrada nos documentos (seção 9, "Divergências registradas na implementação").
 
 **Regra fundamental:** a implementação obedece a esta Spec aprovada. Se surgir conflito entre código, Spec e documentos de modelagem, o comportamento não é alterado em silêncio: a divergência é registrada com a proposta de (1) corrigir a implementação ou (2) alterar a baseline, e a decisão é da equipe.

@@ -1,0 +1,52 @@
+{
+  "cnpj": "00000000000191",
+  "razao_social": "BANCO DO BRASIL SA",
+  "nome_fantasia": "DIRECAO GERAL",
+  "cnae_fiscal": 6422100,
+  "cnae_fiscal_descricao": "Bancos múltiplos, com carteira comercial",
+  "opcao_pelo_simples": false,
+  "opcao_pelo_mei": false,
+  "descricao_situacao_cadastral": "ATIVA",
+  "situacao_cadastral": 2,
+  "email": null,
+  "ddd_telefone_1": "6134939002",
+  "logradouro": "SAUN QUADRA 5 BLOCO B TORRE I, II, III",
+  "numero": "SN",
+  "cep": "70040912",
+  "municipio": "BRASILIA",
+  "uf": "DF",
+  "qsa": [
+    {
+      "pais": null,
+      "nome_socio": "ALAN CARLOS GUEDES DE OLIVEIRA",
+      "codigo_pais": null,
+      "faixa_etaria": "Entre 41 a 50 anos",
+      "cnpj_cpf_do_socio": "***550179**",
+      "qualificacao_socio": "Diretor",
+      "codigo_faixa_etaria": 5,
+      "data_entrada_sociedade": "2023-05-17",
+      "identificador_de_socio": 2,
+      "cpf_representante_legal": "***000000**",
+      "nome_representante_legal": "",
+      "codigo_qualificacao_socio": 10,
+      "qualificacao_representante_legal": "Não informada",
+      "codigo_qualificacao_representante_legal": 0
+    },
+    {
+      "pais": null,
+      "nome_socio": "ALBERTO MARTINHAGO VIEIRA",
+      "codigo_pais": null,
+      "faixa_etaria": "Entre 41 a 50 anos",
+      "cnpj_cpf_do_socio": "***842999**",
+      "qualificacao_socio": "Diretor",
+      "codigo_faixa_etaria": 5,
+      "data_entrada_sociedade": "2023-07-20",
+      "identificador_de_socio": 2,
+      "cpf_representante_legal": "***000000**",
+      "nome_representante_legal": "",
+      "codigo_qualificacao_socio": 10,
+      "qualificacao_representante_legal": "Não informada",
+      "codigo_qualificacao_representante_legal": 0
+    }
+  ]
+}

@@ -109,29 +109,36 @@ A rota `GET /api/saude` responde `{ "aplicacao": "ok", "banco": "ok" }` — ou `
 |---|---|---|---|
 | **Desenvolvimento** | Máquina de cada integrante (`npm run dev`) | PostgreSQL local (`docker compose`) | A cada alteração |
 | **Preview** | Vercel, link temporário por Pull Request | Banco de homologação | A cada push no PR (sem migrações) |
-| **Homologação** | Vercel, endereço fixo | Projeto Supabase de homologação (dados fictícios) | A cada merge na `DEVELOP` |
+| **Homologação** | Vercel, endereço fixo: <https://he-homol.vercel.app> | Projeto Supabase de homologação (dados fictícios) | A cada merge na `DEVELOP` |
 | **Produção** | Vercel, domínio final | Projeto Supabase de produção (dados reais) | A cada merge na `main` |
 
 Cada ambiente tem variáveis e credenciais próprias (RNF11); chaves de serviços externos ficam em modo de teste fora de produção. As migrações rodam pelo workflow **Migrações** (`.github/workflows/migracoes.yml`): homologação a cada push na `DEVELOP`, produção a cada push na `main`.
 
 ### Configurar a homologação (uma vez)
 
-1. **Supabase:** criar o projeto `he-homol` (plano gratuito). Em *Connect*, copiar a string do **Transaction pooler** (porta 6543) e a **Direct connection** (porta 5432).
-2. **Vercel:** importar o repositório; em *Settings → Git*, definir `DEVELOP` como branch de produção do projeto de homologação (ou usar um projeto Vercel só para homologação). Em *Environment Variables*, cadastrar `DATABASE_URL` (string do Transaction pooler) para *Production* e *Preview*.
-3. **GitHub:** em *Settings → Environments*, criar `homologacao` com o segredo `DIRECT_URL` (conexão direta). Em *Settings → Secrets → Actions*, criar `BACKUP_HOMOL_DATABASE_URL` (conexão direta) para o backup.
+1. **Supabase:** criar o projeto `he-homol` (plano gratuito, região São Paulo). Em *Connect*, copiar a string do **Transaction pooler** (porta 6543, para a aplicação) e a do **Session pooler** (porta 5432, para migrações e backup), trocando `[YOUR-PASSWORD]` pela senha do banco **sem os colchetes**. No plano gratuito, a *Direct connection* só funciona por IPv6, que o GitHub Actions não tem — por isso migrações e backup usam o Session pooler.
+2. **Vercel:** importar o repositório num projeto **só de homologação** (`he-homol`), sem *Build Settings* customizados e sem integrações de banco (o banco é o Supabase). Em *Settings → Environments → Production → Branch Tracking*, trocar a branch para `DEVELOP` — a "produção" desse projeto é a homologação. Em *Environment Variables*, cadastrar `DATABASE_URL` (string do **Transaction pooler**, porta 6543) para *Production* e *Preview*. Em *Functions*, região **São Paulo (gru1)**. Os previews ficam protegidos pelo login da Vercel (*Deployment Protection*).
+3. **GitHub:** em *Settings → Environments*, criar `homologacao` com o segredo `DIRECT_URL` (string do Session pooler). Em *Settings → Secrets → Actions*, criar `BACKUP_HOMOL_DATABASE_URL` (a mesma string) para o backup. Os valores devem começar exatamente com `postgresql://`, sem espaços, aspas ou `#`.
 4. **Proteção de branch:** exigir o check **CI** verde antes do merge em `DEVELOP` e `main`.
+5. **Supabase Auth (SPEC-002):**
+   - *Authentication → Sign In / Providers → Email*: provedor ligado, **Confirm email** ligado e **Minimum password length = 8**.
+   - *Authentication → URL Configuration*: **Site URL** `https://he-homol.vercel.app`; em **Redirect URLs**, `http://localhost:3000/**`, `https://he-homol.vercel.app/**` e `https://he-homol-*-health-enterprise.vercel.app/**` (previews).
+   - *Authentication → Emails → Templates*: no **Confirm signup**, trocar o link por `{{ .RedirectTo }}?token_hash={{ .TokenHash }}&type=email`; no **Reset password**, por `{{ .RedirectTo }}?token_hash={{ .TokenHash }}&type=recovery`. Assim o link funciona mesmo aberto em outro aparelho.
+   - *Authentication → Emails → SMTP Settings*: Resend como SMTP (host `smtp.resend.com`, porta `465`, usuário `resend`, senha = API key do Resend, remetente `onboarding@resend.dev`). Sem domínio próprio, o Resend só entrega para o e-mail do dono da conta Resend (OPEN-002).
+   - **Vercel:** cadastrar `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (*Project Settings → API Keys* do Supabase) para *Production* e *Preview*. Opcional: `RESEND_API_KEY` e `EMAIL_REMETENTE` para o aviso de "você já tem conta".
 
 ### Checklist de produção (quando for publicar)
 
 - [ ] Projeto Supabase `he-prod` (plano pago, com backup diário nativo e sem pausa por inatividade)
-- [ ] Vercel com a `main` como produção e o plano Pro (uso comercial)
+- [ ] Projeto Vercel separado (`he-prod`) com a `main` como produção e o plano Pro (uso comercial)
 - [ ] Ambiente `producao` no GitHub com o segredo `DIRECT_URL`; segredo `BACKUP_PROD_DATABASE_URL`
 - [ ] Domínio próprio e variáveis de *Production* na Vercel apontando só para o `he-prod`
+- [ ] Supabase Auth do `he-prod` configurado como no passo 5, com domínio verificado no Resend e as URLs de produção
 - [ ] Revisão do RLS e dos segredos: nenhuma credencial de produção fora do ambiente de produção
 
 ## Backup
 
-O workflow **Backup diário** (`.github/workflows/backup.yml`) roda às 03:00 (Brasília), faz `pg_dump` do schema `public` (dados da aplicação) de cada ambiente configurado e guarda o arquivo como **artefato privado** do GitHub Actions por 90 dias. Também pode ser disparado manualmente em *Actions → Backup diário → Run workflow*.
+O workflow **Backup diário** (`.github/workflows/backup.yml`) roda às 03:00 (Brasília), faz `pg_dump` do schema `public` (dados da aplicação) de cada ambiente configurado, **restaura o dump num PostgreSQL temporário para conferir tabelas, RLS e migrações** (`scripts/verificar-backup.sh`) e só então guarda o arquivo como **artefato privado** do GitHub Actions por 90 dias. Também pode ser disparado manualmente em *Actions → Backup diário → Run workflow*. Como todo workflow agendado, só roda a partir da versão que está na `main`.
 
 **Restaurar** (num PostgreSQL vazio, nunca direto em produção sem revisão):
 
@@ -141,6 +148,22 @@ pg_restore --no-owner --no-privileges --dbname "postgresql://postgres:postgres@l
 ```
 
 > As contas de login ficam no schema `auth` do Supabase Auth e não entram nesse dump. Em produção, o backup nativo do plano pago do Supabase cobre o banco inteiro.
+
+## Parâmetros fiscais
+
+As faixas do Simples Nacional, a tabela CNAE → Anexo, o DAS e o limite do MEI, a regra do Fator R e as margens padrão ficam no banco, carregados do arquivo versionado [`docs/prisma_base/parametros_fiscais_seed.json`](docs/prisma_base/parametros_fiscais_seed.json) (SPEC-003, ADR-004). A aplicação só lê esses valores; nenhum deles fica fixo no código.
+
+- `npm run fiscal:validar` — confere o arquivo (faixas contínuas, alíquotas consistentes, fonte legal, todos os Anexos, atividades e categorias).
+- `npm run fiscal:carregar` — grava no banco só o que mudou, numa única transação (rodar de novo não muda nada). `-- --simular` mostra o que mudaria; `-- --corrigir` substitui um valor da mesma vigência (erro de digitação).
+- Na homologação e na produção, a carga roda sozinha no workflow **Migrações**, logo depois das migrações.
+
+**Como atualizar um parâmetro**
+
+1. **Mudança na lei** (ex.: novo salário mínimo em janeiro → novo DAS): inclua um **novo registro** com a nova `vigenteDesde` e a fonte legal. Não altere o registro antigo — ele continua valendo para as datas anteriores.
+2. **Erro de digitação** num valor já publicado: corrija o registro e rode a carga com `--corrigir` (o valor anterior fica no log).
+3. Abra um PR: o CI valida o arquivo e roda a carga num banco descartável. No merge, a carga chega à homologação (`DEVELOP`) e depois à produção (`main`).
+
+**Todo janeiro:** atualizar `parametroMei` com o DAS calculado sobre o novo salário mínimo (5% do salário mínimo + R$ 1,00 de ICMS e/ou R$ 5,00 de ISS). Enquanto isso não acontece, o CI e a carga mostram um aviso.
 
 ## Estrutura
 ```text
