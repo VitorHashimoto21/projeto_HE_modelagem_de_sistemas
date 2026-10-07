@@ -17,6 +17,11 @@ export async function gravarNegocioAtivo(negocioId: string) {
   });
 }
 
+/** Limpa o negócio ativo (ao sair dele — SPEC-005, OPEN-007). */
+export async function limparNegocioAtivo() {
+  (await cookies()).delete(COOKIE_NEGOCIO_ATIVO);
+}
+
 export async function dependenciasDoNegocio(): Promise<DependenciasDoNegocio> {
   const contexto = await obterContexto();
   const fiscais = parametrosFiscais();

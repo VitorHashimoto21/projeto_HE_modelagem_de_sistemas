@@ -1,6 +1,6 @@
 # SPEC-005 — Equipe, papéis e permissões
 
-> **Status:** ✅ **Aprovada em 07/10/2026** — questões em aberto decididas pela equipe (seção 13), todas pela opção recomendada. Pronta para implementação. Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar). Nenhum código foi escrito.
+> **Status:** ✅ **Aprovada e implementada em 07/10/2026** — questões em aberto decididas pela equipe (seção 13), todas pela opção recomendada; testes T01–T17, T20 e T21 no CI e fluxo completo verificado no navegador, em build de produção local ([evidências](evidencias/SPEC-005/README.md)). Pendente: T19 (e-mail real na homologação, depende do Resend). Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar). Nenhum código foi escrito.
 > **Mapa:** [`MAPA_DE_SPECS.md`](../MAPA_DE_SPECS.md) · **Anterior:** [SPEC-004](SPEC-004.md) (negócio e Dono) · **Próximas que dependem desta:** SPEC-006 a SPEC-013 (todas usam as guardas de papel e a matriz módulo × ação).
 
 ---
@@ -284,6 +284,30 @@ Mudanças de papel e de permissões valem a partir da requisição seguinte do m
 
 Os nomes exatos de rotas, funções e componentes são decididos na implementação, respeitando estes contratos.
 
+**Implementação (07/10/2026):**
+
+- **Domínio** em `src/lib/dominio/permissoes.ts`: matriz, predefinições, resolução, coerência e "Dashboard completo".
+- **Autorização** em `src/lib/auth/autorizacao.ts`, que decide por nível (pública, sessão, Dono, módulo × ação).
+- **Guardas de página** em `src/lib/auth/servidor.ts`: `exigirMembro`, `exigirDono` e `exigirPermissao`.
+- **Fábrica de Server Actions** em `src/lib/auth/acao.ts`: `acaoPublica`, `acaoComSessao`, `acaoDoDono` e `acaoComPermissao`.
+- **Contexto** com papel e permissões: `resolverContextoComPapel`, em `src/lib/auth/contexto.ts`, lê numa única consulta (`filiacao`).
+- **Banco** em `src/lib/db/equipe.ts` (`equipe()` de `@/lib/db`).
+- **Fluxos** em `src/lib/equipe/` (`servicos.ts`, `validacao.ts`, `token.ts`, `menu.ts` e as Server Actions em `acoes.ts`).
+- **Envio de e-mail** comum em `src/lib/integracoes/email.ts`; o aviso da SPEC-002 passou a usá-lo.
+- **Rotas:**
+  - `/negocio/equipe`, `/negocio/equipe/convidar` e `/negocio/equipe/[membroId]`;
+  - `/convite/[token]` (no layout das telas de acesso);
+  - `/sem-acesso`;
+  - "Convites para você" e "Sair deste negócio" em `/negocios`.
+
+**Divergências registradas na implementação:**
+
+- **Índice único parcial não criado** (seção 7, opcional). O Prisma 7 não descreve índice parcial, e o CI compara o banco com o schema (`migrate diff --exit-code`), que acusaria o índice como diferença. A regra "um convite pendente por e-mail" e o limite do plano são garantidos pela transação que trava a linha do negócio (`SELECT … FOR UPDATE`). O T06 cobre isso com 8 pedidos simultâneos em 5 rodadas; sem a trava, ele falhou 4 de 4 vezes.
+- **"Sem acesso" sem o código 403** (5.5, "quando for possível"). O `forbidden()` do Next.js 16 depende de uma opção experimental (`authInterrupts`). A guarda redireciona para `/sem-acesso` (307), e nada é executado.
+- **As ações de acesso da SPEC-002 são declaradas como `acaoPublica`**, e as da SPEC-004 como `acaoComSessao` ou, em "Dados do negócio", `acaoDoDono`. A página "Dados do negócio" passou a usar `exigirDono()` e mostra "Sem acesso" para os demais, em vez de levar ao Painel.
+- **O Painel provisório (SPEC-004) fica aberto a todo membro.** Ele é a página inicial e só mostra o enquadramento fiscal. O Dashboard (SPEC-012) vai exigir "Dashboard: ver" e "Financeiro: ver" nas partes financeiras.
+- **Página do convite sem sessão:** mostra o e-mail convidado por inteiro, para preencher o login ou o cadastro. A máscara (5.3) vale para a conta com outro e-mail, que vê "Sair e entrar com outra conta".
+
 ---
 
 ## 10. Requisitos não funcionais aplicáveis
@@ -444,12 +468,12 @@ Todas decididas pela equipe em 07/10/2026, pela opção recomendada:
 
 A SPEC-005 estará concluída quando:
 
-- [ ] todos os critérios de aceitação (CA-01 a CA-18) estiverem implementados;
-- [ ] todos os invariantes (INV-001 a INV-010) estiverem preservados;
-- [ ] os testes derivados (T01 a T21) estiverem aprovados, com o CI verde no PR (T18 e T19 com evidências na homologação);
-- [ ] os RNFs aplicáveis (RNF01, RNF02, RNF04, RNF07) tiverem sido verificados como descrito na seção 10;
+- [x] todos os critérios de aceitação (CA-01 a CA-18) estiverem implementados — por testes e no navegador; o envio real do e-mail (CA-01) depende do Resend;
+- [x] todos os invariantes (INV-001 a INV-010) estiverem preservados;
+- [ ] os testes derivados (T01 a T21) estiverem aprovados, com o CI verde no PR — T01–T17, T20 e T21 automatizados; T18 com capturas (build de produção local); **T19 pendente** (Resend);
+- [x] os RNFs aplicáveis (RNF01, RNF02, RNF04, RNF07) tiverem sido verificados como descrito na seção 10;
 - [x] as questões OPEN-001 a OPEN-010 tiverem sido decididas e registradas (07/10/2026);
-- [ ] não existir divergência conhecida entre a implementação e esta Spec;
-- [ ] toda divergência em relação à baseline (o comentário de `permissoesCustom` no schema; a frase da SPEC-004 sobre o RF73 já foi corrigida — OPEN-010) tiver sido explicitamente analisada e registrada nos documentos.
+- [x] não existir divergência conhecida entre a implementação e esta Spec (as da seção 9 estão registradas);
+- [x] toda divergência em relação à baseline tiver sido explicitamente analisada e registrada nos documentos — comentário de `permissoesCustom` atualizado no schema; frase da SPEC-004 sobre o RF73 corrigida (OPEN-010).
 
 **Regra fundamental:** a implementação obedece a esta Spec aprovada. Se surgir conflito entre código, Spec e documentos de modelagem, o comportamento não é alterado em silêncio: a divergência é registrada com a proposta de (1) corrigir a implementação ou (2) alterar a baseline, e a decisão é da equipe.

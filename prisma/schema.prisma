@@ -245,7 +245,7 @@ model MembroNegocio {
   usuarioId        String       @db.Uuid
   negocioId        String       @db.Uuid
   papel            PapelUsuario @default(COLABORADOR) // RF05
-  permissoesCustom Json? // RF06: matriz módulo × ação, ex. {"financeiro": {"ver": false, "criar": true}}
+  permissoesCustom Json? // RF06: matriz módulo × ação COMPLETA (6 módulos × ver/criar/editar/excluir — SPEC-005, INV-008); null = predefinição do papel
 
   usuario Usuario @relation(fields: [usuarioId], references: [id])
   negocio Negocio @relation(fields: [negocioId], references: [id])

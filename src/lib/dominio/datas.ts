@@ -75,6 +75,12 @@ export function diaLocal(instante: Date): string {
   return `${pad(p.ano, 4)}-${pad(p.mes)}-${pad(p.dia)}`;
 }
 
+/** Data local no formato brasileiro (DD/MM/AAAA), em America/Sao_Paulo. */
+export function dataBrasileira(instante: Date): string {
+  const [ano, mes, dia] = diaLocal(instante).split("-");
+  return `${dia}/${mes}/${ano}`;
+}
+
 /** Competência (AAAA-MM) do instante, em America/Sao_Paulo. */
 export function competencia(instante: Date): string {
   return diaLocal(instante).slice(0, 7);
