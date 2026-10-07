@@ -1,6 +1,6 @@
 # SPEC-005 — Equipe, papéis e permissões
 
-> **Status:** 📝 **Rascunho para aprovação** (07/10/2026). As questões em aberto (seção 13) precisam ser decididas pela equipe antes da implementação. Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar). Nenhum código foi escrito.
+> **Status:** ✅ **Aprovada em 07/10/2026** — questões em aberto decididas pela equipe (seção 13), todas pela opção recomendada. Pronta para implementação. Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar). Nenhum código foi escrito.
 > **Mapa:** [`MAPA_DE_SPECS.md`](../MAPA_DE_SPECS.md) · **Anterior:** [SPEC-004](SPEC-004.md) (negócio e Dono) · **Próximas que dependem desta:** SPEC-006 a SPEC-013 (todas usam as guardas de papel e a matriz módulo × ação).
 
 ---
@@ -51,9 +51,9 @@
 3. **Contexto com papel:** a filiação (SPEC-002, INV-006) passa a devolver o papel e as permissões efetivas do membro no negócio ativo, numa única consulta por requisição.
 4. **Tela "Equipe"** (Configurações do negócio, só para o Dono): membros (nome, e-mail, papel, permissões), convites pendentes (e-mail, papel, validade) e o botão "Convidar pessoa".
 5. **Convidar** (UC3): e-mail, papel (Gerente ou Colaborador) e, opcionalmente, permissões customizadas (UC4), com o limite do plano gratuito verificado no servidor.
-6. **E-mail do convite** com o link de uso único, o nome do negócio, quem convidou, o papel, o resumo das permissões e a validade (RF72).
+6. **E-mail do convite** com o link de uso único, o nome do negócio, quem convidou, o papel, o resumo das permissões e a validade (RF72), e o link para o Dono copiar e mandar por outro canal (OPEN-004).
 7. **Aceitar o convite**, com ou sem conta (seção 5.3).
-8. **Gerenciar a equipe:** trocar o papel de um membro, editar as permissões dele, remover o membro, cancelar e reenviar convite pendente.
+8. **Gerenciar a equipe:** trocar o papel de um membro, editar as permissões dele, remover o membro, cancelar e reenviar convite pendente; e **sair do negócio** por iniciativa do próprio membro (OPEN-007).
 9. **Menu por permissão:** a área autenticada mostra só os módulos que o membro pode ver; "Configurações" só para o Dono. Acesso direto por URL a área sem permissão mostra uma página "Sem acesso".
 10. **Ajuste da SPEC-004:** a verificação "só o Dono edita os dados do negócio" passa a usar a guarda "exigir Dono" (mesmo comportamento).
 
@@ -61,12 +61,13 @@
 
 | Comportamento | Onde fica |
 |---|---|
-| Troca de plano (gratuito ↔ pago) e o que acontece com quem passa do limite ao voltar para o gratuito (RF73) | SPEC-013, conforme o Mapa. A SPEC-004 cita "SPEC-005 (RF73)" na tabela de fora do escopo; ver OPEN-010. |
+| Troca de plano (gratuito ↔ pago) e o que acontece com quem passa do limite ao voltar para o gratuito (RF73) | SPEC-013, conforme o Mapa (OPEN-010; a frase da SPEC-004 foi corrigida). |
 | Conteúdo das telas de cada módulo e o significado fino de cada ação dentro dele | SPECs 006 a 012 (cada uma declara a permissão exigida por tela e ação) |
 | Conteúdo do Dashboard completo e restrito (RF42, RF57, RF63, RF68) | SPEC-012 |
 | Transferir a posse do negócio (trocar o Dono) ou ter mais de um Dono | Fora do MVP: nenhum requisito pede (INV-002) |
 | Recusar um convite (o convidado simplesmente não aceita e ele expira) | Fora do MVP: o enum `StatusConvite` não tem "recusado" e o RF72 não pede |
 | Exclusão da conta do usuário e o efeito nos negócios em que é membro (RN27) | SPEC-014 |
+| Rotina que apaga o e-mail dos convites expirados ou cancelados há mais de 90 dias | SPEC-014 (OPEN-009) |
 
 ---
 
@@ -78,7 +79,7 @@
   - SPEC-004: `Negocio` com o Dono, negócio ativo e "Dados do negócio".
 - **Decisões arquiteturais:** ADR-002, ADR-003.
 - **Pré-requisitos externos:**
-  - **Envio de e-mail pelo Resend** (`RESEND_API_KEY` e `EMAIL_REMETENTE`), o mesmo serviço do aviso de "você já tem conta" da SPEC-002, **ainda não configurado** na homologação. Ver OPEN-004.
+  - **Envio de e-mail pelo Resend** (`RESEND_API_KEY` e `EMAIL_REMETENTE`), o mesmo serviço do aviso de "você já tem conta" da SPEC-002, **ainda não configurado** na homologação. Não bloqueia a implementação: sem o Resend, o Dono manda o link copiável (OPEN-004). O teste manual completo com e-mail (T19) depende dele.
   - Para que o convite chegue a qualquer endereço (e não só aos da equipe), o domínio do remetente precisa estar verificado no Resend.
 
 ---
@@ -90,7 +91,7 @@
 **Módulos:** Catálogo, Estoque, Vendas, Calculadora, Financeiro, Dashboard.
 **Ações:** ver, criar, editar, excluir/cancelar.
 
-**"Configurações do negócio"** fica fora da matriz e é **exclusiva do Dono**: Equipe e convites, dados do negócio (SPEC-004), plano (SPEC-013) e parâmetros de precificação (taxa média de cartão, margem meta, capacidade e ticket médio — ramo I5 da jornada do Dono). É o "exceto configurações" do Gerente no RF05. Ver OPEN-002.
+**"Configurações do negócio"** fica fora da matriz e é **exclusiva do Dono**: Equipe e convites, dados do negócio (SPEC-004), plano (SPEC-013) e parâmetros de precificação (taxa média de cartão, margem meta, capacidade e ticket médio — ramo I5 da jornada do Dono). É o "exceto configurações" do Gerente no RF05 (OPEN-002).
 
 **Predefinições dos papéis (RF05)** — ✓ permitido, — negado:
 
@@ -103,14 +104,14 @@
 | Financeiro | ✓ ✓ ✓ ✓ | ✓ ✓ ✓ ✓ | — — — — |
 | Dashboard | ✓ (completo) | ✓ (completo) | ver ✓ (restrito, RF63) |
 
-A coluna do Colaborador é derivada da jornada 2.3 ("Consultar Produtos", "Registrar Entrada/Saída", "Nova Venda", "Dashboard restrito", Financeiro e Calculadora bloqueados) e do RF65 (cancelar venda só com permissão granular). O "Catálogo: ver" vem de "somente itens com preço oficial" na venda. **Ver OPEN-001.**
+A coluna do Colaborador é derivada da jornada 2.3 ("Consultar Produtos", "Registrar Entrada/Saída", "Nova Venda", "Dashboard restrito", Financeiro e Calculadora bloqueados) e do RF65 (cancelar venda só com permissão granular). O "Catálogo: ver" vem de "somente itens com preço oficial" na venda. "Vendas: ver" inclui o histórico de vendas (OPEN-001).
 
 **Resolução das permissões efetivas:**
 
 - **Dono:** sempre tudo; não pode ter matriz customizada.
 - **Gerente e Colaborador:** sem matriz customizada (`permissoesCustom` vazio), vale a predefinição do papel. Com matriz customizada, vale a matriz **inteira** gravada, e a predefinição deixa de valer para aquele membro.
 - **Coerência:** "editar" e "excluir/cancelar" exigem "ver" no mesmo módulo; "criar" pode existir sem "ver". Isso permite o exemplo do RF06: lançar despesas no Financeiro sem ver saldo, relatórios, custos fixos ou margens.
-- **Dashboard completo × restrito:** com "Dashboard: ver", o membro vê a parte restrita (vendas do dia e alertas de estoque baixo). As partes financeiras (saldo, semáforo, ponto de equilíbrio, gráficos de faturamento e projeção de caixa) exigem também "Financeiro: ver". Gerente e Dono têm as duas. **Ver OPEN-003.**
+- **Dashboard completo × restrito:** com "Dashboard: ver", o membro vê a parte restrita (vendas do dia e alertas de estoque baixo). As partes financeiras (saldo, semáforo, ponto de equilíbrio, gráficos de faturamento e projeção de caixa) exigem também "Financeiro: ver". Gerente e Dono têm as duas (OPEN-003).
 
 ### 5.2 Convidar (UC3 e UC4)
 
@@ -126,8 +127,9 @@ A coluna do Colaborador é derivada da jornada 2.3 ("Consultar Produtos", "Regis
      4. confere o limite do plano;
      5. gera o token;
      6. grava o `Convite` (PENDENTE, `expiraEm`, `convidadoPorId`, `tokenHash`);
-     7. envia o e-mail.
-  5. O convite aparece em "Convites pendentes", com a validade.
+     7. envia o e-mail, se o Resend estiver configurado.
+  5. A tela mostra ao Dono, **uma única vez**, o link do convite com o botão "Copiar link", para mandar por WhatsApp ou outro canal (OPEN-004), e diz se o e-mail foi enviado.
+  6. O convite aparece em "Convites pendentes", com a validade.
 - **Limite do plano gratuito (RF47):** conta os membros que não são Dono + os convites PENDENTE ainda válidos. No plano gratuito, se a conta já for 1, o convite é recusado com a mensagem "No plano gratuito, o negócio pode ter 1 colaborador. Para convidar mais pessoas, é preciso o plano pago." No plano pago não há limite. A contagem e a gravação acontecem numa transação que trava o negócio, para que dois convites simultâneos não passem do limite.
 - **Fluxos alternativos e de exceção:**
 
@@ -140,7 +142,7 @@ A coluna do Colaborador é derivada da jornada 2.3 ("Consultar Produtos", "Regis
 | Papel Dono no convite (inclusive chamando o servidor direto) | Recusado (INV-002). |
 | Matriz incoerente ou com módulo/ação desconhecidos | Recusada, com a regra que falhou. |
 | Usuário que não é Dono (inclusive chamando o servidor direto) | Recusado; nada é gravado (RN02). |
-| Falha no envio do e-mail | Ver OPEN-004. |
+| Falha no envio do e-mail, ou Resend não configurado | O convite fica criado e válido. A tela avisa "Não conseguimos enviar o e-mail. Copie o link e envie para a pessoa." e mostra o link (OPEN-004). |
 
 - **Pós-condições:** existe um `Convite` PENDENTE com `expiraEm` no futuro; o token em si não está guardado em lugar nenhum, só o hash.
 
@@ -158,9 +160,9 @@ O link do e-mail é `/convite/{token}`: token aleatório de 32 bytes, codificado
      2. cria o `MembroNegocio` com o papel e as permissões do convite;
      3. grava `respondidoEm`;
      4. define o negócio como ativo e leva a `/painel`.
-   - **E-mail diferente:** "Este convite foi enviado para outro e-mail (j•••@exemplo.com). Entre com essa conta para aceitar." Nada muda. **Ver OPEN-005.**
+   - **E-mail diferente:** "Este convite foi enviado para outro e-mail (j•••@exemplo.com). Entre com essa conta para aceitar." Nada muda (OPEN-005).
    - **Já é membro do negócio** (por exemplo, aceitou por outro caminho): "Você já faz parte deste negócio." O convite é marcado como ACEITO.
-4. **Conta nova e confirmação de e-mail:** o link de confirmação do cadastro (SPEC-002) não leva o `proximo`. Por isso, "Meus negócios" passa a mostrar **"Convites para você"**: os convites PENDENTE válidos para o e-mail confirmado da conta, com o botão "Aceitar". A pessoa não depende de achar o e-mail do convite de novo. **Ver OPEN-006.**
+4. **Conta nova e confirmação de e-mail:** o link de confirmação do cadastro (SPEC-002) não leva o `proximo`. Por isso, "Meus negócios" passa a mostrar **"Convites para você"**: os convites PENDENTE válidos para o e-mail confirmado da conta, com o botão "Aceitar". A pessoa não depende de achar o e-mail do convite de novo (OPEN-006).
 
 O limite do plano não é conferido de novo na aceitação: o convite pendente já ocupava a vaga.
 
@@ -174,26 +176,32 @@ Tudo só pelo Dono (RN02), verificado no servidor:
 | **Editar permissões** de um membro | Grava a matriz inteira, com a regra de coerência. "Voltar ao padrão do papel" limpa a matriz. |
 | **Remover membro** | Apaga o `MembroNegocio`. Os registros que a pessoa criou (vendas, movimentações, preços) continuam, ligados ao `Usuario`. Na requisição seguinte, a filiação falha e ela vai para "Meus negócios" (RN01, INV-006 da SPEC-002). Libera a vaga do plano. |
 | **Cancelar convite** pendente | Status CANCELADO, `respondidoEm` gravado; o link para de valer e a vaga é liberada. |
-| **Reenviar convite** pendente | Gera um token novo e uma validade nova, no mesmo registro, e reenvia o e-mail; o link anterior para de valer. |
+| **Reenviar convite** pendente | Gera um token novo e uma validade nova (7 dias), no mesmo registro, reenvia o e-mail e mostra o novo link para copiar; o link anterior para de valer. |
 | Ações sobre o Dono (trocar papel, editar permissões, remover) | Recusadas (INV-002). |
 
 Mudanças de papel e de permissões valem a partir da requisição seguinte do membro, sem novo login. O papel é lido do banco a cada requisição (INV-004).
 
-**Sair do negócio** por iniciativa do próprio membro: ver OPEN-007.
+**Sair do negócio** (OPEN-007): em "Meus negócios", quem não é Dono vê "Sair deste negócio" em cada negócio do qual é membro. Depois de confirmar ("Você perderá o acesso a este negócio. Para voltar, precisará de um novo convite."), o `MembroNegocio` é apagado com o mesmo efeito da remoção pelo Dono (dados mantidos, vaga liberada). Se era o negócio ativo, o cookie é limpo. O Dono não tem essa opção (INV-002).
 
 ### 5.5 Guardas e menu
 
-- **Server Actions** de qualquer módulo começam por "exigir permissão (módulo, ação)". Sem a permissão, a ação é recusada com o erro `SemPermissao` e nada é gravado.
-- **Páginas** de um módulo exigem pelo menos "ver" (ou a ação da página, como "criar" na "Nova venda"). Sem permissão, o servidor mostra a página "Sem acesso" ("Você não tem acesso a esta área. Fale com o Dono do negócio."), com o código HTTP 403 quando for possível. Ver OPEN-008.
+- **Server Actions** são criadas por uma **função de fábrica** que obriga a declarar o nível de acesso (OPEN-008):
+  - "módulo + ação" (exige a permissão no negócio ativo);
+  - "somente Dono" (Configurações);
+  - "só sessão" (ações sem negócio, como cadastrar negócio, aceitar convite e sair do negócio);
+  - "pública" (login, cadastro).
+
+  A fábrica executa a guarda antes do corpo da ação. Sem a permissão, a ação é recusada com o erro `SemPermissao` e nada é gravado. Um teste no CI percorre as Server Actions exportadas e falha se alguma não foi criada pela fábrica. As ações já existentes (SPEC-002 e SPEC-004) passam para a fábrica.
+- **Páginas** de um módulo exigem pelo menos "ver" (ou a ação da página, como "criar" na "Nova venda"). Sem permissão, o servidor mostra a página "Sem acesso" ("Você não tem acesso a esta área. Fale com o Dono do negócio."), com o código HTTP 403 quando for possível.
 - **Configurações** exigem "exigir Dono".
 - **Menu:** monta a lista de módulos pelas permissões efetivas. Esconder um item é conveniência; a barreira é sempre a guarda no servidor (ADR-003).
 - **Consultas de dados** continuam pelo cliente do negócio (SPEC-001). A guarda decide **se** o membro pode agir, e o cliente do negócio decide **em qual** negócio.
 
 ### 5.6 Validade e dados do convite
 
-- **Validade:** 7 dias a partir do envio ou do último reenvio. **Ver OPEN-004.**
+- **Validade:** 7 dias a partir do envio ou do último reenvio (OPEN-004).
 - **Expiração:** o convite que passa da validade é tratado como expirado em toda leitura e marcado como EXPIRADO quando lido, sem rotina agendada.
-- **Guarda dos dados:** o e-mail do convidado fica no convite para o histórico da equipe. Ver OPEN-009.
+- **Guarda dos dados (OPEN-009):** o e-mail do convidado só serve para o convite. Nos convites EXPIRADO ou CANCELADO há mais de 90 dias, o e-mail é apagado; a rotina que faz isso fica na SPEC-014 (LGPD). Os convites ACEITOS não guardam nada além do que o `Usuario` já tem.
 
 ---
 
@@ -205,12 +213,12 @@ Mudanças de papel e de permissões valem a partir da requisição seguinte do m
 | **INV-002** | Todo negócio tem exatamente um Dono; convites e trocas de papel só usam Gerente ou Colaborador; o Dono não pode ser removido, rebaixado nem ter matriz customizada. | Teste de integração e validação (unitário). |
 | **INV-003** | No plano gratuito, membros que não são Dono + convites pendentes válidos ≤ 1, inclusive com pedidos simultâneos. | Teste de integração com dois convites disparados ao mesmo tempo. |
 | **INV-004** | Papel e permissões efetivos são lidos do banco a cada requisição, junto com a filiação; nenhum valor do navegador é aceito. | Teste de integração (mudar o papel no banco e repetir a requisição). |
-| **INV-005** | Toda Server Action e página de módulo passa por uma guarda de permissão no servidor. | Regra de lint ou teste que percorre as Server Actions exportadas (ver OPEN-008) + revisão. |
+| **INV-005** | Toda Server Action é criada pela fábrica, com o nível de acesso declarado; toda página de módulo passa por uma guarda de permissão no servidor. | Teste no CI que percorre as Server Actions exportadas (OPEN-008) + revisão das páginas. |
 | **INV-006** | O convite é de uso único: aceitar marca ACEITO numa atualização condicional (só se PENDENTE e válido); o mesmo token nunca cria dois membros. | Teste de integração com aceitação dupla simultânea. |
 | **INV-007** | O token do convite nunca é guardado nem registrado em log, só o SHA-256 dele; reenviar invalida o token anterior. | Teste unitário (hash) e de integração (token antigo recusado) + revisão dos logs. |
 | **INV-008** | A matriz gravada é coerente ("editar" e "excluir/cancelar" ⇒ "ver") e só tem os 6 módulos e as 4 ações; matriz customizada é sempre completa. | Teste unitário da validação; servidor chamado direto com matriz inválida. |
 | **INV-009** | O membro removido perde o acesso ao negócio na requisição seguinte (RN01). | Teste de integração. |
-| **INV-010** | Um convite só é aceito pela conta cujo e-mail confirmado é o do convite (conforme a decisão da OPEN-005). | Teste de integração com e-mail diferente. |
+| **INV-010** | Um convite só é aceito pela conta cujo e-mail confirmado é o do convite (OPEN-005). | Teste de integração com e-mail diferente. |
 
 ---
 
@@ -264,14 +272,15 @@ Mudanças de papel e de permissões valem a partir da requisição seguinte do m
 | **Validar matriz** (domínio) | objeto informado | matriz válida | `MatrizInvalida` (com a regra) |
 | **Exigir permissão** (guarda) | módulo, ação (contexto da requisição) | contexto `{ usuarioId, negocioId, papel, permissoes }` | `SemSessao`, `SemNegocio`, `SemPermissao` |
 | **Exigir Dono** (guarda) | contexto da requisição | contexto do Dono | `SemSessao`, `SemNegocio`, `SomenteDono` |
-| **Convidar** | e-mail, papel, matriz (opcional) | convite pendente (id, validade) | `SomenteDono`, `CampoInvalido`, `JaEhMembro`, `ConvitePendenteExistente`, `LimiteDoPlano`, `PapelNaoPermitido`, `FalhaNoEnvio` (OPEN-004) |
+| **Convidar** | e-mail, papel, matriz (opcional) | convite pendente (id, validade), link para copiar (mostrado uma vez) e se o e-mail foi enviado | `SomenteDono`, `CampoInvalido`, `JaEhMembro`, `ConvitePendenteExistente`, `LimiteDoPlano`, `PapelNaoPermitido` |
 | **Ler convite pelo token** | token | `{ negocio, convidadoPor, papel, permissoes, email mascarado }` | `ConviteInvalido` (desconhecido, expirado, cancelado ou aceito) |
 | **Aceitar convite** | token (ou id em "Convites para você"), usuário da sessão | membro criado; negócio ativo definido | `ConviteInvalido`, `EmailDiferente`, `JaEhMembro` |
 | **Listar equipe** | negócio ativo (Dono) | membros `{ id, nome, email, papel, customizado }` e convites pendentes `{ id, email, papel, expiraEm }` | `SomenteDono` |
 | **Trocar papel / editar permissões** | id do membro, papel ou matriz | membro atualizado | `SomenteDono`, `AlvoEhDono`, `MatrizInvalida` |
 | **Remover membro** | id do membro | — | `SomenteDono`, `AlvoEhDono` |
-| **Cancelar / reenviar convite** | id do convite | convite atualizado | `SomenteDono`, `ConviteInvalido`, `FalhaNoEnvio` |
+| **Cancelar / reenviar convite** | id do convite | convite atualizado (no reenvio, o novo link para copiar e se o e-mail foi enviado) | `SomenteDono`, `ConviteInvalido` |
 | **Convites para você** | usuário da sessão (e-mail confirmado) | convites pendentes válidos para o e-mail | — |
+| **Sair do negócio** | id do negócio, usuário da sessão | membro removido; cookie limpo se era o ativo | `NaoMembro`, `DonoNaoSai` |
 
 Os nomes exatos de rotas, funções e componentes são decididos na implementação, respeitando estes contratos.
 
@@ -283,7 +292,7 @@ Os nomes exatos de rotas, funções e componentes são decididos na implementaç
 |---|---|---|
 | **RNF01** | Telas de Equipe, convite, aceitação, "Sem acesso" e "Convites para você" responsivas, inclusive a matriz. | Capturas em 390, 768 e 1440 px, claro e escuro, sem rolagem horizontal. |
 | **RNF02** | Autorização por papel e matriz no servidor; aceitação fora do cliente do negócio só depois de validar o convite. | INV-001, INV-004, INV-005, INV-009 por testes de integração. |
-| **RNF04** | E-mail do convidado só para o convite; token nunca guardado. | INV-007; decisão da OPEN-009. |
+| **RNF04** | E-mail do convidado só para o convite; token nunca guardado. | INV-007; e-mail dos convites não aceitos apagado após 90 dias (OPEN-009, rotina na SPEC-014). |
 | **RNF07** | Trocar de negócio muda o papel efetivo sem novo login. | Teste de integração (usuário Dono num negócio e Colaborador em outro). |
 
 ---
@@ -293,7 +302,7 @@ Os nomes exatos de rotas, funções e componentes são decididos na implementaç
 **CA-01 — Convidar Colaborador.**
 Dado o Dono de um negócio no plano gratuito sem colaboradores,
 quando ele convida um e-mail como Colaborador,
-então o convite fica pendente com validade, o e-mail é enviado com o nome do negócio, o papel, o resumo das permissões e o link, e o banco guarda só o hash do token.
+então o convite fica pendente com validade de 7 dias, o e-mail é enviado com o nome do negócio, o papel, o resumo das permissões e o link, o Dono vê uma vez o link para copiar, e o banco guarda só o hash do token.
 
 **CA-02 — Limite do plano gratuito.**
 Dado um negócio gratuito com 1 colaborador (membro ou convite pendente válido),
@@ -370,6 +379,16 @@ Dadas as telas desta Spec,
 quando exibidas em 390, 768 e 1440 px, nos temas claro e escuro,
 então seguem os tokens da identidade, sem rolagem horizontal (inclusive a matriz).
 
+**CA-17 — E-mail indisponível.**
+Dado o Resend não configurado ou falhando,
+quando o Dono convida alguém,
+então o convite é criado, a tela avisa que o e-mail não foi enviado e mostra o link para copiar, e esse link permite aceitar o convite normalmente.
+
+**CA-18 — Sair do negócio.**
+Dado um Gerente ou Colaborador,
+quando ele escolhe "Sair deste negócio" e confirma,
+então deixa de ser membro, perde o acesso na requisição seguinte e a vaga do plano é liberada; para o Dono, a opção não aparece e o servidor recusa o pedido.
+
 ---
 
 ## 12. Casos de teste derivados
@@ -394,7 +413,9 @@ então seguem os tokens da identidade, sem rolagem horizontal (inclusive a matri
 | T16 | Papel por negócio ao trocar o negócio ativo | Integração | CA-15 |
 | T17 | Toda Server Action exportada passa por guarda (verificação automática) | Lint ou teste estático | INV-005 |
 | T18 | Telas em 390/768/1440 px, claro e escuro | Manual com captura | CA-16 |
-| T19 | Fluxo completo na homologação: convidar um e-mail real, receber, criar conta, aceitar, ver o menu do Colaborador, ser removido | Manual (uma vez, depende da OPEN-004) | CA-01, CA-04, CA-05, CA-09, CA-12 |
+| T19 | Fluxo completo na homologação: convidar um e-mail real, receber, criar conta, aceitar, ver o menu do Colaborador, ser removido | Manual (uma vez, depende do Resend configurado) | CA-01, CA-04, CA-05, CA-09, CA-12 |
+| T20 | Convite sem e-mail (envio simulado falhando e Resend ausente): link mostrado e aceitação pelo link | Integração | CA-17 |
+| T21 | Sair do negócio: membro sai, acesso cai, vaga liberada; Dono recusado | Integração | CA-18, INV-002, INV-009 |
 
 Os testes automatizados nunca enviam e-mail de verdade: o envio é um dublê que guarda a mensagem (com o link) para o teste ler. O envio real é verificado manualmente na homologação (T19).
 
@@ -402,18 +423,20 @@ Os testes automatizados nunca enviam e-mail de verdade: o envio é um dublê que
 
 ## 13. Questões em aberto
 
-| ID | Questão | Opções | Recomendação |
-|---|---|---|---|
-| **OPEN-001** | Predefinição do Colaborador. A baseline fala em "Vendas e Estoque, sem Financeiro" e "Dashboard restrito", mas não ação por ação. | (a) a tabela do 5.1: Catálogo só ver; Estoque ver e criar (entrada/saída); Vendas ver e criar, sem cancelar (RF65); Dashboard restrito; (b) outra combinação definida pela equipe. | **(a)**, que é a leitura direta da jornada 2.3 e do RF65. Confirmar se o Colaborador deve ver o **histórico** de vendas ("Vendas: ver") ou só registrar novas. |
-| **OPEN-002** | O que é "Configurações" (o que o Gerente não acessa). | (a) Equipe e convites, dados do negócio, plano e parâmetros de precificação (taxa de cartão, margem meta, capacidade, ticket médio), conforme o ramo I da jornada do Dono; (b) só Equipe e plano, deixando os parâmetros de precificação para o Gerente. | **(a)**, que segue a jornada. Efeito: o Gerente usa a Calculadora com os parâmetros que o Dono definiu, mas não os altera. |
-| **OPEN-003** | Dashboard completo × restrito numa matriz que só tem "Dashboard: ver". | (a) partes financeiras exigem também "Financeiro: ver" (5.1); (b) separar "Dashboard completo" como uma ação ou módulo próprio. | **(a)**: mantém a matriz do RF06 sem ações extras e casa com o RF63, já que tudo que o Colaborador não vê é financeiro. |
-| **OPEN-004** | Envio do e-mail do convite e validade. O Resend ainda não está configurado (pendência da SPEC-002). | (a) configurar o Resend com domínio verificado antes de implementar; sem envio, o convite não é criado; (b) criar o convite e mostrar ao Dono, uma vez, o link para copiar e mandar por WhatsApp, além do e-mail quando configurado; (c) usar o envio de e-mails do Supabase Auth ("invite user"). Validade: 7 dias? | **(b) + configurar o Resend**: o link copiável atende o público (que usa WhatsApp) e não trava o fluxo se o e-mail falhar; o e-mail continua sendo o caminho do RF72. (c) mistura o convite do negócio com a criação de conta no Auth. **7 dias** de validade. |
-| **OPEN-005** | Quem pode aceitar o convite. | (a) só a conta com o mesmo e-mail (confirmado) do convite; (b) qualquer conta com o link. | **(a)**: o link pode ser encaminhado por engano, e o e-mail é o que o Dono escolheu. Com a (b) da OPEN-004, isso também impede que um link copiado sirva para outra pessoa. |
-| **OPEN-006** | Conta nova: o link de confirmação do cadastro não volta ao convite. | (a) "Convites para você" em "Meus negócios", pelo e-mail confirmado; (b) levar o `proximo` pelo cadastro e pela confirmação (muda a SPEC-002 e o modelo de e-mail do Supabase); (c) a pessoa abre o link do convite de novo. | **(a)**: não mexe na SPEC-002 e também resolve quem perdeu o e-mail do convite. |
-| **OPEN-007** | O membro pode sair do negócio sozinho? | (a) sim, "Sair deste negócio" em "Meus negócios" para quem não é Dono; (b) não, só o Dono remove. | **(a)**: o RN02 restringe o que outros fazem com a equipe, não a saída voluntária, e a LGPD favorece que a pessoa possa encerrar o vínculo. Confirmar com a equipe. |
-| **OPEN-008** | Como garantir que nenhuma Server Action esqueça a guarda (INV-005). | (a) regra de lint ou teste que percorre as Server Actions; (b) só revisão de código; (c) todas as ações passam por uma função de fábrica que exige declarar módulo e ação. | **(c) + teste (a)**: a fábrica torna o esquecimento visível e o teste pega o que escapar. |
-| **OPEN-009** | Guarda do e-mail de quem foi convidado e não aceitou (LGPD). | (a) manter os convites como histórico da equipe; (b) apagar o e-mail (ou o convite) dos EXPIRADO e CANCELADO depois de 90 dias. | **(b)**: o e-mail é de alguém que não consentiu, e o histórico não é usado por nenhum requisito. A limpeza pode ficar para a SPEC-014. |
-| **OPEN-010** | Divergência de documento: a SPEC-004 (fora do escopo) diz "Troca de plano — SPEC-005 (RF73)", mas o Mapa coloca o RF73 na SPEC-013. | (a) seguir o Mapa e corrigir a frase da SPEC-004; (b) trazer a troca de plano para esta Spec. | **(a)**: a troca de plano depende dos recursos pagos que a SPEC-013 entrega. Esta Spec só **lê** o plano. Para testar o plano pago, os testes gravam `plano = PAGO` direto no banco. |
+Todas decididas pela equipe em 07/10/2026, pela opção recomendada:
+
+| ID | Decisão |
+|---|---|
+| **OPEN-001** — Predefinição do Colaborador | **Tabela do 5.1:** Catálogo só ver; Estoque ver e criar (entrada/saída); Vendas ver (inclusive o histórico) e criar, sem cancelar (RF65); Dashboard restrito; sem Calculadora e sem Financeiro. |
+| **OPEN-002** — O que é "Configurações" | **Equipe e convites, dados do negócio, plano e parâmetros de precificação** (taxa de cartão, margem meta, capacidade, ticket médio), só para o Dono. O Gerente usa a Calculadora com os parâmetros definidos pelo Dono. |
+| **OPEN-003** — Dashboard completo × restrito | **"Dashboard: ver" mostra a parte restrita; as partes financeiras exigem também "Financeiro: ver".** A matriz não ganha ações extras. |
+| **OPEN-004** — Envio e validade | **E-mail pelo Resend, quando configurado, + link para copiar** mostrado ao Dono uma vez (na criação e no reenvio). Se o e-mail falhar, o convite continua válido. **Validade de 7 dias.** |
+| **OPEN-005** — Quem aceita | **Só a conta com o mesmo e-mail** (confirmado) do convite. |
+| **OPEN-006** — Conta nova | **"Convites para você" em "Meus negócios"**, pelo e-mail confirmado da conta. A SPEC-002 não muda. |
+| **OPEN-007** — Sair do negócio | **Sim:** "Sair deste negócio" para quem não é Dono (5.4, CA-18). |
+| **OPEN-008** — Garantia das guardas | **Fábrica de Server Actions com nível de acesso obrigatório + teste no CI** que percorre as ações exportadas (5.5). As ações das SPECs 002 e 004 passam para a fábrica. |
+| **OPEN-009** — E-mail de convites não aceitos | **Apagado 90 dias depois** de o convite expirar ou ser cancelado. A rotina fica na SPEC-014 (registrado no Mapa). |
+| **OPEN-010** — RF73 na SPEC-004 × Mapa | **Vale o Mapa:** a troca de plano fica na SPEC-013, e a frase da SPEC-004 foi corrigida. Esta Spec só lê o plano; os testes do plano pago gravam `plano = PAGO` direto no banco. |
 
 ---
 
@@ -421,12 +444,12 @@ Os testes automatizados nunca enviam e-mail de verdade: o envio é um dublê que
 
 A SPEC-005 estará concluída quando:
 
-- [ ] todos os critérios de aceitação (CA-01 a CA-16) estiverem implementados;
+- [ ] todos os critérios de aceitação (CA-01 a CA-18) estiverem implementados;
 - [ ] todos os invariantes (INV-001 a INV-010) estiverem preservados;
-- [ ] os testes derivados (T01 a T19) estiverem aprovados, com o CI verde no PR (T18 e T19 com evidências na homologação);
+- [ ] os testes derivados (T01 a T21) estiverem aprovados, com o CI verde no PR (T18 e T19 com evidências na homologação);
 - [ ] os RNFs aplicáveis (RNF01, RNF02, RNF04, RNF07) tiverem sido verificados como descrito na seção 10;
-- [ ] as questões OPEN-001 a OPEN-010 tiverem sido decididas e registradas;
+- [x] as questões OPEN-001 a OPEN-010 tiverem sido decididas e registradas (07/10/2026);
 - [ ] não existir divergência conhecida entre a implementação e esta Spec;
-- [ ] toda divergência em relação à baseline (incluindo a OPEN-010 e o comentário de `permissoesCustom` no schema) tiver sido explicitamente analisada e registrada nos documentos.
+- [ ] toda divergência em relação à baseline (o comentário de `permissoesCustom` no schema; a frase da SPEC-004 sobre o RF73 já foi corrigida — OPEN-010) tiver sido explicitamente analisada e registrada nos documentos.
 
 **Regra fundamental:** a implementação obedece a esta Spec aprovada. Se surgir conflito entre código, Spec e documentos de modelagem, o comportamento não é alterado em silêncio: a divergência é registrada com a proposta de (1) corrigir a implementação ou (2) alterar a baseline, e a decisão é da equipe.

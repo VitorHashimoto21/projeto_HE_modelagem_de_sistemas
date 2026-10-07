@@ -64,7 +64,7 @@
 |---|---|
 | Convites, papéis Gerente/Colaborador e permissões | SPEC-005 |
 | Parâmetros de precificação do negócio (taxa de cartão, capacidade, ticket médio, CMV estimado, margem meta) | SPECs 009 e 010 |
-| Troca de plano (gratuito ↔ pago) | SPEC-005 (RF73) |
+| Troca de plano (gratuito ↔ pago) | SPEC-013 (RF73) — corrigido em 07/10/2026 (SPEC-005, OPEN-010) |
 | Dashboard | SPEC-012 (substitui a página inicial provisória) |
 | Encerramento/exclusão de negócio | SPEC-014 (RN27) — esta Spec só esconde negócios com `encerradoEm` |
 | Negócios fora do Simples (Lucro Presumido/Real) | Ver OPEN-002 |
