@@ -97,7 +97,7 @@ function Materiais({
             const m = porId.get(l.materialId);
             return (
               <li key={l.materialId} className="flex flex-wrap items-center gap-3 rounded-xl border bg-card px-4 py-3">
-                <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">{m?.nome ?? "Material arquivado"}</span>
+                <span className="min-w-0 basis-full truncate text-sm font-medium text-foreground sm:basis-auto sm:flex-1">{m?.nome ?? "Material arquivado"}</span>
                 <label className="flex items-center gap-2 text-sm text-muted-foreground">
                   <span className="sr-only">Quantidade de {m?.nome}</span>
                   <input

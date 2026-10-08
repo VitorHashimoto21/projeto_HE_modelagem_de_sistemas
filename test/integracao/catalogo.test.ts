@@ -90,6 +90,21 @@ describe("cadastro", () => {
     expect(await base.materialServico.count({ where: { negocioId: negocioA } })).toBe(2);
   });
 
+  it("a lista mostra o custo total do serviço (próprio + materiais), igual ao detalhe", async () => {
+    const esmalte = await criar(produto("Esmalte", { custoBase: "8" }));
+    const algodao = await criar(produto("Algodão", { custoBase: "0,50" }));
+    await criar(servico("Manicure", [
+      { materialId: esmalte, quantidade: 0.25 },
+      { materialId: algodao, quantidade: "2" },
+    ]));
+    const lista = await deps().catalogo.listar();
+    expect(lista.map((i) => [i.nome, i.custoTotal, i.materiais])).toEqual([
+      ["Algodão", 0.5, 0],
+      ["Esmalte", 8, 0],
+      ["Manicure", 23, 2],
+    ]);
+  });
+
   it("T06 — materiais inválidos são recusados e nada é gravado (CA-04, INV-003)", async () => {
     const outroServico = await criar(servico("Pedicure"));
     const arquivado = await criar(produto("Lixa"));

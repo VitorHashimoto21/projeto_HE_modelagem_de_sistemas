@@ -49,6 +49,8 @@ export type ItemResumido = {
   custoBase: number;
   precoAtual: number | null;
   materiais: number;
+  /** Custo próprio + materiais (5.2): é o custo que a lista mostra e que o preço deve cobrir. */
+  custoTotal: number;
   arquivado: boolean;
 };
 
@@ -136,7 +138,7 @@ export function criarConsultasDoCatalogo(cliente: ClienteDoNegocio, negocioId: s
           custoBase: true,
           precoAtual: true,
           arquivadoEm: true,
-          _count: { select: { materiais: true } },
+          materiais: { select: { quantidade: true, material: { select: { custoBase: true } } } },
         },
         orderBy: { nome: "asc" },
         take: 1000,
@@ -149,7 +151,11 @@ export function criarConsultasDoCatalogo(cliente: ClienteDoNegocio, negocioId: s
         unidadeMedida: i.unidadeMedida,
         custoBase: num(i.custoBase)!,
         precoAtual: num(i.precoAtual),
-        materiais: i._count.materiais,
+        materiais: i.materiais.length,
+        custoTotal: custoTotal(
+          num(i.custoBase)!,
+          i.materiais.map((m) => ({ custo: num(m.material.custoBase)!, quantidade: num(m.quantidade)! })),
+        ),
         arquivado: i.arquivadoEm !== null,
       }));
     },
