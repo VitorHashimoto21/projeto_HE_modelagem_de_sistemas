@@ -1,6 +1,6 @@
 # SPEC-006 — Catálogo de itens e preço oficial
 
-> **Status:** 📝 **Rascunho para aprovação (07/10/2026)** — gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar). As questões em aberto da seção 13 trazem uma **recomendação**, mas a decisão é da equipe. Nenhuma implementação antes da aprovação.
+> **Status:** ✅ **Aprovada em 07/10/2026** — questões em aberto decididas pela equipe (seção 13), todas pela opção recomendada. Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar).
 > **Mapa:** [`MAPA_DE_SPECS.md`](../MAPA_DE_SPECS.md) · **Anterior:** [SPEC-005](SPEC-005.md) (papéis e permissões) · **Próximas que dependem desta:** SPEC-007 (estoque), SPEC-008 (vendas) e SPEC-010 (calculadora).
 
 ---
@@ -276,17 +276,17 @@ A validação roda no navegador e de novo no servidor, como nas specs anteriores
 
 ## 13. Questões em aberto
 
-Cada questão traz a **recomendação** de quem gerou a Spec; a decisão é da equipe.
+Todas decididas pela equipe em 07/10/2026, pela opção recomendada:
 
-| ID | Questão | Opções | Recomendação |
-|---|---|---|---|
-| **OPEN-001** — Remover um item | Itens têm histórico de preço, estoque e vendas que precisam ficar (RNF05, RN27 — 5 anos). O schema não tem campo de arquivamento. | (a) **arquivar sempre** (novo `arquivadoEm`), com reativação; (b) excluir de verdade se nunca foi usado, arquivar se já foi; (c) só excluir quando nunca usado, sem arquivamento. | **(a)**: uma regra só, nada se perde e é reversível. "Excluir" na matriz da SPEC-005 passa a significar arquivar. |
-| **OPEN-002** — Unidade de medida | RF10 dá exemplos (unidade, kg, litro, hora, caixa). | (a) **lista fixa**: unidade, par, dúzia, caixa, pacote, kg, g, litro, mL, metro, cm, m², hora, atendimento, sessão; (b) texto livre. | **(a)**: evita "un", "UN" e "unid." misturados e permite tratar quantidades decimais no estoque (kg, litro) na SPEC-007. A lista fica no código de validação e cresce sem migração. |
-| **OPEN-003** — Nome repetido | Dois itens com o mesmo nome confundem a venda e a busca. | (a) **bloquear** nome igual entre itens não arquivados (sem diferenciar maiúsculas e espaços extras); (b) só avisar; (c) permitir. | **(a)**, com a unicidade no banco (`nomeChave`). Variações viram nomes diferentes ("Corte feminino", "Corte masculino"). |
-| **OPEN-004** — Quem define o preço manual | O preço é dado do catálogo, mas também resultado da Calculadora. | (a) ***Catálogo: editar***; (b) uma ação da Calculadora (*Calculadora: criar*). | **(a)**: o preço manual existe justamente para quem ainda não usa a Calculadora (RF64). A confirmação pela Calculadora (SPEC-010) continua exigindo a permissão da Calculadora. |
-| **OPEN-005** — Trocar o tipo depois | Um item cadastrado como Produto Físico pode virar Serviço? | (a) **não**: o tipo é fixo (arquiva e cadastra de novo); (b) sim, se nunca teve estoque nem venda. | **(a)**: o tipo decide estoque e materiais (RN04); trocá-lo depois cria casos difíceis (estoque com saldo, serviço que é material). |
-| **OPEN-006** — Arquivar material em uso | Um Produto Físico usado como material em serviços ativos. | (a) **permitir com aviso**, mantendo o vínculo (o custo do serviço continua considerando o material); (b) bloquear até tirar o material dos serviços. | **(a)**: o produto pode sair de linha sem quebrar o serviço; o aviso lista os serviços para a pessoa decidir. |
-| **OPEN-007** — Histórico imutável no banco | O RNF05 diz que o histórico de preço nunca é alterado nem apagado; hoje só a aplicação respeita isso. | (a) **gatilho no banco** que recusa `UPDATE`/`DELETE` em `HistoricoPreco` (o mesmo modelo servirá às movimentações de estoque na SPEC-007); (b) só na aplicação. | **(a)**: protege contra erro de código e contra acesso direto, no mesmo espírito do isolamento da SPEC-001. |
+| ID | Decisão |
+|---|---|
+| **OPEN-001** — Remover um item | **Arquivar sempre** (novo `Item.arquivadoEm`), com reativação. Na matriz da SPEC-005, *Catálogo: excluir* significa arquivar/reativar. Exclusão definitiva fica fora do MVP. |
+| **OPEN-002** — Unidade de medida | **Lista fixa:** unidade, par, dúzia, caixa, pacote, kg, g, litro, mL, metro, cm, m², hora, atendimento, sessão. A lista fica na validação (cresce sem migração). |
+| **OPEN-003** — Nome repetido | **Bloquear** entre itens não arquivados do negócio, sem diferenciar maiúsculas e espaços extras; unicidade no banco por `Item.nomeChave`. |
+| **OPEN-004** — Quem define o preço manual | ***Catálogo: editar.*** A confirmação pela Calculadora (SPEC-010) exige a permissão da Calculadora. |
+| **OPEN-005** — Trocar o tipo | **Não:** o tipo é fixo depois de criado. |
+| **OPEN-006** — Arquivar material em uso | **Permitir com aviso**, listando os serviços que usam o material; o vínculo é mantido. |
+| **OPEN-007** — Histórico imutável | **Gatilho no banco** que recusa `UPDATE` e `DELETE` em `HistoricoPreco` (modelo reutilizado pela SPEC-007). |
 
 ---
 
@@ -298,7 +298,7 @@ A SPEC-006 estará concluída quando:
 - [ ] todos os invariantes (INV-001 a INV-008) estiverem preservados;
 - [ ] os testes derivados (T01 a T17) estiverem aprovados, com o CI verde no PR;
 - [ ] os RNFs aplicáveis (RNF01, RNF02, RNF05, RNF06) tiverem sido verificados como descrito na seção 10;
-- [ ] as questões OPEN-001 a OPEN-007 tiverem sido decididas e registradas;
+- [x] as questões OPEN-001 a OPEN-007 tiverem sido decididas e registradas;
 - [ ] não existir divergência conhecida entre a implementação e esta Spec;
 - [ ] toda divergência em relação à baseline tiver sido explicitamente analisada e registrada nos documentos.
 
