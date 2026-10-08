@@ -245,7 +245,7 @@ model MembroNegocio {
   usuarioId        String       @db.Uuid
   negocioId        String       @db.Uuid
   papel            PapelUsuario @default(COLABORADOR) // RF05
-  permissoesCustom Json? // RF06: matriz módulo × ação, ex. {"financeiro": {"ver": false, "criar": true}}
+  permissoesCustom Json? // RF06: matriz módulo × ação COMPLETA (6 módulos × ver/criar/editar/excluir — SPEC-005, INV-008); null = predefinição do papel
 
   usuario Usuario @relation(fields: [usuarioId], references: [id])
   negocio Negocio @relation(fields: [negocioId], references: [id])
@@ -316,6 +316,11 @@ model Item {
 
   comissaoPercentual Decimal? @db.Decimal(5, 2) // RF52: opcional (null = 0%), entra como despesa variável
 
+  // SPEC-006: itens são arquivados, nunca excluídos (OPEN-001); o nome é único entre os
+  // itens ativos do negócio (OPEN-003) — nomeChave = nome normalizado, nulo quando arquivado.
+  arquivadoEm DateTime?
+  nomeChave   String?
+
   negocio         Negocio               @relation(fields: [negocioId], references: [id])
   movimentacoes   MovimentacaoEstoque[]
   historicoPrecos HistoricoPreco[]
@@ -323,6 +328,7 @@ model Item {
   usadoEm         MaterialServico[]     @relation("MaterialParaServico")
   itensVenda      ItemVenda[]
 
+  @@unique([negocioId, nomeChave])
   @@index([negocioId])
 }
 

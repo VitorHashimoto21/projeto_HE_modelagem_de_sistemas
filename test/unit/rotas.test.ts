@@ -45,7 +45,7 @@ describe("proteção das rotas", () => {
   });
 
   it("páginas públicas ficam abertas com ou sem sessão", () => {
-    for (const caminho of ["/privacidade", "/termos", "/auth/confirmar", "/api/saude", "/link-invalido"]) {
+    for (const caminho of ["/privacidade", "/termos", "/auth/confirmar", "/api/saude", "/link-invalido", "/convite/abc"]) {
       expect(decidirRota(caminho, "", false)).toEqual({ tipo: "seguir" });
       expect(decidirRota(caminho, "", true)).toEqual({ tipo: "seguir" });
     }
@@ -58,5 +58,12 @@ describe("proteção das rotas", () => {
   it("caminho parecido com um público não escapa da proteção", () => {
     expect(decidirRota("/termos-falsos", "", false).tipo).toBe("redirecionar");
     expect(decidirRota("/authx", "", false).tipo).toBe("redirecionar");
+    expect(decidirRota("/convites", "", false).tipo).toBe("redirecionar");
+  });
+
+  it("SPEC-005 — o link do convite abre com e sem sessão; a tela de Equipe exige sessão", () => {
+    expect(decidirRota("/convite/token", "", false)).toEqual({ tipo: "seguir" });
+    expect(decidirRota("/negocio/equipe", "", false)).toEqual({ tipo: "redirecionar", para: "/entrar?proximo=%2Fnegocio%2Fequipe" });
+    expect(destinoSeguro("/convite/abc_DEF-123")).toBe("/convite/abc_DEF-123");
   });
 });

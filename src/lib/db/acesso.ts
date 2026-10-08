@@ -1,4 +1,5 @@
 import type { PrismaClient } from "@/generated/prisma/client";
+import type { PapelUsuario } from "@/generated/prisma/enums";
 
 /**
  * Consultas do controle de acesso (SPEC-002). Ficam aqui, e não no cliente do
@@ -6,6 +7,16 @@ import type { PrismaClient } from "@/generated/prisma/client";
  * global (ADR-002) e a filiação é o que valida o negócio ativo (INV-006).
  */
 export function criarConsultasDeAcesso(cliente: PrismaClient) {
+  /**
+   * Filiação do usuário no negócio não encerrado (INV-006; SPEC-004), com o papel e a
+   * matriz customizada (SPEC-005, INV-004): null se não for membro.
+   */
+  const filiacao = (usuarioId: string, negocioId: string): Promise<{ papel: PapelUsuario; permissoesCustom: unknown } | null> =>
+    cliente.membroNegocio.findFirst({
+      where: { usuarioId, negocioId, negocio: { encerradoEm: null } },
+      select: { papel: true, permissoesCustom: true },
+    });
+
   return {
     /**
      * Conta que não pode entrar (INV-008): com `excluidoEm` preenchido ou, por
@@ -16,13 +27,11 @@ export function criarConsultasDeAcesso(cliente: PrismaClient) {
       return !usuario || usuario.excluidoEm !== null;
     },
 
+    filiacao,
+
     /** O usuário é membro do negócio, e o negócio não está encerrado? (INV-006; SPEC-004) */
     async ehMembro(usuarioId: string, negocioId: string): Promise<boolean> {
-      const membro = await cliente.membroNegocio.findFirst({
-        where: { usuarioId, negocioId, negocio: { encerradoEm: null } },
-        select: { id: true },
-      });
-      return membro !== null;
+      return (await filiacao(usuarioId, negocioId)) !== null;
     },
 
     /** Dados exibidos no cabeçalho da área autenticada. */

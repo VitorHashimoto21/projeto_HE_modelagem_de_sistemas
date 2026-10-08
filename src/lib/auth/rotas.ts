@@ -9,12 +9,14 @@ export const ROTA_MEUS_NEGOCIOS = "/negocios";
 export const ROTA_ENTRAR = "/entrar";
 export const ROTA_NOVA_SENHA = "/nova-senha";
 export const ROTA_LINK_INVALIDO = "/link-invalido";
+/** Área sem permissão (SPEC-005, 5.5). */
+export const ROTA_SEM_ACESSO = "/sem-acesso";
 
 /** Páginas só para quem não está autenticado (quem já entrou vai para a inicial). */
 const SO_SEM_SESSAO = ["/entrar", "/cadastro", "/esqueci-a-senha"];
 
-/** Páginas abertas a todos, com ou sem sessão. */
-const PUBLICAS = ["/link-invalido", "/privacidade", "/termos", "/auth", "/api/saude"];
+/** Páginas abertas a todos, com ou sem sessão. O convite (SPEC-005, 5.3) decide sozinho o que mostrar. */
+const PUBLICAS = ["/link-invalido", "/privacidade", "/termos", "/auth", "/api/saude", "/convite"];
 
 const corresponde = (caminho: string, base: string) => caminho === base || caminho.startsWith(`${base}/`);
 

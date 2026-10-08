@@ -9,7 +9,8 @@ import { acaoCadastrarNegocio, acaoConsultarCnpj, acaoEditarNegocio } from "@/li
 import { CONSULTA_INICIAL, FORMULARIO_INICIAL, type EstadoDoFormularioDeNegocio } from "@/lib/negocio/servicos";
 import { validarNegocio } from "@/lib/negocio/validacao";
 import { cnpjValido } from "@/lib/dominio/cnpj";
-import { CamposFiscais, classeDoCampo, type ValoresFiscais } from "./campos-fiscais";
+import { classeDoCampo } from "@/components/ui/classes";
+import { CamposFiscais, type ValoresFiscais } from "./campos-fiscais";
 
 type AcaoDoFormulario = (anterior: EstadoDoFormularioDeNegocio, form: FormData) => Promise<EstadoDoFormularioDeNegocio>;
 

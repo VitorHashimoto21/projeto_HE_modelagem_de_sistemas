@@ -1,16 +1,17 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { FormularioDadosDoNegocio } from "@/components/negocio/formularios";
-import { exigirNegocio } from "@/lib/auth/servidor";
+import { exigirDono } from "@/lib/auth/servidor";
 import { negocios } from "@/lib/db";
 
 export const metadata: Metadata = { title: "Dados do negócio" };
 
-// "Dados do negócio" (SPEC-004, 5.5): só o Dono edita o enquadramento (INV-007).
+// "Dados do negócio" (SPEC-004, 5.5): só o Dono edita o enquadramento (INV-007). Faz parte
+// das Configurações do negócio (SPEC-005, OPEN-002): os demais veem "Sem acesso".
 export default async function DadosDoNegocio() {
-  const { negocioId, usuarioId } = await exigirNegocio();
-  const [papel, dados] = await Promise.all([negocios().papel(usuarioId!, negocioId), negocios().dadosFiscais(negocioId)]);
-  if (papel !== "DONO" || !dados) redirect("/painel");
+  const { negocioId } = await exigirDono();
+  const dados = await negocios().dadosFiscais(negocioId);
+  if (!dados) redirect("/painel");
 
   return (
     <div className="mx-auto max-w-xl space-y-8">
