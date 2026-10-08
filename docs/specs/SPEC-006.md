@@ -308,7 +308,7 @@ A SPEC-006 estará concluída quando:
 - [x] os testes derivados (T01 a T17) estiverem aprovados, com o CI verde no PR — T01 a T15 automatizados; T16 com capturas (build local) e T17 na homologação (08/10/2026);
 - [x] os RNFs aplicáveis (RNF01, RNF02, RNF05, RNF06) tiverem sido verificados como descrito na seção 10;
 - [x] as questões OPEN-001 a OPEN-007 tiverem sido decididas e registradas;
-- [ ] não existir divergência conhecida entre a implementação e esta Spec — **em análise:** a lista mostra o custo próprio, e não o custo total, dos serviços (ver observações nas evidências);
-- [ ] toda divergência em relação à baseline tiver sido explicitamente analisada e registrada nos documentos.
+- [x] não existir divergência conhecida entre a implementação e esta Spec — a lista passou a mostrar o custo total dos serviços e o nome do material não é mais cortado no celular (PR #53);
+- [x] toda divergência em relação à baseline tiver sido explicitamente analisada e registrada nos documentos.
 
 **Regra fundamental:** a implementação obedece a esta Spec aprovada. Se surgir conflito entre código, Spec e documentos de modelagem, o comportamento não é alterado em silêncio: a divergência é registrada com a proposta de (1) corrigir a implementação ou (2) alterar a baseline, e a decisão é da equipe.

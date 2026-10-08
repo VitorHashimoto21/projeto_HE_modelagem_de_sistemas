@@ -46,7 +46,9 @@ Feito pela equipe em <https://he-homol.vercel.app>, com o Dono e um Colaborador.
 | Colaborador vê o catálogo sem "Novo item" (CA-12) | ✅ | `homol_catalogo_colaborador_1920_{claro,escuro}.png` |
 | Preço abaixo do custo total → aviso; histórico com valor anterior, origem e usuário (CA-06 a CA-08) | ✅ | `homol_servico_preco_abaixo_do_custo_1920_{claro,escuro}.png` |
 
-## Observações da verificação
+## Observações da verificação (corrigidas)
 
-- **Custo na lista:** a lista do catálogo mostra o custo próprio do item (`custoBase`). No serviço de teste, isso foi R$ 0,00, enquanto o custo total com materiais era R$ 5,00. O detalhe e o aviso de preço abaixo do custo usam o custo total. Ver a proposta de correção no PR de evidências.
-- **Nome do material no celular:** em 390 px, no formulário de serviço, o nome do material é cortado (`telas/catalogo_novo_servico_390_*.png`).
+Os dois pontos encontrados na verificação foram corrigidos no PR #53 (08/10/2026). As capturas `catalogo_lista_*` e `catalogo_novo_servico_*` já mostram a versão corrigida.
+
+- **Custo na lista:** a lista mostrava o custo próprio do item; para serviços, isso deixava de fora os materiais. Agora mostra o custo total (próprio + materiais), igual ao detalhe e ao aviso de preço abaixo do custo. Há teste de integração.
+- **Nome do material no celular:** em 390 px, o nome ficava cortado no formulário de serviço. Agora ocupa uma linha própria.
