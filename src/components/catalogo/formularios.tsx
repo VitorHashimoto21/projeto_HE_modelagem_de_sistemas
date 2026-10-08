@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useActionState, useState, type FormEvent } from "react";
 import type { TipoItem } from "@/generated/prisma/enums";
 import { Aviso, BotaoEnviar, MensagemDeCampo } from "@/components/acesso/campos";
-import { classeDoCampo } from "@/components/negocio/campos-fiscais";
+import { classeDoCampo } from "@/components/ui/classes";
 import { acaoCriarItem, acaoDefinirPreco, acaoEditarItem } from "@/lib/catalogo/acoes";
 import { ITEM_INICIAL, PRECO_INICIAL, type EstadoDoItem } from "@/lib/catalogo/servicos";
 import { CATEGORIAS, validarItem, validarPreco } from "@/lib/catalogo/validacao";

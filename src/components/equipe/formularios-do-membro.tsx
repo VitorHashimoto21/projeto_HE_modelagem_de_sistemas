@@ -5,7 +5,7 @@ import { Aviso, BotaoEnviar } from "@/components/acesso/campos";
 import type { Matriz } from "@/lib/dominio/permissoes";
 import { acaoAlterarPapel, acaoAlterarPermissoes, acaoRemoverMembro } from "@/lib/equipe/acoes";
 import { ACAO_INICIAL } from "@/lib/equipe/servicos";
-import { classeDoCampo } from "@/components/negocio/campos-fiscais";
+import { classeDoCampo } from "@/components/ui/classes";
 import { MatrizDePermissoes } from "./matriz-de-permissoes";
 
 /** Trocar o papel (5.4): a matriz customizada é limpa e vale a predefinição do novo papel. */
