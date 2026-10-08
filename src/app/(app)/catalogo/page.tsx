@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { reais, ROTULO_CATEGORIA, ROTULO_TIPO, rotuloUnidade } from "@/components/catalogo/rotulos";
-import { classeDoCampo } from "@/components/negocio/campos-fiscais";
+import { classeDoCampo } from "@/components/ui/classes";
 import type { CategoriaItem, TipoItem } from "@/generated/prisma/enums";
 import { exigirPermissao } from "@/lib/auth/servidor";
 import { CATEGORIAS } from "@/lib/catalogo/validacao";
