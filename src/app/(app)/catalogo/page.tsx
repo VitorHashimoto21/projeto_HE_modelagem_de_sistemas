@@ -101,7 +101,7 @@ export default async function Catalogo({ searchParams }: PageProps<"/catalogo">)
                   ) : (
                     <span className="font-semibold text-foreground">{reais(i.precoAtual)}</span>
                   )}
-                  <p className="text-xs text-muted-foreground">custo {reais(i.custoBase)}</p>
+                  <p className="text-xs text-muted-foreground">custo {reais(i.custoTotal)}</p>
                 </div>
               </Link>
             </li>
