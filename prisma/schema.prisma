@@ -316,6 +316,11 @@ model Item {
 
   comissaoPercentual Decimal? @db.Decimal(5, 2) // RF52: opcional (null = 0%), entra como despesa variável
 
+  // SPEC-006: itens são arquivados, nunca excluídos (OPEN-001); o nome é único entre os
+  // itens ativos do negócio (OPEN-003) — nomeChave = nome normalizado, nulo quando arquivado.
+  arquivadoEm DateTime?
+  nomeChave   String?
+
   negocio         Negocio               @relation(fields: [negocioId], references: [id])
   movimentacoes   MovimentacaoEstoque[]
   historicoPrecos HistoricoPreco[]
@@ -323,6 +328,7 @@ model Item {
   usadoEm         MaterialServico[]     @relation("MaterialParaServico")
   itensVenda      ItemVenda[]
 
+  @@unique([negocioId, nomeChave])
   @@index([negocioId])
 }
 

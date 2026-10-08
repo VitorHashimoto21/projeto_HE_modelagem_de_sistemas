@@ -1,6 +1,6 @@
 # SPEC-006 — Catálogo de itens e preço oficial
 
-> **Status:** ✅ **Aprovada em 07/10/2026** — questões em aberto decididas pela equipe (seção 13), todas pela opção recomendada. Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar).
+> **Status:** 🚧 **Aprovada e implementada em 07/10/2026; verificação na homologação pendente** — questões em aberto decididas pela equipe (seção 13), todas pela opção recomendada; testes T01–T15 automatizados ([evidências](evidencias/SPEC-006/README.md)). Faltam T16 (capturas) e T17 (fluxo na homologação, depois da migração). Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar).
 > **Mapa:** [`MAPA_DE_SPECS.md`](../MAPA_DE_SPECS.md) · **Anterior:** [SPEC-005](SPEC-005.md) (papéis e permissões) · **Próximas que dependem desta:** SPEC-007 (estoque), SPEC-008 (vendas) e SPEC-010 (calculadora).
 
 ---
@@ -205,6 +205,15 @@ A validação roda no navegador e de novo no servidor, como nas specs anteriores
 | **Definir preço** | id, preço, origem (Manual aqui; Calculadora na SPEC-010), dados do cálculo opcionais | registro do histórico + aviso de preço abaixo do custo | `CampoInvalido`, `PrecoIgualAoAtual`, `NaoEncontrado`, `SemPermissao` |
 | **Custo total do serviço** (domínio) | custo próprio, materiais (custo × quantidade) | custo total | — |
 
+**Implementação (07/10/2026):** domínio em `src/lib/dominio/catalogo.ts`; validação, fluxos e Server Actions em `src/lib/catalogo/`; banco em `src/lib/db/catalogo.ts` (`catalogo(contexto)` de `@/lib/db`, sempre pelo cliente do negócio); telas em `src/app/(app)/catalogo/` (lista, `novo`, `[id]` e `[id]/editar`); migração `20261007120000_catalogo`.
+
+**Divergências registradas na implementação:**
+
+- **`negocioId` explícito nas criações:** os tipos do Prisma exigem o campo, embora o cliente do negócio o injete; ele é passado a partir do contexto, e o cliente do negócio recusa qualquer valor diferente (`NegocioDivergente`). A proteção continua no mesmo lugar.
+- **Material arquivado na edição do serviço:** pela OPEN-006 o vínculo é mantido; por isso, ao editar o serviço, um material arquivado que **já estava** nele continua aceito (só não pode ser adicionado de novo a nenhum serviço).
+- **Resultado do arquivamento por código na URL:** a ação redireciona com um código fixo (`?resultado=arquivado`), nunca com texto livre, para que um link montado por terceiros não injete mensagens na tela; os serviços afetados são lidos do banco na própria página.
+- **Teste do menu da SPEC-005:** a lista esperada do menu passou a incluir "Catálogo", como previsto no comentário do módulo de menu.
+
 ---
 
 ## 10. Requisitos não funcionais aplicáveis
@@ -294,9 +303,9 @@ Todas decididas pela equipe em 07/10/2026, pela opção recomendada:
 
 A SPEC-006 estará concluída quando:
 
-- [ ] todos os critérios de aceitação (CA-01 a CA-14) estiverem implementados;
+- [ ] todos os critérios de aceitação (CA-01 a CA-14) estiverem implementados — CA-01 a CA-13 cobertos por testes; CA-14 (visual) e o fluxo na homologação pendentes;
 - [ ] todos os invariantes (INV-001 a INV-008) estiverem preservados;
-- [ ] os testes derivados (T01 a T17) estiverem aprovados, com o CI verde no PR;
+- [ ] os testes derivados (T01 a T17) estiverem aprovados, com o CI verde no PR — T01 a T15 automatizados; T16 e T17 pendentes;
 - [ ] os RNFs aplicáveis (RNF01, RNF02, RNF05, RNF06) tiverem sido verificados como descrito na seção 10;
 - [x] as questões OPEN-001 a OPEN-007 tiverem sido decididas e registradas;
 - [ ] não existir divergência conhecida entre a implementação e esta Spec;
