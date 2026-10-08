@@ -36,3 +36,13 @@ Build de produção (`next build` + `next start`) com o PostgreSQL local e um du
 ## Pendente
 
 - **T19** — fluxo completo na homologação com e-mail real: depende de configurar o Resend (`RESEND_API_KEY` e `EMAIL_REMETENTE`) com domínio verificado. Até lá, o convite funciona pelo link copiável, que pode ser verificado no preview da Vercel.
+
+## Verificação na homologação (08/10/2026, em andamento)
+
+Feita pela equipe em <https://he-homol.vercel.app>, com duas contas reais (Dono e convidado). O Resend ainda não está configurado, então o convite seguiu pelo link copiável (OPEN-004). Nas capturas, o e-mail do convidado e o token do link foram ocultados.
+
+| Passo | Resultado | Captura |
+|---|---|---|
+| Dono convida → "Não conseguimos enviar o e-mail" + link para copiar (CA-17) | ✅ | `homol_convite_criado_1920_claro.png`, `homol_convite_criado_1920_escuro.png` |
+| Convidado vê o convite em "Convites para você" (CA-05, OPEN-006) | ✅ | `homol_convites_para_voce_1920_claro.png` |
+| Membro sai do negócio → "Você saiu do negócio" (CA-18) | ✅ | `homol_saiu_do_negocio_1920_claro.png`, `homol_saiu_do_negocio_1920_escuro.png` |
