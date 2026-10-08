@@ -15,7 +15,35 @@
 | T14 | `test/integracao/catalogo.test.ts`: item de outro negócio é "não encontrado" em toda operação | CA-13 |
 | T15 | idem: lista com 500 itens em menos de 2 s | RNF06 |
 
+## T16 / CA-14 — Telas em 390, 768 e 1440 px, claro e escuro (08/10/2026)
+
+Build de produção local (`next build` + `next start`), PostgreSQL local com dados de exemplo e o dublê do Supabase Auth usado na SPEC-005. Roteiro automatizado no Chromium. São 10 telas × 3 larguras × 2 temas = 60 capturas em [`telas/`](telas/), **sem rolagem horizontal em nenhuma combinação**.
+
+| Tela | Arquivos (`telas/<nome>_<largura>_<tema>.png`) |
+|---|---|
+| Lista (Dono) | `catalogo_lista` |
+| Itens arquivados | `catalogo_arquivados` |
+| Novo item: escolha do tipo | `catalogo_novo_escolha` |
+| Novo produto físico | `catalogo_novo_produto` |
+| Novo serviço com material | `catalogo_novo_servico` |
+| Detalhe do serviço: preço, materiais, custo total e histórico | `catalogo_detalhe_servico` |
+| Editar serviço | `catalogo_editar_servico` |
+| Detalhe de item arquivado | `catalogo_detalhe_arquivado` |
+| Lista do Colaborador (sem "Novo item") | `catalogo_lista_colaborador` |
+| Detalhe do Colaborador (sem editar, preço e arquivar) | `catalogo_detalhe_colaborador` |
+
+O roteiro também confirmou: o Colaborador que abre `/catalogo/novo` cai em "Sem acesso" (CA-12).
+
+## T17 — Fluxo na homologação (08/10/2026, em andamento)
+
+Feito pela equipe em <https://he-homol.vercel.app>, com o Dono e um Colaborador.
+
+| Passo | Resultado | Captura |
+|---|---|---|
+| Arquivar um produto usado como material → aviso com o serviço que o usa; vínculo mantido (CA-10, OPEN-006) | ✅ | `homol_material_arquivado_em_uso_1920_{claro,escuro}.png` |
+| Colaborador vê o catálogo sem "Novo item" (CA-12) | ✅ | `homol_catalogo_colaborador_1920_{claro,escuro}.png` |
+| Preço abaixo do custo total → aviso; histórico com valor anterior, origem e usuário (CA-06 a CA-08) | ✅ | `homol_servico_preco_abaixo_do_custo_1920_claro.png` |
+
 ## Pendente
 
-- **T16 / CA-14:** capturas das telas em 390, 768 e 1440 px, claro e escuro.
 - **T17:** fluxo completo na homologação, depois do merge (a migração `20261007120000_catalogo` roda no workflow **Migrações**).
