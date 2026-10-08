@@ -89,7 +89,7 @@
 ### Regras de Negócio
 
 - **RN06** — Vendas com estoque insuficiente são estritamente proibidas; o sistema bloqueia a operação e deve validar a disponibilidade de cada item no carrinho antes de processar a transação.
-- **RN07** — O alerta de estoque baixo permanece **desativado** para um produto até que ele complete pelo menos 1 ciclo — ao menos uma entrada e uma saída registradas no sistema; antes disso, não há histórico suficiente para comparação.
+- **RN07** — O alerta de estoque baixo **baseado no mínimo sugerido** permanece **desativado** para um produto até que ele complete pelo menos 1 ciclo — ao menos uma entrada e uma saída registradas no sistema; antes disso, não há histórico suficiente para comparação. Se o usuário informar um estoque mínimo manual, o alerta vale desde já (SPEC-007, OPEN-003).
 - **RN08** — Após o primeiro ciclo completo, o sistema passa a sugerir o estoque mínimo automaticamente; o valor sugerido pode ser sobrescrito manualmente pelo usuário a qualquer momento.
 
 ---
@@ -249,7 +249,7 @@
 | RN04 | Tipo do item (Físico/Serviço) determina participação no Estoque e possibilidade de materiais vinculados. |
 | RN05 | Serviço com materiais vinculados dá baixa automática desses materiais no estoque ao ser vendido. |
 | RN06 | Vendas com estoque insuficiente não são permitidas; o sistema bloqueia a operação. |
-| RN07 | Alerta de estoque baixo fica desativado até o produto completar 1 ciclo (ao menos 1 entrada e 1 saída). |
+| RN07 | Alerta pelo mínimo sugerido fica desativado até o produto completar 1 ciclo (ao menos 1 entrada e 1 saída); com mínimo manual, alerta desde já. |
 | RN08 | Estoque mínimo sugerido automaticamente após o 1º ciclo; sobrescrevível manualmente a qualquer momento. |
 | RN09 | Dinheiro/PIX/Débito geram lançamento imediato no caixa. |
 | RN10 | Cartão de Crédito (à vista ou parcelado) gera conta(s) a receber com vencimento futuro. |
