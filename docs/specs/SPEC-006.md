@@ -1,6 +1,6 @@
 # SPEC-006 — Catálogo de itens e preço oficial
 
-> **Status:** 🚧 **Aprovada e implementada em 07/10/2026; verificação na homologação pendente** — questões em aberto decididas pela equipe (seção 13), todas pela opção recomendada; testes T01–T15 automatizados ([evidências](evidencias/SPEC-006/README.md)). Faltam T16 (capturas) e T17 (fluxo na homologação, depois da migração). Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar).
+> **Status:** ✅ **Implementada em 07/10/2026 e verificada na homologação em 08/10/2026** — questões em aberto decididas pela equipe (seção 13), todas pela opção recomendada; testes T01–T15 no CI, telas em 390/768/1440 px nos dois temas (T16) e fluxo na homologação (T17) — [evidências](evidencias/SPEC-006/README.md). Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar).
 > **Mapa:** [`MAPA_DE_SPECS.md`](../MAPA_DE_SPECS.md) · **Anterior:** [SPEC-005](SPEC-005.md) (papéis e permissões) · **Próximas que dependem desta:** SPEC-007 (estoque), SPEC-008 (vendas) e SPEC-010 (calculadora).
 
 ---
@@ -303,12 +303,12 @@ Todas decididas pela equipe em 07/10/2026, pela opção recomendada:
 
 A SPEC-006 estará concluída quando:
 
-- [ ] todos os critérios de aceitação (CA-01 a CA-14) estiverem implementados — CA-01 a CA-13 cobertos por testes; CA-14 (visual) e o fluxo na homologação pendentes;
-- [ ] todos os invariantes (INV-001 a INV-008) estiverem preservados;
-- [ ] os testes derivados (T01 a T17) estiverem aprovados, com o CI verde no PR — T01 a T15 automatizados; T16 e T17 pendentes;
-- [ ] os RNFs aplicáveis (RNF01, RNF02, RNF05, RNF06) tiverem sido verificados como descrito na seção 10;
+- [x] todos os critérios de aceitação (CA-01 a CA-14) estiverem implementados — CA-01 a CA-13 por testes e na homologação; CA-14 com as capturas de `evidencias/SPEC-006/telas/`;
+- [x] todos os invariantes (INV-001 a INV-008) estiverem preservados;
+- [x] os testes derivados (T01 a T17) estiverem aprovados, com o CI verde no PR — T01 a T15 automatizados; T16 com capturas (build local) e T17 na homologação (08/10/2026);
+- [x] os RNFs aplicáveis (RNF01, RNF02, RNF05, RNF06) tiverem sido verificados como descrito na seção 10;
 - [x] as questões OPEN-001 a OPEN-007 tiverem sido decididas e registradas;
-- [ ] não existir divergência conhecida entre a implementação e esta Spec;
+- [ ] não existir divergência conhecida entre a implementação e esta Spec — **em análise:** a lista mostra o custo próprio, e não o custo total, dos serviços (ver observações nas evidências);
 - [ ] toda divergência em relação à baseline tiver sido explicitamente analisada e registrada nos documentos.
 
 **Regra fundamental:** a implementação obedece a esta Spec aprovada. Se surgir conflito entre código, Spec e documentos de modelagem, o comportamento não é alterado em silêncio: a divergência é registrada com a proposta de (1) corrigir a implementação ou (2) alterar a baseline, e a decisão é da equipe.

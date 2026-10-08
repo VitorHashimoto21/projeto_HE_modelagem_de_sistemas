@@ -34,16 +34,19 @@ Build de produção local (`next build` + `next start`), PostgreSQL local com da
 
 O roteiro também confirmou: o Colaborador que abre `/catalogo/novo` cai em "Sem acesso" (CA-12).
 
-## T17 — Fluxo na homologação (08/10/2026, em andamento)
+## T17 — Fluxo na homologação (08/10/2026)
 
 Feito pela equipe em <https://he-homol.vercel.app>, com o Dono e um Colaborador.
 
 | Passo | Resultado | Captura |
 |---|---|---|
+| Cadastrar Produto Físico (Esmalte, custo R$ 5,00) → estoque zero, sem preço (CA-01) | ✅ | `homol_produto_cadastrado_1920_{claro,escuro}.png` |
+| Serviço com material (Colorir unhas, custo próprio R$ 0,00 informado no teste + 1 Esmalte) → custo total R$ 5,00 (CA-03) | ✅ | `homol_servico_com_material_salvo_1920_{claro,escuro}.png` |
 | Arquivar um produto usado como material → aviso com o serviço que o usa; vínculo mantido (CA-10, OPEN-006) | ✅ | `homol_material_arquivado_em_uso_1920_{claro,escuro}.png` |
 | Colaborador vê o catálogo sem "Novo item" (CA-12) | ✅ | `homol_catalogo_colaborador_1920_{claro,escuro}.png` |
-| Preço abaixo do custo total → aviso; histórico com valor anterior, origem e usuário (CA-06 a CA-08) | ✅ | `homol_servico_preco_abaixo_do_custo_1920_claro.png` |
+| Preço abaixo do custo total → aviso; histórico com valor anterior, origem e usuário (CA-06 a CA-08) | ✅ | `homol_servico_preco_abaixo_do_custo_1920_{claro,escuro}.png` |
 
-## Pendente
+## Observações da verificação
 
-- **T17:** fluxo completo na homologação, depois do merge (a migração `20261007120000_catalogo` roda no workflow **Migrações**).
+- **Custo na lista:** a lista do catálogo mostra o custo próprio do item (`custoBase`). No serviço de teste, isso foi R$ 0,00, enquanto o custo total com materiais era R$ 5,00. O detalhe e o aviso de preço abaixo do custo usam o custo total. Ver a proposta de correção no PR de evidências.
+- **Nome do material no celular:** em 390 px, no formulário de serviço, o nome do material é cortado (`telas/catalogo_novo_servico_390_*.png`).
