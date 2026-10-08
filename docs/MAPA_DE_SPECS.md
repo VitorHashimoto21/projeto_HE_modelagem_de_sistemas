@@ -231,7 +231,7 @@ flowchart LR
 - **Justificativa da ordem:** estoque, vendas e calculadora operam sobre itens. O preço manual (RF64) permite vender antes da calculadora existir.
 
 #### SPEC-007 — Estoque: movimentações, alertas e mínimo sugerido
-- **Spec:** [`specs/SPEC-007.md`](./specs/SPEC-007.md) (📝 rascunho para aprovação — questões em aberto OPEN-001 a OPEN-011)
+- **Spec:** [`specs/SPEC-007.md`](./specs/SPEC-007.md) (✅ aprovada — questões em aberto decididas em 08/10/2026)
 - **Objetivo:** registrar entradas e saídas manuais (com motivo), manter auditoria imutável na própria movimentação (saldo anterior e posterior), sugerir o estoque mínimo e alertar quando o estoque estiver baixo.
 - **Valor entregue:** o estoque digital reflete o físico e a reposição é antecipada.
 - **RF:** RF15, RF17, RF19, RF20, RF21 · **RN:** RN07, RN08 · **RNF:** RNF05
@@ -349,4 +349,4 @@ Todos os 113 requisitos (RF01–RF73, RN01–RN29, RNF01–RNF11) estão associa
 
 A conferência do seed fiscal foi concluída em 03/10/2026 (DAS do MEI atualizado para o salário mínimo de 2026), e a SPEC-003 não tem mais pré-requisito pendente. A SPEC-015 depende da aprovação do ADR-007.
 
-**Andamento:** [SPEC-001](specs/SPEC-001.md) e [SPEC-002](specs/SPEC-002.md) implementadas e verificadas na homologação. [SPEC-003](specs/SPEC-003.md) implementada e verificada na homologação. [SPEC-004](specs/SPEC-004.md) implementada e verificada no preview da Vercel (04/10/2026). [SPEC-005](specs/SPEC-005.md) implementada e verificada no navegador em build local (07/10/2026); falta o e-mail real na homologação (Resend). [SPEC-006](specs/SPEC-006.md) implementada e verificada na homologação (08/10/2026). [SPEC-007](specs/SPEC-007.md) gerada (08/10/2026), aguardando a decisão das questões em aberto.
+**Andamento:** [SPEC-001](specs/SPEC-001.md) e [SPEC-002](specs/SPEC-002.md) implementadas e verificadas na homologação. [SPEC-003](specs/SPEC-003.md) implementada e verificada na homologação. [SPEC-004](specs/SPEC-004.md) implementada e verificada no preview da Vercel (04/10/2026). [SPEC-005](specs/SPEC-005.md) implementada e verificada no navegador em build local (07/10/2026); falta o e-mail real na homologação (Resend). [SPEC-006](specs/SPEC-006.md) implementada e verificada na homologação (08/10/2026). [SPEC-007](specs/SPEC-007.md) aprovada (08/10/2026), questões em aberto decididas; pronta para implementar.

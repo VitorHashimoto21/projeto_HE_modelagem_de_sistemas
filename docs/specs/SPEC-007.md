@@ -1,6 +1,6 @@
 # SPEC-007 — Estoque: movimentações, alertas e mínimo sugerido
 
-> **Status:** 📝 **Rascunho para aprovação (08/10/2026)** — gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar). As questões em aberto da seção 13 trazem uma **recomendação**, mas a decisão é da equipe. Nenhuma implementação antes da aprovação.
+> **Status:** ✅ **Aprovada em 08/10/2026** — questões em aberto decididas pela equipe em entrevista (seção 13), todas pela opção recomendada. Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar). Pronta para implementar.
 > **Mapa:** [`MAPA_DE_SPECS.md`](../MAPA_DE_SPECS.md) · **Anterior:** [SPEC-006](SPEC-006.md) (catálogo) · **Próximas que dependem desta:** SPEC-008 (venda, que baixa o estoque), SPEC-011 (cancelamento, que devolve o estoque) e SPEC-012 (dashboard, que mostra os alertas).
 
 ---
@@ -27,7 +27,7 @@
 | | RF21 | Alerta na lista (notificação do sistema) e no cadastro do produto. O Dashboard (SPEC-012) reaproveita a mesma consulta. |
 | | RF08 | Estoque mínimo opcional no cadastro do Produto Físico (SPEC-006) passa a ser o **valor manual** (OPEN-002). |
 | **RN** | RN03, RN04 | Só Produto Físico tem estoque. A quantidade só muda por movimentação. |
-| | RN07 | Alerta desativado até o primeiro ciclo (uma entrada e uma saída), ver OPEN-003. |
+| | RN07 | A **sugestão** (e o alerta baseado nela) só existe após o primeiro ciclo (uma entrada e uma saída); um mínimo manual alerta desde já (OPEN-003, texto do RN07 ajustado). |
 | | RN08 | Sugestão automática após o primeiro ciclo. O valor manual tem prioridade. |
 | | RN06 (preparação) | O saldo nunca fica negativo. A mesma primitiva de baixa condicional será usada pela venda (SPEC-008). |
 | **RNF** | RNF05 | Cada movimentação guarda data, usuário, saldo anterior e posterior e motivo, e nunca é alterada nem apagada (gatilho no banco). |
@@ -199,7 +199,7 @@ A validação roda no navegador e de novo no servidor, como nas specs anteriores
 | `MovimentacaoEstoque` | `tipo`, `quantidade`, `saldoAnterior`, `saldoPosterior`, `motivo`, `usuarioId`, `data`, `vendaId` (SPECs 008/011) | Somente inserção (INV-004). `data` = data da ocorrência informada (OPEN-005). |
 | `Negocio` | `diasCoberturaEstoque` | 1 a 90, padrão 7 (OPEN-010). |
 
-**Mudanças previstas no schema (dependem das decisões da seção 13):**
+**Mudanças previstas no schema (decididas na seção 13):**
 
 - `MovimentacaoEstoque.registradoEm DateTime`, preenchido com o relógio do momento da gravação, depois da trava do item. Ele dá a ordem de registro: a data da ocorrência pode ser retroativa (OPEN-005), mas os saldos seguem a ordem em que as movimentações foram gravadas.
 - `MovimentacaoEstoque.observacao String?` (até 200 caracteres) (OPEN-007).
@@ -280,7 +280,7 @@ A validação roda no navegador e de novo no servidor, como nas specs anteriores
 
 **CA-06 — Cadeia de saldos.** Dada uma sequência qualquer de entradas e saídas (inclusive simultâneas), então cada saldo anterior é o posterior da movimentação anterior do item, e o último posterior é o saldo do item.
 
-**CA-07 — Sem alerta antes do ciclo.** Dado um produto só com entradas e sem mínimo manual, então a situação é "Sem mínimo" e nenhum alerta aparece (RN07).
+**CA-07 — Sem alerta antes do ciclo.** Dado um produto só com entradas e sem mínimo manual, então a situação é "Sem mínimo" e nenhum alerta aparece (RN07). Dado um produto novo com mínimo manual 5 e saldo 2, então o alerta "Estoque baixo" aparece já, antes do ciclo (OPEN-003).
 
 **CA-08 — Sugestão.** Dado um produto cuja primeira movimentação foi há 30 dias, com saídas que somam 60 nesse período e dias de cobertura 7, então a sugestão é ⌈60 ÷ 30 × 7⌉ = 14 e passa a ser o mínimo em vigor.
 
@@ -305,7 +305,7 @@ A validação roda no navegador e de novo no servidor, como nas specs anteriores
 | # | Teste | Tipo | Cobre |
 |---|---|---|---|
 | T01 | Validação: quantidade (vírgula, casas, limites), data (futura, > 90 dias, fuso), motivo, observação com "Outro" | Unitário | CA-03, CA-14 |
-| T02 | Consumo médio diário, ciclo, sugestão com ⌈⌉, estornos descontados, janela de 90 dias, primeiro dia | Unitário | CA-07, CA-08, INV-007 |
+| T02 | Consumo médio diário, ciclo, sugestão com ⌈⌉, estornos descontados, janela de 90 dias, primeiro dia; mínimo manual antes do ciclo | Unitário | CA-07, CA-08, INV-007 |
 | T03 | Mínimo em vigor (manual × sugerido × nenhum) e situação (sem estoque, baixo, normal, sem mínimo) | Unitário | CA-09, CA-10 |
 | T04 | Entrada: saldo, movimentação, usuário, datas | Integração | CA-01, INV-003 |
 | T05 | Saída manual: motivo, saldo; sem motivo e "Outro" sem observação recusados | Integração | CA-02, CA-03, INV-006 |
@@ -326,21 +326,21 @@ A validação roda no navegador e de novo no servidor, como nas specs anteriores
 
 ## 13. Questões em aberto
 
-Cada questão traz a **recomendação** de quem gerou a Spec; a decisão é da equipe.
+Todas decididas pela equipe em 08/10/2026, em entrevista, pela opção recomendada:
 
-| ID | Questão | Opções | Recomendação |
-|---|---|---|---|
-| **OPEN-001** — Permissões do Estoque e quem muda o mínimo | A matriz da SPEC-005 tem *ver, criar, editar, excluir* para o Estoque, mas movimentações não se editam nem se apagam. Hoje o mínimo é editado no formulário do Catálogo. | (a) ***ver***: lista, detalhe e alertas; ***criar***: entrada e saída manual; ***editar***: mínimo manual (sai do formulário de **edição** do Catálogo e fica no cadastro, como pede o RF08); ***excluir***: sem uso no Estoque; (b) igual, mas o mínimo também continua editável no Catálogo (*Catálogo: editar*); (c) saída manual exige *excluir* (só entrada em *criar*). | **(a)**: bate com a predefinição do Colaborador (*ver, criar*: registra entrada e saída, como nas jornadas e no UC8) e deixa um único lugar para o mínimo, ao lado da sugestão. A tela de permissões mostra "sem uso" em *Estoque: excluir*. |
-| **OPEN-002** — Guardar o mínimo manual e o sugerido | O schema só tem `Item.estoqueMinimo`; não há como saber se o valor é manual ou sugerido. | (a) **`estoqueMinimo` = valor manual** (nulo = automático); a sugestão é **calculada na leitura** e nunca gravada; (b) gravar a sugestão em `estoqueMinimo` e criar `estoqueMinimoManual Boolean`, recalculando a cada movimentação. | **(a)**: sem estado duplicado e sem migração de dados. A sugestão fica sempre atual, mesmo em dias sem movimentação, quando a janela de 90 dias anda. O valor do cadastro (RF08) vira o manual. |
-| **OPEN-003** — Alerta com mínimo manual antes do 1º ciclo | O RN07 desativa o alerta até o primeiro ciclo "por falta de histórico para comparação". Mas quem informa um mínimo manual já disse qual é o limite. | (a) **o mínimo manual alerta imediatamente**; o RN07 vale para a sugestão (texto do RN07 ajustado na baseline); (b) seguir o RN07 ao pé da letra: nenhum alerta antes do ciclo, mesmo com mínimo manual. | **(a)**: o motivo do RN07 é a falta de histórico, que só afeta a sugestão. Com (b), um produto novo com mínimo 5 e saldo 2 não avisaria nada. |
-| **OPEN-004** — "Dias com histórico" na fórmula do RF20 | O RF20 divide as saídas dos últimos 90 dias pelo "número de dias com histórico nessa janela". | (a) **dias desde a primeira movimentação do item**, limitados a 90 e contando hoje; (b) número de dias distintos que tiveram alguma saída; (c) sempre 90. | **(a)**: (b) superestima o consumo de quem vende pouco e em poucos dias, e (c) subestima o de produtos novos. Exemplo: 60 saídas em 30 dias = 2 por dia. |
-| **OPEN-005** — Data da movimentação | O RF15 pede "quantidade e data". Se a data puder ser retroativa, a ordem dos saldos fica ambígua. | (a) **data da ocorrência informada** (padrão hoje, nunca futura, até 90 dias atrás), mais um **momento do registro** gravado pelo sistema (`registradoEm`), que ordena os saldos; (b) a data é sempre o momento do registro (sem campo de data); (c) data livre, sem limite. | **(a)**: atende ao RF15 (quem esqueceu de lançar ontem informa a data certa, e o consumo fica correto) sem reescrever saldos passados, porque a auditoria segue a ordem de registro. O limite de 90 dias coincide com a janela da sugestão. |
-| **OPEN-006** — Saída manual maior que o saldo | O RN06 proíbe vender sem estoque; a saída manual não é citada. | (a) **recusar**: o saldo nunca é negativo, com restrição no banco; (b) permitir saldo negativo com aviso. | **(a)**: mesma regra da venda (RN06), o que torna o saldo sempre confiável para a SPEC-008. Se o físico tem mais do que o sistema, primeiro registra-se a entrada. |
-| **OPEN-007** — Corrigir um lançamento errado | Movimentações são imutáveis (RNF05). O schema não tem observação. | (a) **correção por movimento contrário** (uma saída "Outro" para desfazer uma entrada errada, ou uma entrada para desfazer uma saída), com o novo campo **observação** (opcional, obrigatória no motivo "Outro"); (b) botão "Desfazer", que gera o movimento contrário ligado ao original (campo `movimentacaoOrigemId`); (c) sem observação, só o motivo. | **(a)**: simples e auditável, e a observação explica o "Outro" e as correções. O (b) pode vir depois sem mudar o que já foi gravado. |
-| **OPEN-008** — Casas decimais | As quantidades no banco têm 3 casas (`Decimal(10,3)`) e os materiais de serviço já aceitam decimais (SPEC-006). | (a) **até 3 casas em qualquer unidade**, exibindo sem zeros à direita ("10", "1,5", "0,05"); (b) inteiros nas unidades contáveis (un, par, cx, pct…) e 3 casas nas demais. | **(a)**: com (b), um serviço que usa 0,5 un de um material geraria saldo fracionado numa unidade "inteira" na SPEC-008. A sugestão continua inteira (⌈⌉, RF20). |
-| **OPEN-009** — Onde o alerta aparece antes do Dashboard | O RF21 pede o alerta na "notificação do sistema (dashboard/lista)" e no cadastro do produto. O Dashboard é a SPEC-012. | (a) **lista do estoque** (situação e filtro), **detalhe do estoque**, **detalhe do item no Catálogo** e um **cartão no Painel** com a contagem; o Dashboard reaproveita a consulta; (b) igual, mais um número no item "Estoque" do menu; (c) só lista e detalhe. | **(a)**: cumpre o RF21 já nesta Spec sem pesar o menu de todas as páginas, que teria de consultar o estoque a cada navegação. |
-| **OPEN-010** — Quem configura os dias de cobertura | `Negocio.diasCoberturaEstoque` (padrão 7) é configurável por negócio (RF20). | (a) **o Dono, em "Dados do negócio"**, de 1 a 90 dias; (b) quem tem *Estoque: editar*, na tela do Estoque. | **(a)**: é configuração do negócio, e a SPEC-005 (OPEN-002) reservou as configurações ao Dono. A tela do Estoque mostra o valor em uso. |
-| **OPEN-011** — Custo de compra na entrada | Uma entrada é, muitas vezes, uma compra. O schema não tem custo na movimentação. | (a) **não pedir custo na entrada**: o custo continua no Catálogo, e a compra é lançada como despesa no Financeiro (SPEC-009); (b) pedir um custo unitário opcional só para registro; (c) pedir o custo e atualizar `custoBase` pelo custo médio. | **(a)**: mantém a entrada rápida (como nas jornadas) e evita custo em dois lugares. O custo médio (c) muda a precificação e pede decisão própria, junto da SPEC-009 ou da SPEC-010. |
+| ID | Decisão |
+|---|---|
+| **OPEN-001** — Permissões do Estoque e quem muda o mínimo | ***Ver***: lista, detalhe e alertas. ***Criar***: entrada e saída manual. ***Editar***: mínimo manual, que sai do formulário de **edição** do Catálogo e continua no **cadastro** (RF08). ***Excluir***: sem uso no Estoque, e a tela de permissões indica isso. |
+| **OPEN-002** — Guardar o mínimo manual e o sugerido | `Item.estoqueMinimo` guarda só o **valor manual** (nulo = automático). A sugestão é **calculada na leitura** e nunca gravada. |
+| **OPEN-003** — Alerta com mínimo manual antes do 1º ciclo | **O mínimo manual alerta imediatamente.** O RN07 vale para a sugestão, e o texto foi ajustado em `requisitos.md`, `requisitos_ears.md` e no modelo de domínio. |
+| **OPEN-004** — "Dias com histórico" na fórmula do RF20 | **Dias desde a primeira movimentação do item**, no máximo 90, contando hoje. |
+| **OPEN-005** — Data da movimentação | **Data da ocorrência informada** (padrão hoje, nunca futura, até 90 dias atrás). O sistema também grava o **momento do registro** (`registradoEm`), que define a ordem dos saldos. |
+| **OPEN-006** — Saída manual maior que o saldo | **Recusar.** O saldo nunca é negativo, e há uma restrição no banco. |
+| **OPEN-007** — Corrigir um lançamento errado | **Correção por movimento contrário**, com o novo campo **observação** (opcional, obrigatória no motivo "Outro"). |
+| **OPEN-008** — Casas decimais | **Até 3 casas em qualquer unidade**, exibidas sem zeros à direita. A sugestão continua inteira. |
+| **OPEN-009** — Onde o alerta aparece antes do Dashboard | Na **lista do estoque** (situação e filtro), no **detalhe do estoque**, no **detalhe do item no Catálogo** e num **cartão no Painel** com a contagem. |
+| **OPEN-010** — Quem configura os dias de cobertura | **O Dono, em "Dados do negócio"**, de 1 a 90 dias. |
+| **OPEN-011** — Custo de compra na entrada | **Não pedir.** O custo continua no Catálogo, e a compra é lançada como despesa no Financeiro (SPEC-009). |
 
 ---
 
@@ -352,7 +352,7 @@ A SPEC-007 estará concluída quando:
 - [ ] todos os invariantes (INV-001 a INV-008) estiverem preservados;
 - [ ] os testes derivados (T01 a T17) estiverem aprovados, com o CI verde no PR;
 - [ ] os RNFs aplicáveis (RNF01, RNF02, RNF05, RNF06) tiverem sido verificados como descrito na seção 10;
-- [ ] as questões OPEN-001 a OPEN-011 tiverem sido decididas e registradas (e, se aprovada a OPEN-003, o texto do RN07 ajustado em `requisitos.md` e `requisitos_ears.md`);
+- [x] as questões OPEN-001 a OPEN-011 tiverem sido decididas e registradas (08/10/2026), com o texto do RN07 ajustado na baseline (OPEN-003);
 - [ ] não existir divergência conhecida entre a implementação e esta Spec;
 - [ ] toda divergência em relação à baseline tiver sido explicitamente analisada e registrada nos documentos.
 

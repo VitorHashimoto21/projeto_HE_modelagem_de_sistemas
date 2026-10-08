@@ -59,7 +59,7 @@
 | RF20 | Complexo (Evento + resposta condicional) | **QUANDO** um produto completar seu primeiro ciclo (ao menos uma entrada e uma saída), o sistema deve sugerir o estoque mínimo como ⌈consumo médio diário dos últimos 90 dias × dias de cobertura do negócio (padrão 7)⌉, e deve permitir que o usuário sobrescreva esse valor manualmente a qualquer momento. |
 | RF21 | Ubíquo | O sistema deve exibir o alerta de estoque baixo tanto na notificação do sistema (dashboard/lista) quanto no indicador visual do cadastro do produto. |
 | RN06 | Orientado a evento | **QUANDO** o estoque de um produto for insuficiente para a venda, **O SISTEMA DEVE** impedir a operação e não registrar a venda. |
-| RN07 | Orientado a estado | **ENQUANTO** um produto não tiver completado ao menos 1 ciclo de entrada e saída registrado, **O SISTEMA DEVE** deve manter o alerta de estoque baixo desativado para esse produto. |
+| RN07 | Orientado a estado | **ENQUANTO** um produto sem estoque mínimo manual não tiver completado ao menos 1 ciclo de entrada e saída registrado, **O SISTEMA DEVE** manter o alerta de estoque baixo desativado para esse produto. |
 | RN08 | Complexo (Evento + Opcional) | **QUANDO** um produto completar o primeiro ciclo de entrada e saída, o sistema deve sugerir o estoque mínimo automaticamente; **ONDE** o usuário informar um valor manual, o sistema deve utilizá-lo no lugar do sugerido. |
 
 ---
