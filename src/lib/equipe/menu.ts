@@ -12,6 +12,8 @@ export type ItemDoMenu = { rotulo: string; href: string };
 const ITENS: (ItemDoMenu & { exige: Exigencia })[] = [
   // Página inicial provisória (SPEC-004): aberta a todo membro; o Dashboard (SPEC-012) a substitui.
   { rotulo: "Painel", href: "/painel", exige: "membro" },
+  // Módulos (SPEC-006 em diante)
+  { rotulo: "Catálogo", href: "/catalogo", exige: { modulo: "catalogo", acao: "ver" } },
   // Configurações do negócio (OPEN-002)
   { rotulo: "Equipe", href: "/negocio/equipe", exige: "dono" },
   { rotulo: "Dados do negócio", href: "/negocio/dados", exige: "dono" },
