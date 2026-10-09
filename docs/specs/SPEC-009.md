@@ -1,6 +1,6 @@
 # SPEC-009 — Financeiro: caixa, contas e despesas fixas
 
-> **Status:** ✅ **Aprovada em 09/10/2026** — questões em aberto decididas pela equipe (seção 13), todas pela opção recomendada. Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar).
+> **Status:** 🚧 **Aprovada e implementada em 09/10/2026; verificação na homologação pendente** — questões em aberto decididas pela equipe (seção 13), todas pela opção recomendada; testes T01–T13 automatizados e telas verificadas em build de produção com login (T14) — [evidências](evidencias/SPEC-009/README.md). Falta o T15 (fluxo na homologação, com a rotina agendada na Vercel). Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar).
 > **Mapa:** [`MAPA_DE_SPECS.md`](../MAPA_DE_SPECS.md) · **Anteriores:** [SPEC-005](SPEC-005.md) (permissões) e [SPEC-008](SPEC-008.md) (vendas, que já geram lançamentos e contas a receber) · **Próximas que dependem desta:** SPEC-010 (despesas fixas na calculadora), SPEC-011 (estorno de recebidos) e SPEC-012 (saldo e projeção no dashboard).
 
 ---
@@ -219,6 +219,21 @@ Conforme o OPEN-008 (recomendação: recebidas **automaticamente** no vencimento
 | **Despesas fixas** | dados / ativo | despesa | `CampoInvalido`, `DasNaoEditavel`, `SemPermissao` |
 | **Conferir contas do mês** (negócio ativo) / **rotina diária** (todos) | hoje | contas criadas, parcelas recebidas | `SegredoInvalido` (rota) |
 
+**Implementação (09/10/2026):** domínio em `src/lib/dominio/financeiro.ts`; validação, fluxos, Server Actions e a conferência ao acessar em `src/lib/financeiro/`; banco em `src/lib/db/financeiro.ts` (`financeiro(contexto)` de `@/lib/db`, com a primitiva `pagarConta`); rotina em `src/lib/rotinas/diaria.ts` e `src/app/api/rotinas/diaria/route.ts`, agendada em `vercel.json` (todo dia às 09:00 UTC = 06:00 em São Paulo); telas em `src/app/(app)/financeiro/` (caixa, `lancar`, `contas`, `contas/nova`, `contas/[id]`, `despesas-fixas`, `despesas-fixas/[id]`); migração `20261009180000_financeiro`.
+
+**Divergências registradas na implementação:**
+
+- **`DespesaFixa.geraDesde`** (coluna nova, não prevista na seção 7): primeira competência a gerar, calculada pelo OPEN-004 no cadastro e **de novo ao reativar**. Sem ela, reativar uma despesa geraria as contas dos meses em que ficou desativada. As despesas já existentes recebem o mês do cadastro.
+- **Saldo inicial maior que zero** (a seção 5.7 dizia ≥ 0): saldo zero não precisa ser informado, e o banco exige `valor > 0` em todo lançamento.
+- **O saldo inicial também pode ser estornado**, além do avulso. Estornado, ele pode ser informado de novo; pedidos simultâneos são serializados pela linha do negócio (`FOR UPDATE`).
+- **O DAS do MEI tem o id do próprio negócio**, o que garante no máximo um, mesmo com conferências simultâneas. Ele é criado ou reativado enquanto o negócio for MEI **com atividade informada** e é desativado quando deixa de ser. O valor de cada conta é o `ParametroMei` vigente no dia do vencimento; sem parâmetro, a conta não é gerada e a falha vai para o log.
+- **A conferência recupera no máximo 24 competências** por despesa de uma vez (rotina parada por muito tempo).
+- **Totais do mês sem filtros:** os cartões e os saldos de início e fim do mês consideram todos os lançamentos; os filtros por categoria e tipo valem só para a lista (assim, saldo inicial + resultado = saldo final).
+- **O Painel confere depois da resposta** (`after()`), porque ainda não mostra dados financeiros; o Financeiro confere antes de mostrar. Uma falha na conferência nunca impede a página de abrir.
+- **`CRON_SECRET` com pelo menos 16 caracteres:** sem ele, ou com um mais curto, a rota recusa toda chamada (falha fechada).
+- **Gatilho `he_mesmo_negocio` do `LancamentoFinanceiro` recriado** com a nova ligação `estornoDeId`, e o teste de modelos passou a ler a última definição do gatilho em todas as migrações.
+- **"Lançar despesa" no menu** para quem tem *Financeiro: criar* sem *ver* (o menu ganhou a exigência `semAcao`).
+
 ---
 
 ## 10. Requisitos não funcionais aplicáveis
@@ -307,9 +322,9 @@ Todas decididas pela equipe em 09/10/2026, pela opção recomendada:
 
 A SPEC-009 estará concluída quando:
 
-- [ ] todos os critérios de aceitação (CA-01 a CA-14) estiverem implementados;
+- [ ] todos os critérios de aceitação (CA-01 a CA-14) estiverem implementados — por testes e em build de produção com login; falta conferir na homologação (T15);
 - [ ] todos os invariantes (INV-001 a INV-008) estiverem preservados;
-- [ ] os testes derivados (T01 a T15) estiverem aprovados, com o CI verde no PR;
+- [ ] os testes derivados (T01 a T15) estiverem aprovados, com o CI verde no PR — T01 a T13 automatizados; T14 com capturas; T15 pendente;
 - [ ] os RNFs aplicáveis (RNF01, RNF02, RNF05, RNF06) tiverem sido verificados como descrito na seção 10;
 - [x] as questões OPEN-001 a OPEN-008 tiverem sido decididas e registradas;
 - [ ] não existir divergência conhecida entre a implementação e esta Spec;

@@ -135,6 +135,15 @@ enum CategoriaItem {
   OUTROS
 }
 
+// SPEC-009: de onde veio o lançamento (extrato e regras de estorno)
+enum OrigemLancamento {
+  VENDA
+  CONTA
+  AVULSO
+  SALDO_INICIAL
+  ESTORNO
+}
+
 enum TipoLancamento {
   ENTRADA
   SAIDA
@@ -182,11 +191,12 @@ model Usuario {
   membroEm          MembroNegocio[]
   movimentacoes     MovimentacaoEstoque[] // RNF05: auditoria (quem fez a alteração)
   historicoPrecos   HistoricoPreco[] // RNF05: auditoria (quem confirmou o preço)
-  vendasCanceladas  Venda[]               @relation("VendaCanceladaPor") // RF65: auditoria do cancelamento
-  vendasRegistradas Venda[]               @relation("VendaRegistradaPor") // SPEC-008 (OPEN-006)
-  convitesEnviados  Convite[]             @relation("ConviteEnviadoPor") // RF72
-  planosAlterados   Negocio[]             @relation("PlanoAlteradoPor") // RF73
-  createdAt         DateTime              @default(now())
+  vendasCanceladas  Venda[]                @relation("VendaCanceladaPor") // RF65: auditoria do cancelamento
+  vendasRegistradas Venda[]                @relation("VendaRegistradaPor") // SPEC-008 (OPEN-006)
+  lancamentos       LancamentoFinanceiro[] @relation("LancamentoRegistradoPor") // SPEC-009 (RNF05)
+  convitesEnviados  Convite[]              @relation("ConviteEnviadoPor") // RF72
+  planosAlterados   Negocio[]              @relation("PlanoAlteradoPor") // RF73
+  createdAt         DateTime               @default(now())
 }
 
 model Negocio {
@@ -415,11 +425,12 @@ model DespesaFixa {
   id            String              @id @default(uuid()) @db.Uuid
   negocioId     String              @db.Uuid
   descricao     String
-  valorMensal   Decimal             @db.Decimal(10, 2)
+  valorMensal   Decimal?            @db.Decimal(10, 2) // SPEC-009 (OPEN-005): nulo no DAS do MEI — o valor vem do ParametroMei vigente
   diaVencimento Int                 @default(10) // RF67: dia do mês da conta a pagar gerada
   categoria     CategoriaLancamento @default(OUTROS) // RF67: ex. SALARIO, IMPOSTOS (DAS)
   origem        OrigemDespesaFixa   @default(MANUAL)
   ativo         Boolean             @default(true)
+  geraDesde     DateTime            @db.Date // SPEC-009 (OPEN-004): 1º dia da primeira competência a gerar; redefinida ao reativar
   createdAt     DateTime            @default(now())
 
   negocio Negocio             @relation(fields: [negocioId], references: [id])
@@ -587,19 +598,28 @@ model Parcela {
 }
 
 model LancamentoFinanceiro {
-  id        String              @id @default(uuid()) @db.Uuid
-  negocioId String              @db.Uuid
-  vendaId   String?             @db.Uuid // RN09: lançamento imediato de venda
-  contaId   String?             @db.Uuid // RN22: pagamento/recebimento de conta
-  tipo      TipoLancamento
-  categoria CategoriaLancamento // RF32
-  valor     Decimal             @db.Decimal(10, 2)
-  estorno   Boolean             @default(false) // RN25: saída que estorna valor recebido de venda cancelada
-  data      DateTime            @default(now())
+  id          String              @id @default(uuid()) @db.Uuid
+  negocioId   String              @db.Uuid
+  vendaId     String?             @db.Uuid // RN09: lançamento imediato de venda
+  contaId     String?             @db.Uuid // RN22: pagamento/recebimento de conta
+  tipo        TipoLancamento
+  categoria   CategoriaLancamento // RF32
+  valor       Decimal             @db.Decimal(10, 2)
+  estorno     Boolean             @default(false) // RN25: saída que estorna valor recebido de venda cancelada
+  // SPEC-009: origem, descrição e quem registrou (RNF05); estorno ligado ao original (OPEN-003)
+  origem      OrigemLancamento
+  descricao   String?             @db.VarChar(120)
+  usuarioId   String?             @db.Uuid // nulo só nos automáticos da rotina diária
+  estornoDeId String?             @unique @db.Uuid
+  data        DateTime            @default(now())
 
   negocio Negocio            @relation(fields: [negocioId], references: [id])
   venda   Venda?             @relation(fields: [vendaId], references: [id])
   conta   ContaPagarReceber? @relation(fields: [contaId], references: [id])
+  usuario Usuario?           @relation("LancamentoRegistradoPor", fields: [usuarioId], references: [id])
+
+  estornoDe    LancamentoFinanceiro? @relation("EstornoDeLancamento", fields: [estornoDeId], references: [id])
+  estornadoPor LancamentoFinanceiro? @relation("EstornoDeLancamento")
 
   @@index([negocioId])
   @@index([negocioId, data]) // SPEC-008/009: lançamentos por período
@@ -622,6 +642,7 @@ model ContaPagarReceber {
   valorPago     Decimal             @default(0) @db.Decimal(10, 2) // RF31
   vencimento    DateTime
   status        StatusConta         @default(ABERTA)
+  criadaPorId   String?             @db.Uuid // SPEC-009: quem criou a conta manual
 
   negocio     Negocio                @relation(fields: [negocioId], references: [id])
   parcela     Parcela?               @relation(fields: [parcelaId], references: [id])
@@ -630,4 +651,5 @@ model ContaPagarReceber {
 
   @@unique([despesaFixaId, competencia]) // RF67: não duplicar a conta do mesmo mês
   @@index([negocioId])
+  @@index([negocioId, vencimento, status]) // SPEC-009: contas a vencer e atrasadas
 }
