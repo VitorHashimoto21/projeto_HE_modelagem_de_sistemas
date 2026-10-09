@@ -1,6 +1,6 @@
 # SPEC-008 — Registro de venda integrado
 
-> **Status:** 📝 **Rascunho para aprovação (09/10/2026)** — gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar). As questões em aberto da seção 13 trazem uma **recomendação**, mas a decisão é da equipe. Nenhuma implementação antes da aprovação.
+> **Status:** ✅ **Aprovada em 09/10/2026** — questões em aberto decididas pela equipe (seção 13), todas pela opção recomendada. Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar).
 > **Mapa:** [`MAPA_DE_SPECS.md`](../MAPA_DE_SPECS.md) · **Anteriores:** [SPEC-006](SPEC-006.md) (catálogo e preço oficial) e [SPEC-007](SPEC-007.md) (estoque e primitiva de movimentação) · **Próximas que dependem desta:** SPEC-009 (financeiro), SPEC-010 (RBT12 e CMV%), SPEC-011 (cancelamento e troca) e SPEC-012 (dashboard).
 
 ---
@@ -292,17 +292,17 @@
 
 ## 13. Questões em aberto
 
-Cada questão traz a **recomendação** de quem gerou a Spec; a decisão é da equipe.
+Todas decididas pela equipe em 09/10/2026, pela opção recomendada:
 
-| ID | Questão | Opções | Recomendação |
-|---|---|---|---|
-| **OPEN-001** — Desconto na venda | Os requisitos não preveem desconto, e o RN15 diz que o preço é sempre o oficial. | (a) **sem desconto no MVP**: preço oficial sempre; (b) desconto por venda (valor ou %), registrado; (c) alterar o preço da linha. | **(a)**: segue o RN15 e mantém o RBT12/CMV% coerentes; desconto vira evolução com regra própria (afeta faturamento e a calculadora). |
-| **OPEN-002** — Data da venda | A venda pode ser registrada depois (ex.: no fim do dia, vendas de ontem)? | (a) **agora por padrão, com data retroativa de até 7 dias**; (b) só agora; (c) até 90 dias, como no estoque. | **(a)**: cobre quem anota no papel e lança depois, sem bagunçar meses já fechados; a baixa de estoque usa a mesma data (SPEC-007 aceita até 90 dias). |
-| **OPEN-003** — Vencimento das parcelas | RF28 diz "mensal, a partir da data da venda". | (a) **parcela k = mesmo dia, k meses depois** (fim de mês ajustado ao último dia); (b) a cada 30 dias. | **(a)**: é como as maquininhas e o cliente pensam ("todo dia 15"); 1x vence no mês seguinte. |
-| **OPEN-004** — Troco no dinheiro | Quem paga R$ 50,00 numa venda de R$ 36,00. | (a) **campo "valor recebido" só para calcular o troco na tela**; o pagamento grava R$ 36,00; (b) gravar recebido e troco. | **(a)**: o caixa recebe de fato R$ 36,00; gravar o troco não muda nenhum cálculo. |
-| **OPEN-005** — Clientes | RF22 só pede o cliente opcional; não há spec de clientes. | (a) **busca e cadastro rápido dentro da venda**; lista/edição de clientes fica para depois; (b) incluir agora uma tela de clientes. | **(a)**: entrega o RF22 sem aumentar o escopo; a tela de clientes (e a LGPD dos dados de clientes, SPEC-014) entra depois. |
-| **OPEN-006** — Quem registrou | A `Venda` não guarda o usuário que registrou (só quem cancelou). | (a) **novo `Venda.registradaPorId`**; (b) não guardar. | **(a)**: auditoria (RNF05), histórico ("vendido por") e base para comissão no futuro; custa um campo. |
-| **OPEN-007** — Número da venda | Como a pessoa se refere a uma venda ("a venda 57")? | (a) **número sequencial por negócio** (1, 2, 3…), único e sem buracos por concorrência; (b) só data e hora; (c) código curto derivado do id. | **(a)**: é o que o comércio usa e o que aparece nas contas a receber ("Venda nº 57 — parcela 2/3"). |
+| ID | Decisão |
+|---|---|
+| **OPEN-001** — Desconto | **Sem desconto no MVP:** o preço é sempre o oficial (RN15). |
+| **OPEN-002** — Data da venda | **Agora por padrão, com data retroativa de até 7 dias** (dia local de São Paulo). A baixa de estoque e os lançamentos usam a mesma data. |
+| **OPEN-003** — Vencimento das parcelas | **Parcela k vence no mesmo dia da venda, k meses depois**; se o mês não tiver esse dia, no último dia do mês. 1x vence no mês seguinte. |
+| **OPEN-004** — Troco | **Só calculado na tela** ("valor recebido"); o pagamento grava o valor da venda. |
+| **OPEN-005** — Clientes | **Busca e cadastro rápido dentro da venda** (nome e contato opcional). Lista e edição de clientes ficam para depois. |
+| **OPEN-006** — Quem registrou | **Novo `Venda.registradaPorId`**, exibido no histórico e no detalhe. |
+| **OPEN-007** — Número da venda | **Sequencial por negócio** (`Venda.numero`, único por negócio), atribuído na transação, sem buracos. |
 
 ---
 
@@ -314,7 +314,7 @@ A SPEC-008 estará concluída quando:
 - [ ] todos os invariantes (INV-001 a INV-009) estiverem preservados;
 - [ ] os testes derivados (T01 a T16) estiverem aprovados, com o CI verde no PR;
 - [ ] os RNFs aplicáveis (RNF01, RNF02, RNF05, RNF06) tiverem sido verificados como descrito na seção 10;
-- [ ] as questões OPEN-001 a OPEN-007 tiverem sido decididas e registradas;
+- [x] as questões OPEN-001 a OPEN-007 tiverem sido decididas e registradas;
 - [ ] não existir divergência conhecida entre a implementação e esta Spec;
 - [ ] toda divergência em relação à baseline tiver sido explicitamente analisada e registrada nos documentos.
 
