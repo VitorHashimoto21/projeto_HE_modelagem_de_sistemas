@@ -1,6 +1,6 @@
 # SPEC-007 — Estoque: movimentações, alertas e mínimo sugerido
 
-> **Status:** 🚧 **Aprovada em 08/10/2026 e implementada em 09/10/2026; verificação na homologação pendente** — questões em aberto decididas pela equipe em entrevista (seção 13), todas pela opção recomendada; testes T01–T15 automatizados e telas verificadas em build de produção com login (T16) — [evidências](evidencias/SPEC-007/README.md). Falta o T17 (fluxo na homologação, depois da migração). Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar).
+> **Status:** ✅ **Implementada em 09/10/2026 e verificada na homologação** (PR #56) — questões em aberto decididas pela equipe em entrevista (seção 13), todas pela opção recomendada; testes T01–T15 no CI, telas em build de produção com login (T16) e fluxo na homologação (T17) — [evidências](evidencias/SPEC-007/README.md). Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar).
 > **Mapa:** [`MAPA_DE_SPECS.md`](../MAPA_DE_SPECS.md) · **Anterior:** [SPEC-006](SPEC-006.md) (catálogo) · **Próximas que dependem desta:** SPEC-008 (venda, que baixa o estoque), SPEC-011 (cancelamento, que devolve o estoque) e SPEC-012 (dashboard, que mostra os alertas).
 
 ---
@@ -359,12 +359,12 @@ Todas decididas pela equipe em 08/10/2026, em entrevista, pela opção recomenda
 
 A SPEC-007 estará concluída quando:
 
-- [ ] todos os critérios de aceitação (CA-01 a CA-15) estiverem implementados — CA-01 a CA-15 por testes e em build de produção local com login; falta conferir na homologação (T17);
-- [ ] todos os invariantes (INV-001 a INV-008) estiverem preservados;
-- [ ] os testes derivados (T01 a T17) estiverem aprovados, com o CI verde no PR — T01 a T15 automatizados; T16 com capturas; T17 pendente;
-- [ ] os RNFs aplicáveis (RNF01, RNF02, RNF05, RNF06) tiverem sido verificados como descrito na seção 10;
+- [x] todos os critérios de aceitação (CA-01 a CA-15) estiverem implementados — por testes, em build de produção com login e na homologação (09/10/2026);
+- [x] todos os invariantes (INV-001 a INV-008) estiverem preservados;
+- [x] os testes derivados (T01 a T17) estiverem aprovados, com o CI verde no PR — T01 a T15 no CI do PR #56; T16 com capturas; T17 na homologação;
+- [x] os RNFs aplicáveis (RNF01, RNF02, RNF05, RNF06) tiverem sido verificados como descrito na seção 10;
 - [x] as questões OPEN-001 a OPEN-011 tiverem sido decididas e registradas (08/10/2026), com o texto do RN07 ajustado na baseline (OPEN-003);
-- [ ] não existir divergência conhecida entre a implementação e esta Spec;
-- [ ] toda divergência em relação à baseline tiver sido explicitamente analisada e registrada nos documentos.
+- [x] não existir divergência conhecida entre a implementação e esta Spec;
+- [x] toda divergência em relação à baseline tiver sido explicitamente analisada e registrada nos documentos (seção 9).
 
 **Regra fundamental:** a implementação obedece a esta Spec aprovada. Se surgir conflito entre código, Spec e documentos de modelagem, o comportamento não é alterado em silêncio: a divergência é registrada com a proposta de (1) corrigir a implementação ou (2) alterar a baseline, e a decisão é da equipe.
