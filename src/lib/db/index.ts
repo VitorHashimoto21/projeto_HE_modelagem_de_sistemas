@@ -2,12 +2,14 @@ import "server-only";
 import { comNegocio, type ContextoDeNegocio } from "./cliente-do-negocio";
 import { criarConsultasDeAcesso } from "./acesso";
 import { criarConsultasDoCatalogo } from "./catalogo";
+import { criarConsultasDoEstoque } from "./estoque";
 import { criarConsultasDeEquipe } from "./equipe";
 import { criarConsultasDeNegocios } from "./negocios";
 import { criarConsultasFiscais } from "./parametros-fiscais";
 import { prismaBase } from "./prisma";
 
 export type { ConsultasDeAcesso } from "./acesso";
+export type { ConsultasDoEstoque, DetalheDoEstoque, ProdutoEmEstoque } from "./estoque";
 export type { ConsultasDoCatalogo, DetalheDoItem, ItemResumido, OpcaoDeMaterial } from "./catalogo";
 export { LIMITE_DO_PLANO_GRATUITO } from "./equipe";
 export type { ConsultasDeEquipe, ConvitePendente, EquipeDoNegocio, MembroDaEquipe } from "./equipe";
@@ -30,6 +32,11 @@ export function clienteDoNegocio(contexto: ContextoDeNegocio | null | undefined)
 /** Catálogo do negócio ativo (SPEC-006): sempre pelo cliente do negócio. */
 export function catalogo(contexto: ContextoDeNegocio) {
   return criarConsultasDoCatalogo(clienteDoNegocio(contexto), contexto.negocioId);
+}
+
+/** Estoque do negócio ativo (SPEC-007): sempre pelo cliente do negócio. */
+export function estoque(contexto: ContextoDeNegocio) {
+  return criarConsultasDoEstoque(clienteDoNegocio(contexto), contexto.negocioId);
 }
 
 /** Consultas do controle de acesso (SPEC-002): conta bloqueada, filiação e perfil. */

@@ -97,6 +97,16 @@ export function criarConsultasDeNegocios(cliente: PrismaClient) {
         throw e;
       }
     },
+
+    /** Dias de cobertura do estoque (SPEC-007, OPEN-010): lidos por todos, alterados só pelo Dono. */
+    async diasCobertura(negocioId: string): Promise<number> {
+      const n = await cliente.negocio.findUnique({ where: { id: negocioId }, select: { diasCoberturaEstoque: true } });
+      return n?.diasCoberturaEstoque ?? 7;
+    },
+
+    async definirDiasCobertura(negocioId: string, dias: number): Promise<void> {
+      await cliente.negocio.update({ where: { id: negocioId }, data: { diasCoberturaEstoque: dias } });
+    },
   };
 }
 

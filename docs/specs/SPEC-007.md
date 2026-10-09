@@ -1,6 +1,6 @@
 # SPEC-007 — Estoque: movimentações, alertas e mínimo sugerido
 
-> **Status:** ✅ **Aprovada em 08/10/2026** — questões em aberto decididas pela equipe em entrevista (seção 13), todas pela opção recomendada. Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar). Pronta para implementar.
+> **Status:** 🚧 **Aprovada em 08/10/2026 e implementada em 09/10/2026; verificação na homologação pendente** — questões em aberto decididas pela equipe em entrevista (seção 13), todas pela opção recomendada; testes T01–T15 automatizados e telas verificadas em build de produção com login (T16) — [evidências](evidencias/SPEC-007/README.md). Falta o T17 (fluxo na homologação, depois da migração). Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar).
 > **Mapa:** [`MAPA_DE_SPECS.md`](../MAPA_DE_SPECS.md) · **Anterior:** [SPEC-006](SPEC-006.md) (catálogo) · **Próximas que dependem desta:** SPEC-008 (venda, que baixa o estoque), SPEC-011 (cancelamento, que devolve o estoque) e SPEC-012 (dashboard, que mostra os alertas).
 
 ---
@@ -253,6 +253,17 @@ A validação roda no navegador e de novo no servidor, como nas specs anteriores
 | **Movimentar** (interno, transacional) | transação, item, tipo, quantidade, motivo, venda, data, usuário | saldos anterior e posterior | `EstoqueInsuficiente`, `ItemSemEstoque` |
 | **Sugerir mínimo** (domínio) | saídas e estornos da janela, data da primeira movimentação, ciclo, dias de cobertura, hoje | sugestão ou nenhuma | — |
 
+**Implementação (09/10/2026):** domínio em `src/lib/dominio/estoque.ts`; validação, fluxos e Server Actions em `src/lib/estoque/`; banco em `src/lib/db/estoque.ts` — a primitiva `movimentar(tx, negocioId, movimento)` é exportada para as SPECs 008 e 011, e `estoque(contexto)` de `@/lib/db` reúne as consultas; telas em `src/app/(app)/estoque/`; migração `20261009120000_estoque`.
+
+**Divergências registradas na implementação:**
+
+- **`registradoEm` pelo relógio do banco, com microssegundos:** `@db.Timestamp(6)` com padrão `clock_timestamp() AT TIME ZONE 'UTC'`, preenchido na inserção, depois da trava do item. Com milissegundos (o padrão do Prisma), duas movimentações simultâneas poderiam empatar e embaralhar a ordem da cadeia de saldos.
+- **Instante gravado para a data da ocorrência:** hoje → o momento atual; dia anterior → meio-dia (São Paulo) daquele dia, longe da virada do dia, para o cálculo por dia local nunca cair no dia errado.
+- **Dias de cobertura num formulário próprio** em "Dados do negócio" (ação `acaoDefinirDiasCobertura`, só Dono), em vez de entrar na validação do enquadramento fiscal (SPEC-004) — o campo não tem relação com o regime.
+- **Edição do Catálogo não grava mais `estoqueMinimo`:** além de tirar o campo da tela (OPEN-001), a gravação da edição deixou de incluí-lo, senão toda edição apagaria o mínimo manual. Teste de regressão em `test/integracao/catalogo.test.ts`.
+- **Painel passou a usar `exigirMembro()`** para saber se a pessoa vê o Estoque (cartão de alertas).
+- **Teste do menu da SPEC-005** passou a incluir "Estoque".
+
 ---
 
 ## 10. Requisitos não funcionais aplicáveis
@@ -348,9 +359,9 @@ Todas decididas pela equipe em 08/10/2026, em entrevista, pela opção recomenda
 
 A SPEC-007 estará concluída quando:
 
-- [ ] todos os critérios de aceitação (CA-01 a CA-15) estiverem implementados;
+- [ ] todos os critérios de aceitação (CA-01 a CA-15) estiverem implementados — CA-01 a CA-15 por testes e em build de produção local com login; falta conferir na homologação (T17);
 - [ ] todos os invariantes (INV-001 a INV-008) estiverem preservados;
-- [ ] os testes derivados (T01 a T17) estiverem aprovados, com o CI verde no PR;
+- [ ] os testes derivados (T01 a T17) estiverem aprovados, com o CI verde no PR — T01 a T15 automatizados; T16 com capturas; T17 pendente;
 - [ ] os RNFs aplicáveis (RNF01, RNF02, RNF05, RNF06) tiverem sido verificados como descrito na seção 10;
 - [x] as questões OPEN-001 a OPEN-011 tiverem sido decididas e registradas (08/10/2026), com o texto do RN07 ajustado na baseline (OPEN-003);
 - [ ] não existir divergência conhecida entre a implementação e esta Spec;

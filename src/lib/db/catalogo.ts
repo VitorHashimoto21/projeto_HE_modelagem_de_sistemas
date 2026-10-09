@@ -97,6 +97,12 @@ export function criarConsultasDoCatalogo(cliente: ClienteDoNegocio, negocioId: s
     if (validos !== ids.length) throw new MaterialInvalido();
   }
 
+  const semMinimo = <T extends { estoqueMinimo: unknown }>(campos: T): Omit<T, "estoqueMinimo"> => {
+    const copia: Partial<T> = { ...campos };
+    delete copia.estoqueMinimo;
+    return copia as Omit<T, "estoqueMinimo">;
+  };
+
   const camposDoItem = (d: DadosDoItem) => ({
     nome: d.nome,
     nomeChave: d.nomeChave,
@@ -254,7 +260,8 @@ export function criarConsultasDoCatalogo(cliente: ClienteDoNegocio, negocioId: s
           await tx.item.update({
             where: { id },
             // Arquivado não ocupa o nome (OPEN-003): a chave só volta ao reativar.
-            data: { ...camposDoItem(dados), nomeChave: atual.arquivadoEm ? null : dados.nomeChave },
+            // O mínimo manual não muda pela edição do Catálogo: depois do cadastro, só pelo Estoque (SPEC-007, OPEN-001).
+            data: { ...semMinimo(camposDoItem(dados)), nomeChave: atual.arquivadoEm ? null : dados.nomeChave },
           });
           if (atual.tipo === "SERVICO") {
             await tx.materialServico.deleteMany({ where: { servicoId: id } });

@@ -312,7 +312,7 @@ model Item {
   // participação no Estoque é determinada pelo campo `tipo` (RN04),
   // validar na camada de aplicação.
   quantidadeEstoque Decimal  @default(0) @db.Decimal(10, 3) // RN03: nasce zerado
-  estoqueMinimo     Decimal? @db.Decimal(10, 3) // RF08/RF20: opcional, sugerido após 1º ciclo (RN07/RN08)
+  estoqueMinimo     Decimal? @db.Decimal(10, 3) // SPEC-007 (OPEN-002): mínimo MANUAL; nulo = usar a sugestão calculada na leitura (RF20, RN08)
 
   comissaoPercentual Decimal? @db.Decimal(5, 2) // RF52: opcional (null = 0%), entra como despesa variável
 
@@ -360,7 +360,11 @@ model MovimentacaoEstoque {
   saldoPosterior Decimal            @db.Decimal(10, 3) // RNF05: valor novo
   motivo         MotivoSaidaManual? // RF17: obrigatório apenas quando tipo = SAIDA_MANUAL
   usuarioId      String             @db.Uuid // RNF05: auditoria
-  data           DateTime           @default(now())
+  data           DateTime           @default(now()) // SPEC-007 (OPEN-005): data da ocorrência informada (até 90 dias atrás)
+  // SPEC-007: momento da gravação, com microssegundos, pelo relógio do banco (depois da trava do item) —
+  // define a ordem da cadeia de saldos, mesmo com data retroativa.
+  registradoEm   DateTime           @default(dbgenerated("(clock_timestamp() AT TIME ZONE 'UTC'::text)")) @db.Timestamp(6)
+  observacao     String?            @db.VarChar(200) // SPEC-007 (OPEN-007): obrigatória no motivo OUTRO
 
   negocio Negocio @relation(fields: [negocioId], references: [id])
   item    Item    @relation(fields: [itemId], references: [id])
@@ -369,6 +373,8 @@ model MovimentacaoEstoque {
 
   @@index([negocioId])
   @@index([itemId])
+  @@index([itemId, data]) // SPEC-007: consumo dos últimos 90 dias
+  @@index([itemId, registradoEm]) // SPEC-007: movimentações na ordem de registro
   @@index([vendaId])
 }
 

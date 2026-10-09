@@ -3,11 +3,13 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { FormularioPreco } from "@/components/catalogo/formularios";
 import { numero, reais, ROTULO_CATEGORIA, ROTULO_ORIGEM, ROTULO_TIPO, rotuloUnidade } from "@/components/catalogo/rotulos";
+import { SeloDeSituacao } from "@/components/estoque/situacao";
 import { exigirPermissao } from "@/lib/auth/servidor";
 import { acaoArquivarItem } from "@/lib/catalogo/acoes";
 import { MENSAGENS_DO_ARQUIVAMENTO } from "@/lib/catalogo/servicos";
-import { catalogo } from "@/lib/db";
+import { catalogo, estoque } from "@/lib/db";
 import { ItemNaoEncontrado } from "@/lib/db/catalogo";
+import { hoje } from "@/lib/dominio/datas";
 import { pode } from "@/lib/dominio/permissoes";
 
 export const metadata: Metadata = { title: "Item do catálogo" };
@@ -47,6 +49,9 @@ export default async function DetalheDoItem({ params, searchParams }: PageProps<
   const podeEditar = pode(membro.permissoes, "catalogo", "editar");
   const podeArquivar = pode(membro.permissoes, "catalogo", "excluir");
   const resultado = typeof busca.resultado === "string" ? MENSAGENS_DO_ARQUIVAMENTO[busca.resultado] : undefined;
+  // Situação do estoque (SPEC-007, RF21) para quem também pode ver o Estoque.
+  const verEstoque = pode(membro.permissoes, "estoque", "ver");
+  const situacao = item.tipo === "PRODUTO_FISICO" && verEstoque ? await estoque(membro).situacaoDoProduto(item.id, hoje()) : null;
 
   return (
     <div className="space-y-8">
@@ -104,7 +109,29 @@ export default async function DetalheDoItem({ params, searchParams }: PageProps<
           {item.tipo === "PRODUTO_FISICO" && (
             <>
               <Linha rotulo="Em estoque" valor={`${numero(item.quantidadeEstoque)} ${rotuloUnidade(item.unidadeMedida)}`} />
-              <Linha rotulo="Estoque mínimo" valor={item.estoqueMinimo === null ? "Ainda não definido" : numero(item.estoqueMinimo)} />
+              <Linha
+                rotulo="Estoque mínimo"
+                valor={
+                  situacao?.minimo
+                    ? `${numero(situacao.minimo.valor)} (${situacao.minimo.origem})`
+                    : item.estoqueMinimo === null
+                      ? "Ainda não definido"
+                      : numero(item.estoqueMinimo)
+                }
+              />
+              {situacao && (
+                <Linha
+                  rotulo="Situação do estoque"
+                  valor={
+                    <span className="inline-flex flex-wrap items-center justify-end gap-2">
+                      <SeloDeSituacao situacao={situacao.situacao} />
+                      <Link href={`/estoque/${item.id}`} className="font-medium text-primary underline-offset-2 hover:underline">
+                        Ver estoque
+                      </Link>
+                    </span>
+                  }
+                />
+              )}
             </>
           )}
         </dl>
