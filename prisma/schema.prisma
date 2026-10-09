@@ -179,13 +179,14 @@ model Usuario {
   excluidoEm          DateTime? // RN27: acesso bloqueado
   anonimizadoEm       DateTime? // RN27: nome/e-mail/senha substituídos por valores anônimos
 
-  membroEm         MembroNegocio[]
-  movimentacoes    MovimentacaoEstoque[] // RNF05: auditoria (quem fez a alteração)
-  historicoPrecos  HistoricoPreco[] // RNF05: auditoria (quem confirmou o preço)
-  vendasCanceladas Venda[]               @relation("VendaCanceladaPor") // RF65: auditoria do cancelamento
-  convitesEnviados Convite[]             @relation("ConviteEnviadoPor") // RF72
-  planosAlterados  Negocio[]             @relation("PlanoAlteradoPor") // RF73
-  createdAt        DateTime              @default(now())
+  membroEm          MembroNegocio[]
+  movimentacoes     MovimentacaoEstoque[] // RNF05: auditoria (quem fez a alteração)
+  historicoPrecos   HistoricoPreco[] // RNF05: auditoria (quem confirmou o preço)
+  vendasCanceladas  Venda[]               @relation("VendaCanceladaPor") // RF65: auditoria do cancelamento
+  vendasRegistradas Venda[]               @relation("VendaRegistradaPor") // SPEC-008 (OPEN-006)
+  convitesEnviados  Convite[]             @relation("ConviteEnviadoPor") // RF72
+  planosAlterados   Negocio[]             @relation("PlanoAlteradoPor") // RF73
+  createdAt         DateTime              @default(now())
 }
 
 model Negocio {
@@ -216,6 +217,7 @@ model Negocio {
   ticketMedioEstimado       Decimal? @db.Decimal(10, 2) // RF50
   faturamentoMensalEstimado Decimal? @db.Decimal(12, 2) // RF50: recomendado = capacidade × ticket, editável
   cmvEstimado               Decimal? @db.Decimal(5, 2) // RF62: CMV% usado enquanto não há histórico
+  proximoNumeroVenda        Int      @default(1) // SPEC-008 (OPEN-007): próximo número de venda, incrementado na transação da venda
   diasCoberturaEstoque      Int      @default(7) // RF20: estoque mínimo = ⌈consumo médio diário × dias⌉
 
   encerradoEm DateTime? // RN27: negócio encerrado após exclusão do único Dono (dados fiscais retidos 5 anos)
@@ -505,6 +507,10 @@ model Venda {
   data       DateTime @default(now())
   valorTotal Decimal  @db.Decimal(10, 2)
 
+  // SPEC-008: número sequencial por negócio (OPEN-007) e quem registrou (OPEN-006)
+  numero          Int
+  registradaPorId String @db.Uuid
+
   // RF65/RN25: cancelamento (a venda nunca é apagada)
   status             StatusVenda @default(CONCLUIDA)
   canceladaEm        DateTime?
@@ -515,6 +521,7 @@ model Venda {
   negocio       Negocio                @relation(fields: [negocioId], references: [id])
   cliente       Cliente?               @relation(fields: [clienteId], references: [id])
   canceladaPor  Usuario?               @relation("VendaCanceladaPor", fields: [canceladaPorId], references: [id])
+  registradaPor Usuario                @relation("VendaRegistradaPor", fields: [registradaPorId], references: [id])
   vendaOrigem   Venda?                 @relation("TrocaDeVenda", fields: [vendaOrigemId], references: [id])
   vendaTroca    Venda?                 @relation("TrocaDeVenda")
   itens         ItemVenda[]
@@ -522,6 +529,7 @@ model Venda {
   pagamentos    Pagamento[]
   lancamentos   LancamentoFinanceiro[] // RN12 — 1:N: pagamento misto pode gerar mais de um lançamento imediato
 
+  @@unique([negocioId, numero]) // SPEC-008 (OPEN-007)
   @@index([negocioId])
   @@index([negocioId, data, status]) // AD-QA01/RN21/RN25: RBT12 e faturamento somam só vendas CONCLUIDA
 }
@@ -594,6 +602,7 @@ model LancamentoFinanceiro {
   conta   ContaPagarReceber? @relation(fields: [contaId], references: [id])
 
   @@index([negocioId])
+  @@index([negocioId, data]) // SPEC-008/009: lançamentos por período
   @@index([contaId])
 }
 
