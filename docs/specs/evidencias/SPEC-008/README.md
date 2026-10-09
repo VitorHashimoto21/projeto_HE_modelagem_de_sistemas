@@ -29,6 +29,8 @@
 - histórico de hoje: 2 vendas, R$ 45,00; Painel ok;
 - frente de caixa e histórico em 390, 768 e 1440 px, claro e escuro, **sem rolagem horizontal** — capturas em [`telas/`](telas/).
 
-## Pendente
+## Verificação na homologação (T16) — 09/10/2026
 
-- **T16:** fluxo completo na homologação, depois do merge (migração `20261009150000_vendas`).
+Depois do merge do PR #58, o workflow **Migrações** aplicou `20261009150000_vendas` (carga fiscal: "Nada a mudar") e a Vercel publicou <https://he-homol.vercel.app> (`/api/saude` ok; `/vendas/nova` sem sessão → login).
+
+Teste pela equipe, com a própria conta: venda à vista em PIX ("Venda nº 1 registrada", baixa de estoque no detalhe); venda mista dinheiro + crédito 3x com troco calculado e as 3 parcelas "A receber" mês a mês; aviso de estoque insuficiente com "Finalizar" desabilitado; histórico do dia com o total. **Tudo funcionando.**
