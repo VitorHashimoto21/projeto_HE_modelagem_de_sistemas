@@ -29,6 +29,8 @@
 - `/catalogo/[id]` mostra a situação do estoque; edição do Catálogo sem o campo de mínimo; "Dados do negócio" com os dias de cobertura;
 - lista e detalhe em 390, 768 e 1440 px, claro e escuro, **sem rolagem horizontal** — capturas em [`telas/`](telas/).
 
-## Pendente
+## Verificação na homologação (T17) — 09/10/2026
 
-- **T17:** fluxo completo na homologação, depois do merge (a migração `20261009120000_estoque` roda no workflow **Migrações**).
+Depois do merge do PR #56, o workflow **Migrações** aplicou `20261009120000_estoque` (carga fiscal: "Nada a mudar") e a Vercel publicou <https://he-homol.vercel.app> (`/api/saude` ok; `/estoque` sem sessão → login).
+
+Teste pela equipe, com a própria conta: lista só com produtos físicos; entrada de 10; saída de 3 com motivo "Quebra" (10 → 7); saída de 50 recusada por estoque insuficiente; mínimo manual 8 → "Estoque baixo" na lista, no cartão do Painel e no detalhe do Catálogo. **Tudo funcionando.**

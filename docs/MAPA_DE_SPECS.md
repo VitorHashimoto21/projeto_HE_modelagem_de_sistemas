@@ -231,7 +231,7 @@ flowchart LR
 - **Justificativa da ordem:** estoque, vendas e calculadora operam sobre itens. O preço manual (RF64) permite vender antes da calculadora existir.
 
 #### SPEC-007 — Estoque: movimentações, alertas e mínimo sugerido
-- **Spec:** [`specs/SPEC-007.md`](./specs/SPEC-007.md) (✅ aprovada — questões em aberto decididas em 08/10/2026)
+- **Spec:** [`specs/SPEC-007.md`](./specs/SPEC-007.md) (✅ implementada e verificada na homologação em 09/10/2026)
 - **Objetivo:** registrar entradas e saídas manuais (com motivo), manter auditoria imutável na própria movimentação (saldo anterior e posterior), sugerir o estoque mínimo e alertar quando o estoque estiver baixo.
 - **Valor entregue:** o estoque digital reflete o físico e a reposição é antecipada.
 - **RF:** RF15, RF17, RF19, RF20, RF21 · **RN:** RN07, RN08 · **RNF:** RNF05
