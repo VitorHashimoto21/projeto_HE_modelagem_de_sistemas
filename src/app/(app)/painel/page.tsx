@@ -105,7 +105,7 @@ export default async function Painel({ searchParams }: PageProps<"/painel">) {
       </section>
 
       <p className="text-sm text-muted-foreground">
-        Vendas, financeiro e a calculadora de preços chegam nas próximas etapas do sistema.
+        O financeiro e a calculadora de preços chegam nas próximas etapas do sistema.
       </p>
     </div>
   );

@@ -1,6 +1,6 @@
 # SPEC-008 — Registro de venda integrado
 
-> **Status:** ✅ **Aprovada em 09/10/2026** — questões em aberto decididas pela equipe (seção 13), todas pela opção recomendada. Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar).
+> **Status:** 🚧 **Aprovada e implementada em 09/10/2026; verificação na homologação pendente** — questões em aberto decididas pela equipe (seção 13), todas pela opção recomendada; testes T01–T14 automatizados e telas verificadas em build de produção com login (T15) — [evidências](evidencias/SPEC-008/README.md). Falta o T16 (fluxo na homologação, depois da migração). Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar).
 > **Mapa:** [`MAPA_DE_SPECS.md`](../MAPA_DE_SPECS.md) · **Anteriores:** [SPEC-006](SPEC-006.md) (catálogo e preço oficial) e [SPEC-007](SPEC-007.md) (estoque e primitiva de movimentação) · **Próximas que dependem desta:** SPEC-009 (financeiro), SPEC-010 (RBT12 e CMV%), SPEC-011 (cancelamento e troca) e SPEC-012 (dashboard).
 
 ---
@@ -224,6 +224,18 @@
 | **Detalhar venda** | id | venda com itens, pagamentos, parcelas/contas, movimentações | `NaoEncontrado`, `SemPermissao` |
 | **Dividir em parcelas** (domínio) | valor, N, data da venda | parcelas (valor, vencimento) | — |
 
+**Implementação (09/10/2026):** domínio em `src/lib/dominio/venda.ts`; validação, fluxos e Server Actions em `src/lib/vendas/`; banco em `src/lib/db/vendas.ts` (`vendas(contexto)` de `@/lib/db`); telas em `src/app/(app)/vendas/` (histórico, `nova` e `[id]`) e a frente de caixa em `src/components/vendas/frente-de-caixa.tsx`; migração `20261009150000_vendas`.
+
+**Divergências registradas na implementação:**
+
+- **Número da venda por contador no negócio:** `Negocio.proximoNumeroVenda` é incrementado com `UPDATE … RETURNING` dentro da transação da venda. A trava da linha do negócio serializa as vendas do mesmo negócio (curtas), e uma venda recusada desfaz o incremento — números sem buracos (testado com vendas simultâneas).
+- **Identificador do carrinho como id da venda (INV-009):** gerado no navegador ao abrir a frente de caixa; o servidor procura a venda antes de gravar e, se dois envios correrem juntos, a violação de chave primária do segundo devolve a venda do primeiro.
+- **Linhas do mesmo item são somadas** na validação do carrinho.
+- **Material arquivado continua sendo consumido** pela venda do serviço (`exigirAtivo: false` na baixa do material), coerente com a SPEC-006 (OPEN-006: o vínculo é mantido). O produto vendido diretamente precisa estar ativo.
+- **Quantidade do material arredondada a 3 casas** (quantidade vendida × quantidade por execução); se o resultado for 0, não há baixa.
+- **Lista de itens e de clientes carregada na página** da frente de caixa e filtrada no navegador (até 2.000 itens e 1.000 clientes), em vez de uma busca no servidor a cada tecla.
+- **Testes de isolamento da SPEC-001** passaram a informar `numero` e `registradaPorId` ao criar vendas, e o mapa de relações (`modelos.ts`) ganhou `registradaPor`/`vendasRegistradas`.
+
 ---
 
 ## 10. Requisitos não funcionais aplicáveis
@@ -310,9 +322,9 @@ Todas decididas pela equipe em 09/10/2026, pela opção recomendada:
 
 A SPEC-008 estará concluída quando:
 
-- [ ] todos os critérios de aceitação (CA-01 a CA-13) estiverem implementados;
+- [ ] todos os critérios de aceitação (CA-01 a CA-13) estiverem implementados — por testes e em build de produção com login; falta conferir na homologação (T16);
 - [ ] todos os invariantes (INV-001 a INV-009) estiverem preservados;
-- [ ] os testes derivados (T01 a T16) estiverem aprovados, com o CI verde no PR;
+- [ ] os testes derivados (T01 a T16) estiverem aprovados, com o CI verde no PR — T01 a T14 automatizados; T15 com capturas; T16 pendente;
 - [ ] os RNFs aplicáveis (RNF01, RNF02, RNF05, RNF06) tiverem sido verificados como descrito na seção 10;
 - [x] as questões OPEN-001 a OPEN-007 tiverem sido decididas e registradas;
 - [ ] não existir divergência conhecida entre a implementação e esta Spec;

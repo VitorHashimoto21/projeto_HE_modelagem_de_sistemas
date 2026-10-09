@@ -15,6 +15,8 @@ const ITENS: (ItemDoMenu & { exige: Exigencia })[] = [
   // Módulos (SPEC-006 em diante)
   { rotulo: "Catálogo", href: "/catalogo", exige: { modulo: "catalogo", acao: "ver" } },
   { rotulo: "Estoque", href: "/estoque", exige: { modulo: "estoque", acao: "ver" } },
+  { rotulo: "Nova venda", href: "/vendas/nova", exige: { modulo: "vendas", acao: "criar" } },
+  { rotulo: "Vendas", href: "/vendas", exige: { modulo: "vendas", acao: "ver" } },
   // Configurações do negócio (OPEN-002)
   { rotulo: "Equipe", href: "/negocio/equipe", exige: "dono" },
   { rotulo: "Dados do negócio", href: "/negocio/dados", exige: "dono" },
