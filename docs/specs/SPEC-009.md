@@ -1,6 +1,6 @@
 # SPEC-009 — Financeiro: caixa, contas e despesas fixas
 
-> **Status:** 📝 **Rascunho para aprovação (09/10/2026)** — gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar). As questões em aberto da seção 13 trazem uma **recomendação**, mas a decisão é da equipe. Nenhuma implementação antes da aprovação.
+> **Status:** ✅ **Aprovada em 09/10/2026** — questões em aberto decididas pela equipe (seção 13), todas pela opção recomendada. Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar).
 > **Mapa:** [`MAPA_DE_SPECS.md`](../MAPA_DE_SPECS.md) · **Anteriores:** [SPEC-005](SPEC-005.md) (permissões) e [SPEC-008](SPEC-008.md) (vendas, que já geram lançamentos e contas a receber) · **Próximas que dependem desta:** SPEC-010 (despesas fixas na calculadora), SPEC-011 (estorno de recebidos) e SPEC-012 (saldo e projeção no dashboard).
 
 ---
@@ -288,18 +288,18 @@ Conforme o OPEN-008 (recomendação: recebidas **automaticamente** no vencimento
 
 ## 13. Questões em aberto
 
-Cada questão traz a **recomendação** de quem gerou a Spec; a decisão é da equipe.
+Todas decididas pela equipe em 09/10/2026, pela opção recomendada:
 
-| ID | Questão | Opções | Recomendação |
-|---|---|---|---|
-| **OPEN-001** — Saldo inicial | Um negócio que já existe tem dinheiro em caixa antes de usar o sistema. | (a) **informar uma vez um lançamento "Saldo inicial"** (data e valor); (b) campo no negócio; (c) começar do zero. | **(a)**: aparece no extrato, entra no saldo como qualquer lançamento e fica auditável. |
-| **OPEN-002** — Lançamentos avulsos | UC12a fala em despesa operacional; RF29 em entradas e saídas. | (a) **entradas e saídas avulsas**, com categoria e descrição; (b) só saídas (despesa operacional). | **(a)**: há entradas fora de venda (aporte do dono, reembolso). |
-| **OPEN-003** — Corrigir erros | Lançamento ou conta registrados errado. | (a) **lançamentos imutáveis com estorno** (gatilho no banco, como estoque e preço); contas manuais sem pagamento podem ser editadas ou canceladas; (b) permitir editar/excluir lançamentos manuais. | **(a)**: mantém o caixa auditável (RNF05) e coerente com as outras specs. |
-| **OPEN-004** — Primeira conta da despesa fixa | Despesa cadastrada no meio do mês. | (a) **mês do cadastro se o dia de vencimento ainda não passou; senão, o próximo mês**; (b) sempre o mês do cadastro; (c) sempre o próximo. | **(a)**: não cria conta "atrasada" logo ao cadastrar e não pula um vencimento que ainda vai acontecer. |
-| **OPEN-005** — DAS do MEI | O DAS muda todo janeiro (SPEC-003). | (a) **despesa automática para negócio MEI, valor do parâmetro vigente na competência**, só o dia é editável; (b) o usuário cadastra como despesa comum. | **(a)**: é o que o RF60 pede e acompanha o salário mínimo sem o usuário fazer nada. |
-| **OPEN-006** — Permissões do Financeiro | Como as 4 ações da matriz (SPEC-005) se aplicam. | (a) ***ver***: caixa, saldo, contas e despesas fixas; ***criar***: avulso, nova conta, registrar pagamento, nova despesa fixa; ***editar***: editar despesa fixa e conta manual; ***excluir***: estornar avulso e cancelar conta manual; (b) outra divisão. | **(a)**: permite o caso do RF06 (Colaborador que só lança despesa, sem ver saldo). |
-| **OPEN-007** — Data do lançamento e do pagamento | Lançar depois o que aconteceu antes. | (a) **hoje por padrão, retroativa até 90 dias**, nunca futura (como o estoque); (b) só hoje; (c) até 7 dias (como a venda). | **(a)**: contas costumam ser registradas com atraso (boleto pago na semana passada). |
-| **OPEN-008** — Recebimento das parcelas do cartão | RN14 diz que entram no saldo "na data de vencimento/recebimento". | (a) **automático no vencimento** (rotina diária e conferência), com opção de registrar antes; (b) sempre manual. | **(a)**: a maquininha deposita sozinha; exigir o registro manual de cada parcela deixaria o saldo sempre errado. |
+| ID | Decisão |
+|---|---|
+| **OPEN-001** — Saldo inicial | **Lançamento "Saldo inicial"**, informado uma vez por negócio (data e valor), no extrato e no saldo. |
+| **OPEN-002** — Lançamentos avulsos | **Entradas e saídas avulsas**, com categoria e descrição. |
+| **OPEN-003** — Corrigir erros | **Lançamentos imutáveis com estorno** (gatilho `he_somente_insercao`); **contas manuais sem pagamento** podem ser editadas ou canceladas. |
+| **OPEN-004** — Primeira conta da despesa fixa | **Mês do cadastro se o dia de vencimento ainda não passou; senão, o próximo mês.** |
+| **OPEN-005** — DAS do MEI | **Despesa automática para negócio MEI**, com o DAS vigente na competência (SPEC-003); só o dia de vencimento é editável. |
+| **OPEN-006** — Permissões | ***Ver***: caixa, saldo, contas e despesas fixas; ***criar***: avulso, saldo inicial, nova conta, registrar pagamento, nova despesa fixa; ***editar***: despesa fixa e conta manual; ***excluir***: estornar avulso e cancelar conta manual. |
+| **OPEN-007** — Data | **Hoje por padrão, retroativa até 90 dias**, nunca futura. |
+| **OPEN-008** — Parcelas do cartão | **Recebidas automaticamente no vencimento** (rotina diária e conferência ao abrir), com opção de registrar antes. |
 
 ---
 
@@ -311,7 +311,7 @@ A SPEC-009 estará concluída quando:
 - [ ] todos os invariantes (INV-001 a INV-008) estiverem preservados;
 - [ ] os testes derivados (T01 a T15) estiverem aprovados, com o CI verde no PR;
 - [ ] os RNFs aplicáveis (RNF01, RNF02, RNF05, RNF06) tiverem sido verificados como descrito na seção 10;
-- [ ] as questões OPEN-001 a OPEN-008 tiverem sido decididas e registradas;
+- [x] as questões OPEN-001 a OPEN-008 tiverem sido decididas e registradas;
 - [ ] não existir divergência conhecida entre a implementação e esta Spec;
 - [ ] toda divergência em relação à baseline tiver sido explicitamente analisada e registrada nos documentos.
 
