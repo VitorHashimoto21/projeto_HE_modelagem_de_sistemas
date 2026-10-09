@@ -305,7 +305,8 @@ export function FormularioItem({ valores, opcoes }: { valores?: ValoresDoItem; o
           />
         </div>
 
-        {tipo === "PRODUTO_FISICO" && (
+        {/* Na edição, o mínimo manual fica no Estoque (SPEC-007, OPEN-001). */}
+        {tipo === "PRODUTO_FISICO" && !editando && (
           <CampoTexto
             nome="estoqueMinimo"
             rotulo="Estoque mínimo"

@@ -70,7 +70,8 @@ export function MatrizDePermissoes({
       ))}
       <p className="text-xs text-muted-foreground">
         Editar e excluir/cancelar exigem também “Ver”. O Dashboard completo (saldo, semáforo, ponto de equilíbrio e
-        gráficos) aparece só para quem também pode ver o Financeiro.
+        gráficos) aparece só para quem também pode ver o Financeiro. No Estoque, “Excluir/cancelar” não tem uso:
+        movimentações nunca são apagadas, e um lançamento errado é corrigido com uma entrada ou saída.
       </p>
     </fieldset>
   );

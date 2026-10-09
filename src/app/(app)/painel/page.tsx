@@ -2,8 +2,10 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ROTULO_ANEXO, ROTULO_ATIVIDADE_MEI, ROTULO_REGIME } from "@/components/negocio/rotulos";
-import { exigirNegocio } from "@/lib/auth/servidor";
-import { negocios } from "@/lib/db";
+import { exigirMembro } from "@/lib/auth/servidor";
+import { estoque, negocios } from "@/lib/db";
+import { hoje } from "@/lib/dominio/datas";
+import { pode } from "@/lib/dominio/permissoes";
 import { formatarCnpj } from "@/lib/dominio/cnpj";
 import { MENSAGENS_ENQUADRAMENTO } from "@/lib/negocio/enquadramento";
 
@@ -21,12 +23,16 @@ function Linha({ rotulo, valor }: { rotulo: string; valor: React.ReactNode }) {
 // Página inicial do negócio ativo (SPEC-004, escopo 7) — provisória: o Dashboard da
 // SPEC-012 a substitui. Sem negócio ativo válido, exigirNegocio leva a "Meus negócios".
 export default async function Painel({ searchParams }: PageProps<"/painel">) {
-  const { negocioId, usuarioId } = await exigirNegocio();
-  const [n, papel, { salvo }] = await Promise.all([
+  const membro = await exigirMembro();
+  const { negocioId, papel } = membro;
+  // Cartão de alertas do estoque (SPEC-007, OPEN-009) para quem tem Estoque — ver.
+  const verEstoque = pode(membro.permissoes, "estoque", "ver");
+  const [n, { salvo }, alertas] = await Promise.all([
     negocios().dadosFiscais(negocioId),
-    negocios().papel(usuarioId!, negocioId),
     searchParams,
+    verEstoque ? estoque(membro).contarAlertas(hoje()) : Promise.resolve(null),
   ]);
+  const totalAlertas = alertas ? alertas.baixo + alertas.semEstoque : 0;
   if (!n) notFound();
 
   return (
@@ -40,6 +46,36 @@ export default async function Painel({ searchParams }: PageProps<"/painel">) {
         <p role="status" className="rounded-xl border border-status-ok/30 bg-status-ok-bg px-4 py-3 text-sm text-status-ok">
           Dados do negócio salvos.
         </p>
+      )}
+
+      {alertas && (
+        <section
+          aria-labelledby="titulo-alertas"
+          className={`rounded-2xl border p-6 shadow-sm ${totalAlertas > 0 ? "border-status-warn/40 bg-status-warn-bg" : "bg-card"}`}
+        >
+          <h2 id="titulo-alertas" className="font-display text-xl font-semibold text-card-foreground">
+            Estoque
+          </h2>
+          {totalAlertas > 0 ? (
+            <p className="mt-1 text-sm text-status-warn">
+              <span aria-hidden="true">▲ </span>
+              <strong>
+                {totalAlertas} {totalAlertas === 1 ? "produto" : "produtos"} com estoque baixo
+              </strong>
+              {alertas.semEstoque > 0 && ` (${alertas.semEstoque} sem estoque)`}.{" "}
+              <Link href="/estoque?situacao=baixo" className="font-semibold underline underline-offset-2">
+                Ver quais
+              </Link>
+            </p>
+          ) : (
+            <p className="mt-1 text-sm text-muted-foreground">
+              Nenhum produto com estoque baixo.{" "}
+              <Link href="/estoque" className="font-medium text-primary underline-offset-2 hover:underline">
+                Abrir o estoque
+              </Link>
+            </p>
+          )}
+        </section>
       )}
 
       <section className="rounded-2xl border bg-card p-6 shadow-sm" aria-labelledby="titulo-enquadramento">
@@ -69,7 +105,7 @@ export default async function Painel({ searchParams }: PageProps<"/painel">) {
       </section>
 
       <p className="text-sm text-muted-foreground">
-        Estoque, vendas, financeiro e a calculadora de preços chegam nas próximas etapas do sistema.
+        Vendas, financeiro e a calculadora de preços chegam nas próximas etapas do sistema.
       </p>
     </div>
   );
