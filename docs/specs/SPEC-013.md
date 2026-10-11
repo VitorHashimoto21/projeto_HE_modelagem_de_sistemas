@@ -1,6 +1,6 @@
 # SPEC-013 — Plano gratuito × pago
 
-> **Status:** 📝 **Rascunho** — aguardando as decisões da equipe nas questões em aberto (seção 13). Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar).
+> **Status:** ✅ **Aprovada em 11/10/2026** — questões em aberto decididas pela equipe (seção 13), todas pela opção recomendada. Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar).
 > **Mapa:** [`MAPA_DE_SPECS.md`](../MAPA_DE_SPECS.md) · **Anteriores:** [SPEC-005](SPEC-005.md) (equipe, permissões e limite de colaboradores), [SPEC-008](SPEC-008.md) (vendas com custo gravado), [SPEC-009](SPEC-009.md) (fluxo de caixa e contas) e [SPEC-012](SPEC-012.md) (Dashboard) · **Próximas que dependem desta:** SPEC-015 (cobrança real, que substitui só o ponto de troca de plano).
 
 ---
@@ -247,6 +247,20 @@
 ---
 
 ## 13. Questões em aberto
+
+Todas decididas pela equipe em 11/10/2026, pela opção recomendada:
+
+| ID | Decisão |
+|---|---|
+| **OPEN-001** — Quem continua com acesso na volta ao gratuito | **O Dono escolhe na confirmação qual colaborador continua**; os outros ficam **suspensos** (vínculo, papel e permissões mantidos) e os **convites pendentes são cancelados**; com vaga livre, o Dono pode trocar quem tem acesso. |
+| **OPEN-002** — Como gerar o PDF | **Arquivo PDF gerado no servidor** com `pdf-lib`, baixado como o CSV. |
+| **OPEN-003** — Permissões dos relatórios | **Reaproveitar os módulos:** rentabilidade = Vendas — ver e Financeiro — ver; exportar vendas = Vendas — ver; fluxo de caixa e contas = Financeiro — ver. |
+| **OPEN-004** — O que o gratuito vê | **"Relatórios" no menu com o selo "Plano pago"**; a página explica e oferece o upgrade (Dono → página do plano; demais → "Peça ao Dono do negócio"). |
+| **OPEN-005** — Onde vale o limite de 12 meses | **Histórico de vendas, meses do fluxo de caixa, contas quitadas/canceladas e movimentações do estoque**; contas em aberto sempre; registro antigo abre pelo link. |
+| **OPEN-006** — Formato do CSV | **Ponto e vírgula, vírgula decimal e UTF-8 com BOM.** |
+| **OPEN-007** — Registro da troca de plano | **Tabela `HistoricoPlano` somente inserção**, além dos campos da última troca. |
+
+Opções consideradas:
 
 | ID | Questão | Opções | Recomendação |
 |---|---|---|---|
