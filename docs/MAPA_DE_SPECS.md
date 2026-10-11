@@ -253,6 +253,7 @@ flowchart LR
 - **Justificativa da ordem:** gera os dados de que o financeiro, a calculadora (RBT12 e CMV%) e o dashboard dependem.
 
 #### SPEC-009 — Financeiro: caixa, contas e despesas fixas
+- **Spec:** [`specs/SPEC-009.md`](./specs/SPEC-009.md) (✅ implementada e verificada na homologação em 11/10/2026)
 - **Objetivo:** manter o fluxo de caixa e as contas a pagar/receber (com quitação parcial que gera lançamento), cadastrar as despesas fixas (incluindo o DAS do MEI) e gerar suas contas mensais.
 - **Valor entregue:** saldo real e compromissos futuros visíveis, sem lançamento duplicado.
 - **RF:** RF06 (permissão de despesa operacional), RF29–RF32, RF48, RF60, RF67 · **RN:** RN14, RN22 · **RNF:** RNF02, RNF05

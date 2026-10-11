@@ -42,7 +42,22 @@ São 49 testes novos (37 unitários e 12 de integração). Toda a suíte passa: 
   - ela lança uma despesa de R$ 12,50 sem ver o saldo.
 - **Telas** (caixa, lançar, contas, conta, nova conta e despesas fixas): verificadas em 390, 768 e 1440 px, nos temas claro e escuro, **sem rolagem horizontal**. Capturas selecionadas em [`telas/`](telas/).
 
-## Pendente
+## Verificação na homologação (T15) — 11/10/2026
 
-- **Antes do merge:** cadastrar `CRON_SECRET` na Vercel (projeto he-homol, tipo *secret*, ao menos 16 caracteres, por exemplo `openssl rand -hex 32`). Sem ele, a rotina recusa as chamadas, e as contas só são geradas ao abrir o Financeiro e o Painel.
-- **T15:** fluxo completo na homologação depois do merge (migração `20261009180000_financeiro`), incluindo uma execução da rotina agendada (Vercel → Cron Jobs).
+- **Merge do PR #60:** o workflow **Migrações** aplicou `20261009180000_financeiro` sem erro, com a carga fiscal em seguida. O CI ficou verde.
+- **Publicação:** a Vercel publicou <https://he-homol.vercel.app>:
+  - `/api/saude` responde ok;
+  - `/api/rotinas/diaria` sem o segredo responde 401;
+  - `/financeiro` sem sessão leva ao login.
+- **`CRON_SECRET`:** cadastrado na Vercel; a rotina aparece em *Settings → Cron Jobs*.
+
+**Teste pela equipe, com a própria conta:**
+- caixa com as vendas já registradas;
+- saldo inicial;
+- lançamento avulso e estorno;
+- conta a pagar com pagamento parcial e depois total, com o valor acima do restante recusado;
+- despesa fixa gerando a conta do mês;
+- execução da rotina agendada;
+- telas no celular.
+
+**Tudo funcionando.**
