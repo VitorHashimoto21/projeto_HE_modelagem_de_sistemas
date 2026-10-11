@@ -183,10 +183,11 @@ model Usuario {
   email String @unique
 
   // RNF04: consentimento explícito de uso de dados (LGPD)
-  consentimentoLgpdEm DateTime?
-  versaoTermosAceita  String? // SPEC-002, OPEN-005: versão da política e dos termos aceita (ex.: "2026-10-03")
-  excluidoEm          DateTime? // RN27: acesso bloqueado
-  anonimizadoEm       DateTime? // RN27: nome/e-mail/senha substituídos por valores anônimos
+  consentimentoLgpdEm  DateTime?
+  versaoTermosAceita   String? // SPEC-002, OPEN-005: versão da política e dos termos aceita (ex.: "2026-10-03")
+  excluidoEm           DateTime? // RN27: acesso bloqueado
+  anonimizadoEm        DateTime? // RN27: nome/e-mail/senha substituídos por valores anônimos
+  credencialRemovidaEm DateTime? // SPEC-014 (OPEN-001): credencial apagada no Supabase Auth; nula com excluidoEm = pendência da rotina diária
 
   membroEm          MembroNegocio[]
   movimentacoes     MovimentacaoEstoque[] // RNF05: auditoria (quem fez a alteração)
@@ -232,7 +233,8 @@ model Negocio {
   proximoNumeroVenda        Int      @default(1) // SPEC-008 (OPEN-007): próximo número de venda, incrementado na transação da venda
   diasCoberturaEstoque      Int      @default(7) // RF20: estoque mínimo = ⌈consumo médio diário × dias⌉
 
-  encerradoEm DateTime? // RN27: negócio encerrado após exclusão do único Dono (dados fiscais retidos 5 anos)
+  encerradoEm  DateTime? // RN27: negócio encerrado após exclusão do único Dono (dados fiscais retidos 5 anos)
+  eliminarApos DateTime? @db.Date // SPEC-014 (OPEN-005): data prevista de eliminação (encerramento + 5 anos)
 
   planoAlteradoPor Usuario? @relation("PlanoAlteradoPor", fields: [planoAlteradoPorId], references: [id])
 

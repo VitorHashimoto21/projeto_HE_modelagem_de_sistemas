@@ -35,10 +35,13 @@ export default async function LayoutDaAplicacao({ children }: LayoutProps<"/">) 
             <Link href="/negocios" className="hidden text-sm font-medium text-muted-foreground hover:text-foreground md:inline">
               Meus negócios
             </Link>
+            <Link href="/conta" className="text-sm font-medium text-muted-foreground hover:text-foreground lg:hidden">
+              Minha conta
+            </Link>
             {perfil && (
-              <span className="hidden text-sm text-muted-foreground lg:inline" title={perfil.email}>
+              <Link href="/conta" className="hidden text-sm text-muted-foreground hover:text-foreground lg:inline" title={`${perfil.email} — Minha conta`}>
                 {perfil.nome}
-              </span>
+              </Link>
             )}
             <AlternarTema />
             <form action={acaoSair}>

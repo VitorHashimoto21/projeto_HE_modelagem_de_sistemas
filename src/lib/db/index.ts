@@ -9,6 +9,7 @@ import { criarConsultasDePrecificacao } from "./precificacao";
 import { criarConsultasDeVendas } from "./vendas";
 import { criarConsultasDeEquipe } from "./equipe";
 import { criarConsultasDeNegocios } from "./negocios";
+import { criarConsultasDaLgpd } from "./lgpd";
 import { criarConsultasDePlanos } from "./planos";
 import { criarConsultasDeRelatorios } from "./relatorios";
 import { criarConsultasFiscais } from "./parametros-fiscais";
@@ -25,6 +26,7 @@ export { LIMITE_DO_PLANO_GRATUITO } from "./equipe";
 export type { ConsultasDeEquipe, ConvitePendente, EquipeDoNegocio, MembroDaEquipe } from "./equipe";
 export { CnpjJaCadastrado } from "./negocios";
 export type { ConsultasDeNegocios, ResumoDoNegocio } from "./negocios";
+export type { ConsultasDaLgpd, ResumoDaExclusao } from "./lgpd";
 export type { ConsultasDePlanos, SituacaoDoPlano } from "./planos";
 export type { ConsultasDeRelatorios } from "./relatorios";
 export { AcimaDoLimiteDoSimples, ParametroAusente } from "./parametros-fiscais";
@@ -64,6 +66,11 @@ export function financeiro(contexto: ContextoDeNegocio) {
 /** Dados da Calculadora de precificação (SPEC-010): sempre pelo cliente do negócio. */
 export function precificacao(contexto: ContextoDeNegocio) {
   return criarConsultasDePrecificacao(clienteDoNegocio(contexto), contexto.negocioId);
+}
+
+/** LGPD (SPEC-014): exportação e exclusão de conta, atravessando os negócios do titular. */
+export function lgpd() {
+  return criarConsultasDaLgpd(prismaBase());
 }
 
 /** Relatórios do plano pago (SPEC-013): sempre pelo cliente do negócio. */
