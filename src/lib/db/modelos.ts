@@ -29,6 +29,7 @@ export const MODELOS = {
       planoAlteradoPor: { modelo: "Usuario", fk: "planoAlteradoPorId" },
       membros: { modelo: "MembroNegocio" },
       convites: { modelo: "Convite" },
+      historicoPlanos: { modelo: "HistoricoPlano" },
       itens: { modelo: "Item" },
       materiaisServico: { modelo: "MaterialServico" },
       movimentacoes: { modelo: "MovimentacaoEstoque" },
@@ -50,6 +51,13 @@ export const MODELOS = {
     relacoes: {
       usuario: { modelo: "Usuario", fk: "usuarioId" },
       negocio: { modelo: "Negocio", fk: "negocioId" },
+    },
+  },
+  HistoricoPlano: {
+    classe: "operacional",
+    relacoes: {
+      negocio: { modelo: "Negocio", fk: "negocioId" },
+      usuario: { modelo: "Usuario", fk: "usuarioId" },
     },
   },
   Convite: {
@@ -181,6 +189,7 @@ export const MODELOS = {
       lancamentos: { modelo: "LancamentoFinanceiro" },
       convitesEnviados: { modelo: "Convite" },
       planosAlterados: { modelo: "Negocio" },
+      trocasDePlano: { modelo: "HistoricoPlano" },
     },
   },
   FaixaTributaria: { classe: "global", relacoes: {} },

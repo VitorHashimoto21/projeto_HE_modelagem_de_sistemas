@@ -9,11 +9,12 @@ import type { PapelUsuario } from "@/generated/prisma/enums";
 export function criarConsultasDeAcesso(cliente: PrismaClient) {
   /**
    * Filiação do usuário no negócio não encerrado (INV-006; SPEC-004), com o papel e a
-   * matriz customizada (SPEC-005, INV-004): null se não for membro.
+   * matriz customizada (SPEC-005, INV-004): null se não for membro ou se estiver suspenso
+   * pela volta ao plano gratuito (SPEC-013, INV-006).
    */
   const filiacao = (usuarioId: string, negocioId: string): Promise<{ papel: PapelUsuario; permissoesCustom: unknown } | null> =>
     cliente.membroNegocio.findFirst({
-      where: { usuarioId, negocioId, negocio: { encerradoEm: null } },
+      where: { usuarioId, negocioId, suspensoEm: null, negocio: { encerradoEm: null } },
       select: { papel: true, permissoesCustom: true },
     });
 

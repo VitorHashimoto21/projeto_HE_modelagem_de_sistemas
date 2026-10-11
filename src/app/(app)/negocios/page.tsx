@@ -89,22 +89,32 @@ export default async function MeusNegocios({ searchParams }: PageProps<"/negocio
             const ativo = n.id === contexto.negocioId;
             return (
               <li key={n.id}>
-                <form action={acaoTrocarNegocio}>
-                  <input type="hidden" name="negocioId" value={n.id} />
-                  <button
-                    type="submit"
-                    aria-current={ativo ? "true" : undefined}
-                    className={`w-full rounded-2xl border bg-card p-5 text-left shadow-sm transition-colors hover:border-primary ${
-                      ativo ? "border-primary ring-4 ring-ring/15" : ""
-                    }`}
-                  >
-                    <span className="block truncate font-display text-lg font-semibold text-card-foreground">{n.nome}</span>
-                    <span className="mt-1 block text-sm text-muted-foreground">
-                      {ROTULO_REGIME[n.regime]} · {ROTULO_PAPEL[n.papel]}
-                      {ativo && " · aberto agora"}
+                {n.suspenso ? (
+                  // SPEC-013 (5.2): membro suspenso pela volta ao plano gratuito — sem entrar.
+                  <div className="w-full rounded-2xl border border-dashed bg-card p-5 shadow-sm">
+                    <span className="block truncate font-display text-lg font-semibold text-muted-foreground">{n.nome}</span>
+                    <span className="mt-1 block text-sm text-status-warn">
+                      <span aria-hidden="true">▲ </span>Acesso suspenso — o negócio voltou ao plano gratuito. Fale com o Dono.
                     </span>
-                  </button>
-                </form>
+                  </div>
+                ) : (
+                  <form action={acaoTrocarNegocio}>
+                    <input type="hidden" name="negocioId" value={n.id} />
+                    <button
+                      type="submit"
+                      aria-current={ativo ? "true" : undefined}
+                      className={`w-full rounded-2xl border bg-card p-5 text-left shadow-sm transition-colors hover:border-primary ${
+                        ativo ? "border-primary ring-4 ring-ring/15" : ""
+                      }`}
+                    >
+                      <span className="block truncate font-display text-lg font-semibold text-card-foreground">{n.nome}</span>
+                      <span className="mt-1 block text-sm text-muted-foreground">
+                        {ROTULO_REGIME[n.regime]} · {ROTULO_PAPEL[n.papel]}
+                        {ativo && " · aberto agora"}
+                      </span>
+                    </button>
+                  </form>
+                )}
                 {n.papel !== "DONO" && (
                   <div className="mt-2 px-1">
                     <SairDoNegocio negocioId={n.id} nome={n.nome} />

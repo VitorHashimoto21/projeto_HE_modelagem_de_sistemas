@@ -1,6 +1,6 @@
 # SPEC-013 — Plano gratuito × pago
 
-> **Status:** ✅ **Aprovada em 11/10/2026** — questões em aberto decididas pela equipe (seção 13), todas pela opção recomendada. Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar).
+> **Status:** 🚧 **Aprovada e implementada em 11/10/2026; verificação na homologação pendente** — questões em aberto decididas pela equipe (seção 13), todas pela opção recomendada; testes T01–T12 automatizados e telas verificadas em build de produção com login (T13) — [evidências](evidencias/SPEC-013/README.md). Falta o T14 (fluxo na homologação). Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar).
 > **Mapa:** [`MAPA_DE_SPECS.md`](../MAPA_DE_SPECS.md) · **Anteriores:** [SPEC-005](SPEC-005.md) (equipe, permissões e limite de colaboradores), [SPEC-008](SPEC-008.md) (vendas com custo gravado), [SPEC-009](SPEC-009.md) (fluxo de caixa e contas) e [SPEC-012](SPEC-012.md) (Dashboard) · **Próximas que dependem desta:** SPEC-015 (cobrança real, que substitui só o ponto de troca de plano).
 
 ---
@@ -168,6 +168,25 @@
 - **Integrações:** nenhuma.
 - **Identidade visual:** selo "Plano pago" com ícone e texto; a oferta de upgrade usa o cartão de destaque do tema; tabelas responsivas.
 
+**Implementação (11/10/2026):**
+- regras puras em `src/lib/dominio/planos.ts` (funcionalidades, limite do histórico, volta ao gratuito) e `src/lib/dominio/relatorios.ts` (período, rentabilidade, CSV);
+- `alterarPlano` e `trocarAcesso` em `src/lib/db/planos.ts`; leituras dos relatórios em `src/lib/db/relatorios.ts`;
+- tabelas, CSV e PDF (`pdf-lib` 1.17.1) em `src/lib/relatorios/`; fluxos e Server Actions do plano em `src/lib/planos/`;
+- páginas `src/app/(app)/negocio/plano` e `src/app/(app)/relatorios`, e a rota de download `relatorios/exportar`;
+- ajustes na filiação, em "Meus negócios", na Equipe, no menu e nas quatro listas do OPEN-005;
+- migração `20261012100000_planos`.
+
+**Divergências registradas na implementação:**
+
+- **Banco:** além de `suspensoEm` e da tabela `HistoricoPlano`, entraram os CHECKs "o Dono nunca é suspenso" e "a troca registrada muda de fato o plano", e o RLS ligado na tabela nova (como em todas as outras — o teste de isolamento exige).
+- **Aceite de convite trava o negócio antes do convite**, na mesma ordem de `alterarPlano`: aceite e volta ao gratuito simultâneos se enfileiram, sem impasse, e o limite nunca é ultrapassado (INV-004, teste com 5 rodadas).
+- **Seletor de negócio** no topo não lista os negócios em que o membro está suspenso; "Meus negócios" mostra o negócio marcado.
+- **Recusa da exportação:** no gratuito, volta à página dos relatórios (oferta de upgrade); sem a permissão, vai para "Sem acesso".
+- **Rentabilidade:** o faturamento de cada linha é arredondado ao centavo, como o total da venda (SPEC-008), para a soma bater com o faturamento do período.
+- **PDF com as fontes padrão** (sem fonte embutida): caracteres fora do alfabeto latino são trocados (ex.: "−" vira "-"); acentos do português saem normalmente.
+- **Movimentações do estoque** limitadas pela data da ocorrência; o saldo e o consumo continuam usando tudo.
+- **Rentabilidade no celular** em lista (cada item com todas as colunas), em vez da tabela com rolagem lateral.
+
 ---
 
 ## 9. Contratos necessários (conceituais)
@@ -278,9 +297,9 @@ Opções consideradas:
 
 A SPEC-013 estará concluída quando:
 
-- [ ] todos os critérios de aceitação (CA-01 a CA-14) estiverem implementados;
+- [ ] todos os critérios de aceitação (CA-01 a CA-14) estiverem implementados — por testes e em build de produção com login; falta conferir na homologação (T14);
 - [ ] todos os invariantes (INV-001 a INV-008) estiverem preservados;
-- [ ] os testes derivados (T01 a T14) estiverem aprovados, com o CI verde no PR;
+- [ ] os testes derivados (T01 a T14) estiverem aprovados, com o CI verde no PR — T01 a T12 automatizados; T13 com capturas; T14 pendente;
 - [ ] os RNFs aplicáveis (RNF01, RNF02, RNF06, RNF10) tiverem sido verificados como descrito na seção 10;
 - [ ] as questões OPEN-001 a OPEN-007 tiverem sido decididas e registradas;
 - [ ] não existir divergência conhecida entre a implementação e esta Spec;

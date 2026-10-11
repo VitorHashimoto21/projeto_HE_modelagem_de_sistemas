@@ -175,7 +175,8 @@ export type FluxoDeCaixa = {
 export type FiltroDoFluxo = { mes: string; categoria?: CategoriaLancamento; tipo?: TipoLancamento; pagina?: number };
 
 export type SituacaoFiltrada = "abertas" | "atrasadas" | "quitadas" | "canceladas" | "todas";
-export type FiltroDasContas = { tipo: TipoConta; situacao: SituacaoFiltrada; pagina?: number };
+/** `desde`: limite do histórico do plano gratuito (SPEC-013, OPEN-005) — quitadas e canceladas antes dele ficam fora. */
+export type FiltroDasContas = { tipo: TipoConta; situacao: SituacaoFiltrada; pagina?: number; desde?: string | null };
 
 export type ContaExibida = {
   id: string;
@@ -543,7 +544,7 @@ export function criarConsultasFinanceiras(cliente: ClienteDoNegocio, negocioId: 
 
     // ---------- Contas (5.3) ----------
 
-    async listarContas(f: FiltroDasContas, hoje: string): Promise<{ contas: ContaExibida[]; pagina: number; paginas: number; atrasadas: number }> {
+    async listarContas(f: FiltroDasContas, hoje: string): Promise<{ contas: ContaExibida[]; pagina: number; paginas: number; atrasadas: number; ocultasPeloPlano: number }> {
       const inicioDeHoje = intervaloDoDia(hoje).inicio;
       const situacao =
         f.situacao === "abertas"
@@ -555,10 +556,18 @@ export function criarConsultasFinanceiras(cliente: ClienteDoNegocio, negocioId: 
               : f.situacao === "canceladas"
                 ? { status: "CANCELADA" as const }
                 : {};
-      const where = { tipo: f.tipo, ...situacao };
-      const [total, atrasadas] = await Promise.all([
+      // Contas em aberto aparecem sempre; quitadas e canceladas, só dentro do histórico do plano.
+      const desde = f.desde ? intervaloDoDia(f.desde).inicio : null;
+      const limite = desde ? { OR: [{ status: { in: ["ABERTA", "PARCIAL"] as StatusConta[] } }, { vencimento: { gte: desde } }] } : {};
+      const where = { tipo: f.tipo, ...situacao, ...limite };
+      const [total, atrasadas, ocultasPeloPlano] = await Promise.all([
         cliente.contaPagarReceber.count({ where }),
         cliente.contaPagarReceber.count({ where: { tipo: f.tipo, status: { in: ["ABERTA", "PARCIAL"] }, vencimento: { lt: inicioDeHoje } } }),
+        desde
+          ? cliente.contaPagarReceber.count({
+              where: { tipo: f.tipo, status: { in: (f.situacao === "quitadas" ? ["QUITADA"] : f.situacao === "canceladas" ? ["CANCELADA"] : ["QUITADA", "CANCELADA"]) as StatusConta[] }, vencimento: { lt: desde } },
+            })
+          : Promise.resolve(0),
       ]);
       const paginas = Math.max(1, Math.ceil(total / CONTAS_POR_PAGINA));
       const pagina = Math.min(Math.max(1, Math.floor(f.pagina ?? 1) || 1), paginas);
@@ -569,7 +578,7 @@ export function criarConsultasFinanceiras(cliente: ClienteDoNegocio, negocioId: 
         take: CONTAS_POR_PAGINA,
         select: camposDaConta,
       });
-      return { contas: contas.map((c) => exibirConta(c, hoje)), pagina, paginas, atrasadas };
+      return { contas: contas.map((c) => exibirConta(c, hoje)), pagina, paginas, atrasadas, ocultasPeloPlano: f.situacao === "abertas" || f.situacao === "atrasadas" ? 0 : ocultasPeloPlano };
     },
 
     async detalharConta(id: string, hoje: string): Promise<DetalheDaConta> {

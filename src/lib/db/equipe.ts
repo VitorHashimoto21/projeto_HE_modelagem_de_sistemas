@@ -1,6 +1,7 @@
 import { Prisma, type PrismaClient } from "@/generated/prisma/client";
 import type { PapelUsuario, PlanoNegocio } from "@/generated/prisma/enums";
 import type { Matriz } from "@/lib/dominio/permissoes";
+import { LIMITE_DO_PLANO_GRATUITO } from "@/lib/dominio/planos";
 import { comNegocio } from "./cliente-do-negocio";
 
 /**
@@ -19,6 +20,8 @@ export type MembroDaEquipe = {
   email: string;
   papel: PapelUsuario;
   permissoesCustom: unknown;
+  /** SPEC-013: sem acesso desde a volta ao plano gratuito. */
+  suspensoEm?: Date | null;
 };
 
 export type ConvitePendente = { id: string; email: string; papel: PapelUsuario; permissoesCustom: unknown; expiraEm: Date };
@@ -36,8 +39,8 @@ export type ResultadoDoConvite =
   | { ok: true; id: string }
   | { ok: false; erro: "LimiteDoPlano" | "JaEhMembro" | "ConvitePendenteExistente" | "NegocioIndisponivel" };
 
-/** Colaboradores permitidos no plano gratuito, além do Dono (RF47). */
-export const LIMITE_DO_PLANO_GRATUITO = 1;
+/** Colaboradores permitidos no plano gratuito, além do Dono (RF47) — definido no domínio de planos (SPEC-013). */
+export { LIMITE_DO_PLANO_GRATUITO };
 
 const json = (m: Matriz | null) => (m === null ? Prisma.DbNull : (m as unknown as Prisma.InputJsonValue));
 
@@ -72,7 +75,7 @@ export function criarConsultasDeEquipe(cliente: PrismaClient) {
           await expirarVencidos(db as unknown as PrismaClient, agora);
           const [membros, convites] = await Promise.all([
             db.membroNegocio.findMany({
-              select: { id: true, usuarioId: true, papel: true, permissoesCustom: true, usuario: { select: { nome: true, email: true } } },
+              select: { id: true, usuarioId: true, papel: true, permissoesCustom: true, suspensoEm: true, usuario: { select: { nome: true, email: true } } },
             }),
             db.convite.findMany({
               where: { status: "PENDENTE" },
@@ -83,7 +86,7 @@ export function criarConsultasDeEquipe(cliente: PrismaClient) {
           const ordem: Record<PapelUsuario, number> = { DONO: 0, GERENTE: 1, COLABORADOR: 2 };
           return {
             membros: membros
-              .map((m) => ({ id: m.id, usuarioId: m.usuarioId, papel: m.papel, permissoesCustom: m.permissoesCustom, nome: m.usuario.nome, email: m.usuario.email }))
+              .map((m) => ({ id: m.id, usuarioId: m.usuarioId, papel: m.papel, permissoesCustom: m.permissoesCustom, nome: m.usuario.nome, email: m.usuario.email, suspensoEm: m.suspensoEm }))
               .sort((a, b) => ordem[a.papel] - ordem[b.papel] || a.nome.localeCompare(b.nome, "pt-BR")),
             convites,
           };
@@ -108,7 +111,7 @@ export function criarConsultasDeEquipe(cliente: PrismaClient) {
             }
             if (travado[0].plano === "GRATUITO") {
               const [membros, pendentes] = await Promise.all([
-                tx.membroNegocio.count({ where: { papel: { not: "DONO" } } }),
+                tx.membroNegocio.count({ where: { papel: { not: "DONO" }, suspensoEm: null } }), // suspensos não ocupam vaga (SPEC-013)
                 tx.convite.count({ where: { status: "PENDENTE" } }),
               ]);
               if (membros + pendentes >= LIMITE_DO_PLANO_GRATUITO) return { ok: false, erro: "LimiteDoPlano" };
@@ -226,6 +229,11 @@ export function criarConsultasDeEquipe(cliente: PrismaClient) {
       agora: Date,
     ): Promise<{ ok: true; negocioId: string } | { ok: false; erro: "ConviteInvalido" | "JaEhMembro" }> {
       return cliente.$transaction(async (tx) => {
+        // Trava o negócio antes do convite, na mesma ordem de alterarPlano (SPEC-013, INV-004):
+        // aceite e volta ao gratuito simultâneos se enfileiram, sem impasse.
+        const alvo = await tx.convite.findUnique({ where: { id: conviteId }, select: { negocioId: true } });
+        if (!alvo) return { ok: false, erro: "ConviteInvalido" };
+        await tx.$queryRaw`SELECT 1 FROM "Negocio" WHERE "id" = ${alvo.negocioId}::uuid FOR UPDATE`;
         const marcado = await tx.convite.updateMany({
           where: { id: conviteId, email, status: "PENDENTE", expiraEm: { gt: agora }, negocio: { encerradoEm: null } },
           data: { status: "ACEITO", respondidoEm: agora },

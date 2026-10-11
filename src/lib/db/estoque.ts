@@ -149,6 +149,8 @@ export type DetalheDoEstoque = ProdutoEmEstoque & {
   consumoNaJanela: { saidas: number; estornos: number; primeiroDia: string | null };
   diasCobertura: number;
   movimentacoes: MovimentacaoExibida[];
+  /** Movimentações anteriores ao histórico do plano gratuito (SPEC-013). */
+  ocultasPeloPlano: number;
   pagina: number;
   paginas: number;
 };
@@ -239,15 +241,22 @@ export function criarConsultasDoEstoque(cliente: ClienteDoNegocio, negocioId: st
       return lista;
     },
 
-    async detalhar(id: string, hoje: string, pagina = 1): Promise<DetalheDoEstoque> {
+    /** `desde`: limite do histórico do plano gratuito (SPEC-013, OPEN-005) para a lista de movimentações. */
+    async detalhar(id: string, hoje: string, pagina = 1, desde: string | null = null): Promise<DetalheDoEstoque> {
       if (!UUID.test(id)) throw new ItemNaoEncontrado();
       const item = await cliente.item.findFirst({ where: { id, tipo: "PRODUTO_FISICO" }, select: camposDoProduto });
       if (!item) throw new ItemNaoEncontrado();
-      const [mapa, dias, total] = await Promise.all([resumos(hoje, id), diasCobertura(), cliente.movimentacaoEstoque.count({ where: { itemId: id } })]);
+      const filtro = { itemId: id, ...(desde ? { data: { gte: intervaloDoDia(desde).inicio } } : {}) };
+      const [mapa, dias, total, ocultasPeloPlano] = await Promise.all([
+        resumos(hoje, id),
+        diasCobertura(),
+        cliente.movimentacaoEstoque.count({ where: filtro }),
+        desde ? cliente.movimentacaoEstoque.count({ where: { itemId: id, data: { lt: intervaloDoDia(desde).inicio } } }) : Promise.resolve(0),
+      ]);
       const paginas = Math.max(1, Math.ceil(total / MOVIMENTACOES_POR_PAGINA));
       const atual = Math.min(Math.max(1, Math.floor(pagina) || 1), paginas);
       const movimentacoes = await cliente.movimentacaoEstoque.findMany({
-        where: { itemId: id },
+        where: filtro,
         orderBy: { registradoEm: "desc" },
         skip: (atual - 1) * MOVIMENTACOES_POR_PAGINA,
         take: MOVIMENTACOES_POR_PAGINA,
@@ -260,6 +269,7 @@ export function criarConsultasDoEstoque(cliente: ClienteDoNegocio, negocioId: st
         diasCobertura: dias,
         pagina: atual,
         paginas,
+        ocultasPeloPlano,
         movimentacoes: movimentacoes.map((m) => ({
           id: m.id,
           tipo: m.tipo,

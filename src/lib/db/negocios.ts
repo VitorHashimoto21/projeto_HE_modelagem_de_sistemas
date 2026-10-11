@@ -15,7 +15,7 @@ export class CnpjJaCadastrado extends Error {
   }
 }
 
-export type ResumoDoNegocio = { id: string; nome: string; regime: RegimeTributario; papel: PapelUsuario };
+export type ResumoDoNegocio = { id: string; nome: string; regime: RegimeTributario; papel: PapelUsuario; suspenso: boolean };
 
 const paraBanco = (d: DadosDoNegocio) => ({
   nome: d.nome,
@@ -51,20 +51,20 @@ export function criarConsultasDeNegocios(cliente: PrismaClient) {
       return (await cliente.negocio.count({ where: { cnpj } })) > 0;
     },
 
-    /** Negócios em que o usuário é membro, sem os encerrados, em ordem alfabética. */
+    /** Negócios em que o usuário é membro, sem os encerrados, em ordem alfabética; os suspensos marcados (SPEC-013). */
     async listarDoUsuario(usuarioId: string): Promise<ResumoDoNegocio[]> {
       const membros = await cliente.membroNegocio.findMany({
         where: { usuarioId, negocio: { encerradoEm: null } },
-        select: { papel: true, negocio: { select: { id: true, nome: true, regimeTributario: true } } },
+        select: { papel: true, suspensoEm: true, negocio: { select: { id: true, nome: true, regimeTributario: true } } },
         orderBy: { negocio: { nome: "asc" } },
       });
-      return membros.map((m) => ({ id: m.negocio.id, nome: m.negocio.nome, regime: m.negocio.regimeTributario, papel: m.papel }));
+      return membros.map((m) => ({ id: m.negocio.id, nome: m.negocio.nome, regime: m.negocio.regimeTributario, papel: m.papel, suspenso: m.suspensoEm !== null }));
     },
 
-    /** Papel do usuário no negócio, ou null se não for membro ou o negócio estiver encerrado. */
+    /** Papel do usuário no negócio, ou null se não for membro, estiver suspenso (SPEC-013) ou o negócio estiver encerrado. */
     async papel(usuarioId: string, negocioId: string): Promise<PapelUsuario | null> {
       const membro = await cliente.membroNegocio.findFirst({
-        where: { usuarioId, negocioId, negocio: { encerradoEm: null } },
+        where: { usuarioId, negocioId, suspensoEm: null, negocio: { encerradoEm: null } },
         select: { papel: true },
       });
       return membro?.papel ?? null;
