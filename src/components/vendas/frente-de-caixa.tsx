@@ -6,9 +6,12 @@ import { classeDoCampo } from "@/components/ui/classes";
 import { lerNumero } from "@/lib/dominio/catalogo";
 import { somarDias } from "@/lib/dominio/estoque";
 import {
+  acertoDoCancelamento,
   DIAS_RETROATIVOS,
   dividirEmParcelas,
   FORMAS_DE_PAGAMENTO,
+  FORMAS_DE_REEMBOLSO,
+  MOTIVOS_CANCELAMENTO,
   MAX_PARCELAS,
   paraCentavos,
   reaisDeCentavos,
@@ -16,7 +19,7 @@ import {
   troco,
   type FormaDePagamento,
 } from "@/lib/dominio/venda";
-import { acaoCadastrarCliente, acaoRegistrarVenda } from "@/lib/vendas/acoes";
+import { acaoCadastrarCliente, acaoRegistrarVenda, acaoTrocarVenda } from "@/lib/vendas/acoes";
 import { VENDA_INICIAL, type EstadoDoCliente } from "@/lib/vendas/servicos";
 
 export type ItemDaFrente = {
@@ -32,6 +35,9 @@ type Cliente = { id: string; nome: string; contato: string | null };
 type Linha = { itemId: string; quantidade: string };
 type Pagamento = { chave: number; forma: FormaDePagamento; valor: string; parcelas: number };
 
+/** Modo troca (SPEC-011, OPEN-004): a venda original, o limite e o que já foi recebido. */
+export type TrocaDaFrente = { vendaId: string; numero: number; limiteCentavos: number; recebidoCentavos: number };
+
 const botao =
   "rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-60";
 const secundario = "rounded-xl border border-input px-4 py-2.5 text-sm font-semibold text-foreground hover:bg-muted disabled:opacity-50";
@@ -39,8 +45,9 @@ const cartao = "rounded-2xl border bg-card p-5 shadow-sm";
 const reaisCampo = (centavos: number) => (centavos / 100).toFixed(2).replace(".", ",");
 
 /** Frente de caixa (SPEC-008, 5.1): monta a venda; o servidor recalcula e valida tudo (5.2). */
-export function FrenteDeCaixa({ itens, clientes: clientesIniciais, hoje }: { itens: ItemDaFrente[]; clientes: Cliente[]; hoje: string }) {
-  const [estado, executar, enviando] = useActionState(acaoRegistrarVenda, VENDA_INICIAL);
+export function FrenteDeCaixa({ itens, clientes: clientesIniciais, hoje, troca }: { itens: ItemDaFrente[]; clientes: Cliente[]; hoje: string; troca?: TrocaDaFrente }) {
+  // Na troca, a ação é a de cancelar e trocar; os estados de erro têm a mesma forma e o sucesso redireciona.
+  const [estado, executar, enviando] = useActionState(troca ? (acaoTrocarVenda as unknown as typeof acaoRegistrarVenda) : acaoRegistrarVenda, VENDA_INICIAL);
   // Identificador do carrinho = id da venda: reenviar o mesmo carrinho não cria outra venda (INV-009).
   const [carrinhoId] = useState(() => crypto.randomUUID());
   const [busca, setBusca] = useState("");
@@ -49,8 +56,11 @@ export function FrenteDeCaixa({ itens, clientes: clientesIniciais, hoje }: { ite
   const [clienteId, setClienteId] = useState("");
   const [novoCliente, setNovoCliente] = useState(false);
   const [dia, setDia] = useState(hoje);
-  const [pagamentos, setPagamentos] = useState<Pagamento[]>([{ chave: 1, forma: "PIX", valor: "", parcelas: 1 }]);
+  const [pagamentos, setPagamentos] = useState<Pagamento[]>(troca ? [] : [{ chave: 1, forma: "PIX", valor: "", parcelas: 1 }]);
   const [recebido, setRecebido] = useState("");
+  const [motivo, setMotivo] = useState("TROCA");
+  const [detalhe, setDetalhe] = useState("");
+  const [formaReembolso, setFormaReembolso] = useState("");
 
   const porId = useMemo(() => new Map(itens.map((i) => [i.id, i])), [itens]);
   const encontrados = busca.trim()
@@ -65,7 +75,13 @@ export function FrenteDeCaixa({ itens, clientes: clientesIniciais, hoje }: { ite
   });
   const total = linhasCalc.reduce((s, l) => s + l.subtotal, 0);
   const pago = pagamentos.reduce((s, p) => s + paraCentavos(lerNumero(p.valor) ?? 0), 0);
-  const falta = total - pago;
+  // Troca (RN26): o crédito cobre até o recebido; os pagamentos são só o restante.
+  const acerto = troca ? acertoDoCancelamento(troca.recebidoCentavos, total) : null;
+  const credito = acerto?.creditoCentavos ?? 0;
+  const reembolso = acerto?.reembolsoCentavos ?? 0;
+  const acimaDoLimite = troca ? total > troca.limiteCentavos : false;
+  const falta = total - credito - pago;
+  const erroDe = (campo: string) => (estado.status === "erro" ? estado.erros?.[campo] : undefined);
 
   // Aviso de estoque (a decisão final é do servidor): soma o consumo direto e o dos materiais.
   const consumo = new Map<string, { nome: string; pedido: number; saldo: number }>();
@@ -79,8 +95,16 @@ export function FrenteDeCaixa({ itens, clientes: clientesIniciais, hoje }: { ite
   }
   const semEstoque = [...consumo.values()].filter((c) => c.pedido > c.saldo + 1e-9);
 
+  const cancelamentoOk = !troca || ((motivo !== "OUTRO" || detalhe.trim().length > 0) && (reembolso === 0 || formaReembolso !== ""));
   const podeFinalizar =
-    linhas.length > 0 && linhasCalc.every((l) => l.valida) && total > 0 && falta === 0 && pagamentos.every((p) => (lerNumero(p.valor) ?? 0) > 0) && semEstoque.length === 0;
+    linhas.length > 0 &&
+    linhasCalc.every((l) => l.valida) &&
+    total > 0 &&
+    falta === 0 &&
+    pagamentos.every((p) => (lerNumero(p.valor) ?? 0) > 0) &&
+    semEstoque.length === 0 &&
+    !acimaDoLimite &&
+    cancelamentoOk;
 
   const dinheiro = pagamentos.find((p) => p.forma === "DINHEIRO");
   const trocoCentavos = dinheiro && recebido ? troco(paraCentavos(lerNumero(recebido) ?? 0), paraCentavos(lerNumero(dinheiro.valor) ?? 0)) : null;
@@ -92,7 +116,7 @@ export function FrenteDeCaixa({ itens, clientes: clientesIniciais, hoje }: { ite
   function preencherRestante(chave: number) {
     setPagamentos((ps) => {
       const outros = ps.filter((p) => p.chave !== chave).reduce((s, p) => s + paraCentavos(lerNumero(p.valor) ?? 0), 0);
-      return ps.map((p) => (p.chave === chave ? { ...p, valor: reaisCampo(Math.max(0, total - outros)) } : p));
+      return ps.map((p) => (p.chave === chave ? { ...p, valor: reaisCampo(Math.max(0, total - credito - outros)) } : p));
     });
   }
 
@@ -223,6 +247,35 @@ export function FrenteDeCaixa({ itens, clientes: clientesIniciais, hoje }: { ite
             <p className="text-2xl font-semibold text-foreground">{reaisDeCentavos(total)}</p>
           </div>
 
+          {troca && (
+            <dl className="mb-4 space-y-1 rounded-xl bg-muted/50 px-4 py-3 text-sm">
+              <div className="flex justify-between gap-3">
+                <dt className="text-muted-foreground">Limite (venda nº {troca.numero})</dt>
+                <dd className="font-medium text-foreground">{reaisDeCentavos(troca.limiteCentavos)}</dd>
+              </div>
+              <div className="flex justify-between gap-3">
+                <dt className="text-muted-foreground">Crédito de troca</dt>
+                <dd className="font-medium text-foreground">− {reaisDeCentavos(credito)}</dd>
+              </div>
+              <div className="flex justify-between gap-3">
+                <dt className="text-muted-foreground">A pagar agora</dt>
+                <dd className="font-semibold text-foreground">{reaisDeCentavos(Math.max(0, total - credito))}</dd>
+              </div>
+              <div className="flex justify-between gap-3">
+                <dt className="text-muted-foreground">A devolver</dt>
+                <dd className="font-semibold text-foreground">{reaisDeCentavos(reembolso)}</dd>
+              </div>
+              <p className="pt-1 text-xs text-muted-foreground">
+                Já recebido na venda original: {reaisDeCentavos(troca.recebidoCentavos)}. O crédito usa até esse valor; o que sobrar é devolvido.
+              </p>
+            </dl>
+          )}
+          {acimaDoLimite && troca && (
+            <p role="alert" className="mb-3 rounded-xl border border-status-danger/30 bg-status-danger-bg px-4 py-3 text-sm text-status-danger">
+              A troca precisa ter valor menor ou igual a {reaisDeCentavos(troca.limiteCentavos)}.
+            </p>
+          )}
+
           <ul className="space-y-3" aria-label="Formas de pagamento">
             {pagamentos.map((p) => {
               const valor = paraCentavos(lerNumero(p.valor) ?? 0);
@@ -244,7 +297,7 @@ export function FrenteDeCaixa({ itens, clientes: clientesIniciais, hoje }: { ite
                         </option>
                       ))}
                     </select>
-                    {pagamentos.length > 1 && (
+                    {(pagamentos.length > 1 || troca) && (
                       <button
                         type="button"
                         aria-label="Remover forma de pagamento"
@@ -296,17 +349,19 @@ export function FrenteDeCaixa({ itens, clientes: clientesIniciais, hoje }: { ite
           </ul>
           <button
             type="button"
-            onClick={() => setPagamentos([...pagamentos, { chave: Math.max(...pagamentos.map((p) => p.chave)) + 1, forma: "DINHEIRO", valor: "", parcelas: 1 }])}
+            onClick={() => setPagamentos([...pagamentos, { chave: Math.max(0, ...pagamentos.map((p) => p.chave)) + 1, forma: troca ? "PIX" : "DINHEIRO", valor: "", parcelas: 1 }])}
             className={`${secundario} mt-3 w-full`}
           >
-            + Outra forma de pagamento
+            {troca && pagamentos.length === 0 ? "+ Pagar a diferença" : "+ Outra forma de pagamento"}
           </button>
 
           <p className={`mt-4 text-sm font-medium ${falta === 0 && total > 0 ? "text-status-ok" : "text-muted-foreground"}`} aria-live="polite">
             {total === 0
               ? "Adicione itens ao carrinho."
               : falta === 0
-                ? "Pagamento completo."
+                ? troca && pago === 0
+                  ? "Coberto pelo crédito de troca."
+                  : "Pagamento completo."
                 : falta > 0
                   ? `Falta ${reaisDeCentavos(falta)}`
                   : `Pagamento passou ${reaisDeCentavos(-falta)} do total`}
@@ -322,25 +377,78 @@ export function FrenteDeCaixa({ itens, clientes: clientesIniciais, hoje }: { ite
             </div>
           )}
 
-          <div className="mt-4">
-            <label htmlFor="dia" className="text-sm font-medium text-foreground">
-              Data da venda
-            </label>
-            <input
-              id="dia"
-              type="date"
-              value={dia}
-              max={hoje}
-              min={somarDias(hoje, -DIAS_RETROATIVOS)}
-              onChange={(e) => setDia(e.target.value)}
-              className={`${classeDoCampo()} mt-1.5`}
-            />
-          </div>
+          {troca ? (
+            <div className="mt-4 space-y-3 border-t pt-4">
+              <p className="text-sm font-semibold text-foreground">Cancelamento da venda nº {troca.numero}</p>
+              <div>
+                <label htmlFor="motivo" className="text-sm font-medium text-foreground">
+                  Motivo
+                </label>
+                <select id="motivo" value={motivo} onChange={(e) => setMotivo(e.target.value)} className={`${classeDoCampo(erroDe("motivo"))} mt-1.5`}>
+                  {Object.entries(MOTIVOS_CANCELAMENTO).map(([v, r]) => (
+                    <option key={v} value={v}>
+                      {r}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label htmlFor="detalhe" className="text-sm font-medium text-foreground">
+                  Detalhe {motivo === "OUTRO" ? "(obrigatório)" : "(opcional)"}
+                </label>
+                <input id="detalhe" maxLength={200} value={detalhe} onChange={(e) => setDetalhe(e.target.value)} className={`${classeDoCampo(erroDe("detalhe"))} mt-1.5`} />
+                <MensagemDeCampo id="detalhe-erro" erro={erroDe("detalhe")} />
+              </div>
+              {reembolso > 0 && (
+                <div>
+                  <label htmlFor="formaReembolso" className="text-sm font-medium text-foreground">
+                    Devolver {reaisDeCentavos(reembolso)} em
+                  </label>
+                  <select id="formaReembolso" value={formaReembolso} onChange={(e) => setFormaReembolso(e.target.value)} className={`${classeDoCampo(erroDe("formaReembolso"))} mt-1.5`}>
+                    <option value="">Selecione…</option>
+                    {Object.entries(FORMAS_DE_REEMBOLSO).map(([v, r]) => (
+                      <option key={v} value={v}>
+                        {r}
+                      </option>
+                    ))}
+                  </select>
+                  <MensagemDeCampo id="formaReembolso-erro" erro={erroDe("formaReembolso")} />
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="mt-4">
+              <label htmlFor="dia" className="text-sm font-medium text-foreground">
+                Data da venda
+              </label>
+              <input
+                id="dia"
+                type="date"
+                value={dia}
+                max={hoje}
+                min={somarDias(hoje, -DIAS_RETROATIVOS)}
+                onChange={(e) => setDia(e.target.value)}
+                className={`${classeDoCampo()} mt-1.5`}
+              />
+            </div>
+          )}
 
           <form action={executar} className="mt-5">
             <input type="hidden" name="carrinho" value={carrinhoJson} />
+            {troca && (
+              <>
+                <input type="hidden" name="vendaId" value={troca.vendaId} />
+                <input type="hidden" name="motivo" value={motivo} />
+                <input type="hidden" name="detalhe" value={detalhe} />
+                <input type="hidden" name="formaReembolso" value={reembolso > 0 ? formaReembolso : ""} />
+              </>
+            )}
             <button type="submit" disabled={!podeFinalizar || enviando} className={`${botao} w-full py-3.5`}>
-              {enviando ? "Registrando…" : `Finalizar venda${total ? ` · ${reaisDeCentavos(total)}` : ""}`}
+              {enviando
+                ? "Registrando…"
+                : troca
+                  ? `Cancelar a venda nº ${troca.numero} e registrar a troca`
+                  : `Finalizar venda${total ? ` · ${reaisDeCentavos(total)}` : ""}`}
             </button>
           </form>
         </section>

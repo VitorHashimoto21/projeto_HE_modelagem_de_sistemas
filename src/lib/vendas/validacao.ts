@@ -1,7 +1,17 @@
 import type { ErrosDeCampo } from "@/lib/auth/validacao";
 import { casasDecimais, lerNumero } from "@/lib/dominio/catalogo";
 import { diasEntre } from "@/lib/dominio/estoque";
-import { DIAS_RETROATIVOS, FORMAS_DE_PAGAMENTO, MAX_PARCELAS, paraCentavos, type FormaDePagamento } from "@/lib/dominio/venda";
+import {
+  DIAS_RETROATIVOS,
+  FORMAS_DE_PAGAMENTO,
+  FORMAS_DE_REEMBOLSO,
+  MAX_PARCELAS,
+  MOTIVOS_CANCELAMENTO,
+  paraCentavos,
+  type FormaDePagamento,
+  type FormaDeReembolso,
+  type MotivoDeCancelamento,
+} from "@/lib/dominio/venda";
 
 /**
  * Validação da venda (SPEC-008, 5.5). Roda no navegador e no servidor. O carrinho chega
@@ -26,6 +36,10 @@ export const MENSAGENS_VENDA = {
   nomeObrigatorio: "Informe o nome do cliente",
   nomeLongo: "Use no máximo 120 caracteres",
   contatoLongo: "Use no máximo 120 caracteres",
+  motivoObrigatorio: "Escolha o motivo do cancelamento",
+  detalheObrigatorio: 'Descreva o motivo quando escolher "Outro"',
+  detalheLongo: "Use no máximo 200 caracteres",
+  formaReembolsoInvalida: "Forma de reembolso inválida",
 } as const;
 
 export type LinhaDoCarrinho = { itemId: string; quantidade: number; precoVistoCentavos: number | null };
@@ -48,14 +62,15 @@ const lerValor = (v: unknown) => (typeof v === "number" ? v : lerNumero(typeof v
  * Valida a forma do carrinho (sem consultar o banco). Linhas do mesmo item são somadas.
  * A soma dos pagamentos é conferida no servidor contra o total calculado com o preço oficial.
  */
-export function validarCarrinho(entrada: unknown, hoje: string): Validacao<DadosDoCarrinho> {
+export function validarCarrinho(entrada: unknown, hoje: string, opcoes: { troca?: boolean } = {}): Validacao<DadosDoCarrinho> {
   const c = entrada as Record<string, unknown> | null;
   if (!c || typeof c !== "object" || typeof c.id !== "string" || !UUID.test(c.id)) {
     return { ok: false, erros: { carrinho: MENSAGENS_VENDA.carrinhoInvalido } };
   }
   const erros: ErrosDeCampo = {};
 
-  const dia = typeof c.dia === "string" && c.dia ? c.dia : hoje;
+  // A troca é registrada hoje (SPEC-011, 5.4).
+  const dia = opcoes.troca ? hoje : typeof c.dia === "string" && c.dia ? c.dia : hoje;
   const diff = /^\d{4}-\d{2}-\d{2}$/.test(dia) && !Number.isNaN(Date.parse(`${dia}T00:00:00Z`)) ? diasEntre(dia, hoje) : -1;
   if (diff < 0 || diff > DIAS_RETROATIVOS) erros.dia = MENSAGENS_VENDA.dataInvalida;
 
@@ -90,7 +105,8 @@ export function validarCarrinho(entrada: unknown, hoje: string): Validacao<Dados
 
   const pagamentos: PagamentoDoCarrinho[] = [];
   const brutos = Array.isArray(c.pagamentos) ? (c.pagamentos as Record<string, unknown>[]) : [];
-  if (brutos.length === 0) erros.pagamentos = MENSAGENS_VENDA.semPagamento;
+  // Na troca, o crédito pode cobrir tudo: os pagamentos são só o restante (SPEC-011, RN26).
+  if (brutos.length === 0 && !opcoes.troca) erros.pagamentos = MENSAGENS_VENDA.semPagamento;
   else if (brutos.length > MAX_PAGAMENTOS) erros.pagamentos = MENSAGENS_VENDA.formaInvalida;
   for (const p of brutos) {
     const forma = p?.forma as FormaDePagamento;
@@ -124,4 +140,29 @@ export function validarCliente(campos: Record<string, string>): Validacao<{ nome
   else if (nome.length > 120) erros.nome = MENSAGENS_VENDA.nomeLongo;
   if (contato && contato.length > 120) erros.contato = MENSAGENS_VENDA.contatoLongo;
   return Object.keys(erros).length ? { ok: false, erros } : { ok: true, dados: { nome, contato } };
+}
+
+export type DadosDoCancelamento = {
+  /** Texto gravado em Venda.motivoCancelamento: "<motivo>" ou "<motivo>: <detalhe>". */
+  motivo: string;
+  /** Obrigatória só quando houver reembolso (conferido no servidor com o recebido). */
+  formaReembolso: FormaDeReembolso | null;
+};
+
+/** Cancelamento (SPEC-011, 5.3; OPEN-002, OPEN-003). */
+export function validarCancelamento(campos: Record<string, string>): Validacao<DadosDoCancelamento> {
+  const erros: ErrosDeCampo = {};
+  const codigo = campos.motivo as MotivoDeCancelamento;
+  const valido = Object.hasOwn(MOTIVOS_CANCELAMENTO, codigo ?? "");
+  if (!valido) erros.motivo = MENSAGENS_VENDA.motivoObrigatorio;
+  const detalhe = (campos.detalhe ?? "").trim().replace(/\s+/g, " ");
+  if (detalhe.length > 200) erros.detalhe = MENSAGENS_VENDA.detalheLongo;
+  else if (codigo === "OUTRO" && !detalhe) erros.detalhe = MENSAGENS_VENDA.detalheObrigatorio;
+  let formaReembolso: FormaDeReembolso | null = null;
+  if (campos.formaReembolso) {
+    if (Object.hasOwn(FORMAS_DE_REEMBOLSO, campos.formaReembolso)) formaReembolso = campos.formaReembolso as FormaDeReembolso;
+    else erros.formaReembolso = MENSAGENS_VENDA.formaReembolsoInvalida;
+  }
+  if (Object.keys(erros).length) return { ok: false, erros };
+  return { ok: true, dados: { motivo: detalhe ? `${MOTIVOS_CANCELAMENTO[codigo]}: ${detalhe}` : MOTIVOS_CANCELAMENTO[codigo], formaReembolso } };
 }

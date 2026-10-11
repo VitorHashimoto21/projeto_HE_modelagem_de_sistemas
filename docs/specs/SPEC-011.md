@@ -1,6 +1,6 @@
 # SPEC-011 — Cancelamento e troca de venda
 
-> **Status:** ✅ **Aprovada em 11/10/2026** — questões em aberto decididas pela equipe (seção 13), todas pela opção recomendada. Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar).
+> **Status:** 🚧 **Aprovada e implementada em 11/10/2026; verificação na homologação pendente** — questões em aberto decididas pela equipe (seção 13), todas pela opção recomendada; testes T01–T12 automatizados e telas verificadas em build de produção com login (T13) — [evidências](evidencias/SPEC-011/README.md). Falta o T14 (fluxo na homologação). Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar).
 > **Mapa:** [`MAPA_DE_SPECS.md`](../MAPA_DE_SPECS.md) · **Anteriores:** [SPEC-007](SPEC-007.md) (primitiva de estoque), [SPEC-008](SPEC-008.md) (venda, pagamentos, parcelas e baixas ligadas à venda) e [SPEC-009](SPEC-009.md) (contas, recebimentos e lançamentos) · **Próximas que dependem desta:** SPEC-012 (dashboard sem vendas canceladas).
 
 ---
@@ -176,6 +176,22 @@ O cancelamento, os estornos de estoque, o reembolso e a venda de troca têm a da
 | **Cancelar** | venda, motivo, forma do reembolso | venda cancelada, reembolso | `JaCancelada`, `MotivoInvalido`, `FormaDeReembolsoAusente`, `SemPermissao` |
 | **Cancelar e trocar** | venda, motivo, carrinho da troca (id, itens, pagamentos do restante), forma do reembolso | venda cancelada, nova venda, crédito usado, reembolso | os de cima + `TrocaAcimaDoOriginal`, os da venda (estoque, preço, soma) |
 
+**Implementação (11/10/2026):**
+- regras puras (`acertoDoCancelamento`, motivos e formas de reembolso) em `src/lib/dominio/venda.ts`;
+- `cancelar` e `previaDoCancelamento` em `src/lib/db/vendas.ts`, com o registro da venda dividido em `prepararVenda` e `gravarVenda` para a troca gravar a nova venda dentro da transação do cancelamento;
+- validação, fluxos e Server Actions em `src/lib/vendas/`;
+- telas `src/app/(app)/vendas/[id]/cancelar` e `trocar`, o detalhe da venda com o comprovante e a frente de caixa em modo troca;
+- migração `20261011150000_cancelamento`.
+
+**Divergências registradas na implementação:**
+
+- **CHECK e gatilho em `Venda`:** "cancelada se e somente se quem, quando e motivo estiverem preenchidos", e uma venda cancelada não pode mais ser alterada (`he_venda_cancelada_imutavel`). Um teste da SPEC-010 que criava venda cancelada sem esses campos foi ajustado.
+- **Ordem na transação:** primeiro o status (atualização condicional), depois o estorno do estoque, as contas e só então o recebido. Assim, a troca do **mesmo item** usa o estoque devolvido, e a tela de troca já soma as devoluções ao saldo exibido.
+- **Reenvio da troca:** o id do carrinho da troca é o id da nova venda. Se dois envios correm juntos, o segundo encontra a venda já cancelada ou o id já usado e devolve a troca gravada pelo primeiro (falha encontrada pelo teste de concorrência e corrigida).
+- **Reembolso no extrato do caixa:** o lançamento tem origem `ESTORNO`, `estorno = true` e `vendaId`, e a lista do Financeiro passou a mostrar a descrição dele ("Reembolso da venda nº N — forma"), com o link para a venda, em vez de "Venda nº N".
+- **"Troca" fica fora da lista do "Só cancelar"**: o motivo "Troca" é o padrão na tela de troca.
+- **Venda no crédito sem nada recebido:** cancela sem pedir a forma de reembolso (não há o que devolver).
+
 ---
 
 ## 10. Requisitos não funcionais aplicáveis
@@ -263,9 +279,9 @@ Todas decididas pela equipe em 11/10/2026, pela opção recomendada:
 
 A SPEC-011 estará concluída quando:
 
-- [ ] todos os critérios de aceitação (CA-01 a CA-11) estiverem implementados;
+- [ ] todos os critérios de aceitação (CA-01 a CA-11) estiverem implementados — por testes e em build de produção com login; falta conferir na homologação (T14);
 - [ ] todos os invariantes (INV-001 a INV-008) estiverem preservados;
-- [ ] os testes derivados (T01 a T14) estiverem aprovados, com o CI verde no PR;
+- [ ] os testes derivados (T01 a T14) estiverem aprovados, com o CI verde no PR — T01 a T12 automatizados; T13 com capturas; T14 pendente;
 - [ ] os RNFs aplicáveis (RNF01, RNF02, RNF05, RNF06) tiverem sido verificados como descrito na seção 10;
 - [x] as questões OPEN-001 a OPEN-006 tiverem sido decididas e registradas;
 - [ ] não existir divergência conhecida entre a implementação e esta Spec;

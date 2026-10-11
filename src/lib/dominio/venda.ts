@@ -60,3 +60,33 @@ export function troco(recebidoCentavos: number, valorEmDinheiroCentavos: number)
 /** "R$ 1.234,56" a partir de centavos. */
 export const reaisDeCentavos = (centavos: number) =>
   paraReais(centavos).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+// ---------- Cancelamento e troca (SPEC-011) ----------
+
+/** Motivos do cancelamento (OPEN-002); o detalhe é obrigatório em "Outro". */
+export const MOTIVOS_CANCELAMENTO = {
+  ERRO_REGISTRO: "Erro no registro",
+  DEVOLUCAO: "Devolução",
+  TROCA: "Troca",
+  DESISTENCIA: "Desistência do cliente",
+  OUTRO: "Outro",
+} as const;
+export type MotivoDeCancelamento = keyof typeof MOTIVOS_CANCELAMENTO;
+
+/** Como o dinheiro é devolvido (OPEN-003). */
+export const FORMAS_DE_REEMBOLSO = { DINHEIRO: "Dinheiro", PIX: "PIX", DEBITO: "Débito", ESTORNO_CARTAO: "Estorno no cartão" } as const;
+export type FormaDeReembolso = keyof typeof FORMAS_DE_REEMBOLSO;
+
+/**
+ * Acerto do cancelamento (RN25, RN26, INV-004): crédito de troca = min(valor da troca,
+ * recebido); reembolso = recebido − crédito; restante da troca = troca − crédito (pago em
+ * formas normais). Sem troca, tudo o que foi recebido é reembolsado.
+ */
+export function acertoDoCancelamento(recebidoCentavos: number, trocaCentavos: number | null) {
+  const creditoCentavos = trocaCentavos === null ? 0 : Math.min(trocaCentavos, Math.max(0, recebidoCentavos));
+  return {
+    creditoCentavos,
+    reembolsoCentavos: Math.max(0, recebidoCentavos) - creditoCentavos,
+    restanteCentavos: trocaCentavos === null ? 0 : trocaCentavos - creditoCentavos,
+  };
+}

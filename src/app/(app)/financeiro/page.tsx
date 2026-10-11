@@ -166,7 +166,8 @@ export default async function Caixa({ searchParams }: PageProps<"/financeiro">) 
                   <p className={`font-medium break-words text-foreground ${l.estornado ? "line-through decoration-muted-foreground" : ""}`}>
                     {l.venda ? (
                       <Link href={`/vendas/${l.venda.id}`} className="text-primary underline-offset-2 hover:underline">
-                        Venda nº {l.venda.numero}
+                        {/* O reembolso de venda cancelada (SPEC-011) tem descrição própria. */}
+                        {l.descricao ?? `Venda nº ${l.venda.numero}`}
                       </Link>
                     ) : l.conta ? (
                       <Link href={`/financeiro/contas/${l.conta.id}`} className="text-primary underline-offset-2 hover:underline">
