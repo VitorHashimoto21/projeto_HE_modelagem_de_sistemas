@@ -35,6 +35,11 @@ São 23 testes novos (11 unitários e 12 de integração). Toda a suíte passa: 
 - **Histórico:** as vendas canceladas aparecem marcadas.
 - **Telas:** cancelar, detalhe da cancelada, detalhe da troca e troca no celular, em 390, 768 e 1440 px, nos temas claro e escuro, **sem rolagem horizontal**. Capturas em [`telas/`](telas/).
 
-## Pendente
+## Verificação na homologação (T14) — 11/10/2026
 
-- **T14:** fluxo completo na homologação depois do merge (migração `20261011150000_cancelamento`).
+- **Merge do PR #64:** o workflow **Migrações** aplicou `20261011150000_cancelamento` sem erro ("All migrations have been successfully applied"). O CI ficou verde.
+- **Publicação:** a Vercel publicou <https://he-homol.vercel.app> com o commit do merge; a página de login responde.
+
+**Teste pela equipe, com a própria conta:** cancelamento de venda à vista (prévia, motivo obrigatório, estoque de volta, reembolso no caixa) e troca (crédito de troca, diferença devolvida, vendas ligadas).
+
+**Tudo funcionando.**
