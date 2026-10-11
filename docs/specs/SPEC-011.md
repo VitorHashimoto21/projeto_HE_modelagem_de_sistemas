@@ -1,6 +1,6 @@
 # SPEC-011 — Cancelamento e troca de venda
 
-> **Status:** 📝 **Rascunho** — aguardando as decisões da equipe nas questões em aberto (seção 13). Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar).
+> **Status:** ✅ **Aprovada em 11/10/2026** — questões em aberto decididas pela equipe (seção 13), todas pela opção recomendada. Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar).
 > **Mapa:** [`MAPA_DE_SPECS.md`](../MAPA_DE_SPECS.md) · **Anteriores:** [SPEC-007](SPEC-007.md) (primitiva de estoque), [SPEC-008](SPEC-008.md) (venda, pagamentos, parcelas e baixas ligadas à venda) e [SPEC-009](SPEC-009.md) (contas, recebimentos e lançamentos) · **Próximas que dependem desta:** SPEC-012 (dashboard sem vendas canceladas).
 
 ---
@@ -238,8 +238,18 @@ O cancelamento, os estornos de estoque, o reembolso e a venda de troca têm a da
 
 ## 13. Questões em aberto
 
-| ID | Questão | Opções | Recomendação |
-|---|---|---|---|
+Todas decididas pela equipe em 11/10/2026, pela opção recomendada:
+
+| ID | Decisão |
+|---|---|
+| **OPEN-001** — Prazo para cancelar | **Sem prazo**: qualquer venda concluída pode ser cancelada; os efeitos têm a data de hoje. |
+| **OPEN-002** — Motivo | **Lista** (Erro no registro, Devolução, Troca, Desistência do cliente, Outro) **+ detalhe** opcional, obrigatório em "Outro". |
+| **OPEN-003** — Forma do reembolso | **Um lançamento de saída** com a forma escolhida (Dinheiro, PIX, Débito ou Estorno no cartão) registrada na descrição. |
+| **OPEN-004** — Como montar a troca | **Frente de caixa da SPEC-008 em modo troca**, com o crédito já aplicado e o limite do valor original. |
+| **OPEN-005** — Permissões | **Cancelar: Vendas — excluir/cancelar; trocar: excluir/cancelar + criar.** |
+| **OPEN-006** — Cancelar uma venda de troca | **Pode**, e o crédito de troca usado entra no recebido (é reembolsado). O RN25 ("exceto crédito de troca") é entendido como "o crédito não gera lançamento de entrada". |
+
+---|---|---|---|
 | **OPEN-001** — Prazo para cancelar | Há limite de tempo? | (a) **Sem prazo**: qualquer venda concluída pode ser cancelada; os efeitos têm a data de hoje; (b) até 90 dias depois da venda (como a data retroativa do Financeiro) | **(a)** — erros e devoluções podem aparecer tarde; a auditoria (quem, quando, motivo) e a data de hoje nos estornos mantêm o histórico correto. |
 | **OPEN-002** — Motivo | Livre ou de uma lista? | (a) **Lista** (Erro no registro, Devolução, Troca, Desistência do cliente, Outro) + detalhe opcional, obrigatório em "Outro"; (b) texto livre obrigatório | **(a)** — padroniza os relatórios futuros (ex.: quantas devoluções) e é mais rápido no balcão; o detalhe cobre os casos raros. |
 | **OPEN-003** — Forma do reembolso | Como registrar a devolução do dinheiro? | (a) **Um lançamento de saída** com a forma escolhida (Dinheiro, PIX, Débito ou Estorno no cartão) registrada na descrição; (b) estornar cada recebimento automaticamente na forma original | **(a)** — reflete o que acontece no balcão (devolve-se de uma vez, muitas vezes em outra forma) e mantém um único lançamento auditável. |
@@ -257,7 +267,7 @@ A SPEC-011 estará concluída quando:
 - [ ] todos os invariantes (INV-001 a INV-008) estiverem preservados;
 - [ ] os testes derivados (T01 a T14) estiverem aprovados, com o CI verde no PR;
 - [ ] os RNFs aplicáveis (RNF01, RNF02, RNF05, RNF06) tiverem sido verificados como descrito na seção 10;
-- [ ] as questões OPEN-001 a OPEN-006 tiverem sido decididas e registradas;
+- [x] as questões OPEN-001 a OPEN-006 tiverem sido decididas e registradas;
 - [ ] não existir divergência conhecida entre a implementação e esta Spec;
 - [ ] toda divergência em relação à baseline tiver sido explicitamente analisada e registrada nos documentos.
 
