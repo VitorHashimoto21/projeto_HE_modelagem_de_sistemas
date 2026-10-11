@@ -241,7 +241,7 @@ export function criarConsultasDeVendas(cliente: ClienteDoNegocio, negocioId: str
               });
               if (ehImediato(p.forma)) {
                 await tx.lancamentoFinanceiro.create({
-                  data: { negocioId, vendaId: venda.id, tipo: "ENTRADA", categoria: "VENDAS", valor: reais(p.valorCentavos), data },
+                  data: { negocioId, vendaId: venda.id, origem: "VENDA", tipo: "ENTRADA", categoria: "VENDAS", valor: reais(p.valorCentavos), data, usuarioId },
                 });
                 continue;
               }

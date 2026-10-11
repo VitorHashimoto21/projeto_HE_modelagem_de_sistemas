@@ -3,6 +3,7 @@ import { comNegocio, type ContextoDeNegocio } from "./cliente-do-negocio";
 import { criarConsultasDeAcesso } from "./acesso";
 import { criarConsultasDoCatalogo } from "./catalogo";
 import { criarConsultasDoEstoque } from "./estoque";
+import { criarConsultasFinanceiras } from "./financeiro";
 import { criarConsultasDeVendas } from "./vendas";
 import { criarConsultasDeEquipe } from "./equipe";
 import { criarConsultasDeNegocios } from "./negocios";
@@ -11,6 +12,7 @@ import { prismaBase } from "./prisma";
 
 export type { ConsultasDeAcesso } from "./acesso";
 export type { ConsultasDeVendas, DetalheDaVenda, ItemVendavel, VendaResumida } from "./vendas";
+export type { ConsultasFinanceiras, ContaExibida, DespesaExibida, DetalheDaConta, FluxoDeCaixa, LancamentoExibido } from "./financeiro";
 export type { ConsultasDoEstoque, DetalheDoEstoque, ProdutoEmEstoque } from "./estoque";
 export type { ConsultasDoCatalogo, DetalheDoItem, ItemResumido, OpcaoDeMaterial } from "./catalogo";
 export { LIMITE_DO_PLANO_GRATUITO } from "./equipe";
@@ -44,6 +46,21 @@ export function estoque(contexto: ContextoDeNegocio) {
 /** Vendas do negócio ativo (SPEC-008): sempre pelo cliente do negócio. */
 export function vendas(contexto: ContextoDeNegocio) {
   return criarConsultasDeVendas(clienteDoNegocio(contexto), contexto.negocioId);
+}
+
+/** Financeiro do negócio ativo (SPEC-009): sempre pelo cliente do negócio. */
+export function financeiro(contexto: ContextoDeNegocio) {
+  return criarConsultasFinanceiras(clienteDoNegocio(contexto), contexto.negocioId);
+}
+
+/**
+ * Rotina diária (SPEC-009, 5.5): a única parte que roda fora de um negócio. Percorre os
+ * negócios ativos e, para cada um, faz a mesma conferência do negócio ativo, com o cliente
+ * do negócio daquele negócio.
+ */
+export async function negociosAtivos(): Promise<string[]> {
+  const lista = await prismaBase().negocio.findMany({ where: { encerradoEm: null }, select: { id: true }, orderBy: { createdAt: "asc" } });
+  return lista.map((n) => n.id);
 }
 
 /** Consultas do controle de acesso (SPEC-002): conta bloqueada, filiação e perfil. */

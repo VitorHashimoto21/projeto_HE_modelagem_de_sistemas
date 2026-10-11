@@ -154,6 +154,9 @@ export const MODELOS = {
       negocio: { modelo: "Negocio", fk: "negocioId" },
       venda: { modelo: "Venda", fk: "vendaId" },
       conta: { modelo: "ContaPagarReceber", fk: "contaId" },
+      usuario: { modelo: "Usuario", fk: "usuarioId" },
+      estornoDe: { modelo: "LancamentoFinanceiro", fk: "estornoDeId" },
+      estornadoPor: { modelo: "LancamentoFinanceiro" },
     },
   },
   ContaPagarReceber: {
@@ -175,6 +178,7 @@ export const MODELOS = {
       historicoPrecos: { modelo: "HistoricoPreco" },
       vendasCanceladas: { modelo: "Venda" },
       vendasRegistradas: { modelo: "Venda" },
+      lancamentos: { modelo: "LancamentoFinanceiro" },
       convitesEnviados: { modelo: "Convite" },
       planosAlterados: { modelo: "Negocio" },
     },

@@ -15,8 +15,11 @@ export const ROTA_SEM_ACESSO = "/sem-acesso";
 /** Páginas só para quem não está autenticado (quem já entrou vai para a inicial). */
 const SO_SEM_SESSAO = ["/entrar", "/cadastro", "/esqueci-a-senha"];
 
-/** Páginas abertas a todos, com ou sem sessão. O convite (SPEC-005, 5.3) decide sozinho o que mostrar. */
-const PUBLICAS = ["/link-invalido", "/privacidade", "/termos", "/auth", "/api/saude", "/convite"];
+/**
+ * Páginas abertas a todos, com ou sem sessão. O convite (SPEC-005, 5.3) decide sozinho o que
+ * mostrar; a rotina diária (SPEC-009) exige o próprio segredo (CRON_SECRET), não uma sessão.
+ */
+const PUBLICAS = ["/link-invalido", "/privacidade", "/termos", "/auth", "/api/saude", "/convite", "/api/rotinas"];
 
 const corresponde = (caminho: string, base: string) => caminho === base || caminho.startsWith(`${base}/`);
 

@@ -1,12 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { after } from "next/server";
 import { ROTULO_ANEXO, ROTULO_ATIVIDADE_MEI, ROTULO_REGIME } from "@/components/negocio/rotulos";
 import { exigirMembro } from "@/lib/auth/servidor";
 import { estoque, negocios } from "@/lib/db";
 import { hoje } from "@/lib/dominio/datas";
 import { pode } from "@/lib/dominio/permissoes";
 import { formatarCnpj } from "@/lib/dominio/cnpj";
+import { conferirFinanceiro } from "@/lib/financeiro/conferencia";
 import { MENSAGENS_ENQUADRAMENTO } from "@/lib/negocio/enquadramento";
 
 export const metadata: Metadata = { title: "Painel" };
@@ -25,6 +27,9 @@ function Linha({ rotulo, valor }: { rotulo: string; valor: React.ReactNode }) {
 export default async function Painel({ searchParams }: PageProps<"/painel">) {
   const membro = await exigirMembro();
   const { negocioId, papel } = membro;
+  // Conferência das contas do mês e das parcelas vencidas (SPEC-009, 5.5), depois da resposta:
+  // o Painel ainda não mostra o financeiro, então não precisa esperar por ela.
+  after(() => conferirFinanceiro(membro));
   // Cartão de alertas do estoque (SPEC-007, OPEN-009) para quem tem Estoque — ver.
   const verEstoque = pode(membro.permissoes, "estoque", "ver");
   const [n, { salvo }, alertas] = await Promise.all([
@@ -105,7 +110,7 @@ export default async function Painel({ searchParams }: PageProps<"/painel">) {
       </section>
 
       <p className="text-sm text-muted-foreground">
-        O financeiro e a calculadora de preços chegam nas próximas etapas do sistema.
+        A calculadora de preços chega na próxima etapa do sistema.
       </p>
     </div>
   );
