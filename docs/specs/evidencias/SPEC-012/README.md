@@ -34,6 +34,17 @@ São 23 testes novos (14 unitários e 9 de integração). Toda a suíte passa: l
 - **Sem "Dashboard: ver"** (matriz customizada): o nome do negócio e os atalhos, sem indicadores.
 - **Telas:** Dashboard do Dono em 390, 768 e 1440 px, nos temas claro e escuro; gráfico por mês no celular; Colaborador em 390 e 1440 px — **sem rolagem horizontal**. Capturas em [`telas/`](telas/).
 
-## Pendente
+## Verificação na homologação (T13) — 11/10/2026
 
-- **T13:** fluxo completo na homologação depois do merge (sem migração nova).
+- **Merge do PR #66:** os workflows **CI** e **Migrações** ficaram verdes (sem migração nova).
+- **Publicação:** a Vercel publicou <https://he-homol.vercel.app> com o commit do merge; `/api/saude` responde ok (aplicação e banco) e `/painel` sem sessão leva ao login.
+
+**Teste pela equipe, com a própria conta:**
+- Dashboard completo com os seis cartões;
+- saldo igual ao do Financeiro e PE e meta iguais aos da Calculadora;
+- gráfico de 30 dias e de 12 meses;
+- venda nova refletida nas vendas de hoje e no faturamento do mês;
+- projeção de caixa;
+- telas no celular.
+
+**Tudo funcionando.**
