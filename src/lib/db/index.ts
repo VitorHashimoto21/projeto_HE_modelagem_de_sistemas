@@ -4,6 +4,7 @@ import { criarConsultasDeAcesso } from "./acesso";
 import { criarConsultasDoCatalogo } from "./catalogo";
 import { criarConsultasDoEstoque } from "./estoque";
 import { criarConsultasFinanceiras } from "./financeiro";
+import { criarConsultasDePrecificacao } from "./precificacao";
 import { criarConsultasDeVendas } from "./vendas";
 import { criarConsultasDeEquipe } from "./equipe";
 import { criarConsultasDeNegocios } from "./negocios";
@@ -12,6 +13,7 @@ import { prismaBase } from "./prisma";
 
 export type { ConsultasDeAcesso } from "./acesso";
 export type { ConsultasDeVendas, DetalheDaVenda, ItemVendavel, VendaResumida } from "./vendas";
+export type { ConsultasDePrecificacao, ItemCalculavel, ParametrosDePrecificacao } from "./precificacao";
 export type { ConsultasFinanceiras, ContaExibida, DespesaExibida, DetalheDaConta, FluxoDeCaixa, LancamentoExibido } from "./financeiro";
 export type { ConsultasDoEstoque, DetalheDoEstoque, ProdutoEmEstoque } from "./estoque";
 export type { ConsultasDoCatalogo, DetalheDoItem, ItemResumido, OpcaoDeMaterial } from "./catalogo";
@@ -51,6 +53,11 @@ export function vendas(contexto: ContextoDeNegocio) {
 /** Financeiro do negócio ativo (SPEC-009): sempre pelo cliente do negócio. */
 export function financeiro(contexto: ContextoDeNegocio) {
   return criarConsultasFinanceiras(clienteDoNegocio(contexto), contexto.negocioId);
+}
+
+/** Dados da Calculadora de precificação (SPEC-010): sempre pelo cliente do negócio. */
+export function precificacao(contexto: ContextoDeNegocio) {
+  return criarConsultasDePrecificacao(clienteDoNegocio(contexto), contexto.negocioId);
 }
 
 /**

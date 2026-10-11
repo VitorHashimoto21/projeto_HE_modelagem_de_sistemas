@@ -87,9 +87,17 @@ export default async function DetalheDoItem({ params, searchParams }: PageProps<
       )}
 
       <section className="rounded-2xl border bg-card p-6 shadow-sm" aria-labelledby="titulo-preco">
-        <h2 id="titulo-preco" className="mb-1 font-display text-xl font-semibold text-card-foreground">
-          Preço oficial
-        </h2>
+        <div className="mb-1 flex flex-wrap items-center justify-between gap-3">
+          <h2 id="titulo-preco" className="font-display text-xl font-semibold text-card-foreground">
+            Preço oficial
+          </h2>
+          {/* Atalho da Calculadora (SPEC-010, OPEN-001) para quem tem Calculadora — ver. */}
+          {!item.arquivado && pode(membro.permissoes, "calculadora", "ver") && (
+            <Link href={`/calculadora?item=${item.id}`} className="text-sm font-medium text-primary underline-offset-2 hover:underline">
+              Calcular preço
+            </Link>
+          )}
+        </div>
         <p className="mb-4 text-3xl font-semibold text-foreground">
           {item.precoAtual === null ? <span className="text-base font-medium text-status-warn">Sem preço — ainda não pode ser vendido</span> : reais(item.precoAtual)}
         </p>

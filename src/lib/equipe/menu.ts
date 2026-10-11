@@ -18,6 +18,7 @@ const ITENS: (ItemDoMenu & { exige: Exigencia })[] = [
   { rotulo: "Estoque", href: "/estoque", exige: { modulo: "estoque", acao: "ver" } },
   { rotulo: "Nova venda", href: "/vendas/nova", exige: { modulo: "vendas", acao: "criar" } },
   { rotulo: "Vendas", href: "/vendas", exige: { modulo: "vendas", acao: "ver" } },
+  { rotulo: "Calculadora", href: "/calculadora", exige: { modulo: "calculadora", acao: "ver" } },
   { rotulo: "Financeiro", href: "/financeiro", exige: { modulo: "financeiro", acao: "ver" } },
   // RF06 (SPEC-009, OPEN-006): quem só lança despesa operacional, sem ver o caixa.
   { rotulo: "Lançar despesa", href: "/financeiro/lancar", exige: { modulo: "financeiro", acao: "criar", semAcao: "ver" } },

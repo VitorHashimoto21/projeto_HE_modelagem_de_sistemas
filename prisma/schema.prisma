@@ -224,6 +224,7 @@ model Negocio {
   taxaCartaoMedia           Decimal  @default(0) @db.Decimal(5, 2) // RF51: % médio da maquininha
   margemLucroMeta           Decimal? @db.Decimal(5, 2) // RF56: margem desejada p/ faturamento meta
   capacidadeMensal          Decimal? @db.Decimal(10, 2) // RF50: horas/atendimentos/unidades por mês
+  unidadeCapacidade         String?  @db.VarChar(30) // SPEC-010: unidade da capacidade (ex.: "atendimentos"), só exibição
   ticketMedioEstimado       Decimal? @db.Decimal(10, 2) // RF50
   faturamentoMensalEstimado Decimal? @db.Decimal(12, 2) // RF50: recomendado = capacidade × ticket, editável
   cmvEstimado               Decimal? @db.Decimal(5, 2) // RF62: CMV% usado enquanto não há histórico
@@ -407,6 +408,10 @@ model HistoricoPreco {
   despesasVariaveisPercentual Decimal?          @db.Decimal(5, 2) // RN20: taxa cartão + comissão
   regimeTributario            RegimeTributario?
   impostoAplicado             Decimal?          @db.Decimal(5, 2) // alíquota efetiva utilizada
+  // SPEC-010: valor exato calculado (quando o confirmado foi arredondado para cima — OPEN-004)
+  // e a memória completa do cálculo (RNF05; Anexo efetivo para o aviso do OPEN-008)
+  precoSugerido               Decimal?          @db.Decimal(10, 2)
+  memoriaCalculo              Json?
   dataConfirmacao             DateTime          @default(now())
 
   negocio Negocio @relation(fields: [negocioId], references: [id])
