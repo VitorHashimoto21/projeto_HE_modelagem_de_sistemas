@@ -264,7 +264,7 @@ flowchart LR
 - **Justificativa da ordem:** recebe as contas geradas pelas vendas e fornece as despesas fixas (com contas mensais geradas por rotina diária + conferência ao acessar) para a calculadora e o dashboard.
 
 #### SPEC-010 — Calculadora de precificação
-- **Spec:** [`specs/SPEC-010.md`](./specs/SPEC-010.md) (🚧 implementada; verificação na homologação pendente)
+- **Spec:** [`specs/SPEC-010.md`](./specs/SPEC-010.md) (✅ implementada e verificada na homologação em 11/10/2026)
 - **Objetivo:** sugerir o preço de venda pelo markup completo (custo + materiais, despesas fixas %, despesas variáveis %, imposto por RBT12 — 12 meses anteriores, proporcional com pouco histórico — e Anexo efetivo — com Fator R —, ou Imposto% informado no regime Autônomo, margem), exibir o ponto de equilíbrio e confirmar o preço oficial com histórico.
 - **Valor entregue:** o diferencial central do produto — precificação correta e auditável.
 - **RF:** RF34–RF40, RF41, RF49, RF50, RF51, RF53, RF54, RF55 (cálculo do PE), RF60 (Imposto% = 0 para MEI), RF61, RF62 (cálculo do CMV%), RF69 · **RN:** RN15, RN16, RN19, RN20, RN21, RN28, RN29 · **RNF:** RNF05, RNF06, RNF08
