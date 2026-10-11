@@ -1,6 +1,6 @@
 # SPEC-010 — Calculadora de precificação
 
-> **Status:** 📝 **Rascunho** — aguardando as decisões da equipe nas questões em aberto (seção 13). Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar).
+> **Status:** ✅ **Aprovada em 11/10/2026** — questões em aberto decididas pela equipe (seção 13), todas pela opção recomendada. Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar).
 > **Mapa:** [`MAPA_DE_SPECS.md`](../MAPA_DE_SPECS.md) · **Anteriores:** [SPEC-003](SPEC-003.md) (parâmetros fiscais), [SPEC-004](SPEC-004.md) (regime e Anexo), [SPEC-006](SPEC-006.md) (catálogo e preço oficial), [SPEC-008](SPEC-008.md) (vendas com custo unitário) e [SPEC-009](SPEC-009.md) (despesas fixas, DAS e lançamentos de salário) · **Próximas que dependem desta:** SPEC-012 (ponto de equilíbrio e meta no dashboard).
 
 ---
@@ -296,8 +296,20 @@ Usados só enquanto não houver histórico (faturamento e CMV%) ou sempre (taxa 
 
 ## 13. Questões em aberto
 
-| ID | Questão | Opções | Recomendação |
-|---|---|---|---|
+Todas decididas pela equipe em 11/10/2026, pela opção recomendada:
+
+| ID | Decisão |
+|---|---|
+| **OPEN-001** — Onde fica a Calculadora | **Tela própria `/calculadora`** (escolha do item, ponto de equilíbrio, meta e parâmetros) + **atalho "Calcular preço"** no detalhe do item do Catálogo. |
+| **OPEN-002** — Parâmetros de precificação | **Na tela da Calculadora**, com a permissão do módulo Calculadora (Dono e Gerente, UC16). |
+| **OPEN-003** — Permissões | ***Ver***: calcular, simular, ver ponto de equilíbrio e meta; ***criar***: confirmar preço; ***editar***: parâmetros de precificação. |
+| **OPEN-004** — Ajuste do preço | **Exato** (arredondado para cima ao centavo) **ou "arredondar para cima"** ao próximo real inteiro — nunca abaixo do sugerido; o valor exato fica no histórico. |
+| **OPEN-005** — RBT12 com menos de 12 meses | **Meses desde a primeira venda** (dentro dos 12), contando meses sem venda como zero. Diverge do texto literal do RF49 ("meses com vendas"), registrado. |
+| **OPEN-006** — Despesas fixas no cálculo | **Cadastro atual**: despesas fixas ativas + DAS vigente (MEI). |
+| **OPEN-007** — Folha do Fator R | **Saídas da categoria Salário** (líquidas de estornos) no período do RBT12 real; sem vendas no período → Anexo V (RN28). |
+| **OPEN-008** — Aviso de mudança do Anexo | **Comparar com o Anexo efetivo do último preço confirmado** (guardado na memória do cálculo). |
+
+---|---|---|---|
 | **OPEN-001** — Onde fica a Calculadora | Tela própria ou só a partir do item? | (a) **`/calculadora`** com a escolha do item + atalho "Calcular preço" no detalhe do item; (b) só no detalhe do item do Catálogo | **(a)** — a tela própria também abriga o ponto de equilíbrio, a meta e os parâmetros; o atalho leva direto ao item. |
 | **OPEN-002** — Parâmetros de precificação | Onde e por quem são editados? | (a) **Tela da Calculadora**, com permissão da Calculadora (Dono e Gerente, UC16); (b) em "Dados do negócio", só o Dono | **(a)** — o UC16 inclui o Gerente, e os parâmetros ficam perto de onde são usados. |
 | **OPEN-003** — Permissões | Como dividir ver/criar/editar? | (a) ***ver***: calcular, simular, ver PE e meta; ***criar***: confirmar preço; ***editar***: parâmetros; (b) ***ver***: calcular; ***editar***: confirmar preço e parâmetros | **(a)** — confirmar um preço cria um registro de histórico; separar permite um Colaborador que simula sem mudar preços. |
@@ -317,7 +329,7 @@ A SPEC-010 estará concluída quando:
 - [ ] todos os invariantes (INV-001 a INV-007) estiverem preservados;
 - [ ] os testes derivados (T01 a T13) estiverem aprovados, com o CI verde no PR;
 - [ ] os RNFs aplicáveis (RNF01, RNF02, RNF05, RNF06, RNF08) tiverem sido verificados como descrito na seção 10;
-- [ ] as questões OPEN-001 a OPEN-008 tiverem sido decididas e registradas;
+- [x] as questões OPEN-001 a OPEN-008 tiverem sido decididas e registradas;
 - [ ] não existir divergência conhecida entre a implementação e esta Spec;
 - [ ] toda divergência em relação à baseline tiver sido explicitamente analisada e registrada nos documentos.
 
