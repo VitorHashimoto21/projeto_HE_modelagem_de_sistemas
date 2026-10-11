@@ -11,7 +11,7 @@ type Exigencia = "membro" | "dono" | { modulo: Modulo; acao: Acao; semAcao?: Aca
 export type ItemDoMenu = { rotulo: string; href: string };
 
 const ITENS: (ItemDoMenu & { exige: Exigencia })[] = [
-  // Página inicial provisória (SPEC-004): aberta a todo membro; o Dashboard (SPEC-012) a substitui.
+  // Página inicial (Dashboard — SPEC-012): aberta a todo membro; sem "Dashboard: ver", só atalhos (OPEN-005).
   { rotulo: "Painel", href: "/painel", exige: "membro" },
   // Módulos (SPEC-006 em diante)
   { rotulo: "Catálogo", href: "/catalogo", exige: { modulo: "catalogo", acao: "ver" } },
