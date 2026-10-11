@@ -15,6 +15,7 @@ const quando = new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle:
 const cartao = "rounded-2xl border bg-card p-6 shadow-sm";
 
 // Detalhe da venda (SPEC-008, 5.4) e confirmação depois de registrar: Vendas — ver.
+// SPEC-011: auditoria do cancelamento, ligação com a troca e o botão de cancelar (Vendas — excluir).
 export default async function DetalheDaVenda({ params, searchParams }: PageProps<"/vendas/[id]">) {
   const membro = await exigirPermissao("vendas", "ver");
   const [{ id }, busca] = await Promise.all([params, searchParams]);
@@ -25,6 +26,7 @@ export default async function DetalheDaVenda({ params, searchParams }: PageProps
       throw e;
     });
   const podeVender = pode(membro.permissoes, "vendas", "criar");
+  const podeCancelar = pode(membro.permissoes, "vendas", "excluir") && v.status === "CONCLUIDA";
 
   return (
     <div className="space-y-6">
@@ -45,17 +47,95 @@ export default async function DetalheDaVenda({ params, searchParams }: PageProps
         </div>
       )}
 
+      {busca.cancelada && v.cancelamento && (
+        <p role="status" className="rounded-2xl border border-status-ok/30 bg-status-ok-bg px-5 py-4 font-medium text-status-ok">
+          Venda nº {v.numero} cancelada.{v.cancelamento.reembolso ? ` Reembolso de ${brl(v.cancelamento.reembolso.valor)} registrado no caixa.` : ""}
+        </p>
+      )}
+      {busca.troca && v.trocaDe && (
+        <p role="status" className="rounded-2xl border border-status-ok/30 bg-status-ok-bg px-5 py-4 font-medium text-status-ok">
+          Troca registrada: a venda nº {v.trocaDe.numero} foi cancelada e esta é a venda nº {v.numero}.
+        </p>
+      )}
+
       <div className="flex flex-wrap items-baseline justify-between gap-3">
         <div>
-          <h1 className="font-display text-3xl font-semibold text-foreground">Venda nº {v.numero}</h1>
+          <h1 className="flex flex-wrap items-center gap-3 font-display text-3xl font-semibold text-foreground">
+            Venda nº {v.numero}
+            {v.status === "CANCELADA" && (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-status-danger-bg px-3 py-1 font-sans text-sm font-medium text-status-danger">
+                <span aria-hidden="true">✕</span>
+                Cancelada
+              </span>
+            )}
+          </h1>
           <p className="text-sm text-muted-foreground">
             {quando.format(v.data)} · por {v.registradaPor}
             {v.cliente && ` · cliente ${v.cliente}`}
-            {v.status === "CANCELADA" && " · cancelada"}
           </p>
         </div>
-        <p className="text-3xl font-semibold text-foreground">{brl(v.valorTotal)}</p>
+        <div className="flex flex-col items-end gap-2">
+          <p className={`text-3xl font-semibold ${v.status === "CANCELADA" ? "text-muted-foreground line-through" : "text-foreground"}`}>{brl(v.valorTotal)}</p>
+          {podeCancelar && (
+            <Link href={`/vendas/${v.id}/cancelar`} className="rounded-xl border border-input px-4 py-2 text-sm font-semibold text-status-danger hover:bg-muted">
+              Cancelar venda
+            </Link>
+          )}
+        </div>
       </div>
+
+      {v.trocaDe && (
+        <p className="rounded-xl border bg-muted/40 px-4 py-3 text-sm text-foreground">
+          Troca da{" "}
+          <Link href={`/vendas/${v.trocaDe.id}`} className="font-medium text-primary underline-offset-2 hover:underline">
+            venda nº {v.trocaDe.numero}
+          </Link>
+          , cancelada.
+        </p>
+      )}
+
+      {v.cancelamento && (
+        <section className="rounded-2xl border border-status-danger/30 bg-card p-6 shadow-sm" aria-labelledby="titulo-cancelamento">
+          <h2 id="titulo-cancelamento" className="mb-2 font-display text-xl font-semibold text-card-foreground">
+            Cancelamento
+          </h2>
+          <dl className="space-y-1 text-sm">
+            <div className="flex flex-wrap justify-between gap-2">
+              <dt className="text-muted-foreground">Quando e por quem</dt>
+              <dd className="font-medium text-foreground">
+                {quando.format(v.cancelamento.em)} · {v.cancelamento.por}
+              </dd>
+            </div>
+            <div className="flex flex-wrap justify-between gap-2">
+              <dt className="text-muted-foreground">Motivo</dt>
+              <dd className="font-medium break-words text-foreground">{v.cancelamento.motivo}</dd>
+            </div>
+            <div className="flex flex-wrap justify-between gap-2">
+              <dt className="text-muted-foreground">Reembolso</dt>
+              <dd className="font-medium text-foreground">
+                {v.cancelamento.reembolso ? (
+                  <>
+                    <span className="text-status-danger">− {brl(v.cancelamento.reembolso.valor)}</span> · {v.cancelamento.reembolso.descricao.split(" — ").pop()}
+                  </>
+                ) : (
+                  "Nenhum"
+                )}
+              </dd>
+            </div>
+            {v.trocadaPor && (
+              <div className="flex flex-wrap justify-between gap-2">
+                <dt className="text-muted-foreground">Trocada pela</dt>
+                <dd>
+                  <Link href={`/vendas/${v.trocadaPor.id}`} className="font-medium text-primary underline-offset-2 hover:underline">
+                    venda nº {v.trocadaPor.numero}
+                  </Link>
+                </dd>
+              </div>
+            )}
+          </dl>
+          <p className="mt-3 text-xs text-muted-foreground">O estoque voltou, as parcelas em aberto foram canceladas e a venda saiu do faturamento.</p>
+        </section>
+      )}
 
       <section className={cartao} aria-labelledby="titulo-itens">
         <h2 id="titulo-itens" className="mb-2 font-display text-xl font-semibold text-card-foreground">
@@ -87,7 +167,9 @@ export default async function DetalheDaVenda({ params, searchParams }: PageProps
                 </span>
                 <span className="font-semibold text-foreground">{brl(p.valor)}</span>
               </div>
-              {p.parcelas.length > 0 ? (
+              {p.forma === "CREDITO_TROCA" ? (
+                <p className="mt-1 text-xs text-muted-foreground">Abatido do valor já pago na venda original (não entra de novo no caixa).</p>
+              ) : p.parcelas.length > 0 ? (
                 <ol className="mt-2 space-y-1 text-xs text-muted-foreground">
                   {p.parcelas.map((pa) => (
                     <li key={pa.numero} className="flex flex-wrap justify-between gap-2">
@@ -111,7 +193,7 @@ export default async function DetalheDaVenda({ params, searchParams }: PageProps
       {v.movimentacoes.length > 0 && (
         <section className={cartao} aria-labelledby="titulo-estoque">
           <h2 id="titulo-estoque" className="mb-2 font-display text-xl font-semibold text-card-foreground">
-            Baixas de estoque
+            Movimentações de estoque
           </h2>
           <ul className="divide-y">
             {v.movimentacoes.map((m, idx) => (
@@ -120,7 +202,7 @@ export default async function DetalheDaVenda({ params, searchParams }: PageProps
                   {m.nome}
                 </Link>
                 <span className="text-muted-foreground">
-                  −{qtd(m.quantidade)} · {qtd(m.saldoAnterior)} → {qtd(m.saldoPosterior)}
+                  {m.tipo === "ENTRADA_ESTORNO" ? `+${qtd(m.quantidade)} (estorno)` : `−${qtd(m.quantidade)}`} · {qtd(m.saldoAnterior)} → {qtd(m.saldoPosterior)}
                 </span>
               </li>
             ))}

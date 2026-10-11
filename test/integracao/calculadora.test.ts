@@ -45,7 +45,16 @@ const meioDoMes = (comp: string) => new Date(intervaloDaCompetencia(comp).inicio
 async function venda(data: Date, valor: number, extra: { custo?: number; status?: "CONCLUIDA" | "CANCELADA"; negocioId?: string; itemId?: string } = {}) {
   const negocioId = extra.negocioId ?? negocioA;
   const v = await base.venda.create({
-    data: { negocioId, data, valorTotal: valor, numero: numeroVenda++, registradaPorId: usuario, status: extra.status ?? "CONCLUIDA" },
+    data: {
+      negocioId,
+      data,
+      valorTotal: valor,
+      numero: numeroVenda++,
+      registradaPorId: usuario,
+      status: extra.status ?? "CONCLUIDA",
+      // Venda cancelada sempre com quem, quando e por quê (CHECK da SPEC-011).
+      ...(extra.status === "CANCELADA" ? { canceladaEm: data, canceladaPorId: usuario, motivoCancelamento: "Erro no registro" } : {}),
+    },
   });
   if (extra.itemId) {
     await base.itemVenda.create({ data: { negocioId, vendaId: v.id, itemId: extra.itemId, quantidade: 2, precoUnitario: valor / 2, custoUnitario: extra.custo ?? 0 } });
