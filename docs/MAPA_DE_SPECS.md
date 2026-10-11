@@ -242,6 +242,7 @@ flowchart LR
 - **Justificativa da ordem:** a venda (SPEC-008) só pode validar e baixar estoque que já é controlado.
 
 #### SPEC-008 — Registro de venda integrado
+- **Spec:** [`specs/SPEC-008.md`](./specs/SPEC-008.md) (✅ implementada e verificada na homologação em 09/10/2026)
 - **Objetivo:** registrar vendas multi-itens com cliente opcional e pagamento misto/parcelado, validando estoque (baixa condicional atômica) e preço; dar baixa no estoque (incluindo materiais, com movimentações ligadas à venda) e gerar lançamentos ou contas a receber na mesma transação, gravando o custo unitário.
 - **Valor entregue:** o fluxo central de operação, integrado ao estoque e ao financeiro sem lançamento duplicado.
 - **RF:** RF16, RF18, RF22–RF28, RF33, RF62 (gravação do custo unitário) · **RN:** RN05, RN06, RN09–RN13, RN23, RN29 · **RNF:** RNF01, RNF02
