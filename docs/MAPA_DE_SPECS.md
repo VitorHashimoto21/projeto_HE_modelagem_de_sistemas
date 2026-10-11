@@ -308,7 +308,7 @@ flowchart LR
 - **Justificativa da ordem:** precisa que as funcionalidades a restringir e os dados dos relatórios já existam.
 
 #### SPEC-014 — LGPD: exportação e exclusão de conta
-- **Spec:** [`specs/SPEC-014.md`](./specs/SPEC-014.md) (🚧 implementada; verificação na homologação pendente)
+- **Spec:** [`specs/SPEC-014.md`](./specs/SPEC-014.md) (✅ implementada e verificada na homologação em 11/10/2026)
 - **Objetivo:** exportar os dados do titular (.zip com JSON e CSV) e excluir a conta por anonimização, encerrando os negócios em que ele é o único Dono e mantendo os registros fiscais por 5 anos sem identificação.
 - **Valor entregue:** conformidade legal e confiança do usuário.
 - **RF:** — · **RN:** RN27 · **RNF:** RNF04

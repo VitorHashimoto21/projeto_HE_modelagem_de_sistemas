@@ -29,6 +29,14 @@ São 15 testes novos (7 unitários e 8 de integração). Toda a suíte passa: li
 - **Depois:** a área autenticada leva ao login e o login com a conta excluída é recusado.
 - **Telas:** "Minha conta" em 390, 768 e 1440 px, nos temas claro e escuro — **sem rolagem horizontal**. Capturas em [`telas/`](telas/).
 
-## Pendente
+## Verificação na homologação (T13) — 11/10/2026
 
-- **T13:** fluxo completo na homologação depois do merge (migração `20261012150000_lgpd`), com uma **conta de teste criada só para isso** e a `SUPABASE_SECRET_KEY` cadastrada na Vercel.
+- **Merge do PR #70:** o workflow **Migrações** aplicou `20261012150000_lgpd` sem erro; o CI ficou verde.
+- **Publicação:** a Vercel publicou <https://he-homol.vercel.app> com o commit do merge; `/api/saude` responde ok (aplicação e banco) e `/conta` e `/conta/exportar` levam ao login sem sessão.
+- **Chave:** `SUPABASE_SECRET_KEY` cadastrada na Vercel como variável secreta (o valor nunca passou pelo repositório nem pelo chat).
+
+**Teste pela equipe:**
+- exportação com a própria conta;
+- exclusão de uma **conta de teste descartável**: negócio encerrado, volta à tela de entrar com o aviso, login recusado depois e a conta **removida do Supabase Auth** (confirmado em *Authentication → Users*) — a remoção pela API administrativa funcionou.
+
+**Tudo funcionando.**
