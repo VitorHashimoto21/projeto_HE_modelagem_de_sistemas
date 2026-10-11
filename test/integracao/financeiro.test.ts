@@ -326,7 +326,11 @@ describe("rotina diária (rota)", () => {
     expect((await chamar("Bearer errado")).status).toBe(401);
     expect(await base.contaPagarReceber.count()).toBe(0);
     const ok = await chamar("Bearer segredo-de-teste-com-32-caracteres!");
-    expect(ok).toEqual({ status: 200, corpo: { dia: HOJE, negocios: 2, contasCriadas: 2, parcelasRecebidas: 0, falhas: 0 } });
+    expect(ok).toEqual({
+      status: 200,
+      // SPEC-014: a rotina também anonimiza convites antigos e tenta remover credenciais pendentes.
+      corpo: { dia: HOJE, negocios: 2, contasCriadas: 2, parcelasRecebidas: 0, falhas: 0, convitesAnonimizados: 0, credenciais: { removidas: 0, pendentes: 0 } },
+    });
     expect(await base.contaPagarReceber.groupBy({ by: ["negocioId"], _count: true })).toHaveLength(2);
   });
 });

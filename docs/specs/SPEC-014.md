@@ -1,6 +1,6 @@
 # SPEC-014 — LGPD: exportação e exclusão de conta
 
-> **Status:** ✅ **Aprovada em 11/10/2026** — questões em aberto decididas pela equipe (seção 13), todas pela opção recomendada. Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar).
+> **Status:** 🚧 **Aprovada e implementada em 11/10/2026; verificação na homologação pendente** — questões em aberto decididas pela equipe (seção 13), todas pela opção recomendada; testes T01–T11 automatizados e telas verificadas em build de produção com login (T12) — [evidências](evidencias/SPEC-014/README.md). Falta o T13 (fluxo na homologação). Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar).
 > **Mapa:** [`MAPA_DE_SPECS.md`](../MAPA_DE_SPECS.md) · **Anteriores:** [SPEC-002](SPEC-002.md) (conta, consentimento e bloqueio de conta excluída), [SPEC-004](SPEC-004.md) (negócios e o Dono), [SPEC-005](SPEC-005.md) (equipe e convites), [SPEC-008](SPEC-008.md) (clientes nas vendas) e [SPEC-013](SPEC-013.md) (CSV e arquivos de exportação) · **Próximas que dependem desta:** nenhuma.
 
 ---
@@ -157,6 +157,22 @@ A rotina diária (SPEC-009) anonimiza o e-mail dos convites `EXPIRADO` ou `CANCE
 - **Integrações:** Supabase Auth (OPEN-001).
 - **Identidade visual:** a exclusão fica numa "zona de perigo" com cor de alerta, ícone e texto; o botão final só habilita com a confirmação.
 
+**Implementação (11/10/2026):**
+- regras puras em `src/lib/dominio/lgpd.ts` (valores anônimos, confirmação, data de eliminação, arquivos da exportação);
+- `src/lib/db/lgpd.ts` (perfil, resumo, dados do titular, transação de exclusão, pendências de credencial, convites antigos);
+- `src/lib/auth/credencial.ts` (API administrativa do Supabase com `SUPABASE_SECRET_KEY`); fluxos, .zip (`fflate` 0.8.2) e Server Action em `src/lib/lgpd/`;
+- página `src/app/(app)/conta` e a rota `conta/exportar`; aviso na tela de entrada; link "Minha conta" no topo;
+- rotina diária: convites antigos e credenciais pendentes;
+- migração `20261012150000_lgpd`.
+
+**Divergências registradas na implementação:**
+
+- **Banco:** além de `Usuario.credencialRemovidaEm` (OPEN-001) e `Negocio.eliminarApos` (OPEN-005), entraram CHECKs: anonimizada e credencial removida só em conta excluída; data de eliminação só em negócio encerrado.
+- **Convites dos negócios encerrados:** além de cancelar os pendentes, o e-mail de **todos** os convites desses negócios é anonimizado — os convidados também deixam de ser identificáveis.
+- **Datas na exportação em ISO 8601 (UTC) também nos CSVs**, em vez de DD/MM/AAAA: evita deslocar de dia os campos que guardam só a data. Valores decimais com vírgula no CSV e ponto no JSON, sem casas extras (o valor exato gravado).
+- **Sem a chave secreta,** a exclusão acontece do mesmo jeito (conta bloqueada e anonimizada) e a remoção da credencial fica pendente para a rotina diária; a rotina passa a devolver também `convitesAnonimizados` e `credenciais`.
+- **Link "Minha conta":** o nome do usuário no topo (telas largas) e "Minha conta" nas menores.
+
 ---
 
 ## 9. Contratos necessários (conceituais)
@@ -257,9 +273,9 @@ Opções consideradas:
 
 A SPEC-014 estará concluída quando:
 
-- [ ] todos os critérios de aceitação (CA-01 a CA-11) estiverem implementados;
+- [ ] todos os critérios de aceitação (CA-01 a CA-11) estiverem implementados — por testes e em build de produção com login; falta conferir na homologação (T13);
 - [ ] todos os invariantes (INV-001 a INV-006) estiverem preservados;
-- [ ] os testes derivados (T01 a T13) estiverem aprovados, com o CI verde no PR;
+- [ ] os testes derivados (T01 a T13) estiverem aprovados, com o CI verde no PR — T01 a T11 automatizados; T12 com capturas; T13 pendente;
 - [ ] os RNFs aplicáveis (RNF01, RNF02, RNF04, RNF06) tiverem sido verificados como descrito na seção 10;
 - [ ] as questões OPEN-001 a OPEN-006 tiverem sido decididas e registradas;
 - [ ] não existir divergência conhecida entre a implementação e esta Spec;
