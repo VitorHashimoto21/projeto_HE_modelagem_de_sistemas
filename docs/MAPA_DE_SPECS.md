@@ -275,7 +275,7 @@ flowchart LR
 - **Justificativa da ordem:** precisa de vendas (RBT12 e CMV%), de despesas fixas e lançamentos de salário (Fator R) e de parâmetros fiscais já estabelecidos.
 
 #### SPEC-011 — Cancelamento e troca de venda
-- **Spec:** [`specs/SPEC-011.md`](./specs/SPEC-011.md) (🚧 implementada; verificação na homologação pendente)
+- **Spec:** [`specs/SPEC-011.md`](./specs/SPEC-011.md) (✅ implementada e verificada na homologação em 11/10/2026)
 - **Objetivo:** cancelar uma venda com motivo, revertendo estoque (exatamente as movimentações da venda), contas abertas e valores recebidos em uma transação; opcionalmente, fazer a troca por itens de valor menor ou igual, com crédito de troca.
 - **Valor entregue:** correção de erros e devoluções sem corromper estoque, caixa ou faturamento.
 - **RF:** RF65, RF66 · **RN:** RN25, RN26 · **RNF:** RNF05
