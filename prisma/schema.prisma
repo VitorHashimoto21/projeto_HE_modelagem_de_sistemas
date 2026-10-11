@@ -196,6 +196,7 @@ model Usuario {
   lancamentos       LancamentoFinanceiro[] @relation("LancamentoRegistradoPor") // SPEC-009 (RNF05)
   convitesEnviados  Convite[]              @relation("ConviteEnviadoPor") // RF72
   planosAlterados   Negocio[]              @relation("PlanoAlteradoPor") // RF73
+  trocasDePlano     HistoricoPlano[] // SPEC-013 (OPEN-007): quem trocou o plano
   createdAt         DateTime               @default(now())
 }
 
@@ -237,6 +238,7 @@ model Negocio {
 
   membros          MembroNegocio[]
   convites         Convite[]
+  historicoPlanos  HistoricoPlano[] // SPEC-013 (OPEN-007)
   itens            Item[]
   materiaisServico MaterialServico[]
   movimentacoes    MovimentacaoEstoque[]
@@ -259,6 +261,7 @@ model MembroNegocio {
   negocioId        String       @db.Uuid
   papel            PapelUsuario @default(COLABORADOR) // RF05
   permissoesCustom Json? // RF06: matriz módulo × ação COMPLETA (6 módulos × ver/criar/editar/excluir — SPEC-005, INV-008); null = predefinição do papel
+  suspensoEm       DateTime? // SPEC-013 (OPEN-001): sem acesso desde a volta ao plano gratuito; o Dono nunca é suspenso
 
   usuario Usuario @relation(fields: [usuarioId], references: [id])
   negocio Negocio @relation(fields: [negocioId], references: [id])
@@ -657,4 +660,20 @@ model ContaPagarReceber {
   @@unique([despesaFixaId, competencia]) // RF67: não duplicar a conta do mesmo mês
   @@index([negocioId])
   @@index([negocioId, vencimento, status]) // SPEC-009: contas a vencer e atrasadas
+}
+
+// SPEC-013 (RF73, OPEN-007): toda troca de plano, somente inserção (gatilho he_somente_insercao).
+// Escrito só por alterarPlano, junto de Negocio.plano/planoAlteradoEm/planoAlteradoPorId.
+model HistoricoPlano {
+  id        String       @id @default(uuid()) @db.Uuid
+  negocioId String       @db.Uuid
+  de        PlanoNegocio
+  para      PlanoNegocio
+  usuarioId String       @db.Uuid
+  createdAt DateTime     @default(now())
+
+  negocio Negocio @relation(fields: [negocioId], references: [id])
+  usuario Usuario @relation(fields: [usuarioId], references: [id])
+
+  @@index([negocioId, createdAt])
 }

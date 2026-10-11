@@ -297,6 +297,7 @@ flowchart LR
 - **Justificativa da ordem:** agrega dados de todos os módulos anteriores.
 
 #### SPEC-013 — Plano gratuito × pago
+- **Spec:** [`specs/SPEC-013.md`](./specs/SPEC-013.md) (🚧 implementada; verificação na homologação pendente)
 - **Objetivo:** diferenciar as funcionalidades por plano (sem limite de volume), entregar os relatórios avançados do plano pago (rentabilidade por item, exportação CSV/PDF, histórico acima de 12 meses), bloqueá-los no gratuito e oferecer o upgrade, com troca de plano simulada pelo Dono num único ponto de troca (`alterarPlano`), preparado para a cobrança real (SPEC-015).
 - **Valor entregue:** viabiliza o modelo freemium sem afastar o público sensível a preço.
 - **RF:** RF45, RF46, RF47 (relatórios avançados), RF70, RF71, RF73 · **RN:** RN18 · **RNF:** RNF10

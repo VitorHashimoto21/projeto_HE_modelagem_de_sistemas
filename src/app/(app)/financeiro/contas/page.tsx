@@ -1,11 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { botaoPrimario, CabecalhoDoFinanceiro, reais, ROTULO_CATEGORIA, SeloDaConta } from "@/components/financeiro/exibicao";
+import { AvisoDoHistorico } from "@/components/planos/avisos";
 import { exigirPermissao } from "@/lib/auth/servidor";
 import { financeiro } from "@/lib/db";
 import type { SituacaoFiltrada } from "@/lib/db/financeiro";
 import { hoje } from "@/lib/dominio/datas";
 import { pode } from "@/lib/dominio/permissoes";
+import { inicioDoHistorico } from "@/lib/dominio/planos";
+import { planoDoMembro } from "@/lib/planos/servidor";
 import { conferirFinanceiro } from "@/lib/financeiro/conferencia";
 import { cn } from "@/lib/utils";
 
@@ -32,7 +35,9 @@ export default async function Contas({ searchParams }: PageProps<"/financeiro/co
   const dia = hoje();
 
   await conferirFinanceiro(membro);
-  const r = await financeiro(membro).listarContas({ tipo, situacao, pagina }, dia);
+  // Plano gratuito: quitadas e canceladas só dos últimos 12 meses (SPEC-013, OPEN-005).
+  const desde = inicioDoHistorico(await planoDoMembro(membro), dia);
+  const r = await financeiro(membro).listarContas({ tipo, situacao, pagina, desde }, dia);
   const link = (extra: Record<string, string | number>) => {
     const p = new URLSearchParams({ tipo, situacao, ...Object.fromEntries(Object.entries(extra).map(([k, v]) => [k, String(v)])) });
     return `/financeiro/contas?${p}`;
@@ -51,6 +56,8 @@ export default async function Contas({ searchParams }: PageProps<"/financeiro/co
           )
         }
       />
+
+      {r.ocultasPeloPlano > 0 && <AvisoDoHistorico ehDono={membro.papel === "DONO"} />}
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div role="tablist" aria-label="Tipo de conta" className="inline-flex rounded-xl border bg-card p-1">

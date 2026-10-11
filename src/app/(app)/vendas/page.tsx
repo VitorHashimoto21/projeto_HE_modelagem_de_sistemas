@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { AvisoDoHistorico } from "@/components/planos/avisos";
 import { classeDoCampo } from "@/components/ui/classes";
 import { brl, ROTULO_FORMA } from "@/components/vendas/rotulos";
 import { exigirPermissao } from "@/lib/auth/servidor";
@@ -7,6 +8,8 @@ import { vendas } from "@/lib/db";
 import { hoje as hojeLocal, intervaloDoDia } from "@/lib/dominio/datas";
 import { diasEntre, somarDias } from "@/lib/dominio/estoque";
 import { pode } from "@/lib/dominio/permissoes";
+import { inicioDoHistorico, limitarDia } from "@/lib/dominio/planos";
+import { planoDoMembro } from "@/lib/planos/servidor";
 
 export const metadata: Metadata = { title: "Vendas" };
 
@@ -39,7 +42,12 @@ function periodo(p: Record<string, string | string[] | undefined>, hoje: string)
 export default async function Vendas({ searchParams }: PageProps<"/vendas">) {
   const membro = await exigirPermissao("vendas", "ver");
   const hoje = hojeLocal();
-  const { de, ate, chave } = periodo(await searchParams, hoje);
+  const pedido = periodo(await searchParams, hoje);
+  // Plano gratuito: histórico dos últimos 12 meses (SPEC-013, OPEN-005); datas anteriores vão ao limite.
+  const inicio = inicioDoHistorico(await planoDoMembro(membro), hoje);
+  const limDe = limitarDia(pedido.de, inicio);
+  const limAte = limitarDia(pedido.ate, inicio);
+  const { de, ate, chave } = { ...pedido, de: limDe.dia, ate: limAte.dia };
   const { vendas: lista, totalConcluidas } = await vendas(membro).listar(intervaloDoDia(de).inicio, intervaloDoDia(ate).fim);
 
   return (
@@ -55,6 +63,8 @@ export default async function Vendas({ searchParams }: PageProps<"/vendas">) {
           </Link>
         )}
       </div>
+
+      {(limDe.ajustado || limAte.ajustado) && <AvisoDoHistorico ehDono={membro.papel === "DONO"} />}
 
       <nav aria-label="Período" className="flex flex-wrap gap-2">
         {PERIODOS.map((p) => (
@@ -73,13 +83,13 @@ export default async function Vendas({ searchParams }: PageProps<"/vendas">) {
           <label htmlFor="de" className="mb-1 block text-xs text-muted-foreground">
             De
           </label>
-          <input id="de" name="de" type="date" defaultValue={de} max={hoje} className={classeDoCampo()} />
+          <input id="de" name="de" type="date" defaultValue={de} min={inicio ?? undefined} max={hoje} className={classeDoCampo()} />
         </div>
         <div>
           <label htmlFor="ate" className="mb-1 block text-xs text-muted-foreground">
             Até
           </label>
-          <input id="ate" name="ate" type="date" defaultValue={ate} max={hoje} className={classeDoCampo()} />
+          <input id="ate" name="ate" type="date" defaultValue={ate} min={inicio ?? undefined} max={hoje} className={classeDoCampo()} />
         </div>
         <button type="submit" className="rounded-xl border border-input px-5 py-3 text-sm font-semibold text-foreground hover:bg-muted">
           Ver período

@@ -4,12 +4,15 @@ import { notFound } from "next/navigation";
 import { rotuloUnidade } from "@/components/catalogo/rotulos";
 import { FormularioMinimo, FormularioMovimentacao } from "@/components/estoque/formularios";
 import { quantidade, ROTULO_MOTIVO, ROTULO_MOVIMENTACAO, SeloDeSituacao } from "@/components/estoque/situacao";
+import { AvisoDoHistorico } from "@/components/planos/avisos";
 import { exigirPermissao } from "@/lib/auth/servidor";
 import { estoque } from "@/lib/db";
 import { ItemNaoEncontrado } from "@/lib/db/catalogo";
 import { dataBrasileira, hoje } from "@/lib/dominio/datas";
 import { diasEntre, JANELA_DIAS } from "@/lib/dominio/estoque";
 import { pode } from "@/lib/dominio/permissoes";
+import { inicioDoHistorico } from "@/lib/dominio/planos";
+import { planoDoMembro } from "@/lib/planos/servidor";
 
 export const metadata: Metadata = { title: "Estoque do produto" };
 
@@ -29,8 +32,10 @@ export default async function EstoqueDoProduto({ params, searchParams }: PagePro
   const [{ id }, busca] = await Promise.all([params, searchParams]);
   const dia = hoje();
   const pagina = Number(typeof busca.pagina === "string" ? busca.pagina : "1") || 1;
+  // Plano gratuito: movimentações dos últimos 12 meses (SPEC-013, OPEN-005).
+  const desde = inicioDoHistorico(await planoDoMembro(membro), dia);
   const d = await estoque(membro)
-    .detalhar(id, dia, pagina)
+    .detalhar(id, dia, pagina, desde)
     .catch((e) => {
       if (e instanceof ItemNaoEncontrado) notFound();
       throw e;
@@ -105,6 +110,11 @@ export default async function EstoqueDoProduto({ params, searchParams }: PagePro
         <h2 id="titulo-movimentacoes" className="mb-2 font-display text-xl font-semibold text-card-foreground">
           Movimentações
         </h2>
+        {d.ocultasPeloPlano > 0 && (
+          <div className="mb-3">
+            <AvisoDoHistorico ehDono={membro.papel === "DONO"} />
+          </div>
+        )}
         {d.movimentacoes.length === 0 ? (
           <p className="text-sm text-muted-foreground">Nenhuma movimentação ainda.</p>
         ) : (

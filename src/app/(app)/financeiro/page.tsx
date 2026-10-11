@@ -3,6 +3,7 @@ import Link from "next/link";
 import type { CategoriaLancamento, TipoLancamento } from "@/generated/prisma/enums";
 import { botaoPrimario, CabecalhoDoFinanceiro, reais, ROTULO_CATEGORIA, ROTULO_ORIGEM, Saldo, ValorComSinal } from "@/components/financeiro/exibicao";
 import { Aviso } from "@/components/acesso/campos";
+import { AvisoDoHistorico } from "@/components/planos/avisos";
 import { BotaoEstornar, FormularioSaldoInicial } from "@/components/financeiro/formularios";
 import { classeDoCampo } from "@/components/ui/classes";
 import { exigirPermissao } from "@/lib/auth/servidor";
@@ -11,6 +12,8 @@ import { dataBrasileira, hoje } from "@/lib/dominio/datas";
 import { CATEGORIAS, competenciaBrasileira, competenciaDoDia, somarMeses } from "@/lib/dominio/financeiro";
 import { pode } from "@/lib/dominio/permissoes";
 import { conferirFinanceiro } from "@/lib/financeiro/conferencia";
+import { inicioDoHistorico, limitarCompetencia } from "@/lib/dominio/planos";
+import { planoDoMembro } from "@/lib/planos/servidor";
 
 export const metadata: Metadata = { title: "Financeiro" };
 
@@ -34,7 +37,11 @@ export default async function Caixa({ searchParams }: PageProps<"/financeiro">) 
   const busca = await searchParams;
   const dia = hoje();
   const mesAtual = competenciaDoDia(dia);
-  const mes = typeof busca.mes === "string" && MES.test(busca.mes) && busca.mes <= mesAtual ? busca.mes : mesAtual;
+  const pedido = typeof busca.mes === "string" && MES.test(busca.mes) && busca.mes <= mesAtual ? busca.mes : mesAtual;
+  // Plano gratuito: os últimos 12 meses (SPEC-013, OPEN-005); o saldo continua com tudo.
+  const inicio = inicioDoHistorico(await planoDoMembro(membro), dia);
+  const { comp: mes, ajustado } = limitarCompetencia(pedido, inicio);
+  const noLimite = inicio !== null && mes === inicio.slice(0, 7);
   const categoria = typeof busca.categoria === "string" && Object.hasOwn(CATEGORIAS, busca.categoria) ? (busca.categoria as CategoriaLancamento) : undefined;
   const tipo = busca.tipo === "ENTRADA" || busca.tipo === "SAIDA" ? (busca.tipo as TipoLancamento) : undefined;
   const pagina = Number(typeof busca.pagina === "string" ? busca.pagina : "1") || 1;
@@ -65,6 +72,7 @@ export default async function Caixa({ searchParams }: PageProps<"/financeiro">) 
         }
       />
 
+      {(ajustado || noLimite) && <AvisoDoHistorico ehDono={membro.papel === "DONO"} />}
       {busca.saldoInicial && <Aviso tipo="sucesso">Saldo inicial registrado. Para corrigi-lo, estorne o lançamento e informe de novo.</Aviso>}
 
       <section aria-label="Saldo" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -98,9 +106,15 @@ export default async function Caixa({ searchParams }: PageProps<"/financeiro">) 
       <section aria-labelledby="titulo-lancamentos" className="rounded-2xl border bg-card p-6 shadow-sm">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <nav aria-label="Mês" className="flex items-center gap-2">
-            <Link href={link({ mes: somarMeses(mes, -1), pagina: undefined })} className="rounded-lg px-2 py-1 text-sm font-medium text-primary hover:bg-accent" aria-label="Mês anterior">
-              ←
-            </Link>
+            {noLimite ? (
+              <span className="px-2 py-1 text-sm text-muted-foreground/40" aria-hidden="true">
+                ←
+              </span>
+            ) : (
+              <Link href={link({ mes: somarMeses(mes, -1), pagina: undefined })} className="rounded-lg px-2 py-1 text-sm font-medium text-primary hover:bg-accent" aria-label="Mês anterior">
+                ←
+              </Link>
+            )}
             <h2 id="titulo-lancamentos" className="font-display text-xl font-semibold text-card-foreground first-letter:uppercase">
               {nomeDoMes(mes)}
             </h2>

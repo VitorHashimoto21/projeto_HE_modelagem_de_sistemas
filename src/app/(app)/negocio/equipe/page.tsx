@@ -3,6 +3,7 @@ import Link from "next/link";
 import { AcoesDoConvite } from "@/components/equipe/acoes-do-convite";
 import { exigirDono } from "@/lib/auth/servidor";
 import { equipe, LIMITE_DO_PLANO_GRATUITO } from "@/lib/db";
+import { acaoTrocarAcesso } from "@/lib/planos/acoes";
 import { dataBrasileira } from "@/lib/dominio/datas";
 import { ROTULO_PAPEL } from "@/lib/dominio/permissoes";
 
@@ -15,8 +16,12 @@ const botaoPrincipal =
 export default async function Equipe({ searchParams }: PageProps<"/negocio/equipe">) {
   const { negocioId } = await exigirDono();
   const doNegocio = equipe().doNegocio(negocioId);
-  const [resumo, { membros, convites }, { removido, erro }] = await Promise.all([doNegocio.resumo(), doNegocio.listar(new Date()), searchParams]);
-  const ocupadas = membros.filter((m) => m.papel !== "DONO").length + convites.length;
+  const [resumo, { membros: todos, convites }, { removido, erro, aviso }] = await Promise.all([doNegocio.resumo(), doNegocio.listar(new Date()), searchParams]);
+  // SPEC-013: suspensos (volta ao plano gratuito) não ocupam vaga e aparecem à parte.
+  const membros = todos.filter((m) => !m.suspensoEm);
+  const suspensos = todos.filter((m) => m.suspensoEm);
+  const ativosColab = membros.filter((m) => m.papel !== "DONO");
+  const ocupadas = ativosColab.length + convites.length;
   const noLimite = resumo?.plano === "GRATUITO" && ocupadas >= LIMITE_DO_PLANO_GRATUITO;
 
   return (
@@ -38,9 +43,14 @@ export default async function Equipe({ searchParams }: PageProps<"/negocio/equip
           Pessoa removida da equipe.
         </p>
       )}
+      {typeof aviso === "string" && (
+        <p role="status" className="rounded-xl border border-status-ok/30 bg-status-ok-bg px-4 py-3 text-sm text-status-ok">
+          {aviso}
+        </p>
+      )}
       {erro && (
         <p role="alert" className="rounded-xl border border-destructive/30 bg-status-danger-bg px-4 py-3 text-sm text-status-danger">
-          Não foi possível concluir. Atualize a página e tente de novo.
+          {typeof erro === "string" && erro !== "1" ? erro : "Não foi possível concluir. Atualize a página e tente de novo."}
         </p>
       )}
       {noLimite && (
@@ -76,6 +86,51 @@ export default async function Equipe({ searchParams }: PageProps<"/negocio/equip
           ))}
         </ul>
       </section>
+
+      {suspensos.length > 0 && (
+        <section aria-labelledby="titulo-suspensos" className="space-y-3">
+          <h2 id="titulo-suspensos" className="font-display text-xl font-semibold text-foreground">
+            Sem acesso pelo plano gratuito
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            Continuam na equipe, com o mesmo papel e as mesmas permissões, e voltam a ter acesso no plano pago. No gratuito, só 1 colaborador tem acesso.
+          </p>
+          <ul className="divide-y rounded-2xl border border-dashed bg-card shadow-sm">
+            {suspensos.map((m) => (
+              <li key={m.id} className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold text-muted-foreground">{m.nome}</p>
+                  <p className="truncate text-xs text-muted-foreground">
+                    {ROTULO_PAPEL[m.papel]} · {m.email}
+                  </p>
+                </div>
+                {resumo?.plano === "GRATUITO" && (
+                  <form action={acaoTrocarAcesso} className="flex flex-wrap items-center gap-2 text-sm">
+                    <input type="hidden" name="reativar" value={m.id} />
+                    {ocupadas >= LIMITE_DO_PLANO_GRATUITO && ativosColab.length > 0 && (
+                      <>
+                        <label htmlFor={`suspender-${m.id}`} className="sr-only">
+                          No lugar de
+                        </label>
+                        <select id={`suspender-${m.id}`} name="suspender" className="rounded-lg border bg-card px-2 py-1.5 text-sm">
+                          {ativosColab.map((a) => (
+                            <option key={a.id} value={a.id}>
+                              no lugar de {a.nome}
+                            </option>
+                          ))}
+                        </select>
+                      </>
+                    )}
+                    <button type="submit" className="rounded-lg border px-3 py-1.5 font-medium text-primary hover:bg-accent">
+                      Dar acesso
+                    </button>
+                  </form>
+                )}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <section aria-labelledby="titulo-convites" className="space-y-3">
         <h2 id="titulo-convites" className="font-display text-xl font-semibold text-foreground">
