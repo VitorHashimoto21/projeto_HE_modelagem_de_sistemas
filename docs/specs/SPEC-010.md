@@ -1,6 +1,6 @@
 # SPEC-010 — Calculadora de precificação
 
-> **Status:** ✅ **Aprovada em 11/10/2026** — questões em aberto decididas pela equipe (seção 13), todas pela opção recomendada. Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar).
+> **Status:** 🚧 **Aprovada e implementada em 11/10/2026; verificação na homologação pendente** — questões em aberto decididas pela equipe (seção 13), todas pela opção recomendada; testes T01–T11 automatizados e telas verificadas em build de produção com login (T12) — [evidências](evidencias/SPEC-010/README.md). Falta o T13 (fluxo na homologação). Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar).
 > **Mapa:** [`MAPA_DE_SPECS.md`](../MAPA_DE_SPECS.md) · **Anteriores:** [SPEC-003](SPEC-003.md) (parâmetros fiscais), [SPEC-004](SPEC-004.md) (regime e Anexo), [SPEC-006](SPEC-006.md) (catálogo e preço oficial), [SPEC-008](SPEC-008.md) (vendas com custo unitário) e [SPEC-009](SPEC-009.md) (despesas fixas, DAS e lançamentos de salário) · **Próximas que dependem desta:** SPEC-012 (ponto de equilíbrio e meta no dashboard).
 
 ---
@@ -156,7 +156,7 @@ Meta               = Despesas fixas ÷ (1 − CMV% − Imp% − taxa de cartão%
 | Campo | Regra |
 |---|---|
 | Taxa média de cartão (%) | 0 a 30, 2 casas. |
-| Capacidade mensal | > 0, até 3 casas, com a unidade livre (horas, atendimentos, unidades). |
+| Capacidade mensal | > 0, até 2 casas, com a unidade livre (horas, atendimentos, unidades). |
 | Ticket médio estimado (R$) | > 0, 2 casas. |
 | Faturamento mensal estimado (R$) | Sugerido = capacidade × ticket; editável; > 0. |
 | CMV% estimado | 0 a 95, 2 casas. |
@@ -229,6 +229,24 @@ Usados só enquanto não houver histórico (faturamento e CMV%) ou sempre (taxa 
 | **Confirmar preço** | item, margem, arredondamento, preço visto | registro do histórico | os de cima + `PrecoMudou` (com o novo valor) |
 | **Ponto de equilíbrio e meta** | — (negócio ativo) | PE, Meta, componentes, alerta | `SemFaturamento`, `SemPermissao` |
 | **Parâmetros de precificação** | taxa de cartão, capacidade, unidade, ticket, faturamento estimado, CMV% estimado, margem meta | parâmetros | `CampoInvalido`, `SemPermissao` |
+
+**Implementação (11/10/2026):**
+- domínio em `src/lib/dominio/precificacao.ts`;
+- validação, fluxos e Server Actions em `src/lib/calculadora/`;
+- agregados em `src/lib/db/precificacao.ts` (`precificacao(contexto)` de `@/lib/db`);
+- telas em `src/app/(app)/calculadora/` (calculadora e `parametros`) e o atalho no detalhe do item do Catálogo;
+- migração `20261011120000_calculadora`.
+
+**Divergências registradas na implementação:**
+
+- **O cálculo acontece na própria página** (consulta com `?item=&margem=&comissao=`), sempre no servidor. Só a confirmação e os parâmetros são Server Actions, e a confirmação recalcula tudo (INV-003).
+- **Capacidade mensal com até 2 casas** (a seção 5.5 dizia 3): a coluna existente é `Decimal(10,2)`.
+- **O DAS do cálculo vem do regime do negócio** (MEI com atividade informada → `ParametroMei` vigente), mesmo antes de a despesa automática da SPEC-009 ser criada. MEI sem atividade bloqueia o cálculo com a orientação de completar os dados.
+- **Ordem dos bloqueios:** item, faturamento, dados fiscais do regime, custo, margem padrão e, por fim, a soma dos percentuais.
+- **Confirmar o mesmo preço é registrado** (a função de preço da SPEC-006 só recusa preço igual quando a origem é Manual).
+- **Simulação com outra comissão não pode ser confirmada.** A confirmação sempre usa a comissão do item; para mudá-la, altera-se o item no Catálogo.
+- **Ponto de equilíbrio sem CMV%:** sem histórico de vendas e sem CMV% estimado, o ponto de equilíbrio e a meta não são mostrados e a tela pede o CMV% nos parâmetros. A meta também depende da margem desejada.
+- **Folha do Fator R:** conta as saídas da categoria Salário e desconta só os **estornos** delas; outras entradas nessa categoria não reduzem a folha.
 
 ---
 
@@ -325,9 +343,9 @@ Todas decididas pela equipe em 11/10/2026, pela opção recomendada:
 
 A SPEC-010 estará concluída quando:
 
-- [ ] todos os critérios de aceitação (CA-01 a CA-13) estiverem implementados;
+- [ ] todos os critérios de aceitação (CA-01 a CA-13) estiverem implementados — por testes e em build de produção com login; falta conferir na homologação (T13);
 - [ ] todos os invariantes (INV-001 a INV-007) estiverem preservados;
-- [ ] os testes derivados (T01 a T13) estiverem aprovados, com o CI verde no PR;
+- [ ] os testes derivados (T01 a T13) estiverem aprovados, com o CI verde no PR — T01 a T11 automatizados; T12 com capturas; T13 pendente;
 - [ ] os RNFs aplicáveis (RNF01, RNF02, RNF05, RNF06, RNF08) tiverem sido verificados como descrito na seção 10;
 - [x] as questões OPEN-001 a OPEN-008 tiverem sido decididas e registradas;
 - [ ] não existir divergência conhecida entre a implementação e esta Spec;

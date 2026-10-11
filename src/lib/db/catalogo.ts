@@ -300,7 +300,9 @@ export function criarConsultasDoCatalogo(cliente: ClienteDoNegocio, negocioId: s
           select: { precoAtual: true, custoBase: true, materiais: { select: { quantidade: true, material: { select: { custoBase: true } } } } },
         });
         if (!i) throw new ItemNaoEncontrado();
-        if (i.precoAtual !== null && num(i.precoAtual) === preco) throw new PrecoIgualAoAtual();
+        // A confirmação pela Calculadora registra também o mesmo preço: documenta a revisão com os
+        // parâmetros do dia (SPEC-010, 5.3). O preço manual igual ao atual continua recusado.
+        if (origem === "MANUAL" && i.precoAtual !== null && num(i.precoAtual) === preco) throw new PrecoIgualAoAtual();
         await gravarPreco(tx as ClienteDoNegocio, id, preco, usuarioId, origem, calculo);
         return {
           custoTotal: custoTotal(
