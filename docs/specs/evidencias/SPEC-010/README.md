@@ -43,6 +43,17 @@ São 28 testes novos (16 unitários e 12 de integração). Toda a suíte passa: 
 - **Colaboradora só com *Calculadora: ver*:** vê o menu, o bloqueio explicado e os parâmetros só para leitura.
 - **Telas:** calculadora e parâmetros em 390, 768 e 1440 px, nos temas claro e escuro, **sem rolagem horizontal**. Capturas em [`telas/`](telas/).
 
-## Pendente
+## Verificação na homologação (T13) — 11/10/2026
 
-- **T13:** fluxo completo na homologação depois do merge (migração `20261011120000_calculadora`).
+- **Merge do PR #62:** o workflow **Migrações** aplicou `20261011120000_calculadora` sem erro; a carga fiscal não precisou de mudança ("Nada a mudar"). O CI ficou verde.
+- **Publicação:** a Vercel publicou <https://he-homol.vercel.app>; `/api/saude` responde ok e `/calculadora` sem sessão leva ao login.
+
+**Teste pela equipe, com a própria conta:**
+- Calculadora no menu, com o regime exibido;
+- ponto de equilíbrio e parâmetros de precificação;
+- cálculo de um item com a memória do cálculo;
+- margem inviável bloqueada;
+- confirmação do preço, com o histórico de origem Calculadora e o atalho no Catálogo;
+- telas no celular.
+
+**Tudo funcionando.**
