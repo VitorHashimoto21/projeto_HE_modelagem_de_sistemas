@@ -2,6 +2,7 @@ import "server-only";
 import { comNegocio, type ContextoDeNegocio } from "./cliente-do-negocio";
 import { criarConsultasDeAcesso } from "./acesso";
 import { criarConsultasDoCatalogo } from "./catalogo";
+import { criarConsultasDoDashboard } from "./dashboard";
 import { criarConsultasDoEstoque } from "./estoque";
 import { criarConsultasFinanceiras } from "./financeiro";
 import { criarConsultasDePrecificacao } from "./precificacao";
@@ -12,6 +13,7 @@ import { criarConsultasFiscais } from "./parametros-fiscais";
 import { prismaBase } from "./prisma";
 
 export type { ConsultasDeAcesso } from "./acesso";
+export type { ConsultasDoDashboard, VendasDoDia } from "./dashboard";
 export type { ConsultasDeVendas, DetalheDaVenda, ItemVendavel, VendaResumida } from "./vendas";
 export type { ConsultasDePrecificacao, ItemCalculavel, ParametrosDePrecificacao } from "./precificacao";
 export type { ConsultasFinanceiras, ContaExibida, DespesaExibida, DetalheDaConta, FluxoDeCaixa, LancamentoExibido } from "./financeiro";
@@ -58,6 +60,11 @@ export function financeiro(contexto: ContextoDeNegocio) {
 /** Dados da Calculadora de precificação (SPEC-010): sempre pelo cliente do negócio. */
 export function precificacao(contexto: ContextoDeNegocio) {
   return criarConsultasDePrecificacao(clienteDoNegocio(contexto), contexto.negocioId);
+}
+
+/** Leituras do Dashboard (SPEC-012): sempre pelo cliente do negócio. */
+export function dashboard(contexto: ContextoDeNegocio) {
+  return criarConsultasDoDashboard(clienteDoNegocio(contexto), contexto.negocioId);
 }
 
 /**

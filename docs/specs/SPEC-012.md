@@ -1,6 +1,6 @@
 # SPEC-012 — Dashboard e saúde financeira
 
-> **Status:** ✅ **Aprovada em 11/10/2026** — questões em aberto decididas pela equipe (seção 13), todas pela opção recomendada. Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar).
+> **Status:** 🚧 **Aprovada e implementada em 11/10/2026; verificação na homologação pendente** — questões em aberto decididas pela equipe (seção 13), todas pela opção recomendada; testes T01–T11 automatizados e telas verificadas em build de produção com login (T12) — [evidências](evidencias/SPEC-012/README.md). Falta o T13 (fluxo na homologação). Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar).
 > **Mapa:** [`MAPA_DE_SPECS.md`](../MAPA_DE_SPECS.md) · **Anteriores:** [SPEC-005](SPEC-005.md) (Dashboard completo × restrito), [SPEC-007](SPEC-007.md) (alertas de estoque), [SPEC-008](SPEC-008.md) (vendas), [SPEC-009](SPEC-009.md) (saldo, contas e despesas fixas), [SPEC-010](SPEC-010.md) (ponto de equilíbrio e meta) e [SPEC-011](SPEC-011.md) (vendas canceladas fora dos números) · **Próximas que dependem desta:** SPEC-013 (relatórios avançados do plano pago).
 
 ---
@@ -184,6 +184,22 @@ Hoje, os 30 dias, os 12 meses e as competências da projeção são calculados e
 - **Integrações:** nenhuma.
 - **Identidade visual:** cores de status do tema (`status-ok`, `status-warn`, `status-danger`) com ícone e texto; números com sinal como no Financeiro; gráfico com a cor primária e contraste nos dois temas.
 
+**Implementação (11/10/2026):**
+- funções puras (séries, semáforo, projeção e a lista de cartões com o que cada um exige) em `src/lib/dominio/dashboard.ts`;
+- consultas agregadas em `src/lib/db/dashboard.ts` e `saldoAtual` em `src/lib/db/financeiro.ts` (a mesma soma do "Saldo atual" do fluxo de caixa);
+- carregadores dos cartões, com a falha isolada por cartão, em `src/lib/dashboard/`;
+- página `src/app/(app)/painel/page.tsx` e cartões em `src/components/dashboard/cartoes.tsx`;
+- sem migração.
+
+**Divergências registradas na implementação:**
+
+- **PE não calculável, em três casos:** os bloqueios da Calculadora (mensagem dela), "sem CMV" (sem histórico nem CMV estimado) e "inviável" (percentuais somam 100% ou mais). Nos três o semáforo fica "Indisponível", com link para os parâmetros (ou para os dados do negócio, quando falta regime, Anexo ou atividade).
+- **Sem meta e PE atingido:** selo verde "Ponto de equilíbrio atingido" e o convite para configurar a meta.
+- **Gráfico e projeção empilhados** em todas as larguras: lado a lado, a projeção ficava apertada na tela larga.
+- **Barra do dia de hoje (ou do mês atual) mais clara**, marcada "até agora" na tabela e no rótulo da barra.
+- **Atalhos (OPEN-005):** os mesmos itens do menu do membro, sem o "Painel".
+- **Contas atrasadas:** aviso abaixo da projeção, com link para as contas atrasadas no Financeiro.
+
 ---
 
 ## 9. Contratos necessários (conceituais)
@@ -291,9 +307,9 @@ Opções consideradas:
 
 A SPEC-012 estará concluída quando:
 
-- [ ] todos os critérios de aceitação (CA-01 a CA-14) estiverem implementados;
+- [ ] todos os critérios de aceitação (CA-01 a CA-14) estiverem implementados — por testes e em build de produção com login; falta conferir na homologação (T13);
 - [ ] todos os invariantes (INV-001 a INV-007) estiverem preservados;
-- [ ] os testes derivados (T01 a T13) estiverem aprovados, com o CI verde no PR;
+- [ ] os testes derivados (T01 a T13) estiverem aprovados, com o CI verde no PR — T01 a T11 automatizados; T12 com capturas; T13 pendente;
 - [ ] os RNFs aplicáveis (RNF01, RNF02, RNF06, RNF10) tiverem sido verificados como descrito na seção 10;
 - [ ] as questões OPEN-001 a OPEN-006 tiverem sido decididas e registradas;
 - [ ] não existir divergência conhecida entre a implementação e esta Spec;

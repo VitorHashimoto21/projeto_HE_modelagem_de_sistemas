@@ -404,6 +404,15 @@ export function criarConsultasFinanceiras(cliente: ClienteDoNegocio, negocioId: 
 
     // ---------- Caixa (5.1, 5.2) ----------
 
+    /** Saldo real até o fim de hoje (RN14) — o mesmo "Saldo atual" do fluxo; usado pelo Dashboard (SPEC-012). */
+    async saldoAtual(hoje: string): Promise<number> {
+      const fimDeHoje = intervaloDoDia(hoje).fim;
+      const [t] = await cliente.$queryRaw<{ atual: unknown }[]>`
+        SELECT COALESCE(SUM(CASE WHEN tipo = 'ENTRADA' THEN valor ELSE -valor END), 0) AS atual
+        FROM "LancamentoFinanceiro" WHERE "negocioId" = ${negocioId}::uuid AND "data" < ${fimDeHoje}`;
+      return centavosDe(t.atual);
+    },
+
     /** Fluxo de caixa do mês (AAAA-MM): totais pelo período inteiro; a lista com os filtros. */
     async fluxo(f: FiltroDoFluxo, hoje: string): Promise<FluxoDeCaixa> {
       const periodo = intervaloDaCompetencia(f.mes);

@@ -286,6 +286,7 @@ flowchart LR
 - **Justificativa da ordem:** só pode reverter efeitos (contas e lançamentos) já estabelecidos; precisa vir antes do dashboard, que exclui vendas canceladas.
 
 #### SPEC-012 — Dashboard e saúde financeira
+- **Spec:** [`specs/SPEC-012.md`](./specs/SPEC-012.md) (🚧 implementada; verificação na homologação pendente)
 - **Objetivo:** exibir o resumo do dia, o gráfico de vendas, o semáforo (PE × meta) e a projeção de caixa para Dono e Gerente, e o dashboard restrito para o Colaborador.
 - **Valor entregue:** visão imediata da saúde do negócio — a proposta "visual e sob controle".
 - **RF:** RF42, RF43, RF44, RF56, RF57, RF63, RF68 · **RN:** RN21, RN25 (consumo), RN29 · **RNF:** RNF01, RNF06, RNF10
