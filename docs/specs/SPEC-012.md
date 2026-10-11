@@ -1,6 +1,6 @@
 # SPEC-012 — Dashboard e saúde financeira
 
-> **Status:** 📝 **Rascunho** — aguardando as decisões da equipe nas questões em aberto (seção 13). Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar).
+> **Status:** ✅ **Aprovada em 11/10/2026** — questões em aberto decididas pela equipe (seção 13), todas pela opção recomendada. Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar).
 > **Mapa:** [`MAPA_DE_SPECS.md`](../MAPA_DE_SPECS.md) · **Anteriores:** [SPEC-005](SPEC-005.md) (Dashboard completo × restrito), [SPEC-007](SPEC-007.md) (alertas de estoque), [SPEC-008](SPEC-008.md) (vendas), [SPEC-009](SPEC-009.md) (saldo, contas e despesas fixas), [SPEC-010](SPEC-010.md) (ponto de equilíbrio e meta) e [SPEC-011](SPEC-011.md) (vendas canceladas fora dos números) · **Próximas que dependem desta:** SPEC-013 (relatórios avançados do plano pago).
 
 ---
@@ -262,6 +262,19 @@ Hoje, os 30 dias, os 12 meses e as competências da projeção são calculados e
 ---
 
 ## 13. Questões em aberto
+
+Todas decididas pela equipe em 11/10/2026, pela opção recomendada:
+
+| ID | Decisão |
+|---|---|
+| **OPEN-001** — Onde fica o Dashboard | **Substitui o conteúdo de `/painel`**, que continua a página inicial (menu "Painel"); o "Enquadramento fiscal" vira uma linha compacta com link para os dados do negócio. |
+| **OPEN-002** — Como desenhar o gráfico | **SVG próprio, desenhado no servidor** (barras), com tabela de valores acessível; sem biblioteca nova. |
+| **OPEN-003** — Semáforo no começo do mês | **Comparação literal do RF57 + linha informativa "No ritmo atual, o mês fecha em R$ X"** (média por dia × dias do mês), marcada como estimativa; a cor não muda por ela. |
+| **OPEN-004** — Período da projeção e contas atrasadas | **Mês atual + 5 seguintes**; contas vencidas e ainda abertas entram no mês atual, destacadas como "atrasadas". |
+| **OPEN-005** — Membro sem "Dashboard: ver" | **Nome do negócio e atalhos** para os módulos que ele pode usar, sem indicadores. |
+| **OPEN-006** — Vendas do dia | **Quantidade, total e ticket médio de hoje** + link "Ver as vendas de hoje", igual no completo e no restrito. |
+
+Opções consideradas:
 
 | ID | Questão | Opções | Recomendação |
 |---|---|---|---|
