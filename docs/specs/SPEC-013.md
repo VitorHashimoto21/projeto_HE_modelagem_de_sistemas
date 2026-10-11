@@ -1,6 +1,6 @@
 # SPEC-013 — Plano gratuito × pago
 
-> **Status:** 🚧 **Aprovada e implementada em 11/10/2026; verificação na homologação pendente** — questões em aberto decididas pela equipe (seção 13), todas pela opção recomendada; testes T01–T12 automatizados e telas verificadas em build de produção com login (T13) — [evidências](evidencias/SPEC-013/README.md). Falta o T14 (fluxo na homologação). Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar).
+> **Status:** ✅ **Implementada e verificada na homologação em 11/10/2026** (PR #68) — questões em aberto decididas pela equipe (seção 13), todas pela opção recomendada; testes T01–T12 no CI, telas em build de produção com login (T13) e fluxo na homologação (T14) — [evidências](evidencias/SPEC-013/README.md). Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar).
 > **Mapa:** [`MAPA_DE_SPECS.md`](../MAPA_DE_SPECS.md) · **Anteriores:** [SPEC-005](SPEC-005.md) (equipe, permissões e limite de colaboradores), [SPEC-008](SPEC-008.md) (vendas com custo gravado), [SPEC-009](SPEC-009.md) (fluxo de caixa e contas) e [SPEC-012](SPEC-012.md) (Dashboard) · **Próximas que dependem desta:** SPEC-015 (cobrança real, que substitui só o ponto de troca de plano).
 
 ---
@@ -297,12 +297,12 @@ Opções consideradas:
 
 A SPEC-013 estará concluída quando:
 
-- [ ] todos os critérios de aceitação (CA-01 a CA-14) estiverem implementados — por testes e em build de produção com login; falta conferir na homologação (T14);
-- [ ] todos os invariantes (INV-001 a INV-008) estiverem preservados;
-- [ ] os testes derivados (T01 a T14) estiverem aprovados, com o CI verde no PR — T01 a T12 automatizados; T13 com capturas; T14 pendente;
-- [ ] os RNFs aplicáveis (RNF01, RNF02, RNF06, RNF10) tiverem sido verificados como descrito na seção 10;
+- [x] todos os critérios de aceitação (CA-01 a CA-14) estiverem implementados — por testes, em build de produção com login e na homologação (11/10/2026);
+- [x] todos os invariantes (INV-001 a INV-008) estiverem preservados;
+- [x] os testes derivados (T01 a T14) estiverem aprovados, com o CI verde no PR — T01 a T12 no CI do PR #68; T13 com capturas; T14 na homologação;
+- [x] os RNFs aplicáveis (RNF01, RNF02, RNF06, RNF10) tiverem sido verificados como descrito na seção 10;
 - [ ] as questões OPEN-001 a OPEN-007 tiverem sido decididas e registradas;
-- [ ] não existir divergência conhecida entre a implementação e esta Spec;
-- [ ] toda divergência em relação à baseline tiver sido explicitamente analisada e registrada nos documentos.
+- [x] não existir divergência conhecida entre a implementação e esta Spec;
+- [x] toda divergência em relação à baseline tiver sido explicitamente analisada e registrada nos documentos (seção 8).
 
 **Regra fundamental:** a implementação obedece a esta Spec aprovada. Se surgir conflito entre código, Spec e documentos de modelagem, o comportamento não é alterado em silêncio: a divergência é registrada com a proposta de (1) corrigir a implementação ou (2) alterar a baseline, e a decisão é da equipe.

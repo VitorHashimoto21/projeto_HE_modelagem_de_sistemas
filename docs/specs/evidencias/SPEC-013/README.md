@@ -38,6 +38,15 @@ São 23 testes novos (14 unitários e 9 de integração). Toda a suíte passa: l
 - **Volta ao gratuito pela tela:** confirmação ("Nenhum dado é apagado") → "Plano gratuito ativado", plano atual Gratuito.
 - **Telas:** plano (pago) e oferta em 390 e 1440 px, relatórios em 390, 768 e 1440 px, nos temas claro e escuro; "Meus negócios" com suspenso no celular — **sem rolagem horizontal**. No celular, a rentabilidade vira uma lista com todas as colunas. Capturas em [`telas/`](telas/) e um PDF de exemplo em [`exemplo-vendas.pdf`](exemplo-vendas.pdf).
 
-## Pendente
+## Verificação na homologação (T14) — 11/10/2026
 
-- **T14:** fluxo completo na homologação depois do merge (migração `20261012100000_planos`).
+- **Merge do PR #68:** o workflow **Migrações** aplicou `20261012100000_planos` sem erro; o CI ficou verde.
+- **Publicação:** a Vercel publicou <https://he-homol.vercel.app> com o commit do merge; `/api/saude` responde ok (aplicação e banco) e `/relatorios`, `/negocio/plano` e a rota de exportação levam ao login sem sessão.
+
+**Teste pela equipe, com a própria conta:**
+- gratuito com o selo no menu, a oferta nos relatórios e o limite de 12 meses;
+- upgrade simulado;
+- rentabilidade e exportações em CSV e PDF;
+- volta ao gratuito.
+
+**Tudo funcionando.**
