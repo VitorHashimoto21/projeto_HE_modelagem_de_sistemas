@@ -1,6 +1,6 @@
 # SPEC-014 — LGPD: exportação e exclusão de conta
 
-> **Status:** 📝 **Rascunho** — aguardando as decisões da equipe nas questões em aberto (seção 13). Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar).
+> **Status:** ✅ **Aprovada em 11/10/2026** — questões em aberto decididas pela equipe (seção 13), todas pela opção recomendada. Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar).
 > **Mapa:** [`MAPA_DE_SPECS.md`](../MAPA_DE_SPECS.md) · **Anteriores:** [SPEC-002](SPEC-002.md) (conta, consentimento e bloqueio de conta excluída), [SPEC-004](SPEC-004.md) (negócios e o Dono), [SPEC-005](SPEC-005.md) (equipe e convites), [SPEC-008](SPEC-008.md) (clientes nas vendas) e [SPEC-013](SPEC-013.md) (CSV e arquivos de exportação) · **Próximas que dependem desta:** nenhuma.
 
 ---
@@ -228,6 +228,19 @@ A rotina diária (SPEC-009) anonimiza o e-mail dos convites `EXPIRADO` ou `CANCE
 ---
 
 ## 13. Questões em aberto
+
+Todas decididas pela equipe em 11/10/2026, pela opção recomendada:
+
+| ID | Decisão |
+|---|---|
+| **OPEN-001** — Remover a credencial do Supabase Auth | **API administrativa do Supabase** com a chave secreta nova `SUPABASE_SECRET_KEY` (secret na Vercel), logo depois da transação; se falhar, a pendência fica registrada e a rotina diária tenta de novo. |
+| **OPEN-002** — Confirmação da exclusão | **Digitar o e-mail da conta e marcar "Entendo que a exclusão é definitiva"**, com o resumo na mesma tela. |
+| **OPEN-003** — Dono com outros membros | **Permitir**: negócios encerrados e membros sem acesso, listados com a contagem na confirmação. |
+| **OPEN-004** — O que entra na exportação | **Perfil, consentimento e vínculos; tudo dos negócios em que é o Dono; dos negócios de outros Donos, só os registros feitos por ele.** |
+| **OPEN-005** — Depois dos 5 anos | **Registrar a data prevista de eliminação** no negócio encerrado; a eliminação física fica para uma spec própria. |
+| **OPEN-006** — Convites antigos | **Trocar o e-mail por um endereço anônimo**, mantendo o registro. |
+
+Opções consideradas:
 
 | ID | Questão | Opções | Recomendação |
 |---|---|---|---|
