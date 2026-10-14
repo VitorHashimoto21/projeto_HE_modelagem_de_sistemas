@@ -1,6 +1,6 @@
 # SPEC-016 — Design system e redesign (Direção "Balcão")
 
-> **Status:** 📝 **Rascunho** — aguardando as decisões da equipe nas questões em aberto (seção 13). Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar).
+> **Status:** ✅ **Aprovada em 14/10/2026** — questões em aberto decididas pela equipe (seção 13): OPEN-001 a OPEN-005 e OPEN-007 pela opção recomendada; OPEN-006 por **um PR único**. Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar).
 > **Mapa:** [`MAPA_DE_SPECS.md`](../MAPA_DE_SPECS.md) · **Anteriores:** todas as telas das SPECs 002 a 014; [SPEC-012](SPEC-012.md) (gráficos em SVG próprio, OPEN-002) · **Base visual:** [`IDENTIDADE_VISUAL.md`](../design/IDENTIDADE_VISUAL.md) e o protótipo aprovado da Direção B (quadro "HE — Direções visuais", linha B, 14/10/2026).
 
 ---
@@ -41,7 +41,7 @@
 2. **Componentes de interface** (`src/components/ui/`): Botão (principal, secundário, perigo, só ícone), Campo de texto, Seleção, Caixa de marcação, Grupo de segmentos, Abas, Superfície (cartão com hierarquia), Cabeçalho de página, Número de destaque, Selo de status, Aviso, Aviso flutuante (toast), Lista responsiva (lista no celular, tabela no computador), Estado vazio, Esqueleto de carregamento, Gaveta lateral/inferior (OPEN-003), Diálogo de confirmação, Ícone (OPEN-001), Paginação, Filtro de período.
 3. **Estrutura do app**: menu lateral verde-escuro no computador (recolhível), trilho só com ícones no tablet, barra inferior com "Vender" no celular, seletor de negócio, menu da conta; **faixa do caixa** (OPEN-005).
 4. **Componentes de gráfico** (`src/components/graficos/`): Barras (com grade, média, parcial hachurado e marca do ano anterior), Barras acima/abaixo do zero com linha (projeção), Medidor (faturado, equilíbrio, meta, ritmo), Barra empilhada, Barras horizontais com destaque, Minigráfico — todos em SVG desenhado no servidor, com uma camada leve no navegador só para o balão (dica) e o realce, e a tabela "Ver os valores".
-5. **Migração das 40 telas** em fases (seção 5.7, OPEN-006), cada uma em um PR verificado na homologação.
+5. **Migração das 40 telas** em 6 etapas (seção 5.7), num **único PR** (OPEN-006), com um commit por etapa e a homologação ao final.
 6. **Movimento** (seção 5.6): uma lista fechada de micro-interações e um único momento-assinatura.
 7. **Regras de escrita da interface** (seção 5.8).
 8. **Qualidade automatizada**: varredura de acessibilidade (axe) nos roteiros de navegador e um teste que impede voltar a escrever estilos de cartão à mão.
@@ -139,9 +139,9 @@
 
 Fora: entradas em cascata ao carregar, efeitos de rolagem, paralaxe, confete, cartões que crescem ao passar o mouse, curvas "elásticas".
 
-### 5.7 Fases da migração
+### 5.7 Etapas da migração (um único PR — OPEN-006)
 
-| Fase | Entrega | Telas |
+| Etapa | Entrega | Telas |
 |---|---|---|
 | **F1 — Fundação** | Tokens v2, fontes, componentes de interface, estrutura do app (menu, barra inferior), faixa do caixa, aviso flutuante | Estrutura em todas as telas (o miolo antigo segue funcionando dentro dela) |
 | **F2 — Gráficos + Painel** | Componentes de gráfico e o Painel completo | `/painel` |
@@ -150,7 +150,7 @@ Fora: entradas em cascata ao carregar, efeitos de rolagem, paralaxe, confete, ca
 | **F5 — Financeiro e Relatórios** | Caixa, contas, despesas fixas, lançar, relatórios | 8 telas |
 | **F6 — Configurações, conta e área pública** | Negócios, dados, equipe, plano, conta, sem acesso; entrar, cadastro, recuperar senha, nova senha, convite, link inválido, privacidade, termos, página inicial | 18 telas |
 
-Cada fase: testes da suíte verdes, roteiros de navegador das specs daquelas telas adaptados e verdes, varredura de acessibilidade, capturas em 390/768/1440 nos dois temas, PR, homologação.
+Cada etapa é um commit (ou uma sequência curta de commits) no mesmo PR, já com os testes da suíte verdes, os roteiros de navegador das telas daquela etapa adaptados e verdes, a varredura de acessibilidade e as capturas em 390/768/1440 nos dois temas. Ao fim de todas, o PR é aberto e, depois do merge, a homologação verifica o conjunto. Para a revisão do grupo, as evidências ficam separadas por etapa.
 
 ### 5.8 Escrita da interface
 
@@ -254,11 +254,25 @@ Nenhuma entidade muda. **Mudanças previstas no schema: nenhuma.** As consultas 
 | T07 | Roteiros das SPECs 002–014 adaptados, com axe, em 390/768/1440, claro e escuro | Navegador | CA-02, CA-08, CA-11 |
 | T08 | Movimento com e sem `prefers-reduced-motion`; momento-assinatura | Navegador | CA-07, CA-09 |
 | T09 | Tamanho do JavaScript antes e depois | Build | Desempenho |
-| T10 | Homologação ao fim de cada fase | Manual | CA-01 a CA-11 |
+| T10 | Homologação depois do merge do PR único | Manual (uma vez) | CA-01 a CA-11 |
 
 ---
 
 ## 13. Questões em aberto
+
+Decididas pela equipe em 14/10/2026:
+
+| ID | Decisão |
+|---|---|
+| **OPEN-001** — Ícones | **Biblioteca Lucide** (`lucide-react`). |
+| **OPEN-002** — Base dos componentes | **Híbrido**: shadcn/ui (Radix) para diálogo, gaveta, menu suspenso, seleção, dica e aviso flutuante, reestilizados com os tokens; o resto próprio. |
+| **OPEN-003** — Formulários curtos | **Gaveta com a própria URL preservada** (rotas interceptadas), acessível também pelo link direto. |
+| **OPEN-004** — Tema escuro | **Mantém claro e escuro**, com o escuro da Direção B definido cor a cor e validado. |
+| **OPEN-005** — Faixa do caixa fora do Painel | **Versão compacta no topo de todas as telas**, só para quem vê o Dashboard completo. |
+| **OPEN-006** — Entregas | **Um único PR** (diferente da recomendação de 6 PRs): as 6 etapas viram commits separados no mesmo PR, com evidências por etapa para facilitar a revisão; homologação uma vez, depois do merge. **Risco aceito:** PR grande para revisar e um único momento de verificação na homologação. |
+| **OPEN-007** — Gráficos do plano pago no Painel | **Seguem o plano**: no gratuito, rentabilidade mostra a oferta (sem valores) e o modo 12 meses fica sem a marca do ano anterior. |
+
+Opções consideradas:
 
 | ID | Questão | Opções | Recomendação |
 |---|---|---|---|
@@ -276,11 +290,11 @@ Nenhuma entidade muda. **Mudanças previstas no schema: nenhuma.** As consultas 
 
 A SPEC-016 estará concluída quando:
 
-- [ ] todos os critérios de aceitação (CA-01 a CA-11) estiverem implementados, nas 6 fases;
+- [ ] todos os critérios de aceitação (CA-01 a CA-11) estiverem implementados, nas 6 etapas;
 - [ ] todos os invariantes (INV-001 a INV-008) estiverem preservados;
-- [ ] os testes derivados (T01 a T10) estiverem aprovados, com o CI verde em cada PR;
+- [ ] os testes derivados (T01 a T10) estiverem aprovados, com o CI verde no PR;
 - [ ] os RNFs aplicáveis (RNF01, RNF02, RNF10 e desempenho) tiverem sido verificados como descrito na seção 10;
-- [ ] as questões OPEN-001 a OPEN-007 tiverem sido decididas e registradas;
+- [x] as questões OPEN-001 a OPEN-007 tiverem sido decididas e registradas;
 - [ ] `IDENTIDADE_VISUAL.md` estiver na versão 2;
 - [ ] não existir divergência conhecida entre a implementação e esta Spec;
 - [ ] toda divergência em relação à baseline tiver sido explicitamente analisada e registrada nos documentos.
