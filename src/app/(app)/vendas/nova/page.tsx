@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { rotuloUnidade } from "@/components/catalogo/rotulos";
+import { AvisoDaPagina } from "@/components/ui/aviso";
+import { CabecalhoDePagina } from "@/components/ui/cabecalho-de-pagina";
+import { classeDoBotao } from "@/components/ui/estilos";
 import { FrenteDeCaixa } from "@/components/vendas/frente-de-caixa";
 import { exigirPermissao } from "@/lib/auth/servidor";
 import { vendas } from "@/lib/db";
@@ -16,20 +19,22 @@ export default async function NovaVenda() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="font-display text-3xl font-semibold text-foreground">Nova venda</h1>
-        <Link href="/vendas" className="text-sm font-medium text-primary underline-offset-2 hover:underline">
-          Ver vendas
-        </Link>
-      </div>
+      <CabecalhoDePagina
+        titulo="Nova venda"
+        acoes={
+          <Link href="/vendas" className={classeDoBotao("secundario", "sm")}>
+            Ver vendas
+          </Link>
+        }
+      />
       {itens.length === 0 && (
-        <p className="rounded-xl border border-status-warn/30 bg-status-warn-bg px-4 py-3 text-sm text-status-warn">
+        <AvisoDaPagina tom="atencao">
           Nenhum item com preço oficial. Defina o preço dos itens no{" "}
           <Link href="/catalogo" className="font-semibold underline underline-offset-2">
             Catálogo
           </Link>{" "}
           para poder vendê-los.
-        </p>
+        </AvisoDaPagina>
       )}
       <FrenteDeCaixa
         hoje={hoje()}

@@ -23,13 +23,12 @@ export default async function Lancar() {
             </Link>
           </p>
         )}
-        <p className="text-xs font-medium tracking-widest text-muted-foreground uppercase">Financeiro</p>
-        <h1 className="font-display text-3xl font-semibold text-foreground">{podeVer ? "Novo lançamento" : "Lançar despesa"}</h1>
+        <h1 className="text-[28px] leading-tight font-extrabold text-foreground">{podeVer ? "Novo lançamento" : "Lançar despesa"}</h1>
         <p className="text-sm text-muted-foreground">
           Para despesas e receitas fora das vendas e das contas, como uma compra de material. Vendas e pagamentos de contas entram no caixa sozinhos.
         </p>
       </div>
-      <section className="rounded-2xl border bg-card p-6 shadow-sm">
+      <section className="rounded-2xl bg-card p-5 sm:p-6">
         <FormularioLancamento hoje={hoje()} />
       </section>
     </div>

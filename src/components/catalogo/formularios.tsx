@@ -83,7 +83,7 @@ function Materiais({
 
   if (opcoes.length === 0 && linhas.length === 0) {
     return (
-      <p className="rounded-xl border border-status-warn/30 bg-status-warn-bg px-4 py-3 text-sm text-status-warn">
+      <p className="rounded-lg bg-status-warn-bg px-4 py-3 text-sm text-status-warn">
         Para vincular materiais, cadastre-os antes como <strong>Produto físico</strong> no catálogo.
       </p>
     );
@@ -145,7 +145,7 @@ function Materiais({
               setLinhas([...linhas, { materialId: escolhido, quantidade: "1" }]); // RF13: sugestão de 1
               setEscolhido("");
             }}
-            className="rounded-xl border border-input px-4 py-3 text-sm font-semibold text-foreground hover:bg-muted disabled:opacity-50"
+            className="rounded-full border border-input px-4 py-3 text-sm font-semibold text-foreground hover:bg-accent disabled:opacity-50 active:scale-[0.96] transition-[background-color,transform] duration-(--duracao-estado)"
           >
             Adicionar
           </button>
@@ -199,15 +199,15 @@ export function FormularioItem({ valores, opcoes }: { valores?: ValoresDoItem; o
 
   if (!tipo) {
     const opcao =
-      "w-full rounded-2xl border bg-card p-5 text-left shadow-sm transition-colors hover:border-primary focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring/15";
+      "w-full rounded-2xl border border-transparent bg-card p-5 text-left transition-colors duration-(--duracao-estado) hover:border-primary focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring/15";
     return (
       <div className="grid gap-4 sm:grid-cols-2">
         <button type="button" className={opcao} onClick={() => setTipo("PRODUTO_FISICO")}>
-          <span className="block font-display text-lg font-semibold text-card-foreground">Produto físico</span>
+          <span className="block text-lg font-bold text-card-foreground">Produto físico</span>
           <span className="mt-1 block text-sm text-muted-foreground">Algo que você vende ou usa e controla no estoque.</span>
         </button>
         <button type="button" className={opcao} onClick={() => setTipo("SERVICO")}>
-          <span className="block font-display text-lg font-semibold text-card-foreground">Serviço</span>
+          <span className="block text-lg font-bold text-card-foreground">Serviço</span>
           <span className="mt-1 block text-sm text-muted-foreground">Algo que você executa, com ou sem materiais.</span>
         </button>
       </div>
@@ -376,7 +376,7 @@ export function FormularioPreco({ itemId }: { itemId: string }) {
     <div className="space-y-3">
       {estado.status === "salvo" && <Aviso tipo="sucesso">Preço atualizado.</Aviso>}
       {estado.status === "salvo" && estado.aviso && (
-        <p role="note" className="rounded-xl border border-status-warn/30 bg-status-warn-bg px-4 py-3 text-sm text-status-warn">
+        <p role="note" className="rounded-lg bg-status-warn-bg px-4 py-3 text-sm text-status-warn">
           {estado.aviso}
         </p>
       )}
@@ -411,7 +411,7 @@ export function FormularioPreco({ itemId }: { itemId: string }) {
         </div>
         <button
           type="submit"
-          className="rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary-hover"
+          className="rounded-full bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground hover:bg-primary-hover active:scale-[0.96] transition-[background-color,transform] duration-(--duracao-estado)"
         >
           Definir preço
         </button>

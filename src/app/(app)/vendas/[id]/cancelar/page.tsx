@@ -1,7 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { ArrowLeftRight } from "lucide-react";
 import { rotuloUnidade } from "@/components/catalogo/rotulos";
+import { CabecalhoDePagina } from "@/components/ui/cabecalho-de-pagina";
+import { classeDoBotao } from "@/components/ui/estilos";
+import { Superficie, TituloDaSuperficie } from "@/components/ui/superficie";
 import { FormularioCancelamento } from "@/components/vendas/cancelamento";
 import { qtd } from "@/components/vendas/rotulos";
 import { exigirPermissao } from "@/lib/auth/servidor";
@@ -28,22 +32,14 @@ export default async function CancelarVenda({ params }: PageProps<"/vendas/[id]/
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
-      <div className="space-y-2">
-        <p className="text-sm">
-          <Link href={`/vendas/${p.id}`} className="font-medium text-primary underline-offset-2 hover:underline">
-            ← Venda nº {p.numero}
-          </Link>
-        </p>
-        <h1 className="font-display text-3xl font-semibold text-foreground">Cancelar a venda nº {p.numero}</h1>
-        <p className="text-sm text-muted-foreground">
-          A venda continua no histórico como cancelada, com quem cancelou, quando e o motivo. Ela sai do faturamento e dos cálculos da Calculadora.
-        </p>
-      </div>
+      <CabecalhoDePagina
+        voltar={{ href: `/vendas/${p.id}`, rotulo: `Venda nº ${p.numero}` }}
+        titulo={`Cancelar a venda nº ${p.numero}`}
+        descricao="A venda continua no histórico como cancelada, com quem cancelou, quando e o motivo. Ela sai do faturamento e dos cálculos da Calculadora."
+      />
 
-      <section aria-labelledby="titulo-efeitos" className="rounded-2xl border bg-card p-6 shadow-sm">
-        <h2 id="titulo-efeitos" className="mb-3 font-display text-xl font-semibold text-card-foreground">
-          O que vai acontecer
-        </h2>
+      <Superficie aria-labelledby="titulo-efeitos">
+        <TituloDaSuperficie id="titulo-efeitos" titulo="O que vai acontecer" />
         <dl className="space-y-3 text-sm">
           <div>
             <dt className="font-medium text-foreground">Estoque que volta</dt>
@@ -70,27 +66,25 @@ export default async function CancelarVenda({ params }: PageProps<"/vendas/[id]/
             </dd>
           </div>
         </dl>
-      </section>
+      </Superficie>
 
-      <section aria-labelledby="titulo-cancelar" className="rounded-2xl border border-status-danger/30 bg-card p-6 shadow-sm">
-        <h2 id="titulo-cancelar" className="mb-4 font-display text-xl font-semibold text-card-foreground">
-          Só cancelar
-        </h2>
+      <Superficie aria-labelledby="titulo-cancelar" className="ring-1 ring-status-danger/30">
+        <TituloDaSuperficie id="titulo-cancelar" titulo="Só cancelar" />
         <FormularioCancelamento vendaId={p.id} numero={p.numero} reembolsoCentavos={p.recebidoCentavos} />
-      </section>
+      </Superficie>
 
       {podeTrocar && (
-        <section aria-labelledby="titulo-trocar" className="rounded-2xl border bg-card p-6 shadow-sm">
-          <h2 id="titulo-trocar" className="mb-1 font-display text-xl font-semibold text-card-foreground">
-            Cancelar e trocar
-          </h2>
-          <p className="mb-4 text-sm text-muted-foreground">
-            Escolha itens de até {reais(p.valorTotalCentavos)}. O valor já recebido vira crédito de troca, e só a diferença é devolvida.
-          </p>
-          <Link href={`/vendas/${p.id}/trocar`} className="inline-flex rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground hover:bg-primary-hover">
+        <Superficie aria-labelledby="titulo-trocar">
+          <TituloDaSuperficie
+            id="titulo-trocar"
+            titulo="Cancelar e trocar"
+            descricao={`Escolha itens de até ${reais(p.valorTotalCentavos)}. O valor já recebido vira crédito de troca, e só a diferença é devolvida.`}
+          />
+          <Link href={`/vendas/${p.id}/trocar`} className={classeDoBotao("principal")}>
+            <ArrowLeftRight aria-hidden="true" />
             Montar a troca
           </Link>
-        </section>
+        </Superficie>
       )}
     </div>
   );

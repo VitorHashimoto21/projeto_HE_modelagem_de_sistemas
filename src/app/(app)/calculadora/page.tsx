@@ -98,8 +98,7 @@ export default async function Calculadora({ searchParams }: PageProps<"/calculad
     <div className="space-y-8">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div className="min-w-0">
-          <p className="text-xs font-medium tracking-widest text-muted-foreground uppercase">Calculadora</p>
-          <h1 className="font-display text-3xl font-semibold text-foreground">Preço de venda</h1>
+          <h1 className="text-[28px] leading-tight font-extrabold text-foreground">Preço de venda</h1>
           {base && (
             <p className="mt-1 text-sm text-muted-foreground">
               Regime: <strong className="font-medium text-foreground">{ROTULO_REGIME[base.regime]}</strong>
@@ -107,26 +106,26 @@ export default async function Calculadora({ searchParams }: PageProps<"/calculad
             </p>
           )}
         </div>
-        <Link href="/calculadora/parametros" className="rounded-xl border border-input px-4 py-2.5 text-sm font-semibold text-foreground hover:bg-muted">
+        <Link href="/calculadora/parametros" className="rounded-full border border-input px-4 py-2.5 text-sm font-semibold text-foreground hover:bg-accent active:scale-[0.96] transition-[background-color,transform] duration-(--duracao-estado)">
           Parâmetros de precificação
         </Link>
       </div>
 
       {base?.avisoAnexo && (
-        <p role="status" className="rounded-xl border border-status-warn/40 bg-status-warn-bg px-4 py-3 text-sm text-status-warn">
+        <p role="status" className="rounded-lg bg-status-warn-bg px-4 py-3 text-sm text-status-warn">
           <span aria-hidden="true">▲ </span>
           {base.avisoAnexo}
         </p>
       )}
       {base?.limiteMei?.acima && (
-        <p role="status" className="rounded-xl border border-status-warn/40 bg-status-warn-bg px-4 py-3 text-sm text-status-warn">
+        <p role="status" className="rounded-lg bg-status-warn-bg px-4 py-3 text-sm text-status-warn">
           <span aria-hidden="true">▲ </span>O faturamento dos últimos 12 meses ({reais(base.rbt12.rbt12Centavos)}) passou do limite do MEI ({reais(base.limiteMei.limiteCentavos)} por ano). Procure o seu contador
           sobre o desenquadramento.
         </p>
       )}
 
-      <section aria-labelledby="titulo-item" className="rounded-2xl border bg-card p-6 shadow-sm">
-        <h2 id="titulo-item" className="mb-4 font-display text-xl font-semibold text-card-foreground">
+      <section aria-labelledby="titulo-item" className="rounded-2xl bg-card p-5 sm:p-6">
+        <h2 id="titulo-item" className="mb-4 text-[17px] font-bold text-card-foreground">
           Calcular o preço de um item
         </h2>
         <form action="/calculadora" className="grid gap-4 sm:grid-cols-[2fr_1fr_1fr_auto] sm:items-end">
@@ -156,7 +155,7 @@ export default async function Calculadora({ searchParams }: PageProps<"/calculad
             </label>
             <input id="comissao" name="comissao" inputMode="decimal" defaultValue={campos.comissao} placeholder="A do item" className={classeDoCampo(opcoes.ok ? undefined : opcoes.erros.comissao)} />
           </div>
-          <button type="submit" className="rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground hover:bg-primary-hover">
+          <button type="submit" className="rounded-full bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground hover:bg-primary-hover active:scale-[0.96] transition-[background-color,transform] duration-(--duracao-estado)">
             Calcular
           </button>
         </form>
@@ -171,8 +170,8 @@ export default async function Calculadora({ searchParams }: PageProps<"/calculad
 
       {resultado?.status === "ok" && (
         <section aria-labelledby="titulo-resultado" className="grid gap-6 lg:grid-cols-[1fr_1.2fr]">
-          <div className="space-y-4 rounded-2xl border bg-card p-6 shadow-sm ring-1 ring-primary/20">
-            <h2 id="titulo-resultado" className="font-display text-xl font-semibold break-words text-card-foreground">
+          <div className="space-y-4 rounded-2xl bg-card p-5 sm:p-6 ring-1 ring-primary/20">
+            <h2 id="titulo-resultado" className="text-[17px] font-bold break-words text-card-foreground">
               {resultado.item.nome}
             </h2>
             <div>
@@ -185,7 +184,7 @@ export default async function Calculadora({ searchParams }: PageProps<"/calculad
               </p>
             </div>
             {resultado.comissao.simulada ? (
-              <p role="status" className="rounded-xl border border-status-warn/40 bg-status-warn-bg px-4 py-3 text-sm text-status-warn">
+              <p role="status" className="rounded-lg bg-status-warn-bg px-4 py-3 text-sm text-status-warn">
                 Simulação com comissão de {pct(resultado.comissao.percentual)}; a do item é {pct(resultado.comissao.doItem)}. Para confirmar com outra comissão, altere-a no Catálogo.
               </p>
             ) : podeConfirmar ? (
@@ -195,8 +194,8 @@ export default async function Calculadora({ searchParams }: PageProps<"/calculad
             )}
           </div>
 
-          <div className="rounded-2xl border bg-card p-6 shadow-sm">
-            <h2 className="mb-2 font-display text-xl font-semibold text-card-foreground">Como o preço foi calculado</h2>
+          <div className="rounded-2xl bg-card p-5 sm:p-6">
+            <h2 className="mb-2 text-[17px] font-bold text-card-foreground">Como o preço foi calculado</h2>
             <dl>
               <Linha
                 rotulo="Custo total"
@@ -229,8 +228,8 @@ export default async function Calculadora({ searchParams }: PageProps<"/calculad
         </section>
       )}
 
-      <section aria-labelledby="titulo-negocio" className="rounded-2xl border bg-card p-6 shadow-sm">
-        <h2 id="titulo-negocio" className="mb-1 font-display text-xl font-semibold text-card-foreground">
+      <section aria-labelledby="titulo-negocio" className="rounded-2xl bg-card p-5 sm:p-6">
+        <h2 id="titulo-negocio" className="mb-1 text-[17px] font-bold text-card-foreground">
           Seu negócio no mês
         </h2>
         {analise.status === "bloqueado" ? (

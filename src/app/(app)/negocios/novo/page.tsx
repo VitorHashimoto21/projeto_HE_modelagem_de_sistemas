@@ -10,7 +10,7 @@ export default async function NovoNegocio() {
   return (
     <div className="mx-auto max-w-xl space-y-8">
       <div>
-        <h1 className="font-display text-3xl font-semibold text-foreground">Cadastrar negócio</h1>
+        <h1 className="text-[28px] leading-tight font-extrabold text-foreground">Cadastrar negócio</h1>
         <p className="mt-1.5 text-sm text-muted-foreground">
           Com o enquadramento certo, a calculadora já embute o imposto correto no preço.
         </p>

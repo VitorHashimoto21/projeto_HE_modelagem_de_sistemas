@@ -17,13 +17,13 @@ export default async function DadosDoNegocio() {
   return (
     <div className="mx-auto max-w-xl space-y-8">
       <div>
-        <h1 className="font-display text-3xl font-semibold text-foreground">Dados do negócio</h1>
+        <h1 className="text-[28px] leading-tight font-extrabold text-foreground">Dados do negócio</h1>
         <p className="mt-1.5 text-sm text-muted-foreground">
           {dados.cnpj ? "O CNPJ não muda depois do cadastro." : "Para virar MEI ou Simples, informe o CNPJ."}
         </p>
       </div>
       <FormularioDadosDoNegocio valores={dados} />
-      <section className="rounded-2xl border bg-card p-6 shadow-sm" aria-label="Estoque">
+      <section className="rounded-2xl bg-card p-5 sm:p-6" aria-label="Estoque">
         <FormularioDiasCobertura atual={diasCobertura} />
       </section>
     </div>

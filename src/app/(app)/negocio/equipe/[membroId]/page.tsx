@@ -24,21 +24,21 @@ export default async function GerenciarMembro({ params }: PageProps<"/negocio/eq
         <Link href="/negocio/equipe" className="text-sm font-medium text-primary underline-offset-2 hover:underline">
           ← Equipe
         </Link>
-        <h1 className="mt-2 font-display text-3xl font-semibold break-words text-foreground">{membro.nome}</h1>
+        <h1 className="mt-2 text-[28px] leading-tight font-extrabold break-words text-foreground">{membro.nome}</h1>
         <p className="mt-1 text-sm break-words text-muted-foreground">
           {membro.email} · {ROTULO_PAPEL[papel]}
         </p>
       </div>
 
-      <section aria-labelledby="titulo-papel" className="space-y-4 rounded-2xl border bg-card p-6 shadow-sm">
-        <h2 id="titulo-papel" className="font-display text-xl font-semibold text-card-foreground">
+      <section aria-labelledby="titulo-papel" className="space-y-4 rounded-2xl bg-card p-5 sm:p-6">
+        <h2 id="titulo-papel" className="text-[17px] font-bold text-card-foreground">
           Papel
         </h2>
         <FormularioPapel membroId={membro.id} papel={papel} />
       </section>
 
-      <section aria-labelledby="titulo-permissoes" className="space-y-4 rounded-2xl border bg-card p-6 shadow-sm">
-        <h2 id="titulo-permissoes" className="font-display text-xl font-semibold text-card-foreground">
+      <section aria-labelledby="titulo-permissoes" className="space-y-4 rounded-2xl bg-card p-5 sm:p-6">
+        <h2 id="titulo-permissoes" className="text-[17px] font-bold text-card-foreground">
           Permissões
         </h2>
         <FormularioPermissoes

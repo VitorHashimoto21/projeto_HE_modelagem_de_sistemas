@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { rotuloUnidade } from "@/components/catalogo/rotulos";
+import { CabecalhoDePagina } from "@/components/ui/cabecalho-de-pagina";
 import { FrenteDeCaixa } from "@/components/vendas/frente-de-caixa";
 import { ROTA_SEM_ACESSO } from "@/lib/auth/rotas";
 import { exigirPermissao } from "@/lib/auth/servidor";
@@ -31,17 +31,11 @@ export default async function TrocarVenda({ params }: PageProps<"/vendas/[id]/tr
 
   return (
     <div className="space-y-6">
-      <div className="space-y-2">
-        <p className="text-sm">
-          <Link href={`/vendas/${p.id}/cancelar`} className="font-medium text-primary underline-offset-2 hover:underline">
-            ← Cancelar a venda nº {p.numero}
-          </Link>
-        </p>
-        <h1 className="font-display text-3xl font-semibold text-foreground">Troca da venda nº {p.numero}</h1>
-        <p className="text-sm text-muted-foreground">
-          Monte o carrinho com os itens novos. Ao confirmar, a venda nº {p.numero} é cancelada e a troca é registrada como uma nova venda, tudo de uma vez.
-        </p>
-      </div>
+      <CabecalhoDePagina
+        voltar={{ href: `/vendas/${p.id}/cancelar`, rotulo: `Cancelar a venda nº ${p.numero}` }}
+        titulo={`Troca da venda nº ${p.numero}`}
+        descricao={`Monte a venda com os itens novos. Ao confirmar, a venda nº ${p.numero} é cancelada e a troca é registrada como uma nova venda, tudo de uma vez.`}
+      />
       <FrenteDeCaixa
         hoje={hoje()}
         clientes={clientes}

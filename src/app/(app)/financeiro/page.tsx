@@ -23,7 +23,7 @@ const nomeDoMes = (comp: string) => `${NOMES_DOS_MESES[Number(comp.slice(5, 7)) 
 
 function Cartao({ rotulo, children, destaque }: { rotulo: string; children: React.ReactNode; destaque?: boolean }) {
   return (
-    <div className={`rounded-2xl border p-5 shadow-sm ${destaque ? "bg-card ring-1 ring-primary/20" : "bg-card"}`}>
+    <div className={`rounded-2xl p-5 ${destaque ? "bg-card ring-1 ring-primary/20" : "bg-card"}`}>
       <p className="text-sm text-muted-foreground">{rotulo}</p>
       <p className={`mt-1 font-semibold ${destaque ? "text-3xl" : "text-xl"}`}>{children}</p>
     </div>
@@ -94,8 +94,8 @@ export default async function Caixa({ searchParams }: PageProps<"/financeiro">) 
       </p>
 
       {podeCriar && !f.saldoInicialInformado && (
-        <section aria-labelledby="titulo-saldo-inicial" className="rounded-2xl border border-status-warn/40 bg-status-warn-bg p-6 shadow-sm">
-          <h2 id="titulo-saldo-inicial" className="font-display text-xl font-semibold text-card-foreground">
+        <section aria-labelledby="titulo-saldo-inicial" className="rounded-2xl bg-status-warn-bg p-5 sm:p-6">
+          <h2 id="titulo-saldo-inicial" className="text-[17px] font-bold text-card-foreground">
             Saldo inicial do caixa
           </h2>
           <p className="mt-1 mb-4 text-sm text-foreground">Quanto dinheiro o negócio tinha quando começou a usar o sistema? Informe uma vez; o saldo parte dele.</p>
@@ -103,7 +103,7 @@ export default async function Caixa({ searchParams }: PageProps<"/financeiro">) 
         </section>
       )}
 
-      <section aria-labelledby="titulo-lancamentos" className="rounded-2xl border bg-card p-6 shadow-sm">
+      <section aria-labelledby="titulo-lancamentos" className="rounded-2xl bg-card p-5 sm:p-6">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <nav aria-label="Mês" className="flex items-center gap-2">
             {noLimite ? (
@@ -115,7 +115,7 @@ export default async function Caixa({ searchParams }: PageProps<"/financeiro">) 
                 ←
               </Link>
             )}
-            <h2 id="titulo-lancamentos" className="font-display text-xl font-semibold text-card-foreground first-letter:uppercase">
+            <h2 id="titulo-lancamentos" className="text-[17px] font-bold text-card-foreground first-letter:uppercase">
               {nomeDoMes(mes)}
             </h2>
             {mes < mesAtual ? (
@@ -149,7 +149,7 @@ export default async function Caixa({ searchParams }: PageProps<"/financeiro">) 
                 </option>
               ))}
             </select>
-            <button type="submit" className="rounded-xl border bg-card px-4 py-2 text-sm font-medium text-foreground hover:bg-accent">
+            <button type="submit" className="rounded-full border bg-card px-4 py-2 text-sm font-medium text-foreground hover:bg-accent active:scale-[0.96] transition-[background-color,transform] duration-(--duracao-estado)">
               Filtrar
             </button>
           </form>

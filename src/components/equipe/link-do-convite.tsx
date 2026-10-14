@@ -29,7 +29,7 @@ export function LinkDoConvite({ link }: { link: string }) {
         <button
           type="button"
           onClick={copiar}
-          className="rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary-hover"
+          className="rounded-full bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground hover:bg-primary-hover active:scale-[0.96] transition-[background-color,transform] duration-(--duracao-estado)"
         >
           {copiado ? "Copiado" : "Copiar link"}
         </button>

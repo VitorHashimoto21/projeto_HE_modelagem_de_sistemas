@@ -24,13 +24,13 @@ export async function PaginaDocumentoLegal({ documento }: { documento: Documento
           <Markdown
             remarkPlugins={[remarkGfm]}
             components={{
-              h1: (p) => <h1 className="mb-6 font-display text-3xl font-semibold" {...p} />,
-              h2: (p) => <h2 className="mt-8 font-display text-xl font-semibold" {...p} />,
+              h1: (p) => <h1 className="mb-6 text-[28px] leading-tight font-extrabold" {...p} />,
+              h2: (p) => <h2 className="mt-8 text-[17px] font-bold" {...p} />,
               h3: (p) => <h3 className="mt-6 font-semibold" {...p} />,
               ul: (p) => <ul className="list-disc space-y-1 pl-6" {...p} />,
               ol: (p) => <ol className="list-decimal space-y-1 pl-6" {...p} />,
               blockquote: (p) => (
-                <blockquote className="rounded-xl border border-status-warn/30 bg-status-warn-bg px-4 py-3 text-status-warn" {...p} />
+                <blockquote className="rounded-lg bg-status-warn-bg px-4 py-3 text-status-warn" {...p} />
               ),
               code: (p) => <code className="rounded bg-muted px-1 py-0.5 text-[0.85em]" {...p} />,
               a: ({ href, children }) => (

@@ -29,7 +29,7 @@ export default async function Catalogo({ searchParams }: PageProps<"/catalogo">)
   return (
     <div className="space-y-8">
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="font-display text-3xl font-semibold text-foreground">{arquivados ? "Itens arquivados" : "Catálogo"}</h1>
+        <h1 className="text-[28px] leading-tight font-extrabold text-foreground">{arquivados ? "Itens arquivados" : "Catálogo"}</h1>
         {pode(membro.permissoes, "catalogo", "criar") && !arquivados && (
           <Link href="/catalogo/novo" className={botaoPrincipal}>
             Novo item
@@ -62,14 +62,14 @@ export default async function Catalogo({ searchParams }: PageProps<"/catalogo">)
             </option>
           ))}
         </select>
-        <button type="submit" className="rounded-xl border border-input px-5 py-3 text-sm font-semibold text-foreground hover:bg-muted">
+        <button type="submit" className="rounded-full border border-input px-5 py-3 text-sm font-semibold text-foreground hover:bg-accent active:scale-[0.96] transition-[background-color,transform] duration-(--duracao-estado)">
           Filtrar
         </button>
       </form>
 
       {itens.length === 0 ? (
-        <section className="rounded-2xl border bg-card px-6 py-12 text-center shadow-sm">
-          <h2 className="mb-2 font-display text-2xl font-semibold text-card-foreground">
+        <section className="rounded-2xl bg-card px-6 py-12 text-center">
+          <h2 className="mb-2 text-xl font-extrabold text-card-foreground">
             {filtrando ? "Nenhum item encontrado" : arquivados ? "Nenhum item arquivado" : "Seu catálogo está vazio"}
           </h2>
           <p className="mx-auto max-w-md text-sm text-muted-foreground">
@@ -86,7 +86,7 @@ export default async function Catalogo({ searchParams }: PageProps<"/catalogo">)
             <li key={i.id}>
               <Link
                 href={`/catalogo/${i.id}`}
-                className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 rounded-2xl border bg-card p-4 shadow-sm transition-colors hover:border-primary"
+                className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 rounded-2xl bg-card p-4 transition-colors hover:border-primary"
               >
                 <div className="min-w-0">
                   <p className="truncate font-medium text-card-foreground">{i.nome}</p>

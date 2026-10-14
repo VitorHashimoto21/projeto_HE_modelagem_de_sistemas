@@ -9,7 +9,7 @@ import { ROTULO_PAPEL } from "@/lib/dominio/permissoes";
 
 export const metadata: Metadata = { title: "Minha conta" };
 
-const cartao = "rounded-2xl border bg-card p-6 shadow-sm";
+const cartao = "rounded-2xl bg-card p-5 sm:p-6";
 
 function Linha({ rotulo, valor }: { rotulo: string; valor: React.ReactNode }) {
   return (
@@ -30,10 +30,10 @@ export default async function MinhaConta() {
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
-      <h1 className="font-display text-3xl font-semibold text-foreground">Minha conta</h1>
+      <h1 className="text-[28px] leading-tight font-extrabold text-foreground">Minha conta</h1>
 
       <section aria-labelledby="titulo-dados" className={cartao}>
-        <h2 id="titulo-dados" className="mb-1 font-display text-xl font-semibold text-card-foreground">
+        <h2 id="titulo-dados" className="mb-1 text-[17px] font-bold text-card-foreground">
           Seus dados
         </h2>
         <dl>
@@ -52,7 +52,7 @@ export default async function MinhaConta() {
       </section>
 
       <section aria-labelledby="titulo-exportar" className={cartao}>
-        <h2 id="titulo-exportar" className="font-display text-xl font-semibold text-card-foreground">
+        <h2 id="titulo-exportar" className="text-[17px] font-bold text-card-foreground">
           Exportar meus dados
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
@@ -62,20 +62,20 @@ export default async function MinhaConta() {
         <a
           href="/conta/exportar"
           download
-          className="mt-4 inline-flex items-center justify-center rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary-hover"
+          className="mt-4 inline-flex items-center justify-center rounded-full bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground hover:bg-primary-hover active:scale-[0.96] transition-[background-color,transform] duration-(--duracao-estado)"
         >
           <span aria-hidden="true">↓&nbsp;</span>Exportar meus dados (.zip)
         </a>
       </section>
 
-      <section aria-labelledby="titulo-excluir" className="rounded-2xl border border-status-danger/40 bg-card p-6 shadow-sm">
-        <h2 id="titulo-excluir" className="flex items-center gap-2 font-display text-xl font-semibold text-status-danger">
+      <section aria-labelledby="titulo-excluir" className="rounded-2xl bg-card p-5 ring-1 ring-status-danger/30 sm:p-6">
+        <h2 id="titulo-excluir" className="flex items-center gap-2 text-[17px] font-bold text-status-danger">
           <span aria-hidden="true">▲</span>Excluir minha conta
         </h2>
         <div className="mt-2 space-y-2 text-sm text-foreground">
           <p>Seu acesso é bloqueado na hora e seus dados pessoais (nome, e-mail e senha) são anonimizados. Exporte seus dados antes, se quiser guardá-los.</p>
           {resumo.encerrar.length > 0 && (
-            <div className="rounded-xl border border-status-danger/30 bg-status-danger-bg px-4 py-3">
+            <div className="rounded-lg bg-status-danger-bg px-4 py-3">
               <p className="font-medium text-status-danger">Negócios que serão encerrados (você é o Dono):</p>
               <ul className="mt-1 list-disc pl-5">
                 {resumo.encerrar.map((n) => (

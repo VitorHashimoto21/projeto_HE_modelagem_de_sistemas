@@ -28,10 +28,10 @@ export default async function Estoque({ searchParams }: PageProps<"/estoque">) {
 
   return (
     <div className="space-y-8">
-      <h1 className="font-display text-3xl font-semibold text-foreground">Estoque</h1>
+      <h1 className="text-[28px] leading-tight font-extrabold text-foreground">Estoque</h1>
 
       {totalAlertas > 0 && situacao !== "baixo" && (
-        <p role="status" className="rounded-xl border border-status-warn/30 bg-status-warn-bg px-4 py-3 text-sm text-status-warn">
+        <p role="status" className="rounded-lg bg-status-warn-bg px-4 py-3 text-sm text-status-warn">
           <span aria-hidden="true">▲ </span>
           {totalAlertas === 1 ? "1 produto está" : `${totalAlertas} produtos estão`} com estoque baixo ou zerado.{" "}
           <Link href="/estoque?situacao=baixo" className="font-semibold underline underline-offset-2">
@@ -64,14 +64,14 @@ export default async function Estoque({ searchParams }: PageProps<"/estoque">) {
           <option value="baixo">Estoque baixo</option>
           <option value="sem-estoque">Sem estoque</option>
         </select>
-        <button type="submit" className="rounded-xl border border-input px-5 py-3 text-sm font-semibold text-foreground hover:bg-muted">
+        <button type="submit" className="rounded-full border border-input px-5 py-3 text-sm font-semibold text-foreground hover:bg-accent active:scale-[0.96] transition-[background-color,transform] duration-(--duracao-estado)">
           Filtrar
         </button>
       </form>
 
       {produtos.length === 0 ? (
-        <section className="rounded-2xl border bg-card px-6 py-12 text-center shadow-sm">
-          <h2 className="mb-2 font-display text-2xl font-semibold text-card-foreground">
+        <section className="rounded-2xl bg-card px-6 py-12 text-center">
+          <h2 className="mb-2 text-xl font-extrabold text-card-foreground">
             {busca || categoria || situacao ? "Nenhum produto encontrado" : "Nenhum produto físico ainda"}
           </h2>
           <p className="mx-auto max-w-md text-sm text-muted-foreground">
@@ -94,7 +94,7 @@ export default async function Estoque({ searchParams }: PageProps<"/estoque">) {
             <li key={pr.id}>
               <Link
                 href={`/estoque/${pr.id}`}
-                className={`flex flex-wrap items-center justify-between gap-x-6 gap-y-2 rounded-2xl border bg-card p-4 shadow-sm transition-colors hover:border-primary ${
+                className={`flex flex-wrap items-center justify-between gap-x-6 gap-y-2 rounded-2xl border border-transparent bg-card p-4 transition-colors duration-(--duracao-estado) hover:border-primary ${
                   emAlerta(pr.situacao) ? "border-status-warn/40" : ""
                 }`}
               >

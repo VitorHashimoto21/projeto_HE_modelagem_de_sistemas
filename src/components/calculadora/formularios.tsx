@@ -127,12 +127,12 @@ export function FormularioParametros({ atuais }: { atuais: ParametrosExibidos })
     <form action={executar} onSubmit={aoEnviar} noValidate className="space-y-6">
       {estado.status === "salvo" && <Aviso tipo="sucesso">{estado.mensagem}</Aviso>}
       <section className="space-y-4">
-        <h2 className="font-display text-lg font-semibold text-card-foreground">Vendas no cartão</h2>
+        <h2 className="text-lg font-bold text-card-foreground">Vendas no cartão</h2>
         <div className="sm:max-w-xs">{campo("taxaCartao", "Taxa média da maquininha (%)", { placeholder: "Ex.: 3,5", dica: "Entra como despesa variável em todo preço." })}</div>
       </section>
       <section className="space-y-4">
         <div>
-          <h2 className="font-display text-lg font-semibold text-card-foreground">Estimativas para começar</h2>
+          <h2 className="text-lg font-bold text-card-foreground">Estimativas para começar</h2>
           <p className="text-sm text-muted-foreground">Usadas enquanto ainda não há vendas nos meses anteriores. Depois, valem os números reais.</p>
         </div>
         <div className="grid gap-4 sm:grid-cols-3">
@@ -149,7 +149,7 @@ export function FormularioParametros({ atuais }: { atuais: ParametrosExibidos })
         </div>
       </section>
       <section className="space-y-4">
-        <h2 className="font-display text-lg font-semibold text-card-foreground">Objetivo</h2>
+        <h2 className="text-lg font-bold text-card-foreground">Objetivo</h2>
         <div className="sm:max-w-xs">{campo("margemMeta", "Margem de lucro desejada no mês (%)", { placeholder: "Ex.: 20", dica: "Usada no faturamento meta." })}</div>
       </section>
       <button type="submit" disabled={enviando} className={botao}>

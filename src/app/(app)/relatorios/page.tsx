@@ -16,7 +16,7 @@ import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Relatórios" };
 
-const cartao = "rounded-2xl border bg-card p-6 shadow-sm";
+const cartao = "rounded-2xl bg-card p-5 sm:p-6";
 const ORDENS: { chave: OrdemDaRentabilidade; rotulo: string }[] = [
   { chave: "margem", rotulo: "Margem" },
   { chave: "faturamento", rotulo: "Faturamento" },
@@ -37,7 +37,7 @@ export default async function Relatorios({ searchParams }: PageProps<"/relatorio
 
   const cabecalho = (
     <div>
-      <h1 className="font-display text-3xl font-semibold text-foreground">Relatórios</h1>
+      <h1 className="text-[28px] leading-tight font-extrabold text-foreground">Relatórios</h1>
       <p className="mt-1 text-sm text-muted-foreground">Rentabilidade por item e exportação em CSV (planilha) e PDF.</p>
     </div>
   );
@@ -105,7 +105,7 @@ export default async function Relatorios({ searchParams }: PageProps<"/relatorio
             </label>
             <input id="ate" name="ate" type="date" required defaultValue={periodo.ate} className={`${classeDoCampo()} mt-1.5`} />
           </div>
-          <button type="submit" className="rounded-xl border bg-card px-4 py-3 text-sm font-medium text-foreground hover:bg-accent">
+          <button type="submit" className="rounded-full border bg-card px-4 py-3 text-sm font-medium text-foreground hover:bg-accent active:scale-[0.96] transition-[background-color,transform] duration-(--duracao-estado)">
             Aplicar
           </button>
         </form>
@@ -117,7 +117,7 @@ export default async function Relatorios({ searchParams }: PageProps<"/relatorio
       {rent && (
         <section aria-labelledby="titulo-rentabilidade" className={cartao}>
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-            <h2 id="titulo-rentabilidade" className="font-display text-xl font-semibold text-card-foreground">
+            <h2 id="titulo-rentabilidade" className="text-[17px] font-bold text-card-foreground">
               Rentabilidade por item
             </h2>
             <nav aria-label="Ordenar por" className="flex flex-wrap items-center gap-1 text-sm">
@@ -244,7 +244,7 @@ export default async function Relatorios({ searchParams }: PageProps<"/relatorio
       )}
 
       <section aria-labelledby="titulo-exportar" className={cartao}>
-        <h2 id="titulo-exportar" className="font-display text-xl font-semibold text-card-foreground">
+        <h2 id="titulo-exportar" className="text-[17px] font-bold text-card-foreground">
           Exportar
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">

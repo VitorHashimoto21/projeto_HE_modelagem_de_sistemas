@@ -226,3 +226,4 @@
 @keyframes gaveta-baixo { from { transform: translateY(24px); opacity: 0; } to { transform: none; opacity: 1; } }
 @keyframes gaveta-lado { from { transform: translateX(32px); opacity: 0; } to { transform: none; opacity: 1; } }
 @keyframes medidor-encher { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes saldo-entrou { 0% { background: transparent; } 20% { background: color-mix(in srgb, var(--ambar) 35%, transparent); transform: scale(1.06); } 100% { background: transparent; transform: none; } }

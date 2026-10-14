@@ -11,9 +11,9 @@ import { acaoAlterarPlano } from "@/lib/planos/acoes";
 
 export const metadata: Metadata = { title: "Plano" };
 
-const botao = "inline-flex items-center justify-center rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary-hover";
-const botaoSecundario = "inline-flex items-center justify-center rounded-xl border bg-card px-5 py-3 text-sm font-semibold text-foreground transition-colors hover:bg-accent";
-const cartao = "rounded-2xl border bg-card p-6 shadow-sm";
+const botao = "inline-flex items-center justify-center rounded-full bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground hover:bg-primary-hover active:scale-[0.96] transition-[background-color,transform] duration-(--duracao-estado)";
+const botaoSecundario = "inline-flex items-center justify-center rounded-full border bg-card px-5 py-3 text-sm font-semibold text-foreground hover:bg-accent active:scale-[0.96] transition-[background-color,transform] duration-(--duracao-estado)";
+const cartao = "rounded-2xl bg-card p-5 sm:p-6";
 
 // Plano do negócio (SPEC-013, UC15): só o Dono (RN02). A troca é simulada (RF73) e passa
 // sempre por alterarPlano; a SPEC-015 troca só esse ponto pelo gateway de pagamento.
@@ -29,8 +29,7 @@ export default async function Plano({ searchParams }: PageProps<"/negocio/plano"
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <div>
-        <p className="text-xs font-medium tracking-widest text-muted-foreground uppercase">Configurações</p>
-        <h1 className="font-display text-3xl font-semibold text-foreground">Plano</h1>
+        <h1 className="text-[28px] leading-tight font-extrabold text-foreground">Plano</h1>
       </div>
 
       {typeof busca.aviso === "string" && <Aviso tipo="sucesso">{busca.aviso}</Aviso>}
@@ -38,7 +37,7 @@ export default async function Plano({ searchParams }: PageProps<"/negocio/plano"
 
       <section aria-labelledby="titulo-atual" className={`${cartao} ${pago ? "ring-1 ring-primary/30" : ""}`}>
         <p className="text-sm text-muted-foreground">Plano atual</p>
-        <h2 id="titulo-atual" className="mt-1 flex items-center gap-2 font-display text-2xl font-semibold text-card-foreground">
+        <h2 id="titulo-atual" className="mt-1 flex items-center gap-2 text-xl font-extrabold text-card-foreground">
           {pago && <span aria-hidden="true">★</span>}
           {ROTULO_PLANO[s.plano]}
         </h2>
@@ -50,7 +49,7 @@ export default async function Plano({ searchParams }: PageProps<"/negocio/plano"
 
       <section aria-label="O que cada plano inclui" className="grid gap-4 sm:grid-cols-2">
         <div className={cartao}>
-          <h2 className="font-display text-xl font-semibold text-card-foreground">Gratuito</h2>
+          <h2 className="text-[17px] font-bold text-card-foreground">Gratuito</h2>
           <ul className="mt-3 space-y-2 text-sm text-foreground">
             {INCLUIDO_NOS_DOIS.map((t) => (
               <li key={t} className="flex gap-2">
@@ -66,7 +65,7 @@ export default async function Plano({ searchParams }: PageProps<"/negocio/plano"
           </ul>
         </div>
         <div className={`${cartao} ring-1 ring-primary/20`}>
-          <h2 className="font-display text-xl font-semibold text-card-foreground">
+          <h2 className="text-[17px] font-bold text-card-foreground">
             <span aria-hidden="true">★ </span>Pago
           </h2>
           <ul className="mt-3 space-y-2 text-sm text-foreground">
@@ -98,15 +97,15 @@ export default async function Plano({ searchParams }: PageProps<"/negocio/plano"
       )}
 
       {confirmar === "PAGO" && !pago && (
-        <section aria-labelledby="titulo-confirmar" className={`${cartao} border-primary/40`}>
-          <h2 id="titulo-confirmar" className="font-display text-xl font-semibold text-card-foreground">
+        <section aria-labelledby="titulo-confirmar" className={`${cartao} ring-1 ring-primary/40`}>
+          <h2 id="titulo-confirmar" className="text-[17px] font-bold text-card-foreground">
             Confirmar o plano pago
           </h2>
           <p className="mt-2 text-sm text-foreground">
             Os relatórios avançados, o histórico completo e a equipe sem limite ficam disponíveis na hora
             {suspensos > 0 && `, e ${suspensos === 1 ? "o colaborador sem acesso volta" : `os ${suspensos} colaboradores sem acesso voltam`} a ter acesso`}.
           </p>
-          <p className="mt-2 rounded-xl border border-status-warn/40 bg-status-warn-bg px-4 py-2 text-sm text-status-warn">
+          <p className="mt-2 rounded-lg bg-status-warn-bg px-4 py-2 text-sm text-status-warn">
             <span aria-hidden="true">▲ </span>Simulação: nenhuma cobrança é feita nesta versão.
           </p>
           <form action={acaoAlterarPlano} className="mt-4 flex flex-wrap gap-3">
@@ -122,8 +121,8 @@ export default async function Plano({ searchParams }: PageProps<"/negocio/plano"
       )}
 
       {confirmar === "GRATUITO" && pago && (
-        <section aria-labelledby="titulo-confirmar" className={`${cartao} border-status-warn/40`}>
-          <h2 id="titulo-confirmar" className="font-display text-xl font-semibold text-card-foreground">
+        <section aria-labelledby="titulo-confirmar" className={`${cartao} ring-1 ring-status-warn/40`}>
+          <h2 id="titulo-confirmar" className="text-[17px] font-bold text-card-foreground">
             Voltar ao plano gratuito
           </h2>
           <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-foreground">

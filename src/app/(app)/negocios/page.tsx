@@ -29,7 +29,7 @@ export default async function MeusNegocios({ searchParams }: PageProps<"/negocio
   return (
     <div className="space-y-8">
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="font-display text-3xl font-semibold text-foreground">Meus negócios</h1>
+        <h1 className="text-[28px] leading-tight font-extrabold text-foreground">Meus negócios</h1>
         {lista.length > 0 && (
           <Link href="/negocios/novo" className={botaoPrincipal}>
             Cadastrar negócio
@@ -38,27 +38,27 @@ export default async function MeusNegocios({ searchParams }: PageProps<"/negocio
       </div>
 
       {contexto.negocioRecusado && (
-        <p role="status" className="rounded-xl border border-status-warn/30 bg-status-warn-bg px-4 py-3 text-sm text-status-warn">
+        <p role="status" className="rounded-lg bg-status-warn-bg px-4 py-3 text-sm text-status-warn">
           O negócio que estava aberto não está disponível para a sua conta. Escolha um negócio abaixo.
         </p>
       )}
 
       {saiu && (
-        <p role="status" className="rounded-xl border border-status-ok/30 bg-status-ok-bg px-4 py-3 text-sm text-status-ok">
+        <p role="status" className="rounded-lg bg-status-ok-bg px-4 py-3 text-sm text-status-ok">
           Você saiu do negócio.
         </p>
       )}
 
       {convites.length > 0 && (
         <section aria-labelledby="titulo-convites" className="space-y-3">
-          <h2 id="titulo-convites" className="font-display text-xl font-semibold text-foreground">
+          <h2 id="titulo-convites" className="text-[17px] font-bold text-foreground">
             Convites para você
           </h2>
           <ul className="grid gap-4 sm:grid-cols-2">
             {convites.map((c) => (
-              <li key={c.id} className="space-y-3 rounded-2xl border border-primary/40 bg-card p-5 shadow-sm">
+              <li key={c.id} className="space-y-3 rounded-2xl bg-card p-5 ring-1 ring-primary/30">
                 <div>
-                  <p className="truncate font-display text-lg font-semibold text-card-foreground">{c.negocio}</p>
+                  <p className="truncate text-lg font-bold text-card-foreground">{c.negocio}</p>
                   <p className="text-sm text-muted-foreground">
                     {c.convidadoPor} convidou você como {ROTULO_PAPEL[c.papel]} · vale até {dataBrasileira(c.expiraEm)}
                   </p>
@@ -71,8 +71,8 @@ export default async function MeusNegocios({ searchParams }: PageProps<"/negocio
       )}
 
       {lista.length === 0 ? (
-        <section className="rounded-2xl border bg-card px-6 py-12 text-center shadow-sm" aria-labelledby="titulo-vazio">
-          <h2 id="titulo-vazio" className="mb-2 font-display text-2xl font-semibold text-card-foreground">
+        <section className="rounded-2xl bg-card px-6 py-12 text-center" aria-labelledby="titulo-vazio">
+          <h2 id="titulo-vazio" className="mb-2 text-xl font-extrabold text-card-foreground">
             Você ainda não tem um negócio
           </h2>
           <p className="mx-auto mb-6 max-w-md text-sm text-muted-foreground">
@@ -91,8 +91,8 @@ export default async function MeusNegocios({ searchParams }: PageProps<"/negocio
               <li key={n.id}>
                 {n.suspenso ? (
                   // SPEC-013 (5.2): membro suspenso pela volta ao plano gratuito — sem entrar.
-                  <div className="w-full rounded-2xl border border-dashed bg-card p-5 shadow-sm">
-                    <span className="block truncate font-display text-lg font-semibold text-muted-foreground">{n.nome}</span>
+                  <div className="w-full rounded-2xl border-dashed bg-card p-5">
+                    <span className="block truncate text-lg font-bold text-muted-foreground">{n.nome}</span>
                     <span className="mt-1 block text-sm text-status-warn">
                       <span aria-hidden="true">▲ </span>Acesso suspenso — o negócio voltou ao plano gratuito. Fale com o Dono.
                     </span>
@@ -103,11 +103,11 @@ export default async function MeusNegocios({ searchParams }: PageProps<"/negocio
                     <button
                       type="submit"
                       aria-current={ativo ? "true" : undefined}
-                      className={`w-full rounded-2xl border bg-card p-5 text-left shadow-sm transition-colors hover:border-primary ${
+                      className={`w-full rounded-2xl border border-transparent bg-card p-5 text-left transition-colors duration-(--duracao-estado) hover:border-primary ${
                         ativo ? "border-primary ring-4 ring-ring/15" : ""
                       }`}
                     >
-                      <span className="block truncate font-display text-lg font-semibold text-card-foreground">{n.nome}</span>
+                      <span className="block truncate text-lg font-bold text-card-foreground">{n.nome}</span>
                       <span className="mt-1 block text-sm text-muted-foreground">
                         {ROTULO_REGIME[n.regime]} · {ROTULO_PAPEL[n.papel]}
                         {ativo && " · aberto agora"}

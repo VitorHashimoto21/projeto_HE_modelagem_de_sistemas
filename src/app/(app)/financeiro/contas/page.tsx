@@ -92,7 +92,7 @@ export default async function Contas({ searchParams }: PageProps<"/financeiro/co
       </div>
 
       {r.atrasadas > 0 && situacao !== "atrasadas" && (
-        <p role="status" className="rounded-xl border border-status-danger/30 bg-status-danger-bg px-4 py-3 text-sm text-status-danger">
+        <p role="status" className="rounded-lg bg-status-danger-bg px-4 py-3 text-sm text-status-danger">
           <span aria-hidden="true">▲ </span>
           {r.atrasadas} {r.atrasadas === 1 ? "conta atrasada" : "contas atrasadas"} {tipo === "PAGAR" ? "a pagar" : "a receber"}.{" "}
           <Link href={`/financeiro/contas?tipo=${tipo}&situacao=atrasadas`} className="font-semibold underline underline-offset-2">
@@ -101,7 +101,7 @@ export default async function Contas({ searchParams }: PageProps<"/financeiro/co
         </p>
       )}
 
-      <section aria-label="Lista de contas" className="rounded-2xl border bg-card shadow-sm">
+      <section aria-label="Lista de contas" className="rounded-2xl bg-card">
         {r.contas.length === 0 ? (
           <p className="p-6 text-sm text-muted-foreground">Nenhuma conta nesta situação.</p>
         ) : (

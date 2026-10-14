@@ -49,30 +49,30 @@ export default async function Conta({ params, searchParams }: PageProps<"/financ
             ← Contas {receber ? "a receber" : "a pagar"}
           </Link>
         </p>
-        <h1 className="font-display text-3xl font-semibold break-words text-foreground">{c.descricao ?? "Conta"}</h1>
+        <h1 className="text-[28px] leading-tight font-extrabold break-words text-foreground">{c.descricao ?? "Conta"}</h1>
         <SeloDaConta tipo={c.tipo} status={c.status} atrasada={c.atrasada} />
       </div>
 
       {nova && <Aviso tipo="sucesso">Conta cadastrada.</Aviso>}
 
       <section className="grid gap-4 sm:grid-cols-3" aria-label="Valores">
-        <div className="rounded-2xl border bg-card p-5 shadow-sm">
+        <div className="rounded-2xl bg-card p-5">
           <p className="text-sm text-muted-foreground">Valor total</p>
           <p className="mt-1 text-2xl font-semibold text-foreground tabular-nums">{reais(c.totalCentavos)}</p>
         </div>
-        <div className="rounded-2xl border bg-card p-5 shadow-sm">
+        <div className="rounded-2xl bg-card p-5">
           <p className="text-sm text-muted-foreground">{receber ? "Recebido" : "Pago"}</p>
           <p className="mt-1 text-2xl font-semibold text-foreground tabular-nums">{reais(c.pagoCentavos)}</p>
         </div>
-        <div className="rounded-2xl border bg-card p-5 shadow-sm">
+        <div className="rounded-2xl bg-card p-5">
           <p className="text-sm text-muted-foreground">Restante</p>
           <p className={`mt-1 text-2xl font-semibold tabular-nums ${c.atrasada ? "text-status-danger" : "text-foreground"}`}>{reais(c.restanteCentavos)}</p>
         </div>
       </section>
 
       {aberta && pode(membro.permissoes, "financeiro", "criar") && (
-        <section aria-labelledby="titulo-pagamento" className="rounded-2xl border bg-card p-6 shadow-sm">
-          <h2 id="titulo-pagamento" className="mb-1 font-display text-xl font-semibold text-card-foreground">
+        <section aria-labelledby="titulo-pagamento" className="rounded-2xl bg-card p-5 sm:p-6">
+          <h2 id="titulo-pagamento" className="mb-1 text-[17px] font-bold text-card-foreground">
             {receber ? "Registrar recebimento" : "Registrar pagamento"}
           </h2>
           <p className="mb-4 text-sm text-muted-foreground">
@@ -83,8 +83,8 @@ export default async function Conta({ params, searchParams }: PageProps<"/financ
         </section>
       )}
 
-      <section aria-labelledby="titulo-dados" className="rounded-2xl border bg-card p-6 shadow-sm">
-        <h2 id="titulo-dados" className="mb-2 font-display text-xl font-semibold text-card-foreground">
+      <section aria-labelledby="titulo-dados" className="rounded-2xl bg-card p-5 sm:p-6">
+        <h2 id="titulo-dados" className="mb-2 text-[17px] font-bold text-card-foreground">
           Dados da conta
         </h2>
         <dl>
@@ -107,8 +107,8 @@ export default async function Conta({ params, searchParams }: PageProps<"/financ
         </dl>
       </section>
 
-      <section aria-labelledby="titulo-historico" className="rounded-2xl border bg-card p-6 shadow-sm">
-        <h2 id="titulo-historico" className="mb-2 font-display text-xl font-semibold text-card-foreground">
+      <section aria-labelledby="titulo-historico" className="rounded-2xl bg-card p-5 sm:p-6">
+        <h2 id="titulo-historico" className="mb-2 text-[17px] font-bold text-card-foreground">
           {receber ? "Recebimentos" : "Pagamentos"}
         </h2>
         {c.lancamentos.length === 0 ? (
@@ -128,8 +128,8 @@ export default async function Conta({ params, searchParams }: PageProps<"/financ
       </section>
 
       {alteravel && (pode(membro.permissoes, "financeiro", "editar") || pode(membro.permissoes, "financeiro", "excluir")) && (
-        <section aria-labelledby="titulo-editar" className="rounded-2xl border bg-card p-6 shadow-sm">
-          <h2 id="titulo-editar" className="mb-1 font-display text-xl font-semibold text-card-foreground">
+        <section aria-labelledby="titulo-editar" className="rounded-2xl bg-card p-5 sm:p-6">
+          <h2 id="titulo-editar" className="mb-1 text-[17px] font-bold text-card-foreground">
             Corrigir a conta
           </h2>
           <p className="mb-4 text-sm text-muted-foreground">Enquanto não houver pagamento, a conta pode ser alterada ou cancelada.</p>

@@ -71,7 +71,7 @@ export default async function Convite({ params }: PageProps<"/convite/[token]">)
           <AceitarConvite token={token} />
         ) : (
           <div className="space-y-4">
-            <p role="alert" className="rounded-xl border border-status-warn/30 bg-status-warn-bg px-4 py-3 text-sm text-status-warn">
+            <p role="alert" className="rounded-lg bg-status-warn-bg px-4 py-3 text-sm text-status-warn">
               Este convite foi enviado para outro e-mail ({convite.emailMascarado}). Entre com essa conta para aceitar.
             </p>
             <form action={acaoSair}>

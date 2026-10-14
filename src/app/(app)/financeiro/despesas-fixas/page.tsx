@@ -26,7 +26,7 @@ export default async function DespesasFixas() {
     <div className="space-y-8">
       <CabecalhoDoFinanceiro atual="despesas" titulo="Despesas fixas" />
 
-      <section className="rounded-2xl border bg-card p-6 shadow-sm" aria-label="Total mensal">
+      <section className="rounded-2xl bg-card p-5 sm:p-6" aria-label="Total mensal">
         <p className="text-sm text-muted-foreground">Total mensal das despesas ativas</p>
         <p className="mt-1 text-3xl font-semibold text-foreground tabular-nums">{reais(totalMensal)}</p>
         <p className="mt-2 text-xs text-muted-foreground">
@@ -34,8 +34,8 @@ export default async function DespesasFixas() {
         </p>
       </section>
 
-      <section aria-labelledby="titulo-lista" className="rounded-2xl border bg-card shadow-sm">
-        <h2 id="titulo-lista" className="px-6 pt-6 font-display text-xl font-semibold text-card-foreground">
+      <section aria-labelledby="titulo-lista" className="rounded-2xl bg-card">
+        <h2 id="titulo-lista" className="px-6 pt-6 text-[17px] font-bold text-card-foreground">
           Cadastradas
         </h2>
         {despesas.length === 0 ? (
@@ -76,8 +76,8 @@ export default async function DespesasFixas() {
       </section>
 
       {pode(membro.permissoes, "financeiro", "criar") && (
-        <section aria-labelledby="titulo-nova" className="rounded-2xl border bg-card p-6 shadow-sm">
-          <h2 id="titulo-nova" className="mb-4 font-display text-xl font-semibold text-card-foreground">
+        <section aria-labelledby="titulo-nova" className="rounded-2xl bg-card p-5 sm:p-6">
+          <h2 id="titulo-nova" className="mb-4 text-[17px] font-bold text-card-foreground">
             Nova despesa fixa
           </h2>
           <FormularioDespesa />

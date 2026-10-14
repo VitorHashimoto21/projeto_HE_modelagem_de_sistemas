@@ -24,7 +24,7 @@ export default async function EditarItem({ params }: PageProps<"/catalogo/[id]/e
 
   return (
     <div className="mx-auto max-w-2xl space-y-8">
-      <h1 className="font-display text-3xl font-semibold break-words text-foreground">Editar {item.nome}</h1>
+      <h1 className="text-[28px] leading-tight font-extrabold break-words text-foreground">Editar {item.nome}</h1>
       <FormularioItem
         opcoes={[...disponiveis, ...jaVinculados]}
         valores={{

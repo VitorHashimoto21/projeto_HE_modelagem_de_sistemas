@@ -12,7 +12,7 @@ export default async function NovoItem() {
   return (
     <div className="mx-auto max-w-2xl space-y-8">
       <div>
-        <h1 className="font-display text-3xl font-semibold text-foreground">Novo item</h1>
+        <h1 className="text-[28px] leading-tight font-extrabold text-foreground">Novo item</h1>
         <p className="mt-1.5 text-sm text-muted-foreground">A quantidade em estoque é lançada depois, na entrada de estoque.</p>
       </div>
       <FormularioItem opcoes={opcoes} />

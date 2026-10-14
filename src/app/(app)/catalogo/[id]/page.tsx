@@ -67,10 +67,10 @@ export default async function DetalheDoItem({ params, searchParams }: PageProps<
               {ROTULO_TIPO[item.tipo]}
               {item.arquivado && " · arquivado"}
             </p>
-            <h1 className="font-display text-3xl font-semibold break-words text-foreground">{item.nome}</h1>
+            <h1 className="text-[28px] leading-tight font-extrabold break-words text-foreground">{item.nome}</h1>
           </div>
           {podeEditar && !item.arquivado && (
-            <Link href={`/catalogo/${item.id}/editar`} className="rounded-xl border border-input px-4 py-2.5 text-sm font-semibold text-foreground hover:bg-muted">
+            <Link href={`/catalogo/${item.id}/editar`} className="rounded-full border border-input px-4 py-2.5 text-sm font-semibold text-foreground hover:bg-accent active:scale-[0.96] transition-[background-color,transform] duration-(--duracao-estado)">
               Editar item
             </Link>
           )}
@@ -86,9 +86,9 @@ export default async function DetalheDoItem({ params, searchParams }: PageProps<
         </Mensagem>
       )}
 
-      <section className="rounded-2xl border bg-card p-6 shadow-sm" aria-labelledby="titulo-preco">
+      <section className="rounded-2xl bg-card p-5 sm:p-6" aria-labelledby="titulo-preco">
         <div className="mb-1 flex flex-wrap items-center justify-between gap-3">
-          <h2 id="titulo-preco" className="font-display text-xl font-semibold text-card-foreground">
+          <h2 id="titulo-preco" className="text-[17px] font-bold text-card-foreground">
             Preço oficial
           </h2>
           {/* Atalho da Calculadora (SPEC-010, OPEN-001) para quem tem Calculadora — ver. */}
@@ -104,8 +104,8 @@ export default async function DetalheDoItem({ params, searchParams }: PageProps<
         {podeEditar && !item.arquivado && <FormularioPreco itemId={item.id} />}
       </section>
 
-      <section className="rounded-2xl border bg-card p-6 shadow-sm" aria-labelledby="titulo-dados">
-        <h2 id="titulo-dados" className="mb-2 font-display text-xl font-semibold text-card-foreground">
+      <section className="rounded-2xl bg-card p-5 sm:p-6" aria-labelledby="titulo-dados">
+        <h2 id="titulo-dados" className="mb-2 text-[17px] font-bold text-card-foreground">
           Dados do item
         </h2>
         <dl>
@@ -146,8 +146,8 @@ export default async function DetalheDoItem({ params, searchParams }: PageProps<
       </section>
 
       {item.tipo === "SERVICO" && (
-        <section className="rounded-2xl border bg-card p-6 shadow-sm" aria-labelledby="titulo-materiais">
-          <h2 id="titulo-materiais" className="mb-2 font-display text-xl font-semibold text-card-foreground">
+        <section className="rounded-2xl bg-card p-5 sm:p-6" aria-labelledby="titulo-materiais">
+          <h2 id="titulo-materiais" className="mb-2 text-[17px] font-bold text-card-foreground">
             Materiais por execução
           </h2>
           {item.materiaisDoServico.length === 0 ? (
@@ -170,8 +170,8 @@ export default async function DetalheDoItem({ params, searchParams }: PageProps<
         </section>
       )}
 
-      <section className="rounded-2xl border bg-card p-6 shadow-sm" aria-labelledby="titulo-historico">
-        <h2 id="titulo-historico" className="mb-2 font-display text-xl font-semibold text-card-foreground">
+      <section className="rounded-2xl bg-card p-5 sm:p-6" aria-labelledby="titulo-historico">
+        <h2 id="titulo-historico" className="mb-2 text-[17px] font-bold text-card-foreground">
           Histórico de preços
         </h2>
         {item.historico.length === 0 ? (

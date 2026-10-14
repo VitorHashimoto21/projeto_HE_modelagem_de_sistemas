@@ -27,7 +27,7 @@ export default function LayoutDeAcesso({ children }: LayoutProps<"/">) {
           <p className="mb-5 text-xs font-medium tracking-widest text-brand-amber uppercase">
             ERP para microempreendedores e autônomos
           </p>
-          <p className="mb-6 font-display text-5xl leading-[1.1] font-semibold text-white">
+          <p className="mb-6 text-5xl leading-[1.1] font-bold text-white">
             A saúde do seu negócio,
             <br />
             visual e sob controle.

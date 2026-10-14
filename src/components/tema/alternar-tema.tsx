@@ -17,7 +17,7 @@ export function AlternarTema() {
       type="button"
       onClick={alternar}
       aria-pressed={escuro}
-      className="rounded-lg border border-input px-3 py-2 text-sm font-medium text-foreground hover:bg-muted"
+      className="rounded-full border border-input px-3 py-2 text-sm font-medium text-foreground hover:bg-accent active:scale-[0.96] transition-[background-color,transform] duration-(--duracao-estado)"
     >
       {escuro ? "Tema claro" : "Tema escuro"}
     </button>

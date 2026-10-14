@@ -66,13 +66,13 @@ export function RemoverMembro({ membroId, nome }: { membroId: string; nome: stri
     );
   }
   return (
-    <form action={acaoRemoverMembro} className="space-y-3 rounded-xl border border-destructive/30 bg-status-danger-bg p-4">
+    <form action={acaoRemoverMembro} className="space-y-3 rounded-lg bg-status-danger-bg p-4">
       <input type="hidden" name="membroId" value={membroId} />
       <p className="text-sm text-status-danger">
         {nome} perde o acesso a este negócio. O que essa pessoa registrou (vendas, movimentações) continua no sistema.
       </p>
       <div className="flex flex-wrap gap-3">
-        <button type="submit" className="rounded-xl bg-destructive px-4 py-2 text-sm font-semibold text-destructive-foreground">
+        <button type="submit" className="rounded-full bg-destructive px-4 py-2 text-sm font-semibold text-destructive-foreground active:scale-[0.96] transition-[background-color,transform] duration-(--duracao-estado)">
           Remover
         </button>
         <button type="button" onClick={() => setConfirmando(false)} className="rounded-xl border px-4 py-2 text-sm font-medium text-foreground">

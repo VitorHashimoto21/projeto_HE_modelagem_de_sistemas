@@ -51,7 +51,7 @@ export function FormularioExclusao({ email }: { email: string }) {
       <button
         type="submit"
         disabled={!pronto || enviando}
-        className="inline-flex w-full items-center justify-center rounded-xl bg-destructive px-5 py-3 text-sm font-semibold text-destructive-foreground transition-opacity disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+        className="inline-flex w-full items-center justify-center rounded-full bg-destructive px-5 py-3 text-sm font-semibold text-destructive-foreground disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto active:scale-[0.96] transition-[background-color,transform] duration-(--duracao-estado)"
       >
         {enviando ? "Excluindo…" : "Excluir minha conta definitivamente"}
       </button>

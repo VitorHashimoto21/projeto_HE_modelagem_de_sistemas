@@ -22,13 +22,12 @@ export default async function NovaConta({ searchParams }: PageProps<"/financeiro
             </Link>
           </p>
         )}
-        <p className="text-xs font-medium tracking-widest text-muted-foreground uppercase">Financeiro</p>
-        <h1 className="font-display text-3xl font-semibold text-foreground">Nova conta</h1>
+        <h1 className="text-[28px] leading-tight font-extrabold text-foreground">Nova conta</h1>
         <p className="text-sm text-muted-foreground">
           Um compromisso com vencimento, como um boleto de fornecedor. As parcelas do cartão e as despesas fixas geram as próprias contas.
         </p>
       </div>
-      <section className="rounded-2xl border bg-card p-6 shadow-sm">
+      <section className="rounded-2xl bg-card p-5 sm:p-6">
         <FormularioConta hoje={hoje()} tipoPadrao={tipo === "RECEBER" ? "RECEBER" : "PAGAR"} />
       </section>
     </div>

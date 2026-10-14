@@ -14,7 +14,7 @@ export default async function Convidar() {
         <Link href="/negocio/equipe" className="text-sm font-medium text-primary underline-offset-2 hover:underline">
           ← Equipe
         </Link>
-        <h1 className="mt-2 font-display text-3xl font-semibold text-foreground">Convidar pessoa</h1>
+        <h1 className="mt-2 text-[28px] leading-tight font-extrabold text-foreground">Convidar pessoa</h1>
         <p className="mt-1.5 text-sm text-muted-foreground">
           A pessoa recebe um link por e-mail, que vale por 7 dias. Se ainda não tiver conta, pode criá-la pelo link.
         </p>

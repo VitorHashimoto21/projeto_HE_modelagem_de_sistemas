@@ -43,7 +43,7 @@ export default async function Parametros() {
             ← Calculadora
           </Link>
         </p>
-        <h1 className="font-display text-3xl font-semibold text-foreground">Parâmetros de precificação</h1>
+        <h1 className="text-[28px] leading-tight font-extrabold text-foreground">Parâmetros de precificação</h1>
         <p className="text-sm text-muted-foreground">
           Valem para todos os preços do negócio. As despesas fixas vêm do{" "}
           <Link href="/financeiro/despesas-fixas" className="font-medium text-primary underline-offset-2 hover:underline">
@@ -52,7 +52,7 @@ export default async function Parametros() {
           , e o regime e o imposto, dos dados do negócio.
         </p>
       </div>
-      <section className="rounded-2xl border bg-card p-6 shadow-sm">
+      <section className="rounded-2xl bg-card p-5 sm:p-6">
         {pode(membro.permissoes, "calculadora", "editar") ? (
           <FormularioParametros atuais={atuais} />
         ) : (

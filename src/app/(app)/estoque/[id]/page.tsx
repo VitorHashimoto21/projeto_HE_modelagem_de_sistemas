@@ -54,7 +54,7 @@ export default async function EstoqueDoProduto({ params, searchParams }: PagePro
           </Link>
         </p>
         <div className="flex flex-wrap items-start justify-between gap-4">
-          <h1 className="min-w-0 font-display text-3xl font-semibold break-words text-foreground">{d.nome}</h1>
+          <h1 className="min-w-0 text-[28px] leading-tight font-extrabold break-words text-foreground">{d.nome}</h1>
           <Link href={`/catalogo/${d.id}`} className="text-sm font-medium text-primary underline-offset-2 hover:underline">
             Ver no Catálogo
           </Link>
@@ -62,7 +62,7 @@ export default async function EstoqueDoProduto({ params, searchParams }: PagePro
       </div>
 
       <section className="grid gap-4 sm:grid-cols-2" aria-label="Resumo do estoque">
-        <div className="rounded-2xl border bg-card p-6 shadow-sm">
+        <div className="rounded-2xl bg-card p-5 sm:p-6">
           <p className="text-sm text-muted-foreground">Saldo</p>
           <p className="mt-1 text-3xl font-semibold text-foreground">
             {quantidade(d.saldo)} <span className="text-base font-normal text-muted-foreground">{unidade}</span>
@@ -72,7 +72,7 @@ export default async function EstoqueDoProduto({ params, searchParams }: PagePro
             <p className="text-xs text-muted-foreground">{DICA_SITUACAO[d.situacao]}</p>
           </div>
         </div>
-        <div className="rounded-2xl border bg-card p-6 shadow-sm">
+        <div className="rounded-2xl bg-card p-5 sm:p-6">
           <p className="text-sm text-muted-foreground">Estoque mínimo em uso</p>
           <p className="mt-1 text-3xl font-semibold text-foreground">
             {d.minimo ? quantidade(d.minimo.valor) : "—"}
@@ -95,19 +95,19 @@ export default async function EstoqueDoProduto({ params, searchParams }: PagePro
 
       {podeMovimentar && (
         <section className="grid gap-4 lg:grid-cols-2" aria-label="Registrar movimentação">
-          <div className="rounded-2xl border bg-card p-6 shadow-sm">
-            <h2 className="mb-4 font-display text-xl font-semibold text-card-foreground">Entrada</h2>
+          <div className="rounded-2xl bg-card p-5 sm:p-6">
+            <h2 className="mb-4 text-[17px] font-bold text-card-foreground">Entrada</h2>
             <FormularioMovimentacao itemId={d.id} tipo="entrada" hoje={dia} unidade={unidade} />
           </div>
-          <div className="rounded-2xl border bg-card p-6 shadow-sm">
-            <h2 className="mb-4 font-display text-xl font-semibold text-card-foreground">Saída manual</h2>
+          <div className="rounded-2xl bg-card p-5 sm:p-6">
+            <h2 className="mb-4 text-[17px] font-bold text-card-foreground">Saída manual</h2>
             <FormularioMovimentacao itemId={d.id} tipo="saida" hoje={dia} unidade={unidade} />
           </div>
         </section>
       )}
 
-      <section className="rounded-2xl border bg-card p-6 shadow-sm" aria-labelledby="titulo-movimentacoes">
-        <h2 id="titulo-movimentacoes" className="mb-2 font-display text-xl font-semibold text-card-foreground">
+      <section className="rounded-2xl bg-card p-5 sm:p-6" aria-labelledby="titulo-movimentacoes">
+        <h2 id="titulo-movimentacoes" className="mb-2 text-[17px] font-bold text-card-foreground">
           Movimentações
         </h2>
         {d.ocultasPeloPlano > 0 && (

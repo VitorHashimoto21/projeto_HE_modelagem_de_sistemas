@@ -78,8 +78,7 @@ export function CabecalhoDoFinanceiro({ atual, titulo, acoes }: { atual: (typeof
     <div className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div className="min-w-0">
-          <p className="text-xs font-medium tracking-widest text-muted-foreground uppercase">Financeiro</p>
-          <h1 className="font-display text-3xl font-semibold break-words text-foreground">{titulo}</h1>
+          <h1 className="text-[28px] leading-tight font-extrabold break-words text-foreground">{titulo}</h1>
         </div>
         {acoes && <div className="flex flex-wrap gap-2">{acoes}</div>}
       </div>

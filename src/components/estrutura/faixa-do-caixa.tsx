@@ -1,6 +1,6 @@
 "use client";
 
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useId, useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { Selo, type TomDoSelo } from "@/components/ui/selo";
@@ -18,13 +18,16 @@ export function FaixaDoCaixaCompacta({ dados, minigrafico }: { dados: DadosDaFai
   const caminho = usePathname();
   const [aberta, setAberta] = useState(false);
   const id = useId();
+  // Momento-assinatura (SPEC-016, 5.6): logo depois de registrar uma venda (?nova=1), o saldo
+  // que acabou de receber o valor ganha um destaque curto.
+  const destaque = useSearchParams().has("nova");
   if (caminho === "/painel") return null;
   return (
     <section aria-label="Faixa do caixa" className="bg-estrutura text-estrutura-foreground md:mx-6 md:mt-4 md:rounded-3xl lg:mx-10">
       <div className="mx-auto flex max-w-[1280px] flex-wrap items-center gap-x-5 gap-y-2 px-4 py-3 md:px-5">
         <p className="flex items-baseline gap-2">
           <span className="text-sm text-estrutura-suave">Saldo</span>
-          <span className="text-lg font-extrabold tabular-nums">{reais(dados.saldoCentavos)}</span>
+          <span className={cn("rounded-lg px-1 text-lg font-extrabold tabular-nums", destaque && "animate-[saldo-entrou_1600ms_var(--ease-saida)]")}>{reais(dados.saldoCentavos)}</span>
         </p>
         <span className="hidden text-ambar sm:inline">{minigrafico}</span>
         <p className="text-sm text-estrutura-suave">

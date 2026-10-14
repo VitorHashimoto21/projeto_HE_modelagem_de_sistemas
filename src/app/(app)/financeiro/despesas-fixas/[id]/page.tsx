@@ -35,7 +35,7 @@ export default async function DespesaFixa({ params }: PageProps<"/financeiro/des
             ← Despesas fixas
           </Link>
         </p>
-        <h1 className="font-display text-3xl font-semibold break-words text-foreground">{d.descricao}</h1>
+        <h1 className="text-[28px] leading-tight font-extrabold break-words text-foreground">{d.descricao}</h1>
         <p className="text-sm text-muted-foreground">
           {d.valorCentavos !== null ? reais(d.valorCentavos) : das !== null ? `${reais(das)} (valor oficial vigente)` : "Valor oficial"} · todo dia {d.diaVencimento} ·{" "}
           {ROTULO_CATEGORIA[d.categoria]}
@@ -52,15 +52,15 @@ export default async function DespesaFixa({ params }: PageProps<"/financeiro/des
 
       {podeEditar ? (
         <>
-          <section className="rounded-2xl border bg-card p-6 shadow-sm">
-            <h2 className="mb-4 font-display text-xl font-semibold text-card-foreground">{ehDas ? "Dia de vencimento" : "Alterar"}</h2>
+          <section className="rounded-2xl bg-card p-5 sm:p-6">
+            <h2 className="mb-4 text-[17px] font-bold text-card-foreground">{ehDas ? "Dia de vencimento" : "Alterar"}</h2>
             <FormularioDespesa
               despesa={{ id: d.id, descricao: d.descricao, valorCentavos: d.valorCentavos, diaVencimento: d.diaVencimento, categoria: d.categoria, das: ehDas }}
             />
           </section>
           {!ehDas && (
-            <section className="rounded-2xl border bg-card p-6 shadow-sm">
-              <h2 className="mb-1 font-display text-xl font-semibold text-card-foreground">{d.ativo ? "Desativar" : "Reativar"}</h2>
+            <section className="rounded-2xl bg-card p-5 sm:p-6">
+              <h2 className="mb-1 text-[17px] font-bold text-card-foreground">{d.ativo ? "Desativar" : "Reativar"}</h2>
               <p className="mb-4 text-sm text-muted-foreground">
                 {d.ativo
                   ? "Desativada, a despesa deixa de gerar contas. As contas já geradas continuam em Contas."

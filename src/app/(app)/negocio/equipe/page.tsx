@@ -28,8 +28,7 @@ export default async function Equipe({ searchParams }: PageProps<"/negocio/equip
     <div className="space-y-8">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="text-xs font-medium tracking-widest text-muted-foreground uppercase">Configurações</p>
-          <h1 className="font-display text-3xl font-semibold text-foreground">Equipe</h1>
+          <h1 className="text-[28px] leading-tight font-extrabold text-foreground">Equipe</h1>
         </div>
         {!noLimite && (
           <Link href="/negocio/equipe/convidar" className={botaoPrincipal}>
@@ -39,32 +38,32 @@ export default async function Equipe({ searchParams }: PageProps<"/negocio/equip
       </div>
 
       {removido && (
-        <p role="status" className="rounded-xl border border-status-ok/30 bg-status-ok-bg px-4 py-3 text-sm text-status-ok">
+        <p role="status" className="rounded-lg bg-status-ok-bg px-4 py-3 text-sm text-status-ok">
           Pessoa removida da equipe.
         </p>
       )}
       {typeof aviso === "string" && (
-        <p role="status" className="rounded-xl border border-status-ok/30 bg-status-ok-bg px-4 py-3 text-sm text-status-ok">
+        <p role="status" className="rounded-lg bg-status-ok-bg px-4 py-3 text-sm text-status-ok">
           {aviso}
         </p>
       )}
       {erro && (
-        <p role="alert" className="rounded-xl border border-destructive/30 bg-status-danger-bg px-4 py-3 text-sm text-status-danger">
+        <p role="alert" className="rounded-lg bg-status-danger-bg px-4 py-3 text-sm text-status-danger">
           {typeof erro === "string" && erro !== "1" ? erro : "Não foi possível concluir. Atualize a página e tente de novo."}
         </p>
       )}
       {noLimite && (
-        <p role="note" className="rounded-xl border border-status-warn/30 bg-status-warn-bg px-4 py-3 text-sm text-status-warn">
+        <p role="note" className="rounded-lg bg-status-warn-bg px-4 py-3 text-sm text-status-warn">
           No plano gratuito, o negócio pode ter 1 colaborador (membro ou convite pendente). Para convidar mais pessoas, é
           preciso o plano pago. Cancelar um convite pendente ou remover alguém libera a vaga.
         </p>
       )}
 
       <section aria-labelledby="titulo-membros" className="space-y-3">
-        <h2 id="titulo-membros" className="font-display text-xl font-semibold text-foreground">
+        <h2 id="titulo-membros" className="text-[17px] font-bold text-foreground">
           Membros
         </h2>
-        <ul className="divide-y rounded-2xl border bg-card shadow-sm">
+        <ul className="divide-y rounded-2xl bg-card">
           {membros.map((m) => (
             <li key={m.id} className="flex flex-col gap-2 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="min-w-0">
@@ -89,13 +88,13 @@ export default async function Equipe({ searchParams }: PageProps<"/negocio/equip
 
       {suspensos.length > 0 && (
         <section aria-labelledby="titulo-suspensos" className="space-y-3">
-          <h2 id="titulo-suspensos" className="font-display text-xl font-semibold text-foreground">
+          <h2 id="titulo-suspensos" className="text-[17px] font-bold text-foreground">
             Sem acesso pelo plano gratuito
           </h2>
           <p className="text-sm text-muted-foreground">
             Continuam na equipe, com o mesmo papel e as mesmas permissões, e voltam a ter acesso no plano pago. No gratuito, só 1 colaborador tem acesso.
           </p>
-          <ul className="divide-y rounded-2xl border border-dashed bg-card shadow-sm">
+          <ul className="divide-y rounded-2xl border-dashed bg-card">
             {suspensos.map((m) => (
               <li key={m.id} className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="min-w-0">
@@ -133,13 +132,13 @@ export default async function Equipe({ searchParams }: PageProps<"/negocio/equip
       )}
 
       <section aria-labelledby="titulo-convites" className="space-y-3">
-        <h2 id="titulo-convites" className="font-display text-xl font-semibold text-foreground">
+        <h2 id="titulo-convites" className="text-[17px] font-bold text-foreground">
           Convites pendentes
         </h2>
         {convites.length === 0 ? (
           <p className="text-sm text-muted-foreground">Nenhum convite pendente.</p>
         ) : (
-          <ul className="divide-y rounded-2xl border bg-card shadow-sm">
+          <ul className="divide-y rounded-2xl bg-card">
             {convites.map((c) => (
               <li key={c.id} className="space-y-3 px-5 py-4">
                 <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
