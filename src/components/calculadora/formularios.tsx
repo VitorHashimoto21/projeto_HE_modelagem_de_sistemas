@@ -3,6 +3,8 @@
 import { useActionState, useState, type FormEvent } from "react";
 import { Aviso, MensagemDeCampo } from "@/components/acesso/campos";
 import { classeDoCampo } from "@/components/ui/classes";
+import { classeDoBotao } from "@/components/ui/estilos";
+import { Superficie, TituloDaSuperficie } from "@/components/ui/superficie";
 import { camposDoFormulario, type ErrosDeCampo } from "@/lib/auth/validacao";
 import { acaoConfirmarPreco, acaoSalvarParametros } from "@/lib/calculadora/acoes";
 import { CONFIRMACAO_INICIAL } from "@/lib/calculadora/servicos";
@@ -10,8 +12,7 @@ import { faturamentoSugerido, validarParametros } from "@/lib/calculadora/valida
 import { lerNumero } from "@/lib/dominio/catalogo";
 import { reaisDeCentavos } from "@/lib/dominio/venda";
 
-const botao =
-  "inline-flex items-center justify-center rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-70";
+const botao = classeDoBotao("principal", "md", "h-auto min-h-11 py-2.5 whitespace-normal");
 
 /**
  * Confirmar o preço (UC10a, OPEN-004): o exato (arredondado para cima ao centavo) ou o próximo
@@ -42,7 +43,7 @@ export function FormularioConfirmacao({ itemId, margem, precoCentavos, arredonda
                 ["real", `${reaisDeCentavos(arredondadoCentavos)} (arredondado para cima)`],
               ] as const
             ).map(([valor, texto]) => (
-              <label key={valor} className="flex cursor-pointer items-center gap-2 rounded-xl border bg-card px-4 py-3 text-sm text-foreground has-[:checked]:border-primary has-[:checked]:ring-2 has-[:checked]:ring-primary/20">
+              <label key={valor} className="flex cursor-pointer items-center gap-2.5 rounded-lg bg-muted px-4 py-3 text-sm font-semibold text-foreground ring-1 ring-transparent transition-[box-shadow,background-color] duration-(--duracao-estado) has-checked:bg-card has-checked:ring-primary has-focus-visible:outline-2 has-focus-visible:outline-ring">
                 <input type="radio" name="escolha" checked={escolha === valor} onChange={() => setEscolha(valor)} className="accent-[var(--color-primary)]" />
                 {texto}
               </label>
@@ -126,32 +127,33 @@ export function FormularioParametros({ atuais }: { atuais: ParametrosExibidos })
   return (
     <form action={executar} onSubmit={aoEnviar} noValidate className="space-y-6">
       {estado.status === "salvo" && <Aviso tipo="sucesso">{estado.mensagem}</Aviso>}
-      <section className="space-y-4">
-        <h2 className="text-lg font-bold text-card-foreground">Vendas no cartão</h2>
+      <Superficie aria-labelledby="titulo-cartao">
+        <TituloDaSuperficie id="titulo-cartao" titulo="Vendas no cartão" />
         <div className="sm:max-w-xs">{campo("taxaCartao", "Taxa média da maquininha (%)", { placeholder: "Ex.: 3,5", dica: "Entra como despesa variável em todo preço." })}</div>
-      </section>
-      <section className="space-y-4">
-        <div>
-          <h2 className="text-lg font-bold text-card-foreground">Estimativas para começar</h2>
-          <p className="text-sm text-muted-foreground">Usadas enquanto ainda não há vendas nos meses anteriores. Depois, valem os números reais.</p>
-        </div>
+      </Superficie>
+      <Superficie aria-labelledby="titulo-estimativas">
+        <TituloDaSuperficie
+          id="titulo-estimativas"
+          titulo="Estimativas para começar"
+          descricao="Usadas enquanto ainda não há vendas nos meses anteriores. Depois, valem os números reais."
+        />
         <div className="grid gap-4 sm:grid-cols-3">
           {campo("capacidadeMensal", "Capacidade por mês", { placeholder: "Ex.: 120", onChange: setCapacidade })}
           {campo("unidadeCapacidade", "Unidade", { placeholder: "Ex.: atendimentos" })}
           {campo("ticketMedio", "Ticket médio (R$)", { placeholder: "Ex.: 60", onChange: setTicket })}
         </div>
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="mt-4 grid gap-4 sm:grid-cols-2">
           {campo("faturamentoEstimado", "Faturamento mensal estimado (R$)", {
             placeholder: sugerido ? (sugerido / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2 }) : "Ex.: 7.200",
             dica: sugerido ? `Sugerido: capacidade × ticket = ${reaisDeCentavos(sugerido)}. Deixe vazio para usar a sugestão.` : "Capacidade × ticket médio, ou informe o seu.",
           })}
           {campo("cmvEstimado", "Custo dos produtos e insumos (% do faturamento)", { placeholder: "Ex.: 30", dica: "CMV% estimado, usado no ponto de equilíbrio." })}
         </div>
-      </section>
-      <section className="space-y-4">
-        <h2 className="text-lg font-bold text-card-foreground">Objetivo</h2>
+      </Superficie>
+      <Superficie aria-labelledby="titulo-objetivo">
+        <TituloDaSuperficie id="titulo-objetivo" titulo="Objetivo" />
         <div className="sm:max-w-xs">{campo("margemMeta", "Margem de lucro desejada no mês (%)", { placeholder: "Ex.: 20", dica: "Usada no faturamento meta." })}</div>
-      </section>
+      </Superficie>
       <button type="submit" disabled={enviando} className={botao}>
         {enviando ? "Salvando…" : "Salvar parâmetros"}
       </button>

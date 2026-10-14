@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { CabecalhoDePagina } from "@/components/ui/cabecalho-de-pagina";
+import { classeDoLink } from "@/components/ui/estilos";
+import { Superficie } from "@/components/ui/superficie";
 import { FormularioParametros } from "@/components/calculadora/formularios";
 import { exigirPermissao } from "@/lib/auth/servidor";
 import { precificacao } from "@/lib/db";
@@ -37,25 +40,23 @@ export default async function Parametros() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
-      <div className="space-y-2">
-        <p className="text-sm">
-          <Link href="/calculadora" className="font-medium text-primary underline-offset-2 hover:underline">
-            ← Calculadora
-          </Link>
-        </p>
-        <h1 className="text-[28px] leading-tight font-extrabold text-foreground">Parâmetros de precificação</h1>
-        <p className="text-sm text-muted-foreground">
-          Valem para todos os preços do negócio. As despesas fixas vêm do{" "}
-          <Link href="/financeiro/despesas-fixas" className="font-medium text-primary underline-offset-2 hover:underline">
-            Financeiro
-          </Link>
-          , e o regime e o imposto, dos dados do negócio.
-        </p>
-      </div>
-      <section className="rounded-2xl bg-card p-5 sm:p-6">
-        {pode(membro.permissoes, "calculadora", "editar") ? (
-          <FormularioParametros atuais={atuais} />
-        ) : (
+      <CabecalhoDePagina
+        voltar={{ href: "/calculadora", rotulo: "Calculadora" }}
+        titulo="Parâmetros de precificação"
+        descricao={
+          <>
+            Valem para todos os preços do negócio. As despesas fixas vêm do{" "}
+            <Link href="/financeiro/despesas-fixas" className={classeDoLink()}>
+              Financeiro
+            </Link>
+            , e o regime e o imposto, dos dados do negócio.
+          </>
+        }
+      />
+      {pode(membro.permissoes, "calculadora", "editar") ? (
+        <FormularioParametros atuais={atuais} />
+      ) : (
+        <Superficie>
           <dl>
             <Linha rotulo="Taxa média da maquininha" valor={atuais.taxaCartao && `${atuais.taxaCartao}%`} />
             <Linha rotulo="Capacidade por mês" valor={[atuais.capacidadeMensal, atuais.unidadeCapacidade].filter(Boolean).join(" ")} />
@@ -64,8 +65,8 @@ export default async function Parametros() {
             <Linha rotulo="CMV% estimado" valor={atuais.cmvEstimado && `${atuais.cmvEstimado}%`} />
             <Linha rotulo="Margem de lucro desejada" valor={atuais.margemMeta && `${atuais.margemMeta}%`} />
           </dl>
-        )}
-      </section>
+        </Superficie>
+      )}
     </div>
   );
 }

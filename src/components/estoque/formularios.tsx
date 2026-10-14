@@ -1,8 +1,12 @@
 "use client";
 
-import { useActionState, useState, type FormEvent } from "react";
+import { useRouter } from "next/navigation";
+import { useActionState, useEffect, useState, type FormEvent } from "react";
+import { toast } from "sonner";
 import { Aviso, MensagemDeCampo } from "@/components/acesso/campos";
 import { classeDoCampo } from "@/components/ui/classes";
+import { classeDoBotao } from "@/components/ui/estilos";
+import { GavetaDaRota } from "@/components/ui/gaveta";
 import { camposDoFormulario, type ErrosDeCampo } from "@/lib/auth/validacao";
 import { MOTIVOS_SAIDA, somarDias } from "@/lib/dominio/estoque";
 import { acaoDefinirMinimo, acaoRegistrarEntrada, acaoRegistrarSaida } from "@/lib/estoque/acoes";
@@ -45,11 +49,23 @@ function Campo({ id, rotulo, erro, children }: { id: string; rotulo: string; err
   );
 }
 
-const botao =
-  "rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-70";
+const botao = classeDoBotao("principal");
 
 /** Entrada (UC7) ou saída manual (UC8). "hoje" vem do servidor (dia de São Paulo). */
-export function FormularioMovimentacao({ itemId, tipo, hoje, unidade }: { itemId: string; tipo: "entrada" | "saida"; hoje: string; unidade: string }) {
+export function FormularioMovimentacao({
+  itemId,
+  tipo,
+  hoje,
+  unidade,
+  aoSalvar,
+}: {
+  itemId: string;
+  tipo: "entrada" | "saida";
+  hoje: string;
+  unidade: string;
+  /** Na gaveta: fecha e confirma com o aviso flutuante em vez de limpar para o próximo. */
+  aoSalvar?: (mensagem: string) => void;
+}) {
   const { estado, executar, enviando, erros, aoEnviar, limpar } = useFormularioDoEstoque(
     tipo === "entrada" ? acaoRegistrarEntrada : acaoRegistrarSaida,
     (c) => validarMovimentacao(c, tipo, hoje),
@@ -65,11 +81,16 @@ export function FormularioMovimentacao({ itemId, tipo, hoje, unidade }: { itemId
       setMotivo("");
     }
   }
+  useEffect(() => {
+    if (estado.status === "salvo") aoSalvar?.(estado.mensagem);
+    // aoSalvar muda a cada renderização do pai; só o resultado da ação importa.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [estado]);
   const p = `${tipo}-`;
 
   return (
     <div className="space-y-3">
-      {estado.status === "salvo" && <Aviso tipo="sucesso">{estado.mensagem}</Aviso>}
+      {estado.status === "salvo" && !aoSalvar && <Aviso tipo="sucesso">{estado.mensagem}</Aviso>}
       {estado.status === "erro" && estado.mensagem && <Aviso tipo="erro">{estado.mensagem}</Aviso>}
       <form key={chave} action={executar} onSubmit={aoEnviar} noValidate className="space-y-4">
         <input type="hidden" name="itemId" value={itemId} />
@@ -136,11 +157,38 @@ export function FormularioMovimentacao({ itemId, tipo, hoje, unidade }: { itemId
             className={classeDoCampo(erros.observacao)}
           />
         </Campo>
-        <button type="submit" disabled={enviando} className={botao}>
+        <button type="submit" disabled={enviando} className={classeDoBotao("principal", "md", "w-full sm:w-auto")}>
           {enviando ? "Registrando…" : tipo === "entrada" ? "Registrar entrada" : "Registrar saída"}
         </button>
       </form>
     </div>
+  );
+}
+
+/** Entrada ou saída na gaveta (OPEN-003): ao salvar, fecha e mostra o aviso flutuante. */
+export function MovimentacaoNaGaveta({
+  titulo,
+  descricao,
+  ...props
+}: {
+  titulo: string;
+  descricao: string;
+  itemId: string;
+  tipo: "entrada" | "saida";
+  hoje: string;
+  unidade: string;
+}) {
+  const router = useRouter();
+  return (
+    <GavetaDaRota titulo={titulo} descricao={descricao}>
+      <FormularioMovimentacao
+        {...props}
+        aoSalvar={(mensagem) => {
+          toast.success(mensagem);
+          router.back();
+        }}
+      />
+    </GavetaDaRota>
   );
 }
 

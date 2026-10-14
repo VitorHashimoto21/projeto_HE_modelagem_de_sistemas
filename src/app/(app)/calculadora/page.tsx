@@ -1,8 +1,15 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Calculator, SlidersHorizontal } from "lucide-react";
 import { FormularioConfirmacao } from "@/components/calculadora/formularios";
 import { ROTULO_REGIME } from "@/components/negocio/rotulos";
+import { BarraEmpilhada } from "@/components/graficos/barras-de-parte";
+import { AvisoDaPagina } from "@/components/ui/aviso";
+import { CabecalhoDePagina } from "@/components/ui/cabecalho-de-pagina";
 import { classeDoCampo } from "@/components/ui/classes";
+import { classeDoBotao, classeDoLink } from "@/components/ui/estilos";
+import { Numero } from "@/components/ui/numero";
+import { Superficie, TituloDaSuperficie } from "@/components/ui/superficie";
 import { exigirPermissao } from "@/lib/auth/servidor";
 import { dependenciasDaCalculadora } from "@/lib/calculadora/servidor";
 import { analisarNegocio, calcular, type BaseDoNegocio, type Fonte, type MotivoDoBloqueio } from "@/lib/calculadora/servicos";
@@ -10,12 +17,13 @@ import { validarOpcoes } from "@/lib/calculadora/validacao";
 import { duasCasas } from "@/lib/dominio/precificacao";
 import { pode } from "@/lib/dominio/permissoes";
 import { reaisDeCentavos as reais } from "@/lib/dominio/venda";
+import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Calculadora" };
 
 const pct = (n: number) => `${duasCasas(n).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`;
 const dataBr = (dia: string) => dia.split("-").reverse().join("/");
-const fonte = (f: Fonte | null) => (f ? `${f.fonteLegal} — vigente desde ${dataBr(f.vigenteDesde)}` : null);
+const fonte = (f: Fonte | null) => (f ? `${f.fonteLegal}, vigente desde ${dataBr(f.vigenteDesde)}` : null);
 
 const ORIGEM_FATURAMENTO = {
   real: "vendas dos últimos 12 meses",
@@ -47,14 +55,14 @@ function Linha({ rotulo, valor, detalhe, forte }: { rotulo: string; valor: React
 function Bloqueio({ motivo, mensagem }: { motivo: MotivoDoBloqueio; mensagem: string }) {
   const c = CORRECAO[motivo];
   return (
-    <div role="alert" className="rounded-2xl border border-status-danger/30 bg-status-danger-bg p-5 text-sm text-status-danger">
-      <p className="font-medium">{mensagem}</p>
+    <AvisoDaPagina tom="erro">
+      <p className="font-semibold">{mensagem}</p>
       {c && (
-        <Link href={c.href} className="mt-2 inline-block font-semibold underline underline-offset-2">
-          {c.texto}
-        </Link>
+        <p className="mt-1">
+          <Link href={c.href}>{c.texto}</Link>
+        </p>
       )}
-    </div>
+    </AvisoDaPagina>
   );
 }
 
@@ -94,40 +102,52 @@ export default async function Calculadora({ searchParams }: PageProps<"/calculad
   const podeConfirmar = pode(membro.permissoes, "calculadora", "criar");
   const base = analise.status === "ok" ? analise.base : null;
 
+  // Composição do preço sugerido (SPEC-016, 5.5): as mesmas parcelas do cálculo, em reais.
+  const composicao =
+    resultado?.status === "ok"
+      ? (() => {
+          const parte = (percentual: number) => Math.round((resultado.precoCentavos * percentual) / 100);
+          const fixas = parte(resultado.despesasFixasPercentual);
+          const variaveis = parte(resultado.despesasVariaveis);
+          const imposto = parte(resultado.base.imposto.percentual);
+          const margem = parte(resultado.margem.percentual);
+          return [
+            { nome: "Custo do item", valorCentavos: Math.max(0, resultado.precoCentavos - fixas - variaveis - imposto - margem) },
+            { nome: "Despesas fixas", valorCentavos: fixas },
+            { nome: "Maquininha e comissão", valorCentavos: variaveis },
+            { nome: "Imposto", valorCentavos: imposto },
+            { nome: "Margem (fica para você)", valorCentavos: margem },
+          ];
+        })()
+      : null;
+
   return (
-    <div className="space-y-8">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div className="min-w-0">
-          <h1 className="text-[28px] leading-tight font-extrabold text-foreground">Preço de venda</h1>
-          {base && (
-            <p className="mt-1 text-sm text-muted-foreground">
-              Regime: <strong className="font-medium text-foreground">{ROTULO_REGIME[base.regime]}</strong>
-              {base.imposto.anexoEfetivo && ` · Anexo ${base.imposto.anexoEfetivo}`}
-            </p>
-          )}
-        </div>
-        <Link href="/calculadora/parametros" className="rounded-full border border-input px-4 py-2.5 text-sm font-semibold text-foreground hover:bg-accent active:scale-[0.96] transition-[background-color,transform] duration-(--duracao-estado)">
-          Parâmetros de precificação
-        </Link>
-      </div>
+    <div className="space-y-6">
+      <CabecalhoDePagina
+        titulo="Preço de venda"
+        descricao={base ? `Regime: ${ROTULO_REGIME[base.regime]}${base.imposto.anexoEfetivo ? `, Anexo ${base.imposto.anexoEfetivo}` : ""}.` : "Calcule o preço de um item a partir dos custos, das despesas e dos impostos."}
+        acoes={
+          <Link href="/calculadora/parametros" className={classeDoBotao("secundario", "sm")}>
+            <SlidersHorizontal aria-hidden="true" />
+            Parâmetros de precificação
+          </Link>
+        }
+      />
 
-      {base?.avisoAnexo && (
-        <p role="status" className="rounded-lg bg-status-warn-bg px-4 py-3 text-sm text-status-warn">
-          <span aria-hidden="true">▲ </span>
-          {base.avisoAnexo}
-        </p>
-      )}
+      {base?.avisoAnexo && <AvisoDaPagina tom="atencao">{base.avisoAnexo}</AvisoDaPagina>}
       {base?.limiteMei?.acima && (
-        <p role="status" className="rounded-lg bg-status-warn-bg px-4 py-3 text-sm text-status-warn">
-          <span aria-hidden="true">▲ </span>O faturamento dos últimos 12 meses ({reais(base.rbt12.rbt12Centavos)}) passou do limite do MEI ({reais(base.limiteMei.limiteCentavos)} por ano). Procure o seu contador
-          sobre o desenquadramento.
-        </p>
+        <AvisoDaPagina tom="atencao">
+          O faturamento dos últimos 12 meses ({reais(base.rbt12.rbt12Centavos)}) passou do limite do MEI ({reais(base.limiteMei.limiteCentavos)} por ano). Procure o seu contador sobre o
+          desenquadramento.
+        </AvisoDaPagina>
       )}
 
-      <section aria-labelledby="titulo-item" className="rounded-2xl bg-card p-5 sm:p-6">
-        <h2 id="titulo-item" className="mb-4 text-[17px] font-bold text-card-foreground">
-          Calcular o preço de um item
-        </h2>
+      <Superficie aria-labelledby="titulo-item">
+        <TituloDaSuperficie
+          id="titulo-item"
+          titulo="Calcular o preço de um item"
+          descricao="Deixe a margem vazia para usar a sugerida para a categoria. A margem é o que sobra para você em cada venda, depois de custos, despesas e impostos; não é o lucro total do negócio."
+        />
         <form action="/calculadora" className="grid gap-4 sm:grid-cols-[2fr_1fr_1fr_auto] sm:items-end">
           <div className="min-w-0">
             <label htmlFor="item" className="mb-1.5 block text-sm font-medium text-foreground">
@@ -138,7 +158,7 @@ export default async function Calculadora({ searchParams }: PageProps<"/calculad
               {itens.map((i) => (
                 <option key={i.id} value={i.id}>
                   {i.nome}
-                  {i.precoAtualCentavos !== null ? ` — ${reais(i.precoAtualCentavos)}` : " — sem preço"}
+                  {i.precoAtualCentavos !== null ? `, hoje ${reais(i.precoAtualCentavos)}` : ", sem preço"}
                 </option>
               ))}
             </select>
@@ -155,47 +175,54 @@ export default async function Calculadora({ searchParams }: PageProps<"/calculad
             </label>
             <input id="comissao" name="comissao" inputMode="decimal" defaultValue={campos.comissao} placeholder="A do item" className={classeDoCampo(opcoes.ok ? undefined : opcoes.erros.comissao)} />
           </div>
-          <button type="submit" className="rounded-full bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground hover:bg-primary-hover active:scale-[0.96] transition-[background-color,transform] duration-(--duracao-estado)">
+          <button type="submit" className={classeDoBotao("principal", "md", "h-[46px]")}>
+            <Calculator aria-hidden="true" />
             Calcular
           </button>
         </form>
-        {!opcoes.ok && <p className="mt-2 text-xs text-destructive">{Object.values(opcoes.erros).join(" · ")}</p>}
-        <p className="mt-3 text-xs text-muted-foreground">
-          Deixe a margem vazia para usar a sugerida para a categoria do item. A margem é o que sobra para você em cada venda, depois de custos, despesas e impostos — não é o lucro total
-          do negócio.
-        </p>
-      </section>
+        {!opcoes.ok && <p className="mt-2 text-xs text-status-danger">{Object.values(opcoes.erros).join(" ")}</p>}
+      </Superficie>
 
       {resultado?.status === "bloqueado" && <Bloqueio motivo={resultado.motivo} mensagem={resultado.mensagem} />}
 
       {resultado?.status === "ok" && (
-        <section aria-labelledby="titulo-resultado" className="grid gap-6 lg:grid-cols-[1fr_1.2fr]">
-          <div className="space-y-4 rounded-2xl bg-card p-5 sm:p-6 ring-1 ring-primary/20">
-            <h2 id="titulo-resultado" className="text-[17px] font-bold break-words text-card-foreground">
-              {resultado.item.nome}
-            </h2>
-            <div>
-              <p className="text-sm text-muted-foreground">Preço sugerido</p>
-              <p className="text-4xl font-semibold text-foreground tabular-nums">{reais(resultado.precoCentavos)}</p>
-              <p className="mt-1 text-sm text-muted-foreground">
+        <section aria-labelledby="titulo-resultado" className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] lg:items-start">
+          <div className="flex flex-col gap-4">
+            <Superficie tom="estrutura" as="div">
+              <h2 id="titulo-resultado" className="text-sm break-words text-estrutura-suave">
+                Preço sugerido para <span className="font-bold text-estrutura-foreground">{resultado.item.nome}</span>
+              </h2>
+              <p className="mt-2 text-[44px] leading-none font-extrabold tracking-tight tabular-nums">{reais(resultado.precoCentavos)}</p>
+              <p className="mt-3 text-sm text-estrutura-suave">
                 {resultado.item.precoAtualCentavos === null
                   ? "O item ainda não tem preço oficial."
                   : `Preço atual: ${reais(resultado.item.precoAtualCentavos)} (${resultado.precoCentavos >= resultado.item.precoAtualCentavos ? "+" : "−"}${reais(Math.abs(resultado.precoCentavos - resultado.item.precoAtualCentavos))}).`}
               </p>
-            </div>
+            </Superficie>
             {resultado.comissao.simulada ? (
-              <p role="status" className="rounded-lg bg-status-warn-bg px-4 py-3 text-sm text-status-warn">
+              <AvisoDaPagina tom="atencao">
                 Simulação com comissão de {pct(resultado.comissao.percentual)}; a do item é {pct(resultado.comissao.doItem)}. Para confirmar com outra comissão, altere-a no Catálogo.
-              </p>
+              </AvisoDaPagina>
             ) : podeConfirmar ? (
-              <FormularioConfirmacao itemId={resultado.item.id} margem={campos.margem} precoCentavos={resultado.precoCentavos} arredondadoCentavos={resultado.arredondadoCentavos} />
+              <Superficie aria-label="Confirmar o preço">
+                <FormularioConfirmacao itemId={resultado.item.id} margem={campos.margem} precoCentavos={resultado.precoCentavos} arredondadoCentavos={resultado.arredondadoCentavos} />
+              </Superficie>
             ) : (
-              <p className="text-xs text-muted-foreground">Você pode simular, mas confirmar o preço exige a permissão de criar na Calculadora.</p>
+              <p className="px-1 text-xs text-muted-foreground">Você pode simular, mas confirmar o preço exige a permissão de criar na Calculadora.</p>
+            )}
+            {composicao && (
+              <Superficie aria-labelledby="titulo-composicao">
+                <TituloDaSuperficie id="titulo-composicao" titulo="Para onde vai cada venda" descricao={`Como os ${reais(resultado.precoCentavos)} se dividem.`} />
+                <BarraEmpilhada
+                  itens={composicao}
+                  descricao={`Composição do preço de ${reais(resultado.precoCentavos)}: ${composicao.map((c) => `${c.nome} ${reais(c.valorCentavos)}`).join(", ")}`}
+                />
+              </Superficie>
             )}
           </div>
 
-          <div className="rounded-2xl bg-card p-5 sm:p-6">
-            <h2 className="mb-2 text-[17px] font-bold text-card-foreground">Como o preço foi calculado</h2>
+          <Superficie aria-labelledby="titulo-calculo">
+            <TituloDaSuperficie id="titulo-calculo" titulo="Como o preço foi calculado" />
             <dl>
               <Linha
                 rotulo="Custo total"
@@ -224,43 +251,43 @@ export default async function Calculadora({ searchParams }: PageProps<"/calculad
               <Linha rotulo="Soma dos percentuais" valor={pct(resultado.soma)} detalhe="Precisa ficar abaixo de 100%." />
               <Linha forte rotulo="Preço = custo ÷ (1 − soma)" valor={reais(resultado.precoCentavos)} detalhe="Arredondado para cima ao centavo." />
             </dl>
-          </div>
+          </Superficie>
         </section>
       )}
 
-      <section aria-labelledby="titulo-negocio" className="rounded-2xl bg-card p-5 sm:p-6">
-        <h2 id="titulo-negocio" className="mb-1 text-[17px] font-bold text-card-foreground">
-          Seu negócio no mês
-        </h2>
+      <Superficie aria-labelledby="titulo-negocio">
+        <TituloDaSuperficie id="titulo-negocio" titulo="Seu negócio no mês" />
         {analise.status === "bloqueado" ? (
-          <div className="mt-3">
-            <Bloqueio motivo={analise.motivo} mensagem={analise.mensagem} />
-          </div>
+          <Bloqueio motivo={analise.motivo} mensagem={analise.mensagem} />
         ) : (
           <>
-            <div className="mt-3 grid gap-4 sm:grid-cols-2">
-              <div className={`rounded-xl border p-4 ${analise.abaixoDoEquilibrio ? "border-status-danger/30 bg-status-danger-bg" : "bg-muted/40"}`}>
-                <p className="text-sm text-muted-foreground">Ponto de equilíbrio</p>
-                <p className="text-2xl font-semibold text-foreground tabular-nums">{analise.pontoDeEquilibrioCentavos === null ? "—" : reais(analise.pontoDeEquilibrioCentavos)}</p>
-                <p className="text-xs text-muted-foreground">Faturamento mínimo para pagar todas as despesas.</p>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className={cn("rounded-lg p-4", analise.abaixoDoEquilibrio ? "bg-status-danger-bg" : "bg-muted")}>
+                <Numero
+                  tamanho="md"
+                  rotulo="Ponto de equilíbrio"
+                  valor={analise.pontoDeEquilibrioCentavos === null ? "—" : reais(analise.pontoDeEquilibrioCentavos)}
+                  detalhe="Faturamento mínimo para pagar todas as despesas."
+                />
               </div>
-              <div className="rounded-xl border bg-muted/40 p-4">
-                <p className="text-sm text-muted-foreground">Faturamento meta</p>
-                <p className="text-2xl font-semibold text-foreground tabular-nums">{analise.metaCentavos === null ? "—" : reais(analise.metaCentavos)}</p>
-                <p className="text-xs text-muted-foreground">
-                  {analise.base.margemMeta === null ? "Informe a margem desejada nos parâmetros." : `Para ter ${pct(analise.base.margemMeta)} de lucro no mês.`}
-                </p>
+              <div className="rounded-lg bg-muted p-4">
+                <Numero
+                  tamanho="md"
+                  rotulo="Faturamento meta"
+                  valor={analise.metaCentavos === null ? "—" : reais(analise.metaCentavos)}
+                  detalhe={analise.base.margemMeta === null ? "Informe a margem desejada nos parâmetros." : `Para ter ${pct(analise.base.margemMeta)} de lucro no mês.`}
+                />
               </div>
             </div>
             {analise.abaixoDoEquilibrio && (
-              <p role="status" className="mt-4 text-sm font-medium text-status-danger">
-                <span aria-hidden="true">▲ </span>O faturamento médio ({reais(analise.base.faturamentoMedioCentavos)}) está abaixo do ponto de equilíbrio: as vendas não cobrem as despesas.
-              </p>
+              <AvisoDaPagina tom="erro" className="mt-4">
+                O faturamento médio ({reais(analise.base.faturamentoMedioCentavos)}) está abaixo do ponto de equilíbrio: as vendas não cobrem as despesas.
+              </AvisoDaPagina>
             )}
             {analise.base.cmv.percentual === null && (
               <p className="mt-4 text-sm text-muted-foreground">
                 Para o ponto de equilíbrio sem histórico de vendas, informe o custo dos produtos e insumos (CMV%) nos{" "}
-                <Link href="/calculadora/parametros" className="font-medium text-primary underline-offset-2 hover:underline">
+                <Link href="/calculadora/parametros" className={classeDoLink()}>
                   parâmetros
                 </Link>
                 .
@@ -278,7 +305,7 @@ export default async function Calculadora({ searchParams }: PageProps<"/calculad
             </dl>
           </>
         )}
-      </section>
+      </Superficie>
     </div>
   );
 }

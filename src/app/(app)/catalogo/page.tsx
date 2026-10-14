@@ -1,17 +1,22 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Archive, ChevronRight, Package, Plus, Search, Sparkles, Tag } from "lucide-react";
 import { reais, ROTULO_CATEGORIA, ROTULO_TIPO, rotuloUnidade } from "@/components/catalogo/rotulos";
+import { CabecalhoDePagina } from "@/components/ui/cabecalho-de-pagina";
 import { classeDoCampo } from "@/components/ui/classes";
+import { EstadoVazio } from "@/components/ui/estado-vazio";
+import { classeDoBotao, classeDoLink } from "@/components/ui/estilos";
+import { Segmentos } from "@/components/ui/segmentos";
+import { Selo } from "@/components/ui/selo";
+import { Superficie } from "@/components/ui/superficie";
 import type { CategoriaItem, TipoItem } from "@/generated/prisma/enums";
 import { exigirPermissao } from "@/lib/auth/servidor";
 import { CATEGORIAS } from "@/lib/catalogo/validacao";
 import { catalogo } from "@/lib/db";
 import { pode } from "@/lib/dominio/permissoes";
+import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Catálogo" };
-
-const botaoPrincipal =
-  "inline-flex items-center justify-center rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary-hover";
 
 const texto = (v: string | string[] | undefined) => (typeof v === "string" ? v : "");
 
@@ -26,97 +31,143 @@ export default async function Catalogo({ searchParams }: PageProps<"/catalogo">)
   const itens = await catalogo(membro).listar({ busca, tipo, categoria, arquivados });
   const filtrando = !!(busca || tipo || categoria);
 
+  const link = (mudanca: { tipo?: TipoItem | null }) => {
+    const q = new URLSearchParams();
+    if (busca) q.set("busca", busca);
+    const t = mudanca.tipo === undefined ? tipo : mudanca.tipo;
+    if (t) q.set("tipo", t);
+    if (categoria) q.set("categoria", categoria);
+    if (arquivados) q.set("arquivados", "1");
+    const texto = q.toString();
+    return texto ? `/catalogo?${texto}` : "/catalogo";
+  };
+
   return (
-    <div className="space-y-8">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="text-[28px] leading-tight font-extrabold text-foreground">{arquivados ? "Itens arquivados" : "Catálogo"}</h1>
-        {pode(membro.permissoes, "catalogo", "criar") && !arquivados && (
-          <Link href="/catalogo/novo" className={botaoPrincipal}>
-            Novo item
-          </Link>
-        )}
+    <div className="space-y-6">
+      <CabecalhoDePagina
+        voltar={arquivados ? { href: "/catalogo", rotulo: "Catálogo" } : undefined}
+        titulo={arquivados ? "Itens arquivados" : "Catálogo"}
+        descricao={arquivados ? "Itens fora da lista e das escolhas. O histórico continua guardado." : "Os produtos que você vende ou usa e os serviços que executa."}
+        acoes={
+          pode(membro.permissoes, "catalogo", "criar") &&
+          !arquivados && (
+            <Link href="/catalogo/novo" className={classeDoBotao("principal")}>
+              <Plus aria-hidden="true" />
+              Novo item
+            </Link>
+          )
+        }
+      />
+
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <Segmentos
+          rotulo="Tipo"
+          itens={[
+            { href: link({ tipo: null }), rotulo: "Todos", ativo: !tipo },
+            { href: link({ tipo: "PRODUTO_FISICO" }), rotulo: "Produtos físicos", ativo: tipo === "PRODUTO_FISICO" },
+            { href: link({ tipo: "SERVICO" }), rotulo: "Serviços", ativo: tipo === "SERVICO" },
+          ]}
+        />
+        <form method="get" className="flex flex-wrap gap-2" role="search">
+          {arquivados && <input type="hidden" name="arquivados" value="1" />}
+          {tipo && <input type="hidden" name="tipo" value={tipo} />}
+          <label className="sr-only" htmlFor="busca">
+            Buscar por nome
+          </label>
+          <div className="relative min-w-0 flex-1 basis-52">
+            <Search aria-hidden="true" className="pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2 text-muted-foreground" />
+            <input id="busca" name="busca" type="search" defaultValue={busca} placeholder="Buscar por nome" className={cn(classeDoCampo(), "h-11 rounded-full py-0 pl-10")} />
+          </div>
+          <label className="sr-only" htmlFor="categoria">
+            Categoria
+          </label>
+          <select id="categoria" name="categoria" defaultValue={categoria ?? ""} className={cn(classeDoCampo(), "h-11 w-auto min-w-0 flex-1 basis-40 rounded-full py-0")}>
+            <option value="">Todas as categorias</option>
+            {CATEGORIAS.map((c) => (
+              <option key={c} value={c}>
+                {ROTULO_CATEGORIA[c]}
+              </option>
+            ))}
+          </select>
+          <button type="submit" className={classeDoBotao("secundario")}>
+            Filtrar
+          </button>
+        </form>
       </div>
 
-      <form method="get" className="grid gap-3 sm:grid-cols-[1fr_auto_auto_auto]" role="search">
-        {arquivados && <input type="hidden" name="arquivados" value="1" />}
-        <label className="sr-only" htmlFor="busca">
-          Buscar por nome
-        </label>
-        <input id="busca" name="busca" defaultValue={busca} placeholder="Buscar por nome…" className={classeDoCampo()} />
-        <label className="sr-only" htmlFor="tipo">
-          Tipo
-        </label>
-        <select id="tipo" name="tipo" defaultValue={tipo ?? ""} className={classeDoCampo()}>
-          <option value="">Todos os tipos</option>
-          <option value="PRODUTO_FISICO">Produtos físicos</option>
-          <option value="SERVICO">Serviços</option>
-        </select>
-        <label className="sr-only" htmlFor="categoria">
-          Categoria
-        </label>
-        <select id="categoria" name="categoria" defaultValue={categoria ?? ""} className={classeDoCampo()}>
-          <option value="">Todas as categorias</option>
-          {CATEGORIAS.map((c) => (
-            <option key={c} value={c}>
-              {ROTULO_CATEGORIA[c]}
-            </option>
-          ))}
-        </select>
-        <button type="submit" className="rounded-full border border-input px-5 py-3 text-sm font-semibold text-foreground hover:bg-accent active:scale-[0.96] transition-[background-color,transform] duration-(--duracao-estado)">
-          Filtrar
-        </button>
-      </form>
-
       {itens.length === 0 ? (
-        <section className="rounded-2xl bg-card px-6 py-12 text-center">
-          <h2 className="mb-2 text-xl font-extrabold text-card-foreground">
-            {filtrando ? "Nenhum item encontrado" : arquivados ? "Nenhum item arquivado" : "Seu catálogo está vazio"}
-          </h2>
-          <p className="mx-auto max-w-md text-sm text-muted-foreground">
+        <Superficie>
+          <EstadoVazio
+            Icone={arquivados ? Archive : Tag}
+            titulo={filtrando ? "Nenhum item encontrado" : arquivados ? "Nenhum item arquivado" : "Seu catálogo está vazio"}
+            acao={
+              filtrando ? (
+                <Link href={arquivados ? "/catalogo?arquivados=1" : "/catalogo"} className={classeDoBotao("secundario")}>
+                  Limpar filtros
+                </Link>
+              ) : (
+                !arquivados &&
+                pode(membro.permissoes, "catalogo", "criar") && (
+                  <Link href="/catalogo/novo" className={classeDoBotao("principal")}>
+                    <Plus aria-hidden="true" />
+                    Cadastrar o primeiro item
+                  </Link>
+                )
+              )
+            }
+          >
             {filtrando
-              ? "Tente outra busca ou limpe os filtros."
+              ? "Tente outra busca ou outro tipo."
               : arquivados
                 ? "Itens arquivados aparecem aqui e podem ser reativados."
                 : "Cadastre os produtos que você vende ou usa e os serviços que executa."}
-          </p>
-        </section>
+          </EstadoVazio>
+        </Superficie>
       ) : (
-        <ul className="grid gap-3" aria-label="Itens do catálogo">
-          {itens.map((i) => (
-            <li key={i.id}>
-              <Link
-                href={`/catalogo/${i.id}`}
-                className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 rounded-2xl bg-card p-4 transition-colors hover:border-primary"
-              >
-                <div className="min-w-0">
-                  <p className="truncate font-medium text-card-foreground">{i.nome}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {ROTULO_TIPO[i.tipo]} · {ROTULO_CATEGORIA[i.categoria]} · {rotuloUnidade(i.unidadeMedida)}
-                    {i.tipo === "SERVICO" && i.materiais > 0 && ` · ${i.materiais} ${i.materiais === 1 ? "material" : "materiais"}`}
-                  </p>
-                </div>
-                <div className="text-right text-sm">
-                  {i.precoAtual === null ? (
-                    <span className="rounded-full bg-status-warn-bg px-2.5 py-1 text-xs font-medium text-status-warn">Sem preço</span>
-                  ) : (
-                    <span className="font-semibold text-foreground">{reais(i.precoAtual)}</span>
-                  )}
-                  <p className="text-xs text-muted-foreground">custo {reais(i.custoTotal)}</p>
-                </div>
-              </Link>
-            </li>
-          ))}
-        </ul>
+        <Superficie espaco="nenhum" className="overflow-hidden">
+          <ul className="divide-y" aria-label="Itens do catálogo">
+            {itens.map((i) => {
+              const Icone = i.tipo === "SERVICO" ? Sparkles : Package;
+              return (
+                <li key={i.id}>
+                  <Link
+                    href={`/catalogo/${i.id}`}
+                    className="flex items-center gap-3 px-4 py-3.5 transition-colors duration-(--duracao-estado) hover:bg-accent focus-visible:bg-accent focus-visible:outline-none sm:gap-4 sm:px-5"
+                  >
+                    <span aria-hidden="true" className="grid size-10 shrink-0 place-items-center rounded-full bg-muted text-primary">
+                      <Icone className="size-4.5" />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-[15px] font-bold text-foreground">{i.nome}</p>
+                      <p className="truncate text-xs text-muted-foreground">
+                        {ROTULO_TIPO[i.tipo]}, {ROTULO_CATEGORIA[i.categoria].toLowerCase()}, {rotuloUnidade(i.unidadeMedida).toLowerCase()}
+                        {i.tipo === "SERVICO" && i.materiais > 0 && `, ${i.materiais} ${i.materiais === 1 ? "material" : "materiais"}`}
+                      </p>
+                    </div>
+                    <div className="shrink-0 text-right">
+                      {i.precoAtual === null ? (
+                        <Selo tom="atencao">Sem preço</Selo>
+                      ) : (
+                        <p className="text-[15px] font-extrabold text-foreground tabular-nums">{reais(i.precoAtual)}</p>
+                      )}
+                      <p className="mt-0.5 text-xs text-muted-foreground tabular-nums">custo {reais(i.custoTotal)}</p>
+                    </div>
+                    <ChevronRight aria-hidden="true" className="hidden size-4 shrink-0 text-muted-foreground sm:block" />
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </Superficie>
       )}
 
-      <p className="text-sm">
-        <Link
-          href={arquivados ? "/catalogo" : "/catalogo?arquivados=1"}
-          className="font-medium text-primary underline-offset-2 hover:underline"
-        >
-          {arquivados ? "← Voltar ao catálogo" : "Ver itens arquivados"}
-        </Link>
-      </p>
+      {!arquivados && (
+        <p className="text-sm">
+          <Link href="/catalogo?arquivados=1" className={classeDoLink()}>
+            Ver itens arquivados
+          </Link>
+        </p>
+      )}
     </div>
   );
 }

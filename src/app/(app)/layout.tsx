@@ -16,7 +16,7 @@ import { menuDoMembro } from "@/lib/equipe/menu";
 // inferior conforme a largura; o menu segue as permissões efetivas (SPEC-005, 5.5) — é
 // conveniência: a barreira é a guarda no servidor de cada página e ação. A faixa do caixa
 // (5.3, OPEN-005) só é calculada para quem vê o Dashboard completo (INV-002).
-export default async function LayoutDaAplicacao({ children }: LayoutProps<"/">) {
+export default async function LayoutDaAplicacao({ children, gaveta }: LayoutProps<"/">) {
   const contexto = await exigirSessao();
   const membro =
     contexto.negocioId && contexto.papel && contexto.permissoes
@@ -50,6 +50,7 @@ export default async function LayoutDaAplicacao({ children }: LayoutProps<"/">) 
         )}
         <main className="mx-auto w-full max-w-[1280px] flex-1 px-4 pt-6 pb-28 sm:px-6 md:pb-10 lg:px-10 lg:pt-8">{children}</main>
       </div>
+      {gaveta}
       <AvisosFlutuantes />
       <Suspense fallback={null}>
         <AvisoDaUrl />

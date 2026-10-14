@@ -1,6 +1,7 @@
 "use client";
 
 import { X } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { Dialog } from "radix-ui";
 import { cn } from "@/lib/utils";
 
@@ -31,6 +32,16 @@ export function Gaveta({
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-50 bg-estrutura/45 data-[state=open]:animate-[gaveta-fundo_var(--duracao-layout)_var(--ease-saida)]" />
         <Dialog.Content
+          onOpenAutoFocus={(e) => {
+            // No computador, o foco vai direto ao primeiro campo; no celular fica no título,
+            // para o teclado não cobrir a gaveta antes de a pessoa escolher onde tocar.
+            if (!window.matchMedia("(min-width: 640px)").matches) return;
+            const campo = (e.currentTarget as HTMLElement).querySelector<HTMLElement>("input:not([type=hidden]), select, textarea");
+            if (campo) {
+              e.preventDefault();
+              campo.focus();
+            }
+          }}
           className={cn(
             "fixed z-50 flex flex-col bg-card text-card-foreground shadow-2xl outline-none",
             "inset-x-0 bottom-0 max-h-[88vh] rounded-t-3xl data-[state=open]:animate-[gaveta-baixo_var(--duracao-layout)_var(--ease-saida)]",
@@ -54,5 +65,18 @@ export function Gaveta({
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>
+  );
+}
+
+/**
+ * Gaveta de uma rota interceptada (OPEN-003): abre por cima da tela de origem e fechar volta
+ * no histórico — a URL do formulário continua valendo para o link direto e o recarregar.
+ */
+export function GavetaDaRota({ titulo, descricao, children }: { titulo: string; descricao?: string; children: React.ReactNode }) {
+  const router = useRouter();
+  return (
+    <Gaveta aberta aoMudar={(aberta) => !aberta && router.back()} titulo={titulo} descricao={descricao}>
+      {children}
+    </Gaveta>
   );
 }

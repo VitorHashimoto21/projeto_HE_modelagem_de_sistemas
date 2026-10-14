@@ -21,7 +21,8 @@ export function Numero({
   return (
     <div className={cn("min-w-0", className)}>
       <p className="text-sm opacity-80">{rotulo}</p>
-      <p className={cn("mt-1 leading-none font-extrabold tracking-tight tabular-nums", tamanhos[tamanho])}>{valor}</p>
+      {/* leading-none depois do tamanho: o tailwind-merge descarta a altura de linha que vem antes do tamanho do texto. */}
+      <p className={cn("mt-1 font-extrabold tracking-tight tabular-nums", tamanhos[tamanho], "leading-none")}>{valor}</p>
       {detalhe && <div className="mt-2 text-sm opacity-80">{detalhe}</div>}
     </div>
   );
