@@ -1,5 +1,5 @@
 import { intervaloDaCompetencia, intervaloDoDia } from "@/lib/dominio/datas";
-import { competenciasDaProjecao, inicioDaSerieDiaria, inicioDaSerieMensal, type ContaParaProjecao, type DespesaParaProjecao } from "@/lib/dominio/dashboard";
+import { competenciasDaProjecao, inicioDaSerieDiaria, inicioDaSerieMensal, serieDiaria, type ContaParaProjecao, type DespesaParaProjecao } from "@/lib/dominio/dashboard";
 import { centavosDe, competenciaDoDia, somarMeses, vencimentoNaCompetencia } from "@/lib/dominio/financeiro";
 import type { ClienteDoNegocio } from "./cliente-do-negocio";
 
@@ -50,6 +50,53 @@ export function criarConsultasDoDashboard(cliente: ClienteDoNegocio, negocioId: 
         WHERE "negocioId" = ${negocioId}::uuid AND status = 'CONCLUIDA' AND "data" >= ${desde} AND "data" < ${ate}
         GROUP BY 1`;
       return Object.fromEntries(linhas.map((l) => [l.comp, centavosDe(l.total)]));
+    },
+
+    /**
+     * Saldo ao fim de cada um dos últimos 30 dias (faixa do caixa — SPEC-016, 5.3): o saldo
+     * antes da janela mais as entradas e saídas de cada dia local. Mesmo saldo real do
+     * Financeiro (RN14): o último ponto é o "Saldo atual".
+     */
+    async saldoDiario(hoje: string): Promise<{ dia: string; saldoCentavos: number }[]> {
+      const inicio = inicioDaSerieDiaria(hoje);
+      const desde = intervaloDoDia(inicio).inicio;
+      const ate = intervaloDoDia(hoje).fim;
+      const [[antes], porDia] = await Promise.all([
+        cliente.$queryRaw<{ saldo: unknown }[]>`
+          SELECT COALESCE(SUM(CASE WHEN tipo = 'ENTRADA' THEN valor ELSE -valor END), 0) AS saldo
+          FROM "LancamentoFinanceiro" WHERE "negocioId" = ${negocioId}::uuid AND "data" < ${desde}`,
+        cliente.$queryRaw<{ dia: string; liquido: unknown }[]>`
+          SELECT to_char(("data" AT TIME ZONE 'UTC') AT TIME ZONE 'America/Sao_Paulo', 'YYYY-MM-DD') AS dia,
+                 SUM(CASE WHEN tipo = 'ENTRADA' THEN valor ELSE -valor END) AS liquido
+          FROM "LancamentoFinanceiro"
+          WHERE "negocioId" = ${negocioId}::uuid AND "data" >= ${desde} AND "data" < ${ate}
+          GROUP BY 1`,
+      ]);
+      const liquido = Object.fromEntries(porDia.map((l) => [l.dia, centavosDe(l.liquido)]));
+      return serieDiaria(hoje, {}).pontos.reduce<{ dia: string; saldoCentavos: number }[]>((acc, p) => {
+        const anterior = acc.length ? acc[acc.length - 1].saldoCentavos : centavosDe(antes.saldo);
+        acc.push({ dia: p.periodo, saldoCentavos: anterior + (liquido[p.periodo] ?? 0) });
+        return acc;
+      }, []);
+    },
+
+    /** Lançamentos de hoje, do mais recente ao mais antigo ("Ver o dia" — SPEC-016, 5.3). */
+    async movimentosDeHoje(hoje: string, limite = 12): Promise<{ id: string; hora: string; descricao: string; tipo: "ENTRADA" | "SAIDA"; valorCentavos: number }[]> {
+      const { inicio, fim } = intervaloDoDia(hoje);
+      const lista = await cliente.lancamentoFinanceiro.findMany({
+        where: { data: { gte: inicio, lt: fim } },
+        orderBy: [{ data: "desc" }, { id: "desc" }],
+        take: limite,
+        select: { id: true, data: true, tipo: true, valor: true, descricao: true, categoria: true, venda: { select: { numero: true } }, conta: { select: { descricao: true } } },
+      });
+      const hora = new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", hour: "2-digit", minute: "2-digit" });
+      return lista.map((l) => ({
+        id: l.id,
+        hora: hora.format(l.data),
+        descricao: l.descricao ?? (l.venda ? `Venda nº ${l.venda.numero}` : (l.conta?.descricao ?? "Lançamento")),
+        tipo: l.tipo,
+        valorCentavos: centavosDe(l.valor),
+      }));
     },
 
     /**

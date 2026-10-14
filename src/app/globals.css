@@ -1,62 +1,71 @@
 @import "tailwindcss";
 
 /* ==========================================================================
-   Health Enterprise (HE) — CSS global
+   Health Enterprise (HE) — CSS global, tokens v2 (SPEC-016, Direção "Balcão")
    Tokens copiados de docs/design/identidade/tokens/tokens.css (SPEC-001, INV-009).
-   Diferenças em relação ao arquivo de origem — só fontes, nenhuma cor:
-   - sem o @import do Google Fonts: Fraunces e Outfit vêm do next/font (layout.tsx);
-   - --font-display e --font-sans apontam para as variáveis do next/font.
+   Diferença em relação ao arquivo de origem — só fontes, nenhuma cor:
+   - sem o @import do Google Fonts: a Manrope vem do next/font (layout.tsx).
    O teste test/unit/tokens.test.ts confere que todas as cores são idênticas.
    ========================================================================== */
 @custom-variant dark (&:where(.dark, .dark *));
 
 /* ---------- Tema claro (padrão) ---------- */
 :root {
-  --radius: 0.75rem;
+  --radius: 1.25rem;
 
   /* Superfícies e texto */
-  --background: #faf9f7;          /* fundo off-white quente */
-  --foreground: #0d1f1a;          /* verde quase preto — 16.25:1 */
+  --background: #eef3f1;          /* fundo neutro levemente frio — 14.99:1 com o texto */
+  --foreground: #12201c;
   --card: #ffffff;
-  --card-foreground: #0d1f1a;
+  --card-foreground: #12201c;
   --popover: #ffffff;
-  --popover-foreground: #0d1f1a;
-  --muted: #f1efeb;
-  --muted-foreground: #5f6670;    /* texto secundário — 5.51:1 */
+  --popover-foreground: #12201c;
+  --muted: #e4ece8;               /* preenchimentos discretos (trilhos, chips) */
+  --muted-foreground: #5a6863;    /* texto de apoio — 5.21:1 no fundo, 4.86:1 no muted */
 
-  /* Ação principal (âmbar escurecido para contraste) */
-  --primary: #b45309;             /* botão/links — branco sobre ele 5.02:1 */
-  --primary-hover: #92400e;       /* 7.09:1 */
+  /* Ação principal: verde da marca (SPEC-016, 5.1) */
+  --primary: #1d6a51;             /* branco sobre ele 6.50:1 */
+  --primary-hover: #134e3b;       /* 9.63:1 */
   --primary-foreground: #ffffff;
 
   /* Secundária e acento neutro */
-  --secondary: #f1efeb;
-  --secondary-foreground: #0d1f1a;
-  --accent: #f1efeb;
-  --accent-foreground: #0d1f1a;
+  --secondary: #e4ece8;
+  --secondary-foreground: #12201c;
+  --accent: #e4ece8;
+  --accent-foreground: #12201c;
 
   /* Bordas e foco */
-  --border: #e5e2dc;              /* divisórias decorativas */
-  --input: #8a8f98;               /* borda de campos — 3.25:1 (UI) */
-  --ring: #b45309;                /* anel de foco — 4.77:1 */
+  --border: #dce3e0;              /* divisórias decorativas */
+  --input: #7a8882;               /* borda de campos — 3.30:1 no fundo, 3.70:1 no cartão */
+  --ring: #1d6a51;                /* foco — 5.79:1 */
 
   /* Erro / ações destrutivas */
-  --destructive: #b91c1c;
+  --destructive: #b42318;
   --destructive-foreground: #ffffff;
 
+  /* Estrutura do app (menu, barra inferior, faixa do caixa) */
+  --estrutura: #12342c;
+  --estrutura-foreground: #ffffff;      /* 13.52:1 */
+  --estrutura-suave: #a9c2b9;           /* texto de apoio na estrutura — 7.15:1 */
+  --estrutura-linha: #2b5a4c;           /* divisórias e avatar na estrutura */
+
+  /* Âmbar: só destaque da marca, sobre a estrutura ou com texto escuro */
+  --ambar: #f5a524;                     /* 6.62:1 sobre a estrutura */
+  --ambar-foreground: #1f1500;          /* 8.83:1 sobre o âmbar */
+
   /* Marca */
-  --brand: #163028;               /* verde da marca (fundo do símbolo) */
-  --brand-deep: #0d1f1a;          /* painel institucional */
+  --brand: #163028;
+  --brand-deep: #0d1f1a;
   --brand-foreground: #ffffff;
-  --brand-amber: #f59e0b;         /* âmbar do broto — só sobre fundos verdes */
+  --brand-amber: #f59e0b;
   --brand-amber-light: #fbbf24;
 
   /* Semáforo de saúde financeira (RF57) — sempre com ícone + rótulo */
-  --status-ok: #166534;           /* Saudável */
+  --status-ok: #166534;
   --status-ok-bg: #e8f5ec;
-  --status-warn: #8a5a00;         /* Atenção */
+  --status-warn: #8a5a00;
   --status-warn-bg: #fdf6d8;
-  --status-danger: #b91c1c;       /* Déficit */
+  --status-danger: #b42318;
   --status-danger-bg: #fdeceb;
 
   /* Gráficos — ordem fixa, validada (CVD, visão normal, contraste) */
@@ -65,22 +74,23 @@
   --chart-3: #2a78d6;
   --chart-4: #d55181;
   --chart-5: #4a3aa7;
+  --chart-neutro: #84948d;              /* séries de contexto (forma "destaque") — 3.18:1 */
 }
 
 /* ---------- Tema escuro ---------- */
 .dark {
   --background: #0b1714;
-  --foreground: #ecebe7;          /* 15.35:1 */
+  --foreground: #ecebe7;
   --card: #12241f;
   --card-foreground: #ecebe7;
   --popover: #12241f;
   --popover-foreground: #ecebe7;
   --muted: #1a2e28;
-  --muted-foreground: #a7b0ab;    /* 8.23:1 */
+  --muted-foreground: #a7b0ab;
 
-  --primary: #f59e0b;             /* texto escuro sobre ele 7.96:1 */
-  --primary-hover: #fbbf24;
-  --primary-foreground: #0d1f1a;
+  --primary: #3dbf93;             /* texto escuro sobre ele 8.14:1 */
+  --primary-hover: #62d3ab;
+  --primary-foreground: #06140f;
 
   --secondary: #1a2e28;
   --secondary-foreground: #ecebe7;
@@ -88,11 +98,19 @@
   --accent-foreground: #ecebe7;
 
   --border: #24392f;
-  --input: #6f817a;               /* 3.93:1 (UI) */
-  --ring: #fbbf24;
+  --input: #6f817a;
+  --ring: #f5a524;
 
   --destructive: #f87171;
   --destructive-foreground: #0d1f1a;
+
+  --estrutura: #0f2a23;
+  --estrutura-foreground: #ffffff;
+  --estrutura-suave: #9db8ae;
+  --estrutura-linha: #24493e;
+
+  --ambar: #f5a524;
+  --ambar-foreground: #1f1500;
 
   --brand: #163028;
   --brand-deep: #0d1f1a;
@@ -112,17 +130,27 @@
   --chart-3: #3987e5;
   --chart-4: #d55181;
   --chart-5: #9085e9;
+  --chart-neutro: #647770;
 }
 
 /* ---------- Mapeamento para utilitários do Tailwind ---------- */
 @theme inline {
-  --font-display: var(--font-fraunces), Georgia, serif;
-  --font-sans: var(--font-outfit), system-ui, sans-serif;
+  --font-display: var(--font-manrope), system-ui, sans-serif;
+  --font-sans: var(--font-manrope), system-ui, sans-serif;
 
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
+  /* Raios por hierarquia (SPEC-016, 5.1): marcas 4, campos 12–16, cartões 20, destaques 24 */
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 0.875rem;
+  --radius-2xl: var(--radius);
+  --radius-3xl: 1.5rem;
+
+  /* Movimento (SPEC-016, 5.1): fechar usa 75% do abrir */
+  --ease-saida: cubic-bezier(0.25, 1, 0.5, 1);
+  --duracao-toque: 120ms;
+  --duracao-estado: 220ms;
+  --duracao-layout: 360ms;
 
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -144,6 +172,12 @@
   --color-ring: var(--ring);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
+  --color-estrutura: var(--estrutura);
+  --color-estrutura-foreground: var(--estrutura-foreground);
+  --color-estrutura-suave: var(--estrutura-suave);
+  --color-estrutura-linha: var(--estrutura-linha);
+  --color-ambar: var(--ambar);
+  --color-ambar-foreground: var(--ambar-foreground);
   --color-brand: var(--brand);
   --color-brand-deep: var(--brand-deep);
   --color-brand-foreground: var(--brand-foreground);
@@ -160,6 +194,7 @@
   --color-chart-3: var(--chart-3);
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
+  --color-chart-neutro: var(--chart-neutro);
 
   /* Pré-paleta — escalas 50–950 (classes bg-verde-100, text-ambar-700, border-neutro-300…) */
   --color-verde-50: #f4f8f6; --color-verde-100: #e5edea; --color-verde-200: #cbdcd6; --color-verde-300: #a9c5bb; --color-verde-400: #7fa99b; --color-verde-500: #558d7b; --color-verde-600: #347461; --color-verde-700: #1f5c4b; --color-verde-800: #084536; --color-verde-900: #163028; --color-verde-950: #0d1f1a;
@@ -170,6 +205,22 @@
 @layer base {
   * { border-color: var(--border); }
   html, body { background: var(--background); color: var(--foreground); font-family: var(--font-sans); }
-  h1, h2, h3, .font-display { font-family: var(--font-display); }
+  h1, h2, h3, .font-display { font-family: var(--font-display); letter-spacing: -0.01em; }
   *:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+  .tabular-nums, input[inputmode="decimal"] { font-variant-numeric: tabular-nums; }
 }
+
+/* Movimento só para quem não pediu menos movimento (SPEC-016, 5.6; INV-007) */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+}
+
+/* Hachurado de estimativa e "até agora" nos gráficos (SPEC-016, 5.5) */
+.hachurado {
+  background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--primary) 45%, transparent) 0 4px, color-mix(in srgb, var(--primary) 12%, transparent) 4px 8px);
+}
+
+/* Entradas da gaveta e do fundo (SPEC-016, 5.6) */
+@keyframes gaveta-fundo { from { opacity: 0; } to { opacity: 1; } }
+@keyframes gaveta-baixo { from { transform: translateY(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes gaveta-lado { from { transform: translateX(32px); opacity: 0; } to { transform: none; opacity: 1; } }
