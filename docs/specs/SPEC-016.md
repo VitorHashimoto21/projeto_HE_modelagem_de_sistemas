@@ -187,9 +187,9 @@ Nenhuma entidade muda. **Mudanças previstas no schema: nenhuma.** As consultas 
 
 - `src/app/globals.css` e `docs/design/identidade/tokens/` — tokens v2 (claro e escuro) e movimento; `src/app/layout.tsx` — Manrope pelo `next/font`.
 - `src/components/ui/` — componentes de interface; `src/components/graficos/` — componentes de gráfico; `src/components/estrutura/` — menu, barra inferior, faixa do caixa.
-- `src/app/(app)/layout.tsx` — nova estrutura; cada tela migrada na sua fase.
+- `src/app/(app)/layout.tsx` — nova estrutura; cada tela migrada na sua etapa.
 - Consultas novas em `src/lib/db/dashboard.ts` (formas de pagamento, ano anterior) e `src/lib/db/financeiro.ts` (fluxo diário), com testes.
-- Roteiros de navegador ganham a varredura axe e passam a viver no repositório (`test/e2e/`), para o CI e para as próximas fases.
+- Roteiros de navegador ganham a varredura axe e passam a viver no repositório (`test/e2e/`), para o CI e para as próximas etapas.
 
 ---
 
