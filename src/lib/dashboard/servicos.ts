@@ -116,3 +116,23 @@ export async function carregarFaixa(deps: DependenciasDoDashboard): Promise<Dado
     movimentos: movimentos.slice(0, 12),
   };
 }
+
+// ---------- Cartões novos do Painel (SPEC-016, 5.5) ----------
+
+export type FormasDoMes = { itens: { nome: string; valorCentavos: number }[]; taxaCartao: number; taxaCentavos: number };
+
+const NOMES_DAS_FORMAS = { PIX: "PIX", DINHEIRO: "Dinheiro", CREDITO: "Crédito", DEBITO: "Débito" } as const;
+
+/** Formas de pagamento do mês, na ordem fixa das cores, e quanto a maquininha leva (taxa média dos parâmetros). */
+export async function carregarFormas(deps: DependenciasDoDashboard): Promise<FormasDoMes> {
+  const [linhas, parametros] = await Promise.all([deps.dashboard.formasDoMes(deps.hoje), deps.calculadora.precificacao.parametros()]);
+  const valor = (f: keyof typeof NOMES_DAS_FORMAS) => linhas.find((l) => l.forma === f)?.valorCentavos ?? 0;
+  const itens = (Object.keys(NOMES_DAS_FORMAS) as (keyof typeof NOMES_DAS_FORMAS)[]).map((f) => ({ nome: NOMES_DAS_FORMAS[f], valorCentavos: valor(f) }));
+  const taxaCartao = parametros.taxaCartao;
+  return { itens, taxaCartao, taxaCentavos: Math.round(((valor("CREDITO") + valor("DEBITO")) * taxaCartao) / 100) };
+}
+
+/** Vendas dos mesmos 12 meses do ano anterior (só no pago — OPEN-007). */
+export function carregarAnoAnterior(deps: Pick<DependenciasDoDashboard, "dashboard" | "hoje">): Promise<Record<string, number>> {
+  return deps.dashboard.vendasPorMesAnoAnterior(deps.hoje);
+}

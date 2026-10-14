@@ -68,3 +68,59 @@ export function FaixaDoCaixaCompacta({ dados, minigrafico }: { dados: DadosDaFai
     </section>
   );
 }
+
+/** Faixa do caixa no Painel (SPEC-016, 5.3): o bloco grande, com o saldo em destaque e a tendência. */
+export function FaixaDoCaixaGrande({ dados, nomeDoNegocio, minigrafico }: { dados: DadosDaFaixa; nomeDoNegocio: string; minigrafico: React.ReactNode }) {
+  const [aberta, setAberta] = useState(false);
+  const id = useId();
+  return (
+    <section aria-label="Faixa do caixa" className="rounded-3xl bg-estrutura p-5 text-estrutura-foreground sm:p-7">
+      <div className="flex flex-wrap items-end justify-between gap-6">
+        <div className="min-w-0 flex-[1_1_16rem]">
+          <p className="text-sm text-estrutura-suave">Saldo em caixa no {nomeDoNegocio}</p>
+          <p className="mt-1.5 text-[40px] leading-none font-extrabold tracking-tight tabular-nums sm:text-[46px]">{reais(dados.saldoCentavos)}</p>
+          <p className="mt-2 text-sm text-estrutura-suave">
+            Hoje entrou <strong className="text-estrutura-foreground">{reais(dados.entrouHojeCentavos)}</strong> e saiu{" "}
+            <strong className="text-estrutura-foreground">{reais(dados.saiuHojeCentavos)}</strong>
+          </p>
+        </div>
+        <div className="max-w-full flex-[0_1_260px] text-ambar">{minigrafico}</div>
+        <div className="flex flex-col items-start gap-2.5">
+          <Selo tom={TOM[dados.saude.tom]} className="text-sm">
+            {dados.saude.rotulo}
+          </Selo>
+          <button
+            type="button"
+            aria-expanded={aberta}
+            aria-controls={id}
+            onClick={() => setAberta(!aberta)}
+            className="inline-flex h-10 items-center gap-1.5 rounded-full border border-estrutura-foreground/35 px-4 text-sm font-semibold hover:bg-estrutura-foreground/10 focus-visible:outline-2 focus-visible:outline-ambar"
+          >
+            {aberta ? "Fechar o dia" : "Ver o dia"}
+            <ChevronDown className={cn("size-4 transition-transform duration-(--duracao-estado) ease-(--ease-saida)", aberta && "rotate-180")} aria-hidden="true" />
+          </button>
+        </div>
+      </div>
+      {aberta && (
+        <div id={id} className="mt-5 animate-[gaveta-baixo_var(--duracao-estado)_var(--ease-saida)]">
+          {dados.movimentos.length === 0 ? (
+            <p className="text-sm text-estrutura-suave">Nenhum movimento no caixa hoje.</p>
+          ) : (
+            <ul className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
+              {dados.movimentos.map((m) => (
+                <li key={m.id} className="rounded-2xl bg-estrutura-foreground/[0.07] px-4 py-3">
+                  <p className="text-[13px] text-estrutura-suave tabular-nums">{m.hora}</p>
+                  <p className="mt-0.5 truncate text-sm">{m.descricao}</p>
+                  <p className="mt-1 text-base font-bold tabular-nums">
+                    {m.tipo === "ENTRADA" ? "+ " : "− "}
+                    {reais(m.valorCentavos)}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+    </section>
+  );
+}

@@ -53,6 +53,35 @@ export function criarConsultasDoDashboard(cliente: ClienteDoNegocio, negocioId: 
     },
 
     /**
+     * Mesmos 12 meses do gráfico, um ano antes (SPEC-016, 5.5; só no plano pago — OPEN-007):
+     * a chave é o mês correspondente da janela atual, para casar com a série de vendasPorMes.
+     */
+    async vendasPorMesAnoAnterior(hoje: string): Promise<Record<string, number>> {
+      const inicio = inicioDaSerieMensal(hoje);
+      const desde = intervaloDaCompetencia(somarMeses(inicio, -12)).inicio;
+      const ate = intervaloDaCompetencia(somarMeses(competenciaDoDia(hoje), -11)).inicio;
+      const linhas = await cliente.$queryRaw<{ comp: string; total: unknown }[]>`
+        SELECT to_char(("data" AT TIME ZONE 'UTC') AT TIME ZONE 'America/Sao_Paulo', 'YYYY-MM') AS comp, SUM("valorTotal") AS total
+        FROM "Venda"
+        WHERE "negocioId" = ${negocioId}::uuid AND status = 'CONCLUIDA' AND "data" >= ${desde} AND "data" < ${ate}
+        GROUP BY 1`;
+      return Object.fromEntries(linhas.map((l) => [somarMeses(l.comp, 12), centavosDe(l.total)]));
+    },
+
+    /** Quanto entrou por forma de pagamento nas vendas concluídas do mês (SPEC-016, 5.5); crédito de troca fica fora. */
+    async formasDoMes(hoje: string): Promise<{ forma: "PIX" | "DINHEIRO" | "DEBITO" | "CREDITO"; valorCentavos: number }[]> {
+      const { inicio } = intervaloDaCompetencia(competenciaDoDia(hoje));
+      const ate = intervaloDoDia(hoje).fim;
+      const linhas = await cliente.$queryRaw<{ forma: "PIX" | "DINHEIRO" | "DEBITO" | "CREDITO"; total: unknown }[]>`
+        SELECT p.forma, SUM(p.valor) AS total
+        FROM "Pagamento" p JOIN "Venda" v ON v.id = p."vendaId"
+        WHERE v."negocioId" = ${negocioId}::uuid AND v.status = 'CONCLUIDA' AND v."data" >= ${inicio} AND v."data" < ${ate}
+          AND p.forma <> 'CREDITO_TROCA'
+        GROUP BY 1`;
+      return linhas.map((l) => ({ forma: l.forma, valorCentavos: centavosDe(l.total) }));
+    },
+
+    /**
      * Saldo ao fim de cada um dos últimos 30 dias (faixa do caixa — SPEC-016, 5.3): o saldo
      * antes da janela mais as entradas e saídas de cada dia local. Mesmo saldo real do
      * Financeiro (RN14): o último ponto é o "Saldo atual".
