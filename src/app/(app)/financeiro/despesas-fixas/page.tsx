@@ -1,12 +1,17 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { CalendarClock } from "lucide-react";
 import { CabecalhoDoFinanceiro, reais, ROTULO_CATEGORIA } from "@/components/financeiro/exibicao";
 import { FormularioDespesa } from "@/components/financeiro/formularios";
+import { EstadoVazio } from "@/components/ui/estado-vazio";
+import { Numero } from "@/components/ui/numero";
+import { Superficie, TituloDaSuperficie } from "@/components/ui/superficie";
 import { exigirPermissao } from "@/lib/auth/servidor";
 import { financeiro } from "@/lib/db";
 import { hoje } from "@/lib/dominio/datas";
 import { pode } from "@/lib/dominio/permissoes";
 import { conferirFinanceiro } from "@/lib/financeiro/conferencia";
+import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Despesas fixas" };
 
@@ -22,67 +27,84 @@ export default async function DespesasFixas() {
   const totalMensal = ativas.reduce((s, d) => s + (d.valorCentavos ?? (d.origem === "DAS_MEI" ? (das ?? 0) : 0)), 0);
   const podeEditar = pode(membro.permissoes, "financeiro", "editar");
 
+  const valorDe = (d: (typeof despesas)[number]) => d.valorCentavos ?? (d.origem === "DAS_MEI" ? (das ?? 0) : 0);
+
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <CabecalhoDoFinanceiro atual="despesas" titulo="Despesas fixas" />
 
-      <section className="rounded-2xl bg-card p-5 sm:p-6" aria-label="Total mensal">
-        <p className="text-sm text-muted-foreground">Total mensal das despesas ativas</p>
-        <p className="mt-1 text-3xl font-semibold text-foreground tabular-nums">{reais(totalMensal)}</p>
-        <p className="mt-2 text-xs text-muted-foreground">
+      <Superficie tom="estrutura" aria-label="Total mensal">
+        <Numero rotulo="Total por mês das despesas ativas" tamanho="xl" valor={reais(totalMensal)} />
+        <p className="mt-3 max-w-2xl text-sm text-estrutura-suave">
           Cada despesa ativa gera uma conta a pagar por mês, com o vencimento no dia escolhido. Mudar o valor vale para os próximos meses.
         </p>
-      </section>
+      </Superficie>
 
-      <section aria-labelledby="titulo-lista" className="rounded-2xl bg-card">
-        <h2 id="titulo-lista" className="px-6 pt-6 text-[17px] font-bold text-card-foreground">
-          Cadastradas
-        </h2>
-        {despesas.length === 0 ? (
-          <p className="p-6 text-sm text-muted-foreground">Nenhuma despesa fixa ainda. Cadastre aluguel, internet, salários…</p>
-        ) : (
-          <ul className="mt-2 divide-y">
-            {despesas.map((d) => {
-              const conteudo = (
-                <>
-                  <div className="min-w-0 flex-1">
-                    <p className={`font-medium break-words ${d.ativo ? "text-foreground" : "text-muted-foreground"}`}>{d.descricao}</p>
-                    <p className="text-xs text-muted-foreground">
-                      Todo dia {d.diaVencimento} · {ROTULO_CATEGORIA[d.categoria]}
-                      {d.origem === "DAS_MEI" && " · automático (MEI)"}
-                      {!d.ativo && " · desativada"}
-                    </p>
-                  </div>
-                  <p className="text-sm font-semibold text-foreground tabular-nums">
-                    {d.valorCentavos !== null ? reais(d.valorCentavos) : das !== null ? reais(das) : "—"}
-                    {d.origem === "DAS_MEI" && <span className="block text-right text-xs font-normal text-muted-foreground">valor oficial vigente</span>}
-                  </p>
-                </>
-              );
-              return (
-                <li key={d.id}>
-                  {podeEditar ? (
-                    <Link href={`/financeiro/despesas-fixas/${d.id}`} className="flex flex-wrap items-start justify-between gap-x-4 gap-y-1 px-6 py-4 transition-colors hover:bg-accent/50">
-                      {conteudo}
-                    </Link>
-                  ) : (
-                    <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-1 px-6 py-4">{conteudo}</div>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </section>
-
-      {pode(membro.permissoes, "financeiro", "criar") && (
-        <section aria-labelledby="titulo-nova" className="rounded-2xl bg-card p-5 sm:p-6">
-          <h2 id="titulo-nova" className="mb-4 text-[17px] font-bold text-card-foreground">
-            Nova despesa fixa
+      <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
+        <Superficie espaco="nenhum" aria-labelledby="titulo-lista" className="min-w-0 flex-1 overflow-hidden">
+          <h2 id="titulo-lista" className="px-5 pt-5 pb-3 text-[17px] font-bold text-card-foreground sm:px-6 sm:pt-6">
+            Cadastradas
           </h2>
-          <FormularioDespesa />
-        </section>
-      )}
+          {despesas.length === 0 ? (
+            <EstadoVazio Icone={CalendarClock} titulo="Nenhuma despesa fixa ainda">
+              Cadastre o aluguel, a internet e os salários: eles entram no preço de venda e na projeção do caixa.
+            </EstadoVazio>
+          ) : (
+            <ul className="divide-y border-t">
+              {despesas.map((d) => {
+                const parte = d.ativo && totalMensal > 0 ? Math.round((valorDe(d) / totalMensal) * 100) : 0;
+                const conteudo = (
+                  <>
+                    <div className="min-w-0 flex-1">
+                      <p className={cn("text-[15px] font-bold break-words", d.ativo ? "text-foreground" : "text-muted-foreground")}>{d.descricao}</p>
+                      <p className="text-xs text-muted-foreground">
+                        Todo dia {d.diaVencimento}, {ROTULO_CATEGORIA[d.categoria].toLowerCase()}
+                        {d.origem === "DAS_MEI" && ", automático (MEI)"}
+                        {!d.ativo && ", desativada"}
+                      </p>
+                      {d.ativo && (
+                        <div className="mt-2 flex items-center gap-2" aria-hidden="true">
+                          <div className="h-1.5 max-w-48 flex-1 rounded-full bg-muted">
+                            <div className="h-full rounded-full bg-primary" style={{ width: `${parte}%` }} />
+                          </div>
+                          <span className="text-xs text-muted-foreground tabular-nums">{parte}%</span>
+                        </div>
+                      )}
+                    </div>
+                    <p className="text-right text-[15px] font-extrabold text-foreground tabular-nums">
+                      {d.valorCentavos !== null ? reais(d.valorCentavos) : das !== null ? reais(das) : "—"}
+                      {d.origem === "DAS_MEI" && <span className="block text-xs font-normal text-muted-foreground">valor oficial vigente</span>}
+                    </p>
+                  </>
+                );
+                return (
+                  <li key={d.id}>
+                    {podeEditar ? (
+                      <Link
+                        href={`/financeiro/despesas-fixas/${d.id}`}
+                        className="flex items-start gap-4 px-5 py-3.5 transition-colors duration-(--duracao-estado) hover:bg-accent focus-visible:bg-accent focus-visible:outline-none sm:px-6"
+                      >
+                        {conteudo}
+                      </Link>
+                    ) : (
+                      <div className="flex items-start gap-4 px-5 py-3.5 sm:px-6">{conteudo}</div>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </Superficie>
+
+        {pode(membro.permissoes, "financeiro", "criar") && (
+          <aside className="w-full lg:sticky lg:top-6 lg:w-96">
+            <Superficie aria-labelledby="titulo-nova">
+              <TituloDaSuperficie id="titulo-nova" titulo="Nova despesa fixa" />
+              <FormularioDespesa />
+            </Superficie>
+          </aside>
+        )}
+      </div>
     </div>
   );
 }

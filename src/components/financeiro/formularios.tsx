@@ -1,8 +1,11 @@
 "use client";
 
-import { useActionState, useState, type FormEvent } from "react";
+import { useRouter } from "next/navigation";
+import { useActionState, useEffect, useState, type FormEvent } from "react";
+import { toast } from "sonner";
 import { Aviso, MensagemDeCampo } from "@/components/acesso/campos";
 import { classeDoCampo } from "@/components/ui/classes";
+import { GavetaDaRota } from "@/components/ui/gaveta";
 import { camposDoFormulario, type ErrosDeCampo } from "@/lib/auth/validacao";
 import { somarDias } from "@/lib/dominio/estoque";
 import { CATEGORIAS, DIAS_RETROATIVOS_FINANCEIRO } from "@/lib/dominio/financeiro";
@@ -127,10 +130,13 @@ function Alternativa({ nome, opcoes, padrao, erro, rotulo }: { nome: string; opc
   return (
     <fieldset>
       <legend className="mb-1.5 block text-sm font-medium text-foreground">{rotulo}</legend>
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-2 gap-1 rounded-full bg-muted p-1">
         {opcoes.map(([valor, texto]) => (
-          <label key={valor} className="flex cursor-pointer items-center gap-2 rounded-xl border bg-card px-4 py-3 text-sm text-foreground has-[:checked]:border-primary has-[:checked]:ring-2 has-[:checked]:ring-primary/20">
-            <input type="radio" name={nome} value={valor} defaultChecked={valor === padrao} className="accent-[var(--color-primary)]" />
+          <label
+            key={valor}
+            className="grid h-10 cursor-pointer place-items-center rounded-full px-3 text-center text-sm font-bold text-foreground transition-colors duration-(--duracao-estado) hover:bg-accent has-checked:bg-estrutura has-checked:text-estrutura-foreground has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-ring"
+          >
+            <input type="radio" name={nome} value={valor} defaultChecked={valor === padrao} className="sr-only" />
             {texto}
           </label>
         ))}
@@ -141,11 +147,16 @@ function Alternativa({ nome, opcoes, padrao, erro, rotulo }: { nome: string; opc
 }
 
 /** Lançamento avulso (UC12a): saída por padrão — o caso mais comum é a despesa operacional. */
-export function FormularioLancamento({ hoje }: { hoje: string }) {
+export function FormularioLancamento({ hoje, aoSalvar }: { hoje: string; aoSalvar?: (mensagem: string) => void }) {
   const f = useFormulario(acaoLancarAvulso, (c) => validarLancamento(c, hoje), true);
+  useEffect(() => {
+    if (f.estado.status === "salvo") aoSalvar?.(f.estado.mensagem);
+    // aoSalvar muda a cada renderização do pai; só o resultado da ação importa.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [f.estado]);
   return (
     <div className="space-y-4">
-      <Avisos estado={f.estado} />
+      {!(aoSalvar && f.estado.status === "salvo") && <Avisos estado={f.estado} />}
       <form key={f.chave} action={f.executar} onSubmit={f.aoEnviar} noValidate className="space-y-4">
         <Alternativa nome="tipo" rotulo="Tipo" padrao="SAIDA" erro={f.erros.tipo} opcoes={[["SAIDA", "Saída (despesa)"], ["ENTRADA", "Entrada"]]} />
         <div className="grid gap-4 sm:grid-cols-2">
@@ -265,11 +276,11 @@ export function FormularioPagamento({ contaId, tipo, restanteCentavos, hoje }: {
   return (
     <div className="space-y-3">
       <Avisos estado={f.estado} />
-      <form key={f.chave} action={f.executar} onSubmit={f.aoEnviar} noValidate className="grid gap-4 sm:grid-cols-[1fr_1fr_auto] sm:items-start">
+      <form key={f.chave} action={f.executar} onSubmit={f.aoEnviar} noValidate className="grid gap-4 sm:grid-cols-2 sm:items-start">
         <input type="hidden" name="contaId" value={contaId} />
         <CampoValor id="pag-valor" rotulo={`Valor ${receber ? "recebido" : "pago"} (R$)`} erro={f.erros.valor} limpar={f.limpar} padrao={valorBr(restanteCentavos)} />
         <CampoData id="pag-data" hoje={hoje} erro={f.erros.data} limpar={f.limpar} />
-        <button type="submit" disabled={f.enviando} className={`${botaoPrimario} sm:mt-7`}>
+        <button type="submit" disabled={f.enviando} className={`${botaoPrimario} sm:col-span-2 sm:justify-self-start`}>
           {f.enviando ? "Registrando…" : receber ? "Registrar recebimento" : "Registrar pagamento"}
         </button>
       </form>
@@ -289,7 +300,7 @@ export function FormularioDespesa({ despesa }: { despesa?: DespesaEditavel }) {
       <form key={f.chave} action={f.executar} onSubmit={f.aoEnviar} noValidate className="space-y-4">
         {despesa && <input type="hidden" name="despesaId" value={despesa.id} />}
         {!das && <CampoDescricao id="desp-descricao" erro={f.erros.descricao} limpar={f.limpar} padrao={despesa?.descricao} exemplo="Ex.: Aluguel" />}
-        <div className={das ? "sm:max-w-xs" : "grid gap-4 sm:grid-cols-3"}>
+        <div className={das ? "sm:max-w-xs" : "grid gap-4 sm:grid-cols-2"}>
           {!das && <CampoValor id="desp-valor" rotulo="Valor mensal (R$)" erro={f.erros.valor} limpar={f.limpar} padrao={despesa?.valorCentavos ? valorBr(despesa.valorCentavos) : undefined} />}
           <Campo id="desp-dia" rotulo="Dia de vencimento" erro={f.erros.diaVencimento} dica="1 a 31; em meses mais curtos, o último dia.">
             <input
@@ -325,5 +336,30 @@ export function BotaoAtivo({ despesaId, ativo }: { despesaId: string; ativo: boo
         {ativo ? "Desativar" : "Reativar"}
       </button>
     </form>
+  );
+}
+
+/** Lançamento avulso na gaveta (SPEC-016, OPEN-003): ao salvar, fecha e confirma no aviso flutuante. */
+export function LancamentoNaGaveta({ titulo, descricao, hoje }: { titulo: string; descricao: string; hoje: string }) {
+  const router = useRouter();
+  return (
+    <GavetaDaRota titulo={titulo} descricao={descricao}>
+      <FormularioLancamento
+        hoje={hoje}
+        aoSalvar={(mensagem) => {
+          toast.success(mensagem);
+          router.back();
+        }}
+      />
+    </GavetaDaRota>
+  );
+}
+
+/** Nova conta na gaveta: ao salvar, a ação leva ao detalhe da conta (a gaveta fecha na navegação). */
+export function ContaNaGaveta({ descricao, hoje, tipoPadrao }: { descricao: string; hoje: string; tipoPadrao: "PAGAR" | "RECEBER" }) {
+  return (
+    <GavetaDaRota titulo="Nova conta" descricao={descricao}>
+      <FormularioConta hoje={hoje} tipoPadrao={tipoPadrao} />
+    </GavetaDaRota>
   );
 }

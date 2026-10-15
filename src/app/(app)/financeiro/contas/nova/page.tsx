@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import { TEXTO_DA_CONTA } from "@/components/financeiro/em-gaveta";
 import { FormularioConta } from "@/components/financeiro/formularios";
+import { CabecalhoDePagina } from "@/components/ui/cabecalho-de-pagina";
+import { Superficie } from "@/components/ui/superficie";
 import { exigirPermissao } from "@/lib/auth/servidor";
 import { hoje } from "@/lib/dominio/datas";
 import { pode } from "@/lib/dominio/permissoes";
@@ -14,22 +16,10 @@ export default async function NovaConta({ searchParams }: PageProps<"/financeiro
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
-      <div className="space-y-2">
-        {pode(membro.permissoes, "financeiro", "ver") && (
-          <p className="text-sm">
-            <Link href="/financeiro/contas" className="font-medium text-primary underline-offset-2 hover:underline">
-              ← Contas
-            </Link>
-          </p>
-        )}
-        <h1 className="text-[28px] leading-tight font-extrabold text-foreground">Nova conta</h1>
-        <p className="text-sm text-muted-foreground">
-          Um compromisso com vencimento, como um boleto de fornecedor. As parcelas do cartão e as despesas fixas geram as próprias contas.
-        </p>
-      </div>
-      <section className="rounded-2xl bg-card p-5 sm:p-6">
+      <CabecalhoDePagina voltar={pode(membro.permissoes, "financeiro", "ver") ? { href: "/financeiro/contas", rotulo: "Contas" } : undefined} titulo="Nova conta" descricao={TEXTO_DA_CONTA} />
+      <Superficie>
         <FormularioConta hoje={hoje()} tipoPadrao={tipo === "RECEBER" ? "RECEBER" : "PAGAR"} />
-      </section>
+      </Superficie>
     </div>
   );
 }

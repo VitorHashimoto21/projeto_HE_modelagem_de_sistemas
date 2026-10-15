@@ -1,12 +1,21 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import type { CategoriaLancamento, TipoLancamento } from "@/generated/prisma/enums";
-import { botaoPrimario, CabecalhoDoFinanceiro, reais, ROTULO_CATEGORIA, ROTULO_ORIGEM, Saldo, ValorComSinal } from "@/components/financeiro/exibicao";
+import { ArrowDownLeft, ArrowUpRight, ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import { CabecalhoDoFinanceiro, reais, ROTULO_CATEGORIA, ROTULO_ORIGEM, Saldo, ValorComSinal } from "@/components/financeiro/exibicao";
+import { ProjecaoDoCaixa } from "@/components/financeiro/projecao";
+import { Legenda, TabelaDeValores } from "@/components/graficos/comuns";
+import { GraficoDeFluxo } from "@/components/graficos/fluxo";
 import { Aviso } from "@/components/acesso/campos";
 import { AvisoDoHistorico } from "@/components/planos/avisos";
 import { BotaoEstornar, FormularioSaldoInicial } from "@/components/financeiro/formularios";
 import { classeDoCampo } from "@/components/ui/classes";
+import { classeDoBotao, classeDoLink } from "@/components/ui/estilos";
+import { Numero } from "@/components/ui/numero";
+import { Superficie, TituloDaSuperficie } from "@/components/ui/superficie";
 import { exigirPermissao } from "@/lib/auth/servidor";
+import { carregarProjecao, cartaoSeguro } from "@/lib/dashboard/servicos";
+import { dependenciasDoDashboard } from "@/lib/dashboard/servidor";
 import { financeiro } from "@/lib/db";
 import { dataBrasileira, hoje } from "@/lib/dominio/datas";
 import { CATEGORIAS, competenciaBrasileira, competenciaDoDia, somarMeses } from "@/lib/dominio/financeiro";
@@ -14,21 +23,14 @@ import { pode } from "@/lib/dominio/permissoes";
 import { conferirFinanceiro } from "@/lib/financeiro/conferencia";
 import { inicioDoHistorico, limitarCompetencia } from "@/lib/dominio/planos";
 import { planoDoMembro } from "@/lib/planos/servidor";
+import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Financeiro" };
 
 const MES = /^\d{4}-(0[1-9]|1[0-2])$/;
 const NOMES_DOS_MESES = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
+const dataBr = (dia: string) => `${dia.slice(8, 10)}/${dia.slice(5, 7)}`;
 const nomeDoMes = (comp: string) => `${NOMES_DOS_MESES[Number(comp.slice(5, 7)) - 1]} de ${comp.slice(0, 4)}`;
-
-function Cartao({ rotulo, children, destaque }: { rotulo: string; children: React.ReactNode; destaque?: boolean }) {
-  return (
-    <div className={`rounded-2xl p-5 ${destaque ? "bg-card ring-1 ring-primary/20" : "bg-card"}`}>
-      <p className="text-sm text-muted-foreground">{rotulo}</p>
-      <p className={`mt-1 font-semibold ${destaque ? "text-3xl" : "text-xl"}`}>{children}</p>
-    </div>
-  );
-}
 
 // Fluxo de caixa (SPEC-009, 5.1): Financeiro — ver. Saldo real (RN14), totais do mês e
 // lançamentos com origem; estorno com "excluir"; saldo inicial e avulso com "criar".
@@ -47,7 +49,12 @@ export default async function Caixa({ searchParams }: PageProps<"/financeiro">) 
   const pagina = Number(typeof busca.pagina === "string" ? busca.pagina : "1") || 1;
 
   await conferirFinanceiro(membro);
-  const f = await financeiro(membro).fluxo({ mes, categoria, tipo, pagina }, dia);
+  const consultas = financeiro(membro);
+  const [f, diario, projecao] = await Promise.all([
+    consultas.fluxo({ mes, categoria, tipo, pagina }, dia),
+    consultas.fluxoDiario(mes),
+    cartaoSeguro("projecao", () => carregarProjecao(dependenciasDoDashboard(membro))),
+  ]);
   const podeCriar = pode(membro.permissoes, "financeiro", "criar");
   const podeEstornar = pode(membro.permissoes, "financeiro", "excluir");
   const link = (extra: Record<string, string | number | undefined>) => {
@@ -58,14 +65,40 @@ export default async function Caixa({ searchParams }: PageProps<"/financeiro">) 
     return q ? `/financeiro?${q}` : "/financeiro";
   };
 
+  const comMovimento = diario.filter((d) => d.entradasCentavos || d.saidasCentavos);
+  const navegacaoDoMes = (
+    <nav aria-label="Mês" className="inline-flex items-center gap-1 rounded-full bg-card p-1">
+      {noLimite ? (
+        <span className={classeDoBotao("fantasma", "icone-sm", "pointer-events-none opacity-30")} aria-hidden="true">
+          <ChevronLeft />
+        </span>
+      ) : (
+        <Link href={link({ mes: somarMeses(mes, -1), pagina: undefined })} scroll={false} className={classeDoBotao("fantasma", "icone-sm")} aria-label="Mês anterior">
+          <ChevronLeft aria-hidden="true" />
+        </Link>
+      )}
+      <span className="min-w-36 px-2 text-center text-sm font-bold first-letter:uppercase">{nomeDoMes(mes)}</span>
+      {mes < mesAtual ? (
+        <Link href={link({ mes: somarMeses(mes, 1), pagina: undefined })} scroll={false} className={classeDoBotao("fantasma", "icone-sm")} aria-label="Próximo mês">
+          <ChevronRight aria-hidden="true" />
+        </Link>
+      ) : (
+        <span className={classeDoBotao("fantasma", "icone-sm", "pointer-events-none opacity-30")} aria-hidden="true">
+          <ChevronRight />
+        </span>
+      )}
+    </nav>
+  );
+
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <CabecalhoDoFinanceiro
         atual="caixa"
         titulo="Fluxo de caixa"
         acoes={
           podeCriar && (
-            <Link href="/financeiro/lancar" className={botaoPrimario}>
+            <Link href="/financeiro/lancar" scroll={false} className={classeDoBotao("principal")}>
+              <Plus aria-hidden="true" />
               Novo lançamento
             </Link>
           )
@@ -75,65 +108,77 @@ export default async function Caixa({ searchParams }: PageProps<"/financeiro">) 
       {(ajustado || noLimite) && <AvisoDoHistorico ehDono={membro.papel === "DONO"} />}
       {busca.saldoInicial && <Aviso tipo="sucesso">Saldo inicial registrado. Para corrigi-lo, estorne o lançamento e informe de novo.</Aviso>}
 
-      <section aria-label="Saldo" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Cartao rotulo="Saldo atual" destaque>
-          <Saldo centavos={f.saldoAtualCentavos} />
-        </Cartao>
-        <Cartao rotulo={`Entradas em ${competenciaBrasileira(mes)}`}>
-          <ValorComSinal tipo="ENTRADA" centavos={f.entradasCentavos} />
-        </Cartao>
-        <Cartao rotulo={`Saídas em ${competenciaBrasileira(mes)}`}>
-          <ValorComSinal tipo="SAIDA" centavos={f.saidasCentavos} />
-        </Cartao>
-        <Cartao rotulo="Resultado do mês">
-          <Saldo centavos={f.entradasCentavos - f.saidasCentavos} />
-        </Cartao>
-      </section>
-      <p className="-mt-4 text-xs text-muted-foreground">
-        Só entra no saldo o que foi recebido ou pago de fato. Parcelas do cartão e contas a receber entram quando recebidas.
-      </p>
+      <Superficie tom="estrutura" aria-label="Saldo">
+        <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between md:gap-8">
+          <Numero rotulo="Saldo atual" tamanho="xl" valor={<span className={f.saldoAtualCentavos < 0 ? "text-ambar" : undefined}>{reais(f.saldoAtualCentavos)}</span>} />
+          <dl className="grid grid-cols-3 gap-x-4 gap-y-3 md:max-w-xl md:flex-1 md:gap-x-6">
+            <div>
+              <dt className="text-sm text-estrutura-suave">Entrou em {competenciaBrasileira(mes)}</dt>
+              <dd className="mt-0.5 text-base font-extrabold tabular-nums sm:text-lg">+ {reais(f.entradasCentavos)}</dd>
+            </div>
+            <div>
+              <dt className="text-sm text-estrutura-suave">Saiu em {competenciaBrasileira(mes)}</dt>
+              <dd className="mt-0.5 text-base font-extrabold tabular-nums sm:text-lg">− {reais(f.saidasCentavos)}</dd>
+            </div>
+            <div>
+              <dt className="text-sm text-estrutura-suave">Resultado do mês</dt>
+              <dd className={cn("mt-0.5 text-base font-extrabold tabular-nums sm:text-lg", f.entradasCentavos - f.saidasCentavos < 0 && "text-ambar")}>{reais(f.entradasCentavos - f.saidasCentavos)}</dd>
+            </div>
+          </dl>
+        </div>
+        <p className="mt-5 text-xs text-estrutura-suave">Só entra no saldo o que foi recebido ou pago de fato. Parcelas do cartão e contas a receber entram quando recebidas.</p>
+      </Superficie>
 
       {podeCriar && !f.saldoInicialInformado && (
-        <section aria-labelledby="titulo-saldo-inicial" className="rounded-2xl bg-status-warn-bg p-5 sm:p-6">
-          <h2 id="titulo-saldo-inicial" className="text-[17px] font-bold text-card-foreground">
-            Saldo inicial do caixa
-          </h2>
-          <p className="mt-1 mb-4 text-sm text-foreground">Quanto dinheiro o negócio tinha quando começou a usar o sistema? Informe uma vez; o saldo parte dele.</p>
+        <Superficie tom="atencao" aria-labelledby="titulo-saldo-inicial">
+          <TituloDaSuperficie
+            id="titulo-saldo-inicial"
+            titulo="Saldo inicial do caixa"
+            descricao="Quanto dinheiro o negócio tinha quando começou a usar o sistema? Informe uma vez; o saldo parte dele."
+          />
           <FormularioSaldoInicial hoje={dia} />
-        </section>
+        </Superficie>
       )}
 
-      <section aria-labelledby="titulo-lancamentos" className="rounded-2xl bg-card p-5 sm:p-6">
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <nav aria-label="Mês" className="flex items-center gap-2">
-            {noLimite ? (
-              <span className="px-2 py-1 text-sm text-muted-foreground/40" aria-hidden="true">
-                ←
-              </span>
-            ) : (
-              <Link href={link({ mes: somarMeses(mes, -1), pagina: undefined })} className="rounded-lg px-2 py-1 text-sm font-medium text-primary hover:bg-accent" aria-label="Mês anterior">
-                ←
-              </Link>
-            )}
-            <h2 id="titulo-lancamentos" className="text-[17px] font-bold text-card-foreground first-letter:uppercase">
-              {nomeDoMes(mes)}
-            </h2>
-            {mes < mesAtual ? (
-              <Link href={link({ mes: somarMeses(mes, 1), pagina: undefined })} className="rounded-lg px-2 py-1 text-sm font-medium text-primary hover:bg-accent" aria-label="Próximo mês">
-                →
-              </Link>
-            ) : (
-              <span className="px-2 py-1 text-sm text-muted-foreground/40" aria-hidden="true">
-                →
-              </span>
-            )}
-          </nav>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        {navegacaoDoMes}
+        <p className="text-sm text-muted-foreground tabular-nums">
+          Começou com <Saldo centavos={f.saldoInicioCentavos} className="font-bold" /> e terminou com <Saldo centavos={f.saldoFimCentavos} className="font-bold" />
+        </p>
+      </div>
+
+      <div className="grid gap-6 xl:grid-cols-2 xl:items-start">
+        <Superficie aria-labelledby="titulo-fluxo">
+          <TituloDaSuperficie id="titulo-fluxo" titulo={`Fluxo de ${nomeDoMes(mes).split(" de ")[0]}`} descricao="Entradas acima e saídas abaixo da linha do zero, dia a dia." />
+          <GraficoDeFluxo dias={diario} ate={mes === mesAtual ? dia : diario[diario.length - 1].dia} descricao={`Entradas e saídas por dia em ${nomeDoMes(mes)}`} />
+          <Legenda
+            className="mt-2"
+            itens={[
+              { rotulo: "Entradas", marca: "barra", cor: "var(--chart-1)" },
+              { rotulo: "Saídas", marca: "barra", cor: "var(--chart-2)" },
+            ]}
+          />
+          <TabelaDeValores
+            className="mt-3"
+            legenda={`Entradas e saídas por dia em ${nomeDoMes(mes)}`}
+            colunas={["Dia", "Entradas", "Saídas"]}
+            linhas={comMovimento.length ? comMovimento.map((d) => [dataBr(d.dia), reais(d.entradasCentavos), reais(d.saidasCentavos)]) : [["Nenhum movimento no mês", "—", "—"]]}
+          />
+        </Superficie>
+        {projecao.ok && <ProjecaoDoCaixa dados={projecao.dados} />}
+      </div>
+
+      <Superficie aria-labelledby="titulo-lancamentos" espaco="nenhum">
+        <div className="flex flex-wrap items-center justify-between gap-3 p-5 pb-3 sm:px-6 sm:pt-6">
+          <h2 id="titulo-lancamentos" className="text-[17px] font-bold text-card-foreground">
+            Lançamentos de {nomeDoMes(mes)}
+          </h2>
           <form action="/financeiro" className="flex flex-wrap gap-2">
             {mes !== mesAtual && <input type="hidden" name="mes" value={mes} />}
             <label htmlFor="filtro-tipo" className="sr-only">
               Tipo
             </label>
-            <select id="filtro-tipo" name="tipo" defaultValue={tipo ?? ""} className={`${classeDoCampo()} w-auto py-2`}>
+            <select id="filtro-tipo" name="tipo" defaultValue={tipo ?? ""} className={cn(classeDoCampo(), "h-10 w-auto rounded-full py-0")}>
               <option value="">Entradas e saídas</option>
               <option value="ENTRADA">Só entradas</option>
               <option value="SAIDA">Só saídas</option>
@@ -141,7 +186,7 @@ export default async function Caixa({ searchParams }: PageProps<"/financeiro">) 
             <label htmlFor="filtro-categoria" className="sr-only">
               Categoria
             </label>
-            <select id="filtro-categoria" name="categoria" defaultValue={categoria ?? ""} className={`${classeDoCampo()} w-auto py-2`}>
+            <select id="filtro-categoria" name="categoria" defaultValue={categoria ?? ""} className={cn(classeDoCampo(), "h-10 w-auto rounded-full py-0")}>
               <option value="">Todas as categorias</option>
               {Object.entries(CATEGORIAS).map(([v, r]) => (
                 <option key={v} value={v}>
@@ -149,70 +194,63 @@ export default async function Caixa({ searchParams }: PageProps<"/financeiro">) 
                 </option>
               ))}
             </select>
-            <button type="submit" className="rounded-full border bg-card px-4 py-2 text-sm font-medium text-foreground hover:bg-accent active:scale-[0.96] transition-[background-color,transform] duration-(--duracao-estado)">
+            <button type="submit" className={classeDoBotao("secundario", "sm", "h-10")}>
               Filtrar
             </button>
           </form>
         </div>
 
-        <dl className="mb-4 grid grid-cols-2 gap-x-6 gap-y-1 rounded-xl bg-muted/50 px-4 py-3 text-sm sm:flex sm:flex-wrap sm:justify-between">
-          <div>
-            <dt className="text-muted-foreground">Saldo no início do mês</dt>
-            <dd className="font-medium">
-              <Saldo centavos={f.saldoInicioCentavos} />
-            </dd>
-          </div>
-          <div>
-            <dt className="text-muted-foreground">Saldo no fim do mês</dt>
-            <dd className="font-medium">
-              <Saldo centavos={f.saldoFimCentavos} />
-            </dd>
-          </div>
-        </dl>
-
         {f.lancamentos.length === 0 ? (
-          <p className="text-sm text-muted-foreground">{categoria || tipo ? "Nenhum lançamento com esses filtros neste mês." : "Nenhum lançamento neste mês."}</p>
+          <p className="px-5 pb-6 text-sm text-muted-foreground sm:px-6">{categoria || tipo ? "Nenhum lançamento com esses filtros neste mês." : "Nenhum lançamento neste mês."}</p>
         ) : (
-          <ol className="divide-y">
-            {f.lancamentos.map((l) => (
-              <li key={l.id} className="flex flex-wrap items-start justify-between gap-x-4 gap-y-1 py-3 text-sm">
-                <div className="min-w-0 flex-1">
-                  <p className={`font-medium break-words text-foreground ${l.estornado ? "line-through decoration-muted-foreground" : ""}`}>
-                    {l.venda ? (
-                      <Link href={`/vendas/${l.venda.id}`} className="text-primary underline-offset-2 hover:underline">
-                        {/* O reembolso de venda cancelada (SPEC-011) tem descrição própria. */}
-                        {l.descricao ?? `Venda nº ${l.venda.numero}`}
-                      </Link>
-                    ) : l.conta ? (
-                      <Link href={`/financeiro/contas/${l.conta.id}`} className="text-primary underline-offset-2 hover:underline">
-                        {l.conta.descricao ?? "Conta"}
-                      </Link>
-                    ) : (
-                      (l.descricao ?? ROTULO_ORIGEM[l.origem])
+          <ol className="divide-y border-t">
+            {f.lancamentos.map((l) => {
+              const entrada = l.tipo === "ENTRADA";
+              const Icone = entrada ? ArrowDownLeft : ArrowUpRight;
+              return (
+                <li key={l.id} className="flex items-start gap-3 px-5 py-3.5 text-sm sm:px-6">
+                  <span aria-hidden="true" className={cn("mt-0.5 grid size-8 shrink-0 place-items-center rounded-full", entrada ? "bg-status-ok-bg text-status-ok" : "bg-status-danger-bg text-status-danger")}>
+                    <Icone className="size-4" strokeWidth={2.4} />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className={cn("font-semibold break-words text-foreground", l.estornado && "line-through decoration-muted-foreground")}>
+                      {l.venda ? (
+                        <Link href={`/vendas/${l.venda.id}`} className={classeDoLink()}>
+                          {/* O reembolso de venda cancelada (SPEC-011) tem descrição própria. */}
+                          {l.descricao ?? `Venda nº ${l.venda.numero}`}
+                        </Link>
+                      ) : l.conta ? (
+                        <Link href={`/financeiro/contas/${l.conta.id}`} className={classeDoLink()}>
+                          {l.conta.descricao ?? "Conta"}
+                        </Link>
+                      ) : (
+                        (l.descricao ?? ROTULO_ORIGEM[l.origem])
+                      )}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {dataBrasileira(l.data)}, {ROTULO_ORIGEM[l.origem].toLowerCase()}, {ROTULO_CATEGORIA[l.categoria].toLowerCase()}
+                      {l.registradoPor ? `, ${l.registradoPor}` : l.origem === "CONTA" ? ", automático" : ""}
+                      {l.estornado && ", estornado"}
+                    </p>
+                  </div>
+                  <div className="flex flex-col items-end gap-1">
+                    <ValorComSinal tipo={l.tipo} centavos={l.valorCentavos} />
+                    {podeEstornar && !l.estornado && (l.origem === "AVULSO" || l.origem === "SALDO_INICIAL") && (
+                      <BotaoEstornar lancamentoId={l.id} descricao={`${l.descricao ?? ROTULO_ORIGEM[l.origem]} (${reais(l.valorCentavos)})`} />
                     )}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {dataBrasileira(l.data)} · {ROTULO_ORIGEM[l.origem]} · {ROTULO_CATEGORIA[l.categoria]}
-                    {l.registradoPor ? ` · ${l.registradoPor}` : l.origem === "CONTA" ? " · automático" : ""}
-                    {l.estornado && " · estornado"}
-                  </p>
-                </div>
-                <div className="flex flex-col items-end gap-1">
-                  <ValorComSinal tipo={l.tipo} centavos={l.valorCentavos} />
-                  {podeEstornar && !l.estornado && (l.origem === "AVULSO" || l.origem === "SALDO_INICIAL") && (
-                    <BotaoEstornar lancamentoId={l.id} descricao={`${l.descricao ?? ROTULO_ORIGEM[l.origem]} (${reais(l.valorCentavos)})`} />
-                  )}
-                </div>
-              </li>
-            ))}
+                  </div>
+                </li>
+              );
+            })}
           </ol>
         )}
 
         {f.paginas > 1 && (
-          <nav aria-label="Páginas dos lançamentos" className="mt-4 flex items-center justify-between text-sm">
+          <nav aria-label="Páginas dos lançamentos" className="flex items-center justify-between gap-2 border-t px-5 py-3 text-sm sm:px-6">
             {f.pagina > 1 ? (
-              <Link href={link({ pagina: f.pagina - 1 })} className="font-medium text-primary underline-offset-2 hover:underline">
-                ← Mais novos
+              <Link href={link({ pagina: f.pagina - 1 })} className={classeDoBotao("fantasma", "sm")}>
+                <ChevronLeft aria-hidden="true" />
+                Mais novos
               </Link>
             ) : (
               <span />
@@ -221,15 +259,16 @@ export default async function Caixa({ searchParams }: PageProps<"/financeiro">) 
               Página {f.pagina} de {f.paginas}
             </span>
             {f.pagina < f.paginas ? (
-              <Link href={link({ pagina: f.pagina + 1 })} className="font-medium text-primary underline-offset-2 hover:underline">
-                Mais antigos →
+              <Link href={link({ pagina: f.pagina + 1 })} className={classeDoBotao("fantasma", "sm")}>
+                Mais antigos
+                <ChevronRight aria-hidden="true" />
               </Link>
             ) : (
               <span />
             )}
           </nav>
         )}
-      </section>
+      </Superficie>
     </div>
   );
 }

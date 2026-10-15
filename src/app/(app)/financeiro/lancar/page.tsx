@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import { TEXTO_DO_LANCAMENTO } from "@/components/financeiro/em-gaveta";
 import { FormularioLancamento } from "@/components/financeiro/formularios";
+import { CabecalhoDePagina } from "@/components/ui/cabecalho-de-pagina";
+import { Superficie } from "@/components/ui/superficie";
 import { exigirPermissao } from "@/lib/auth/servidor";
 import { hoje } from "@/lib/dominio/datas";
 import { pode } from "@/lib/dominio/permissoes";
@@ -15,22 +17,10 @@ export default async function Lancar() {
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
-      <div className="space-y-2">
-        {podeVer && (
-          <p className="text-sm">
-            <Link href="/financeiro" className="font-medium text-primary underline-offset-2 hover:underline">
-              ← Fluxo de caixa
-            </Link>
-          </p>
-        )}
-        <h1 className="text-[28px] leading-tight font-extrabold text-foreground">{podeVer ? "Novo lançamento" : "Lançar despesa"}</h1>
-        <p className="text-sm text-muted-foreground">
-          Para despesas e receitas fora das vendas e das contas, como uma compra de material. Vendas e pagamentos de contas entram no caixa sozinhos.
-        </p>
-      </div>
-      <section className="rounded-2xl bg-card p-5 sm:p-6">
+      <CabecalhoDePagina voltar={podeVer ? { href: "/financeiro", rotulo: "Fluxo de caixa" } : undefined} titulo={podeVer ? "Novo lançamento" : "Lançar despesa"} descricao={TEXTO_DO_LANCAMENTO} />
+      <Superficie>
         <FormularioLancamento hoje={hoje()} />
-      </section>
+      </Superficie>
     </div>
   );
 }

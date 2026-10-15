@@ -1,7 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { botaoPrimario, CabecalhoDoFinanceiro, reais, ROTULO_CATEGORIA, SeloDaConta } from "@/components/financeiro/exibicao";
+import { ChevronLeft, ChevronRight, Plus, Receipt } from "lucide-react";
+import { CabecalhoDoFinanceiro, reais, ROTULO_CATEGORIA, SeloDaConta } from "@/components/financeiro/exibicao";
 import { AvisoDoHistorico } from "@/components/planos/avisos";
+import { AvisoDaPagina } from "@/components/ui/aviso";
+import { EstadoVazio } from "@/components/ui/estado-vazio";
+import { classeDoBotao } from "@/components/ui/estilos";
+import { Segmentos } from "@/components/ui/segmentos";
+import { Superficie } from "@/components/ui/superficie";
 import { exigirPermissao } from "@/lib/auth/servidor";
 import { financeiro } from "@/lib/db";
 import type { SituacaoFiltrada } from "@/lib/db/financeiro";
@@ -44,13 +50,14 @@ export default async function Contas({ searchParams }: PageProps<"/financeiro/co
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <CabecalhoDoFinanceiro
         atual="contas"
         titulo="Contas"
         acoes={
           pode(membro.permissoes, "financeiro", "criar") && (
-            <Link href={`/financeiro/contas/nova?tipo=${tipo}`} className={botaoPrimario}>
+            <Link href={`/financeiro/contas/nova?tipo=${tipo}`} scroll={false} className={classeDoBotao("principal")}>
+              <Plus aria-hidden="true" />
               Nova conta
             </Link>
           )
@@ -59,81 +66,72 @@ export default async function Contas({ searchParams }: PageProps<"/financeiro/co
 
       {r.ocultasPeloPlano > 0 && <AvisoDoHistorico ehDono={membro.papel === "DONO"} />}
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div role="tablist" aria-label="Tipo de conta" className="inline-flex rounded-xl border bg-card p-1">
-          {(["PAGAR", "RECEBER"] as const).map((t) => (
-            <Link
-              key={t}
-              role="tab"
-              aria-selected={t === tipo}
-              href={`/financeiro/contas?tipo=${t}&situacao=${situacao}`}
-              className={cn("rounded-lg px-4 py-2 text-sm font-medium", t === tipo ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground")}
-            >
-              {t === "PAGAR" ? "A pagar" : "A receber"}
-            </Link>
-          ))}
-        </div>
-        <nav aria-label="Situação" className="flex flex-wrap gap-1">
-          {SITUACOES.map(([s, rotulo]) => (
-            <Link
-              key={s}
-              href={`/financeiro/contas?tipo=${tipo}&situacao=${s}`}
-              aria-current={s === situacao ? "page" : undefined}
-              className={cn(
-                "rounded-full border px-3 py-1.5 text-xs font-medium",
-                s === situacao ? "border-primary bg-primary/10 text-foreground" : "text-muted-foreground hover:text-foreground",
-              )}
-            >
-              {rotulo}
-              {s === "atrasadas" && r.atrasadas > 0 && <span className="ml-1 font-semibold text-status-danger">({r.atrasadas})</span>}
-            </Link>
-          ))}
-        </nav>
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <Segmentos
+          rotulo="Tipo de conta"
+          itens={(["PAGAR", "RECEBER"] as const).map((t) => ({ href: `/financeiro/contas?tipo=${t}&situacao=${situacao}`, rotulo: t === "PAGAR" ? "A pagar" : "A receber", ativo: t === tipo }))}
+        />
+        <Segmentos
+          rotulo="Situação"
+          itens={SITUACOES.map(([s, rotulo]) => ({
+            href: `/financeiro/contas?tipo=${tipo}&situacao=${s}`,
+            rotulo: s === "atrasadas" && r.atrasadas > 0 ? `${rotulo} (${r.atrasadas})` : rotulo,
+            ativo: s === situacao,
+          }))}
+        />
       </div>
 
       {r.atrasadas > 0 && situacao !== "atrasadas" && (
-        <p role="status" className="rounded-lg bg-status-danger-bg px-4 py-3 text-sm text-status-danger">
-          <span aria-hidden="true">▲ </span>
-          {r.atrasadas} {r.atrasadas === 1 ? "conta atrasada" : "contas atrasadas"} {tipo === "PAGAR" ? "a pagar" : "a receber"}.{" "}
-          <Link href={`/financeiro/contas?tipo=${tipo}&situacao=atrasadas`} className="font-semibold underline underline-offset-2">
-            Ver quais
-          </Link>
-        </p>
+        <AvisoDaPagina tom="erro">
+          {r.atrasadas} {r.atrasadas === 1 ? "conta atrasada" : "contas atrasadas"} {tipo === "PAGAR" ? "a pagar" : "a receber"}. <Link href={`/financeiro/contas?tipo=${tipo}&situacao=atrasadas`}>Ver quais</Link>
+        </AvisoDaPagina>
       )}
 
-      <section aria-label="Lista de contas" className="rounded-2xl bg-card">
-        {r.contas.length === 0 ? (
-          <p className="p-6 text-sm text-muted-foreground">Nenhuma conta nesta situação.</p>
-        ) : (
+      {r.contas.length === 0 ? (
+        <Superficie>
+          <EstadoVazio Icone={Receipt} titulo="Nenhuma conta nesta situação">
+            {situacao === "abertas" ? `Nada ${tipo === "PAGAR" ? "a pagar" : "a receber"} em aberto.` : "Escolha outra situação acima."}
+          </EstadoVazio>
+        </Superficie>
+      ) : (
+        <Superficie espaco="nenhum" aria-label="Lista de contas" className="overflow-hidden">
           <ul className="divide-y">
             {r.contas.map((c) => (
               <li key={c.id}>
-                <Link href={`/financeiro/contas/${c.id}`} className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2 px-6 py-4 transition-colors hover:bg-accent/50">
+                <Link
+                  href={`/financeiro/contas/${c.id}`}
+                  className={cn(
+                    "flex items-start gap-3 px-4 py-3.5 transition-colors duration-(--duracao-estado) hover:bg-accent focus-visible:bg-accent focus-visible:outline-none sm:gap-4 sm:px-5",
+                    c.atrasada && "shadow-[inset_3px_0_0_var(--status-danger)]",
+                  )}
+                >
                   <div className="min-w-0 flex-1">
-                    <p className="font-medium break-words text-foreground">{c.descricao ?? "Conta"}</p>
+                    <p className="text-[15px] font-bold break-words text-foreground">{c.descricao ?? "Conta"}</p>
                     <p className="text-xs text-muted-foreground">
-                      Vence em {dataBr(c.vencimento)} · {ROTULO_CATEGORIA[c.categoria]} · {ORIGEM[c.origem]}
+                      Vence em {dataBr(c.vencimento)}, {ROTULO_CATEGORIA[c.categoria].toLowerCase()}, {ORIGEM[c.origem].toLowerCase()}
                     </p>
                     <div className="mt-1.5">
                       <SeloDaConta tipo={c.tipo} status={c.status} atrasada={c.atrasada} />
                     </div>
                   </div>
-                  <div className="text-right text-sm">
-                    <p className="font-semibold text-foreground tabular-nums">{reais(c.totalCentavos)}</p>
-                    {c.status === "PARCIAL" && <p className="text-xs text-muted-foreground">Restam {reais(c.restanteCentavos)}</p>}
+                  <div className="text-right">
+                    <p className="text-[15px] font-extrabold text-foreground tabular-nums">{reais(c.totalCentavos)}</p>
+                    {c.status === "PARCIAL" && <p className="text-xs text-muted-foreground tabular-nums">Restam {reais(c.restanteCentavos)}</p>}
                   </div>
+                  <ChevronRight aria-hidden="true" className="mt-1 hidden size-4 shrink-0 text-muted-foreground sm:block" />
                 </Link>
               </li>
             ))}
           </ul>
-        )}
-      </section>
+        </Superficie>
+      )}
 
       {r.paginas > 1 && (
-        <nav aria-label="Páginas das contas" className="flex items-center justify-between text-sm">
+        <nav aria-label="Páginas das contas" className="flex items-center justify-between gap-2 text-sm">
           {r.pagina > 1 ? (
-            <Link href={link({ pagina: r.pagina - 1 })} className="font-medium text-primary underline-offset-2 hover:underline">
-              ← Anteriores
+            <Link href={link({ pagina: r.pagina - 1 })} className={classeDoBotao("fantasma", "sm")}>
+              <ChevronLeft aria-hidden="true" />
+              Anteriores
             </Link>
           ) : (
             <span />
@@ -142,8 +140,9 @@ export default async function Contas({ searchParams }: PageProps<"/financeiro/co
             Página {r.pagina} de {r.paginas}
           </span>
           {r.pagina < r.paginas ? (
-            <Link href={link({ pagina: r.pagina + 1 })} className="font-medium text-primary underline-offset-2 hover:underline">
-              Próximas →
+            <Link href={link({ pagina: r.pagina + 1 })} className={classeDoBotao("fantasma", "sm")}>
+              Próximas
+              <ChevronRight aria-hidden="true" />
             </Link>
           ) : (
             <span />

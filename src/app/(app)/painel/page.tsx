@@ -9,7 +9,7 @@ import { BarraEmpilhada, BarrasHorizontais } from "@/components/graficos/barras-
 import { Legenda, TabelaDeValores } from "@/components/graficos/comuns";
 import { Medidor } from "@/components/graficos/medidor";
 import { Minigrafico } from "@/components/graficos/minigrafico";
-import { GraficoDeProjecao } from "@/components/graficos/projecao";
+import { ProjecaoDoCaixa } from "@/components/financeiro/projecao";
 import { ROTULO_ANEXO, ROTULO_ATIVIDADE_MEI, ROTULO_REGIME } from "@/components/negocio/rotulos";
 import { AvisoDaPagina } from "@/components/ui/aviso";
 import { classeDoBotao, classeDoLink } from "@/components/ui/estilos";
@@ -310,42 +310,7 @@ export default async function Painel({ searchParams }: PageProps<"/painel">) {
 
           {projecao &&
             (projecao.ok ? (
-              <Superficie aria-labelledby="titulo-projecao">
-                <TituloDaSuperficie id="titulo-projecao" titulo="Caixa nos próximos meses" descricao={MENSAGENS_DASHBOARD.rodapeProjecao} />
-                <GraficoDeProjecao
-                  meses={projecao.dados.meses.map((m) => ({
-                    chave: m.competencia,
-                    nome: mesPorExtenso(m.competencia).replace(/^./, (c) => c.toUpperCase()),
-                    curto: mesCurto(m.competencia),
-                    entradasCentavos: m.entradasCentavos,
-                    saidasCentavos: m.saidasCentavos,
-                    saldoCentavos: m.saldoProjetadoCentavos,
-                  }))}
-                  descricao="Entradas previstas acima e saídas abaixo da linha do zero, com o saldo previsto em linha"
-                />
-                <Legenda
-                  className="mt-2"
-                  itens={[
-                    { rotulo: "Entradas previstas", marca: "barra", cor: "var(--chart-1)" },
-                    { rotulo: "Saídas previstas", marca: "barra", cor: "var(--chart-2)" },
-                    { rotulo: "Saldo previsto", marca: "linha" },
-                  ]}
-                />
-                {projecao.dados.atrasadas.quantidade > 0 && (
-                  <AvisoDaPagina tom="atencao" className="mt-3">
-                    {projecao.dados.atrasadas.quantidade} {projecao.dados.atrasadas.quantidade === 1 ? "conta atrasada entra" : "contas atrasadas entram"} no mês atual
-                    {projecao.dados.atrasadas.entradasCentavos > 0 && `, ${reais(projecao.dados.atrasadas.entradasCentavos)} a receber`}
-                    {projecao.dados.atrasadas.saidasCentavos > 0 && `, ${reais(projecao.dados.atrasadas.saidasCentavos)} a pagar`}.{" "}
-                    <Link href={`/financeiro/contas?tipo=${projecao.dados.atrasadas.saidasCentavos > 0 ? "PAGAR" : "RECEBER"}&situacao=atrasadas`}>Ver as contas</Link>
-                  </AvisoDaPagina>
-                )}
-                <TabelaDeValores
-                  className="mt-3"
-                  legenda="Caixa previsto por mês"
-                  colunas={["Mês", "Entradas", "Saídas", "Saldo previsto"]}
-                  linhas={projecao.dados.meses.map((m) => [mesPorExtenso(m.competencia), reais(m.entradasCentavos), reais(m.saidasCentavos), reais(m.saldoProjetadoCentavos)])}
-                />
-              </Superficie>
+              <ProjecaoDoCaixa dados={projecao.dados} />
             ) : (
               <Falha cartao="projecao" />
             ))}

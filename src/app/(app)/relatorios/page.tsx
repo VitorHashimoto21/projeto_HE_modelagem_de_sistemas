@@ -1,22 +1,27 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { redirect } from "next/navigation";
+import { Download } from "lucide-react";
 import { Aviso } from "@/components/acesso/campos";
 import { OfertaDoPlanoPago } from "@/components/planos/avisos";
+import { BarraEmpilhada, BarrasHorizontais } from "@/components/graficos/barras-de-parte";
+import { CabecalhoDePagina } from "@/components/ui/cabecalho-de-pagina";
 import { classeDoCampo } from "@/components/ui/classes";
+import { classeDoBotao } from "@/components/ui/estilos";
+import { Segmentos } from "@/components/ui/segmentos";
+import { Selo } from "@/components/ui/selo";
+import { Superficie, TituloDaSuperficie } from "@/components/ui/superficie";
 import { exigirMembro } from "@/lib/auth/servidor";
 import { ROTA_SEM_ACESSO } from "@/lib/auth/rotas";
 import { podeNoPlano } from "@/lib/dominio/planos";
 import { ATALHOS_DE_PERIODO, diaBrasileiro, lerPeriodo, RELATORIOS, type OrdemDaRentabilidade } from "@/lib/dominio/relatorios";
 import { reaisDeCentavos as reais } from "@/lib/dominio/venda";
 import { planoDoMembro } from "@/lib/planos/servidor";
-import { carregarRentabilidade, relatoriosPermitidos } from "@/lib/relatorios/servicos";
+import { carregarFormasDoPeriodo, carregarRentabilidade, relatoriosPermitidos } from "@/lib/relatorios/servicos";
 import { dependenciasDosRelatorios } from "@/lib/relatorios/servidor";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Relatórios" };
 
-const cartao = "rounded-2xl bg-card p-5 sm:p-6";
 const ORDENS: { chave: OrdemDaRentabilidade; rotulo: string }[] = [
   { chave: "margem", rotulo: "Margem" },
   { chave: "faturamento", rotulo: "Faturamento" },
@@ -35,12 +40,7 @@ export default async function Relatorios({ searchParams }: PageProps<"/relatorio
   const [plano, busca] = await Promise.all([planoDoMembro(membro), searchParams]);
   const ehDono = membro.papel === "DONO";
 
-  const cabecalho = (
-    <div>
-      <h1 className="text-[28px] leading-tight font-extrabold text-foreground">Relatórios</h1>
-      <p className="mt-1 text-sm text-muted-foreground">Rentabilidade por item e exportação em CSV (planilha) e PDF.</p>
-    </div>
-  );
+  const cabecalho = <CabecalhoDePagina titulo="Relatórios" descricao="Rentabilidade por item, formas de pagamento e exportação em CSV (planilha) e PDF." />;
 
   if (!podeNoPlano(plano, "relatorios")) {
     return (
@@ -66,7 +66,12 @@ export default async function Relatorios({ searchParams }: PageProps<"/relatorio
   if (!periodo.ok) redirect("/relatorios");
   const ordem = ORDENS.some((o) => o.chave === busca.ordem) ? (busca.ordem as OrdemDaRentabilidade) : "margem";
   const vePermitido = (r: keyof typeof RELATORIOS) => permitidos.includes(r);
-  const rent = vePermitido("rentabilidade") ? await carregarRentabilidade(periodo.de, periodo.ate, ordem, deps) : null;
+  const [rent, formas] = await Promise.all([
+    vePermitido("rentabilidade") ? carregarRentabilidade(periodo.de, periodo.ate, ordem, deps) : null,
+    vePermitido("vendas") ? carregarFormasDoPeriodo(periodo.de, periodo.ate, deps) : null,
+  ]);
+  // "O que mais deixa lucro" (5.5): sempre pela margem, os 8 primeiros, os 3 primeiros em destaque.
+  const ranking = rent ? [...rent.itens].sort((a, b) => b.margemCentavos - a.margemCentavos).slice(0, 8) : [];
   const q = (extra: Record<string, string>) => {
     const base: Record<string, string> = periodo.chave === "datas" ? { de: periodo.de, ate: periodo.ate } : { periodo: periodo.chave };
     return new URLSearchParams({ ...base, ...extra }).toString();
@@ -78,62 +83,65 @@ export default async function Relatorios({ searchParams }: PageProps<"/relatorio
       {typeof busca.erro === "string" && <Aviso tipo="erro">{busca.erro}</Aviso>}
       {!p.ok && <Aviso tipo="erro">{p.erro}</Aviso>}
 
-      <section aria-label="Período" className={cartao}>
-        <nav aria-label="Atalhos de período" className="flex flex-wrap gap-2">
-          {ATALHOS_DE_PERIODO.map((a) => (
-            <Link
-              key={a.chave}
-              href={`/relatorios?${new URLSearchParams({ periodo: a.chave, ordem })}`}
-              aria-current={periodo.chave === a.chave ? "page" : undefined}
-              className={cn("rounded-lg px-3 py-1.5 text-sm font-medium", periodo.chave === a.chave ? "bg-primary text-primary-foreground" : "border text-foreground hover:bg-accent")}
-            >
-              {a.rotulo}
-            </Link>
-          ))}
-        </nav>
-        <form action="/relatorios" className="mt-4 flex flex-wrap items-end gap-3">
+      <section aria-label="Período" className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+        <div className="space-y-2">
+          <Segmentos
+            rotulo="Atalhos de período"
+            itens={ATALHOS_DE_PERIODO.map((a) => ({ href: `/relatorios?${new URLSearchParams({ periodo: a.chave, ordem })}`, rotulo: a.rotulo, ativo: periodo.chave === a.chave }))}
+          />
+          <p className="px-1 text-sm text-muted-foreground">
+            {diaBrasileiro(periodo.de)} a {diaBrasileiro(periodo.ate)}
+          </p>
+        </div>
+        <form action="/relatorios" className="flex flex-wrap items-end gap-2">
           <input type="hidden" name="ordem" value={ordem} />
           <div>
-            <label htmlFor="de" className="text-sm font-medium text-foreground">
+            <label htmlFor="de" className="mb-1.5 block text-sm font-medium text-foreground">
               De
             </label>
-            <input id="de" name="de" type="date" required defaultValue={periodo.de} className={`${classeDoCampo()} mt-1.5`} />
+            <input id="de" name="de" type="date" required defaultValue={periodo.de} className={cn(classeDoCampo(), "h-11 py-0")} />
           </div>
           <div>
-            <label htmlFor="ate" className="text-sm font-medium text-foreground">
+            <label htmlFor="ate" className="mb-1.5 block text-sm font-medium text-foreground">
               Até
             </label>
-            <input id="ate" name="ate" type="date" required defaultValue={periodo.ate} className={`${classeDoCampo()} mt-1.5`} />
+            <input id="ate" name="ate" type="date" required defaultValue={periodo.ate} className={cn(classeDoCampo(), "h-11 py-0")} />
           </div>
-          <button type="submit" className="rounded-full border bg-card px-4 py-3 text-sm font-medium text-foreground hover:bg-accent active:scale-[0.96] transition-[background-color,transform] duration-(--duracao-estado)">
+          <button type="submit" className={classeDoBotao("secundario")}>
             Aplicar
           </button>
         </form>
-        <p className="mt-3 text-sm text-muted-foreground">
-          {diaBrasileiro(periodo.de)} a {diaBrasileiro(periodo.ate)}
-        </p>
       </section>
 
+      {(ranking.length > 0 || formas) && (
+        <div className="grid gap-6 lg:grid-cols-2">
+          {ranking.length > 0 && (
+            <Superficie aria-labelledby="titulo-ranking">
+              <TituloDaSuperficie id="titulo-ranking" titulo="O que mais deixa lucro" descricao="Margem no período: faturamento menos o custo gravado em cada venda." />
+              <BarrasHorizontais itens={ranking.map((i) => ({ chave: i.itemId, nome: i.nome, valorCentavos: i.margemCentavos, detalhe: pct(i.margemPercentual) }))} />
+            </Superficie>
+          )}
+          {formas && (
+            <Superficie aria-labelledby="titulo-formas">
+              <TituloDaSuperficie id="titulo-formas" titulo="Como os clientes pagam" descricao="Vendas concluídas no período, por forma de pagamento." />
+              <BarraEmpilhada itens={formas} descricao={`Formas de pagamento no período: ${formas.map((f) => `${f.nome} ${reais(f.valorCentavos)}`).join(", ")}`} />
+            </Superficie>
+          )}
+        </div>
+      )}
+
       {rent && (
-        <section aria-labelledby="titulo-rentabilidade" className={cartao}>
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-            <h2 id="titulo-rentabilidade" className="text-[17px] font-bold text-card-foreground">
-              Rentabilidade por item
-            </h2>
-            <nav aria-label="Ordenar por" className="flex flex-wrap items-center gap-1 text-sm">
-              <span className="mr-1 text-muted-foreground">Ordenar por</span>
-              {ORDENS.map((o) => (
-                <Link
-                  key={o.chave}
-                  href={`/relatorios?${q({ ordem: o.chave })}`}
-                  aria-current={ordem === o.chave ? "page" : undefined}
-                  className={cn("rounded-lg px-2.5 py-1 font-medium", ordem === o.chave ? "bg-primary text-primary-foreground" : "text-primary hover:bg-accent")}
-                >
-                  {o.rotulo}
-                </Link>
-              ))}
-            </nav>
-          </div>
+        <Superficie aria-labelledby="titulo-rentabilidade">
+          <TituloDaSuperficie
+            id="titulo-rentabilidade"
+            titulo="Rentabilidade por item"
+            acoes={
+              <div className="flex flex-wrap items-center gap-2 text-sm">
+                <span className="text-muted-foreground">Ordenar por</span>
+                <Segmentos rotulo="Ordenar por" itens={ORDENS.map((o) => ({ href: `/relatorios?${q({ ordem: o.chave })}`, rotulo: o.rotulo, ativo: ordem === o.chave }))} />
+              </div>
+            }
+          />
           {rent.itens.length === 0 ? (
             <p className="text-sm text-muted-foreground">Nenhuma venda concluída no período.</p>
           ) : (
@@ -144,7 +152,11 @@ export default async function Relatorios({ searchParams }: PageProps<"/relatorio
                 <li key={i.itemId} className="py-3 text-sm">
                   <p className="font-medium break-words text-foreground">
                     {i.nome}
-                    {i.arquivado && <span className="ml-2 rounded-full border px-2 py-0.5 text-xs font-normal text-muted-foreground">arquivado</span>}
+                    {i.arquivado && (
+                      <Selo tom="neutro" semIcone className="ml-2">
+                        arquivado
+                      </Selo>
+                    )}
                   </p>
                   {i.linhasSemCusto > 0 && (
                     <p className="text-xs text-status-warn">
@@ -209,7 +221,11 @@ export default async function Relatorios({ searchParams }: PageProps<"/relatorio
                     <tr key={i.itemId} className="border-b last:border-b-0">
                       <td className="py-2 pr-3">
                         <span className="font-medium text-foreground">{i.nome}</span>
-                        {i.arquivado && <span className="ml-2 rounded-full border px-2 py-0.5 text-xs text-muted-foreground">arquivado</span>}
+                        {i.arquivado && (
+                          <Selo tom="neutro" semIcone className="ml-2">
+                            arquivado
+                          </Selo>
+                        )}
                         {i.linhasSemCusto > 0 && (
                           <span className="block text-xs text-status-warn">
                             <span aria-hidden="true">▲ </span>custo não informado em {i.linhasSemCusto} {i.linhasSemCusto === 1 ? "venda" : "vendas"}
@@ -240,17 +256,12 @@ export default async function Relatorios({ searchParams }: PageProps<"/relatorio
             </div>
             </>
           )}
-        </section>
+        </Superficie>
       )}
 
-      <section aria-labelledby="titulo-exportar" className={cartao}>
-        <h2 id="titulo-exportar" className="text-[17px] font-bold text-card-foreground">
-          Exportar
-        </h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Do período acima. O CSV abre no Excel ou no LibreOffice; o PDF, em qualquer leitor.
-        </p>
-        <ul className="mt-4 divide-y">
+      <Superficie aria-labelledby="titulo-exportar">
+        <TituloDaSuperficie id="titulo-exportar" titulo="Exportar" descricao="Do período acima. O CSV abre no Excel ou no LibreOffice; o PDF, em qualquer leitor." />
+        <ul className="divide-y">
           {permitidos.map((r) => (
             <li key={r} className="flex flex-wrap items-center justify-between gap-3 py-3">
               <span className="text-sm font-medium text-foreground">{RELATORIOS[r].rotulo}</span>
@@ -260,9 +271,9 @@ export default async function Relatorios({ searchParams }: PageProps<"/relatorio
                     key={f}
                     href={`/relatorios/exportar?${q({ relatorio: r, formato: f })}`}
                     download
-                    className="rounded-lg border px-3 py-1.5 text-sm font-medium text-primary hover:bg-accent"
+                    className={classeDoBotao("secundario", "sm")}
                   >
-                    <span aria-hidden="true">↓ </span>
+                    <Download aria-hidden="true" />
                     {f.toUpperCase()}
                     <span className="sr-only"> de {RELATORIOS[r].rotulo}</span>
                   </a>
@@ -271,7 +282,7 @@ export default async function Relatorios({ searchParams }: PageProps<"/relatorio
             </li>
           ))}
         </ul>
-      </section>
+      </Superficie>
     </div>
   );
 }

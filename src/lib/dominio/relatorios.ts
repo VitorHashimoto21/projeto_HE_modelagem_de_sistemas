@@ -137,3 +137,24 @@ export const RELATORIOS = {
 export type Relatorio = keyof typeof RELATORIOS;
 
 export const nomeDoArquivo = (r: Relatorio, de: string, ate: string, formato: "csv" | "pdf") => `he-${r}-${de}-a-${ate}.${formato}`;
+
+/** Formas de pagamento na ordem fixa das cores (a mesma do Painel — SPEC-016, 5.5). */
+export const FORMAS_NO_GRAFICO = [
+  ["PIX", "PIX"],
+  ["DINHEIRO", "Dinheiro"],
+  ["CREDITO", "Crédito"],
+  ["DEBITO", "Débito"],
+] as const;
+
+/**
+ * "Como os clientes pagam" no período (SPEC-016, 5.5): soma os pagamentos das vendas
+ * concluídas, por forma. O crédito de troca não entra: é valor já pago na venda original.
+ */
+export function somarFormas(vendas: { status: string; pagamentos: { forma: string; valorCentavos: number }[] }[]): { nome: string; valorCentavos: number }[] {
+  const total = new Map<string, number>();
+  for (const v of vendas) {
+    if (v.status !== "CONCLUIDA") continue;
+    for (const p of v.pagamentos) total.set(p.forma, (total.get(p.forma) ?? 0) + p.valorCentavos);
+  }
+  return FORMAS_NO_GRAFICO.map(([forma, nome]) => ({ nome, valorCentavos: total.get(forma) ?? 0 }));
+}

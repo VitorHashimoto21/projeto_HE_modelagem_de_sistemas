@@ -1,7 +1,7 @@
 import type { ConsultasDeRelatorios } from "@/lib/db/relatorios";
 import { pode, type Matriz } from "@/lib/dominio/permissoes";
 import { podeNoPlano, type Plano } from "@/lib/dominio/planos";
-import { calcularRentabilidade, diaBrasileiro, lerPeriodo, nomeDoArquivo, type OrdemDaRentabilidade, type Relatorio, type Rentabilidade } from "@/lib/dominio/relatorios";
+import { calcularRentabilidade, diaBrasileiro, lerPeriodo, nomeDoArquivo, somarFormas, type OrdemDaRentabilidade, type Relatorio, type Rentabilidade } from "@/lib/dominio/relatorios";
 import { csvDaTabela, pdfDaTabela } from "./arquivos";
 import { tabelaDeContas, tabelaDeRentabilidade, tabelaDeVendas, tabelaDoFluxo, type Tabela } from "./tabelas";
 
@@ -31,6 +31,11 @@ export function conferirAcesso(plano: Plano, m: Matriz, r: Relatorio): Recusa | 
 
 export async function carregarRentabilidade(de: string, ate: string, ordem: OrdemDaRentabilidade, deps: DependenciasDosRelatorios): Promise<Rentabilidade> {
   return calcularRentabilidade(await deps.relatorios.rentabilidade(de, ate), ordem);
+}
+
+/** Formas de pagamento das vendas do período (gráfico dos Relatórios — exige o relatório de vendas). */
+export async function carregarFormasDoPeriodo(de: string, ate: string, deps: DependenciasDosRelatorios) {
+  return somarFormas(await deps.relatorios.vendas(de, ate));
 }
 
 async function tabela(r: Relatorio, de: string, ate: string, deps: DependenciasDosRelatorios): Promise<Tabela> {
