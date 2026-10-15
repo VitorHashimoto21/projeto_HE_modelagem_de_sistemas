@@ -16,6 +16,7 @@ export function Gaveta({
   descricao,
   children,
   gatilho,
+  focoAoFechar,
   className,
 }: {
   aberta?: boolean;
@@ -24,6 +25,8 @@ export function Gaveta({
   descricao?: string;
   children: React.ReactNode;
   gatilho?: React.ReactNode;
+  /** Quem recebe o foco ao fechar, quando a gaveta é aberta sem gatilho (carregada sob demanda). */
+  focoAoFechar?: React.RefObject<HTMLElement | null>;
   className?: string;
 }) {
   return (
@@ -32,6 +35,12 @@ export function Gaveta({
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-50 bg-estrutura/45 data-[state=open]:animate-[gaveta-fundo_var(--duracao-layout)_var(--ease-saida)]" />
         <Dialog.Content
+          onCloseAutoFocus={(e) => {
+            if (focoAoFechar?.current) {
+              e.preventDefault();
+              focoAoFechar.current.focus();
+            }
+          }}
           onOpenAutoFocus={(e) => {
             // No computador, o foco vai direto ao primeiro campo; no celular fica no título,
             // para o teclado não cobrir a gaveta antes de a pessoa escolher onde tocar.

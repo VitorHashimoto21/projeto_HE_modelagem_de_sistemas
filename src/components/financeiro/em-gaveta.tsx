@@ -1,4 +1,4 @@
-import { ContaNaGaveta, LancamentoNaGaveta } from "@/components/financeiro/formularios";
+import { ContaNaGaveta, LancamentoNaGaveta } from "@/components/financeiro/formularios-na-gaveta";
 import { exigirPermissao } from "@/lib/auth/servidor";
 import { hoje } from "@/lib/dominio/datas";
 import { pode } from "@/lib/dominio/permissoes";

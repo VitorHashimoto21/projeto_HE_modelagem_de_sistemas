@@ -1,12 +1,9 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useState, type FormEvent } from "react";
-import { toast } from "sonner";
 import { Aviso, MensagemDeCampo } from "@/components/acesso/campos";
 import { classeDoCampo } from "@/components/ui/classes";
 import { classeDoBotao } from "@/components/ui/estilos";
-import { GavetaDaRota } from "@/components/ui/gaveta";
 import { camposDoFormulario, type ErrosDeCampo } from "@/lib/auth/validacao";
 import { MOTIVOS_SAIDA, somarDias } from "@/lib/dominio/estoque";
 import { acaoDefinirMinimo, acaoRegistrarEntrada, acaoRegistrarSaida } from "@/lib/estoque/acoes";
@@ -162,33 +159,6 @@ export function FormularioMovimentacao({
         </button>
       </form>
     </div>
-  );
-}
-
-/** Entrada ou saída na gaveta (OPEN-003): ao salvar, fecha e mostra o aviso flutuante. */
-export function MovimentacaoNaGaveta({
-  titulo,
-  descricao,
-  ...props
-}: {
-  titulo: string;
-  descricao: string;
-  itemId: string;
-  tipo: "entrada" | "saida";
-  hoje: string;
-  unidade: string;
-}) {
-  const router = useRouter();
-  return (
-    <GavetaDaRota titulo={titulo} descricao={descricao}>
-      <FormularioMovimentacao
-        {...props}
-        aoSalvar={(mensagem) => {
-          toast.success(mensagem);
-          router.back();
-        }}
-      />
-    </GavetaDaRota>
   );
 }
 

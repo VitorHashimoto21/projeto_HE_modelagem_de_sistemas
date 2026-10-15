@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import dynamic from "next/dynamic";
 import { useRef, useState } from "react";
 import {
   ArrowDownCircle,
@@ -23,12 +24,14 @@ import {
   Wallet,
   type LucideIcon,
 } from "lucide-react";
-import { Gaveta } from "@/components/ui/gaveta";
 import { acaoSair } from "@/lib/auth/acoes";
 import type { ItemDoMenu } from "@/lib/equipe/menu";
 import { acaoTrocarNegocio } from "@/lib/negocio/acoes";
 import { useTema } from "@/components/tema/alternar-tema";
 import { cn } from "@/lib/utils";
+
+// A gaveta (Radix) só é baixada quando a pessoa abre o "Mais" (SPEC-016, critério de desempenho).
+const Gaveta = dynamic(() => import("@/components/ui/gaveta").then((m) => m.Gaveta), { ssr: false });
 
 // Estrutura do app (SPEC-016, 5.2): menu lateral verde-escuro no computador, trilho de
 // ícones no tablet e barra inferior com "Vender" no celular. Os itens vêm de menuDoMembro
@@ -169,6 +172,7 @@ export function Navegacao({ itens, negocios, ativo, perfil }: Props) {
   const caminho = usePathname();
   const atual = hrefAtivo(caminho, itens);
   const [maisAberto, setMaisAberto] = useState(false);
+  const botaoMais = useRef<HTMLButtonElement>(null);
   const modulos = itens.filter((i) => !CONFIGURACOES.has(i.href));
   const configuracoes = itens.filter((i) => CONFIGURACOES.has(i.href));
 
@@ -294,17 +298,19 @@ export function Navegacao({ itens, negocios, ativo, perfil }: Props) {
             </Link>
           )}
           {quarto && <ItemInferior item={quarto} ativo={atual === quarto.href} rotulo={quarto.href === "/financeiro" ? "Caixa" : undefined} />}
-          <Gaveta
-            aberta={maisAberto}
-            aoMudar={setMaisAberto}
-            titulo="Menu"
-            gatilho={
-              <button type="button" className="flex min-w-14 flex-col items-center gap-0.5 py-1.5 text-[11px] font-semibold focus-visible:outline-2 focus-visible:outline-ambar">
-                <Menu className="size-[22px]" aria-hidden="true" />
-                Mais
-              </button>
-            }
+          <button
+            ref={botaoMais}
+            type="button"
+            aria-haspopup="dialog"
+            aria-expanded={maisAberto}
+            onClick={() => setMaisAberto(true)}
+            className="flex min-w-14 flex-col items-center gap-0.5 py-1.5 text-[11px] font-semibold focus-visible:outline-2 focus-visible:outline-ambar"
           >
+            <Menu className="size-[22px]" aria-hidden="true" />
+            Mais
+          </button>
+          {maisAberto && (
+          <Gaveta aberta aoMudar={setMaisAberto} titulo="Menu" focoAoFechar={botaoMais}>
             <nav aria-label="Todas as áreas" className="flex flex-col gap-1" onClick={() => setMaisAberto(false)}>
               {[...modulos, ...configuracoes].map((i) => {
                 const Icone = ICONES[i.href] ?? LayoutDashboard;
@@ -336,6 +342,7 @@ export function Navegacao({ itens, negocios, ativo, perfil }: Props) {
               </form>
             </nav>
           </Gaveta>
+          )}
         </nav>
       )}
     </>

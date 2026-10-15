@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { rotuloUnidade } from "@/components/catalogo/rotulos";
-import { FormularioMovimentacao, MovimentacaoNaGaveta } from "@/components/estoque/formularios";
+import { FormularioMovimentacao } from "@/components/estoque/formularios";
+import { MovimentacaoNaGaveta } from "@/components/estoque/formulario-na-gaveta";
 import { quantidade } from "@/components/estoque/situacao";
 import { CabecalhoDePagina } from "@/components/ui/cabecalho-de-pagina";
 import { Superficie } from "@/components/ui/superficie";

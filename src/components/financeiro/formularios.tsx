@@ -1,11 +1,8 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useState, type FormEvent } from "react";
-import { toast } from "sonner";
 import { Aviso, MensagemDeCampo } from "@/components/acesso/campos";
 import { classeDoCampo } from "@/components/ui/classes";
-import { GavetaDaRota } from "@/components/ui/gaveta";
 import { camposDoFormulario, type ErrosDeCampo } from "@/lib/auth/validacao";
 import { somarDias } from "@/lib/dominio/estoque";
 import { CATEGORIAS, DIAS_RETROATIVOS_FINANCEIRO } from "@/lib/dominio/financeiro";
@@ -336,30 +333,5 @@ export function BotaoAtivo({ despesaId, ativo }: { despesaId: string; ativo: boo
         {ativo ? "Desativar" : "Reativar"}
       </button>
     </form>
-  );
-}
-
-/** Lançamento avulso na gaveta (SPEC-016, OPEN-003): ao salvar, fecha e confirma no aviso flutuante. */
-export function LancamentoNaGaveta({ titulo, descricao, hoje }: { titulo: string; descricao: string; hoje: string }) {
-  const router = useRouter();
-  return (
-    <GavetaDaRota titulo={titulo} descricao={descricao}>
-      <FormularioLancamento
-        hoje={hoje}
-        aoSalvar={(mensagem) => {
-          toast.success(mensagem);
-          router.back();
-        }}
-      />
-    </GavetaDaRota>
-  );
-}
-
-/** Nova conta na gaveta: ao salvar, a ação leva ao detalhe da conta (a gaveta fecha na navegação). */
-export function ContaNaGaveta({ descricao, hoje, tipoPadrao }: { descricao: string; hoje: string; tipoPadrao: "PAGAR" | "RECEBER" }) {
-  return (
-    <GavetaDaRota titulo="Nova conta" descricao={descricao}>
-      <FormularioConta hoje={hoje} tipoPadrao={tipoPadrao} />
-    </GavetaDaRota>
   );
 }
