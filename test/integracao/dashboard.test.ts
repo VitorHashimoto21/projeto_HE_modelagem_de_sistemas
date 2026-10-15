@@ -265,7 +265,7 @@ describe("consultas da SPEC-016 (T05)", () => {
     expect(lista.map((m) => [m.descricao, m.tipo, m.valorCentavos]).sort()).toEqual(
       [
         ["Algodão", "SAIDA", 1200],
-        ["Venda nº 1", "ENTRADA", 5000],
+        ["Venda nº 1 — PIX", "ENTRADA", 5000],
       ].sort(),
     );
     expect(lista.every((m) => /^\d{2}:\d{2}$/.test(m.hora))).toBe(true);

@@ -11,9 +11,12 @@ import { reaisDeCentavos as reais } from "@/lib/dominio/venda";
 export type MesProjetado = { chave: string; nome: string; curto: string; entradasCentavos: number; saidasCentavos: number; saldoCentavos: number };
 
 const W = 600;
-const H = 250;
+const H = 272;
 const ZERO = 130;
-const META_ALTURA = 110;
+const META_ALTURA = 100;
+// Faixas verticais (unidades do viewBox): o desenho vai até ZERO + META_ALTURA; abaixo dele,
+// a linha do rótulo do menor saldo e, por último, os nomes dos meses — sem sobreposição.
+const LIMITE_DO_DESENHO = ZERO + META_ALTURA;
 
 export function GraficoDeProjecao({ meses, descricao }: { meses: MesProjetado[]; descricao: string }) {
   const [sel, setSel] = useState(0);
@@ -21,18 +24,12 @@ export function GraficoDeProjecao({ meses, descricao }: { meses: MesProjetado[];
   const { teto } = escalaAmigavel(maior, 2);
   const k = META_ALTURA / teto;
   const larg = W / meses.length;
-  const ys = meses.map((m) => Math.max(8, Math.min(H - 20, Math.round(ZERO - m.saldoCentavos * k))));
+  const ys = meses.map((m) => Math.max(8, Math.min(LIMITE_DO_DESENHO, Math.round(ZERO - m.saldoCentavos * k))));
   const menor = meses.reduce((mi, m, i) => (m.saldoCentavos < meses[mi].saldoCentavos ? i : mi), 0);
   const atual = meses[sel];
-  // O rótulo do menor saldo vai para baixo do ponto quando a linha chega até ele vindo de cima
-  // (senão o texto cruza a própria linha).
+  // O rótulo do menor saldo fica sempre abaixo do ponto: os vizinhos do menor saldo estão
+  // acima dele, então a linha nunca passa por ali, e o espaço até os nomes dos meses é reservado.
   const ultimo = menor === meses.length - 1;
-  const vizinho = ultimo ? ys[menor - 1] : menor === 0 ? ys[1] : Math.min(ys[menor - 1], ys[menor + 1]);
-  const linhaVemDeCima = vizinho !== undefined && vizinho < ys[menor];
-  // No último mês, com a linha descendo até ele, o rótulo fica à esquerda do ponto, na mesma
-  // altura (a área abaixo da linha); nos outros casos, abaixo do ponto se couber, senão acima.
-  const aEsquerda = ultimo && linhaVemDeCima;
-  const rotuloAbaixo = !aEsquerda && linhaVemDeCima && ys[menor] + 20 <= H - 24;
   const xDoPonto = menor * larg + larg / 2;
 
   return (
@@ -70,9 +67,9 @@ export function GraficoDeProjecao({ meses, descricao }: { meses: MesProjetado[];
           <circle key={m.chave} cx={i * larg + larg / 2} cy={ys[i]} r="5" className="pointer-events-none fill-foreground stroke-card" strokeWidth="2" />
         ))}
         <text
-          x={aEsquerda ? xDoPonto - 12 : ultimo ? W - 4 : menor === 0 ? 4 : xDoPonto}
-          y={aEsquerda ? ys[menor] + 4 : rotuloAbaixo ? Math.min(H - 24, ys[menor] + 20) : Math.max(14, ys[menor] - 12)}
-          textAnchor={aEsquerda || ultimo ? "end" : menor === 0 ? "start" : "middle"}
+          x={ultimo ? W - 4 : menor === 0 ? 4 : xDoPonto}
+          y={ys[menor] + 18}
+          textAnchor={ultimo ? "end" : menor === 0 ? "start" : "middle"}
           className="pointer-events-none fill-foreground text-[12px] font-bold"
         >
           menor saldo {reais(meses[menor].saldoCentavos)}
