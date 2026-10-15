@@ -486,6 +486,29 @@ export function criarConsultasFinanceiras(cliente: ClienteDoNegocio, negocioId: 
       };
     },
 
+    /**
+     * Entradas e saídas de cada dia do mês (gráfico "Fluxo do mês" — SPEC-016, 5.5). Mesmos
+     * lançamentos dos totais do caixa; o dia é o de São Paulo. Dias sem movimento vêm zerados.
+     */
+    async fluxoDiario(mes: string): Promise<{ dia: string; entradasCentavos: number; saidasCentavos: number }[]> {
+      const periodo = intervaloDaCompetencia(mes);
+      const linhas = await cliente.$queryRaw<{ dia: string; entradas: unknown; saidas: unknown }[]>`
+        SELECT to_char(("data" AT TIME ZONE 'UTC') AT TIME ZONE 'America/Sao_Paulo', 'YYYY-MM-DD') AS dia,
+               COALESCE(SUM(valor) FILTER (WHERE tipo = 'ENTRADA'), 0) AS entradas,
+               COALESCE(SUM(valor) FILTER (WHERE tipo = 'SAIDA'), 0) AS saidas
+        FROM "LancamentoFinanceiro"
+        WHERE "negocioId" = ${negocioId}::uuid AND "data" >= ${periodo.inicio} AND "data" < ${periodo.fim}
+        GROUP BY 1`;
+      const porDia = new Map(linhas.map((l) => [l.dia, l]));
+      const [ano, m] = mes.split("-").map(Number);
+      const dias = new Date(Date.UTC(ano, m, 0)).getUTCDate();
+      return Array.from({ length: dias }, (_, i) => {
+        const dia = `${mes}-${String(i + 1).padStart(2, "0")}`;
+        const l = porDia.get(dia);
+        return { dia, entradasCentavos: l ? centavosDe(l.entradas) : 0, saidasCentavos: l ? centavosDe(l.saidas) : 0 };
+      });
+    },
+
     async saldoInicialInformado(): Promise<boolean> {
       return (await saldoInicialVigente()) > 0;
     },

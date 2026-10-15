@@ -11,6 +11,8 @@ import { validarNegocio } from "@/lib/negocio/validacao";
 import { cnpjValido } from "@/lib/dominio/cnpj";
 import { classeDoCampo } from "@/components/ui/classes";
 import { CamposFiscais, type ValoresFiscais } from "./campos-fiscais";
+import { ChevronLeft } from "lucide-react";
+import { classeDoBotao } from "@/components/ui/estilos";
 
 type AcaoDoFormulario = (anterior: EstadoDoFormularioDeNegocio, form: FormData) => Promise<EstadoDoFormularioDeNegocio>;
 
@@ -51,7 +53,7 @@ function Confirmacao({
   return (
     <div className="space-y-5">
       {avisos.map((a) => (
-        <p key={a} role="note" className="rounded-xl border border-status-warn/30 bg-status-warn-bg px-4 py-3 text-sm text-status-warn">
+        <p key={a} role="note" className="rounded-lg bg-status-warn-bg px-4 py-3 text-sm text-status-warn">
           {a}
         </p>
       ))}
@@ -60,8 +62,9 @@ function Confirmacao({
         <CamposFiscais valores={valores} erros={erros} regimes={regimes} limparErro={limparErro} />
         <BotaoEnviar enviando="Cadastrando…">Cadastrar negócio</BotaoEnviar>
       </form>
-      <button type="button" onClick={aoVoltar} className="text-sm font-medium text-primary underline-offset-2 hover:underline">
-        ← Voltar
+      <button type="button" onClick={aoVoltar} className={classeDoBotao("fantasma", "sm", "-ml-4")}>
+        <ChevronLeft aria-hidden="true" />
+        Voltar
       </button>
     </div>
   );
@@ -138,13 +141,14 @@ function EtapaCnpj({ aoVoltar }: { aoVoltar: () => void }) {
         <button
           type="submit"
           disabled={consultando}
-          className="flex w-full items-center justify-center rounded-xl bg-primary py-3.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-70"
+          className={classeDoBotao("principal", "lg", "w-full")}
         >
           {consultando ? "Consultando…" : "Consultar CNPJ"}
         </button>
       </form>
-      <button type="button" onClick={aoVoltar} className="text-sm font-medium text-primary underline-offset-2 hover:underline">
-        ← Voltar
+      <button type="button" onClick={aoVoltar} className={classeDoBotao("fantasma", "sm", "-ml-4")}>
+        <ChevronLeft aria-hidden="true" />
+        Voltar
       </button>
     </div>
   );
@@ -163,15 +167,15 @@ export function FormularioNovoNegocio() {
   if (modo === "autonomo") return <Confirmacao key={chave} valores={{ regime: "AUTONOMO" }} regimes={["AUTONOMO"]} aoVoltar={voltar} />;
 
   const opcao =
-    "w-full rounded-2xl border bg-card p-5 text-left shadow-sm transition-colors hover:border-primary focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring/15";
+    "w-full rounded-2xl bg-card p-5 text-left ring-1 ring-transparent transition-[box-shadow,transform] duration-(--duracao-estado) hover:ring-primary active:scale-[0.99] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring";
   return (
     <div className="grid gap-4 sm:grid-cols-2">
       <button type="button" className={opcao} onClick={() => setModo("cnpj")}>
-        <span className="block font-display text-lg font-semibold text-card-foreground">Tenho CNPJ</span>
+        <span className="block text-lg font-bold text-card-foreground">Tenho CNPJ</span>
         <span className="mt-1 block text-sm text-muted-foreground">MEI ou Simples Nacional. Preenchemos os dados pela Receita.</span>
       </button>
       <button type="button" className={opcao} onClick={() => setModo("autonomo")}>
-        <span className="block font-display text-lg font-semibold text-card-foreground">Não tenho CNPJ</span>
+        <span className="block text-lg font-bold text-card-foreground">Não tenho CNPJ</span>
         <span className="mt-1 block text-sm text-muted-foreground">Autônomo: você informa o percentual de imposto que paga.</span>
       </button>
     </div>
@@ -189,7 +193,7 @@ export function FormularioDadosDoNegocio({ valores }: { valores: ValoresFiscais 
         <CamposFiscais valores={valores} erros={erros} regimes={regimes} limparErro={limparErro} cnpjEditavel={!valores.cnpj} />
         <BotaoEnviar enviando="Salvando…">Salvar</BotaoEnviar>
       </form>
-      <Link href="/painel" className="text-sm font-medium text-primary underline-offset-2 hover:underline">
+      <Link href="/painel" className={classeDoBotao("fantasma")}>
         Cancelar
       </Link>
     </div>

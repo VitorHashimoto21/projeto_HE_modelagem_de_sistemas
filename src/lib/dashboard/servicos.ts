@@ -72,3 +72,67 @@ export async function cartaoSeguro<T>(nome: string, carregar: () => Promise<T>):
     return { ok: false };
   }
 }
+
+// ---------- Faixa do caixa (SPEC-016, 5.3) ----------
+
+export type TomDaSaude = "ok" | "atencao" | "perigo" | "neutro";
+
+export type DadosDaFaixa = {
+  saldoCentavos: number;
+  tendencia: number[];
+  entrouHojeCentavos: number;
+  saiuHojeCentavos: number;
+  saude: { tom: TomDaSaude; rotulo: string };
+  movimentos: { id: string; hora: string; descricao: string; tipo: "ENTRADA" | "SAIDA"; valorCentavos: number }[];
+};
+
+/** Saúde do mês em uma palavra para a faixa, a partir do semáforo da SPEC-012 (sem fórmula nova). */
+export function saudeDoSemaforo(e: EstadoDoSemaforo): DadosDaFaixa["saude"] {
+  if (e.status === "indisponivel") return { tom: "neutro", rotulo: "Saúde indisponível" };
+  const cor = e.semaforo.cor;
+  if (cor === "vermelho") return { tom: "perigo", rotulo: "Déficit no mês" };
+  if (cor === "amarelo") return { tom: "atencao", rotulo: "Atenção no mês" };
+  if (cor === "verde") return { tom: "ok", rotulo: "Saudável no mês" };
+  return { tom: "ok", rotulo: "Equilíbrio atingido" };
+}
+
+/** Dados da faixa do caixa: as mesmas fontes do Painel (INV-001 da SPEC-012). */
+export async function carregarFaixa(deps: DependenciasDoDashboard): Promise<DadosDaFaixa> {
+  const [diario, movimentos, semaforo] = await Promise.all([
+    deps.dashboard.saldoDiario(deps.hoje),
+    deps.dashboard.movimentosDeHoje(deps.hoje, 500),
+    carregarSemaforo(deps).catch(() => ({ status: "indisponivel", motivo: "inviavel", mensagem: "" }) as EstadoDoSemaforo),
+  ]);
+  const hoje = movimentos.reduce(
+    (s, m) => (m.tipo === "ENTRADA" ? { ...s, entrou: s.entrou + m.valorCentavos } : { ...s, saiu: s.saiu + m.valorCentavos }),
+    { entrou: 0, saiu: 0 },
+  );
+  return {
+    saldoCentavos: diario.length ? diario[diario.length - 1].saldoCentavos : await deps.saldoAtual(deps.hoje),
+    tendencia: diario.map((d) => d.saldoCentavos),
+    entrouHojeCentavos: hoje.entrou,
+    saiuHojeCentavos: hoje.saiu,
+    saude: saudeDoSemaforo(semaforo),
+    movimentos: movimentos.slice(0, 12),
+  };
+}
+
+// ---------- Cartões novos do Painel (SPEC-016, 5.5) ----------
+
+export type FormasDoMes = { itens: { nome: string; valorCentavos: number }[]; taxaCartao: number; taxaCentavos: number };
+
+const NOMES_DAS_FORMAS = { PIX: "PIX", DINHEIRO: "Dinheiro", CREDITO: "Crédito", DEBITO: "Débito" } as const;
+
+/** Formas de pagamento do mês, na ordem fixa das cores, e quanto a maquininha leva (taxa média dos parâmetros). */
+export async function carregarFormas(deps: DependenciasDoDashboard): Promise<FormasDoMes> {
+  const [linhas, parametros] = await Promise.all([deps.dashboard.formasDoMes(deps.hoje), deps.calculadora.precificacao.parametros()]);
+  const valor = (f: keyof typeof NOMES_DAS_FORMAS) => linhas.find((l) => l.forma === f)?.valorCentavos ?? 0;
+  const itens = (Object.keys(NOMES_DAS_FORMAS) as (keyof typeof NOMES_DAS_FORMAS)[]).map((f) => ({ nome: NOMES_DAS_FORMAS[f], valorCentavos: valor(f) }));
+  const taxaCartao = parametros.taxaCartao;
+  return { itens, taxaCartao, taxaCentavos: Math.round(((valor("CREDITO") + valor("DEBITO")) * taxaCartao) / 100) };
+}
+
+/** Vendas dos mesmos 12 meses do ano anterior (só no pago — OPEN-007). */
+export function carregarAnoAnterior(deps: Pick<DependenciasDoDashboard, "dashboard" | "hoje">): Promise<Record<string, number>> {
+  return deps.dashboard.vendasPorMesAnoAnterior(deps.hoje);
+}

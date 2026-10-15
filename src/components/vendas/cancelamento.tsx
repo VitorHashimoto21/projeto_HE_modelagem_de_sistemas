@@ -3,6 +3,7 @@
 import { useActionState, useState } from "react";
 import { Aviso, MensagemDeCampo } from "@/components/acesso/campos";
 import { classeDoCampo } from "@/components/ui/classes";
+import { classeDoBotao } from "@/components/ui/estilos";
 import { FORMAS_DE_REEMBOLSO, MOTIVOS_CANCELAMENTO, reaisDeCentavos } from "@/lib/dominio/venda";
 import { acaoCancelarVenda } from "@/lib/vendas/acoes";
 import { CANCELAMENTO_INICIAL } from "@/lib/vendas/servicos";
@@ -90,7 +91,7 @@ export function FormularioCancelamento({ vendaId, numero, reembolsoCentavos }: {
       <button
         type="submit"
         disabled={enviando}
-        className="rounded-xl bg-destructive px-5 py-3 text-sm font-semibold text-destructive-foreground transition-colors hover:bg-destructive/90 disabled:cursor-not-allowed disabled:opacity-70"
+        className={classeDoBotao("perigo")}
       >
         {enviando ? "Cancelando…" : `Cancelar a venda nº ${numero}`}
       </button>

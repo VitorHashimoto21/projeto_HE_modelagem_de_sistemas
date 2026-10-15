@@ -132,6 +132,7 @@ Também foram corrigidos, sem decisão nova: a ordem do cronograma da Visão (Ca
 | SPEC-013 | Plano gratuito × pago | 005, 012 |
 | SPEC-014 | LGPD: exportação e exclusão de conta | 002, 004, 008 |
 | SPEC-015 *(opcional)* | Cobrança real do plano pago | 013 |
+| SPEC-016 | Design system e redesign (Direção "Balcão") | 002–014 |
 
 ```mermaid
 flowchart LR
@@ -162,6 +163,7 @@ flowchart LR
     S4 --> S14
     S8 --> S14
     S13 -.-> S15[SPEC-015 Cobrança real - opcional]
+    S14 --> S16[SPEC-016 Design system e redesign]
 ```
 
 ### 2.2 Detalhamento
@@ -328,6 +330,16 @@ flowchart LR
 - **Drivers:** AD-QA05, AD-C05 · **ADRs:** ADR-007 (proposta — aprovar antes de gerar a Spec)
 - **Dependências:** SPEC-013
 - **Justificativa da ordem:** fora do caminho crítico do MVP; só substitui o ponto de troca de plano criado na SPEC-013. Feita se sobrar tempo no semestre ou na continuação rumo à produção.
+
+#### SPEC-016 — Design system e redesign (Direção "Balcão")
+- **Spec:** [`specs/SPEC-016.md`](./specs/SPEC-016.md) (🔵 implementada em 15/10/2026 num único PR; aguardando merge e homologação — [evidências](./specs/evidencias/SPEC-016/README.md))
+- **Objetivo:** criar os componentes de interface e de gráfico, os tokens de movimento e a nova estrutura do app, e migrar todas as telas para a Direção B aprovada (estrutura verde-escura, Manrope, faixa do caixa, gráficos interativos), sem mudar comportamento.
+- **Valor entregue:** produto fácil de ler, agradável de manusear e consistente em qualquer tela; visual mantido em componentes, não em cópias.
+- **RF:** RF43, RF44, RF57, RF68, RF70 (apresentação) · **RN:** RN18 (plano nos cartões novos) · **RNF:** RNF01, RNF02, RNF10
+- **Entidades:** nenhuma nova (leituras agregadas de Venda, Pagamento e LancamentoFinanceiro)
+- **Drivers:** AD-QA04 · **Documentos:** `IDENTIDADE_VISUAL.md` (v2)
+- **Dependências:** SPECs 002 a 014 (todas as telas)
+- **Justificativa da ordem:** depois de todas as funcionalidades do MVP, antes da produção: o redesign muda a apresentação de telas que já existem e estão testadas; feito em 6 etapas num único PR (OPEN-006), com homologação ao final.
 
 ---
 

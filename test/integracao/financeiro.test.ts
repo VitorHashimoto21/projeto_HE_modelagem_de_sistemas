@@ -129,6 +129,21 @@ describe("caixa", () => {
     await expect(base.lancamentoFinanceiro.create({ data: { negocioId: negocioA, origem: "AVULSO", tipo: "SAIDA", categoria: "OUTROS", valor: 0 } })).rejects.toThrow(/valor_positivo/);
   });
 
+  it("SPEC-016 T05 — fluxo diário: todos os dias do mês, somas iguais aos totais do caixa, só o negócio", async () => {
+    await vender([{ forma: "PIX", valor: 50 }]);
+    salvo(await servicos.lancarAvulso({ tipo: "SAIDA", valor: "12,30", categoria: "FORNECEDORES", descricao: "Algodão", data: HOJE }, deps()));
+    salvo(await servicos.lancarAvulso({ tipo: "ENTRADA", valor: "99", categoria: "OUTROS", descricao: "Outro negócio", data: HOJE }, deps({ financeiro: fin(negocioB) }, negocioB)));
+
+    const dias = await fin().fluxoDiario(MES);
+    const [ano, mes] = MES.split("-").map(Number);
+    expect(dias).toHaveLength(new Date(Date.UTC(ano, mes, 0)).getUTCDate());
+    expect(dias[0].dia).toBe(`${MES}-01`);
+    expect(dias.find((d) => d.dia === HOJE)).toEqual({ dia: HOJE, entradasCentavos: 5000, saidasCentavos: 1230 });
+    const fluxo = await fin().fluxo({ mes: MES }, HOJE);
+    expect(dias.reduce((s, d) => s + d.entradasCentavos, 0)).toBe(fluxo.entradasCentavos);
+    expect(dias.reduce((s, d) => s + d.saidasCentavos, 0)).toBe(fluxo.saidasCentavos);
+  });
+
   it("T02 — validação no fluxo: data além de 90 dias e futura são recusadas", async () => {
     const r = await servicos.lancarAvulso({ tipo: "ENTRADA", valor: "10", categoria: "OUTROS", descricao: "x", data: "2000-01-01" }, deps());
     expect(r).toMatchObject({ status: "erro", erros: { data: expect.any(String) } });

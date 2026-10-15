@@ -2,9 +2,9 @@
 
 > *A saúde do seu negócio, visual e sob controle.*
 
-Versão navegável deste guia (com prévias ao vivo nos temas claro e escuro): https://claude.ai/artifact/U4zYRjfWbCHKVb3VHGV43e — privada até ser compartilhada pelo menu *Share*.
+**Versão 2 — Direção "Balcão" (SPEC-016, 10/2026).** A versão 1 (02/10/2026: off-white quente, botão âmbar, Fraunces + Outfit) continua no histórico do repositório. Protótipo aprovado da Direção B: quadro "HE — Direções visuais", linha B (14/10/2026).
 
-Guia da identidade visual do produto, construído a partir do protótipo da equipe no Figma (`docs/design/prototipo/`) e das decisões tomadas em entrevista em 02/10/2026. Todos os arquivos citados estão em `docs/design/`.
+Guia da identidade visual do produto. Todos os arquivos citados estão em `docs/design/`. A implementação vive em `src/app/globals.css` (tokens), `src/components/ui/` (componentes) e `src/components/graficos/` (gráficos).
 
 ![Variações do logo](identidade/logo/folha-de-variacoes.png)
 
@@ -14,9 +14,10 @@ Guia da identidade visual do produto, construído a partir do protótipo da equi
 
 | Elemento | Decisão |
 |---|---|
-| **Nome** | **Health Enterprise** — abreviado como **HE** em espaços pequenos. Substitui "HE Solutions" e "GestorPRO", que apareciam no protótipo. |
-| **Símbolo** | **Broto saudável**: um broto crescendo, que representa o negócio saudável que se desenvolve. As folhas em âmbar remetem a dinheiro e energia; o fundo verde-escuro, a estabilidade. |
-| **Direção visual** | A do protótipo: verde-escuro profundo + destaque âmbar + fundo off-white quente, com títulos serifados (Fraunces) e texto sem serifa (Outfit). Os tons foram ajustados para cumprir o contraste da WCAG 2.1 AA. |
+| **Nome** | **Health Enterprise** — abreviado como **HE** em espaços pequenos. |
+| **Símbolo** | **Broto saudável**: um broto crescendo, que representa o negócio saudável que se desenvolve. As folhas em âmbar remetem a dinheiro e energia; o verde-escuro, a estabilidade. |
+| **Direção visual** | **"Balcão"**: a estrutura do app (menu, barra inferior, faixa do caixa) em verde-escuro, o conteúdo sobre um fundo neutro levemente frio, ações em verde e o âmbar **só** como destaque da marca. Uma fonte só, a **Manrope**. |
+| **Assinatura** | A **faixa do caixa**: saldo, tendência dos últimos 30 dias e a saúde do mês, no topo de todas as telas para quem vê o Dashboard completo. É o que torna o produto reconhecível. |
 | **Personalidade** | Simples, acolhedor e confiável. Sem jargão contábil: o público (personas Camila, Thiago, Gisele e Lucas) quer clareza, não termos técnicos. |
 
 ---
@@ -27,8 +28,8 @@ Guia da identidade visual do produto, construído a partir do protótipo da equi
 
 | Arquivo | Uso |
 |---|---|
-| `he-logo-horizontal.svg` / `.png` | Padrão em fundos claros (cabeçalho do app, documentos). |
-| `he-logo-horizontal-negativo.svg` / `.png` | Fundos escuros (painel do login, tema escuro). Usa o broto **sem** o quadrado, porque o quadrado verde some sobre fundos escuros. |
+| `he-logo-horizontal.svg` / `.png` | Padrão em fundos claros (documentos, telas públicas no tema claro). |
+| `he-logo-horizontal-negativo.svg` / `.png` | Fundos escuros (estrutura do app, painel das telas de acesso, tema escuro). Usa o broto **sem** o quadrado. |
 | `he-logo-vertical.svg` / `.png` | Telas de abertura, capas de apresentação. |
 | `he-simbolo.svg` / `he-simbolo-512.png` | Ícone isolado, avatar, menu recolhido. |
 | `he-simbolo-sem-fundo.svg` | Símbolo sobre o verde da marca. |
@@ -44,73 +45,52 @@ O texto "Health Enterprise" dos SVGs está convertido em contornos (não depende
 
 ### 2.3 Favicon e ícones de app (`identidade/favicon/`)
 
-`favicon.svg`, `favicon.ico` (16/32/48 px), `favicon-16/32/48.png`, `apple-touch-icon.png` (180 px), `icon-192.png`, `icon-512.png`, `icon-maskable-512.png` (ícone adaptável do Android, com o broto dentro da zona segura) e `site.webmanifest` (nome, cores e ícones para instalar o app no celular).
+`favicon.svg`, `favicon.ico` (16/32/48 px), `favicon-16/32/48.png`, `apple-touch-icon.png` (180 px), `icon-192.png`, `icon-512.png`, `icon-maskable-512.png` e `site.webmanifest`. O `theme-color` do app é a cor da estrutura, `#12342c`.
 
 ---
 
 ## 3. Cores
 
-As cores são definidas como **tokens** em [`identidade/tokens/tokens.css`](identidade/tokens/tokens.css), no formato do TailwindCSS v4 + shadcn/ui, com um conjunto para o tema claro e outro para o escuro. Use sempre o **token** (ex.: `bg-primary`, `text-muted-foreground`), nunca o código hex direto no componente.
+As cores são **tokens** em [`identidade/tokens/tokens.css`](identidade/tokens/tokens.css), copiados para `src/app/globals.css` (o teste `test/unit/tokens.test.ts` confere que são idênticos). Use sempre o **token** (ex.: `bg-primary`, `text-muted-foreground`), nunca o código hex no componente — o teste `test/unit/design-system.test.ts` recusa hex, `rgb()` e `rgba()` nas telas.
 
 ### 3.1 Tema claro
 
 | Token | Hex | Uso |
 |---|---|---|
-| `background` | `#faf9f7` | Fundo das telas |
-| `card` | `#ffffff` | Cartões, campos, menus |
-| `foreground` | `#0d1f1a` | Texto principal |
-| `muted-foreground` | `#5f6670` | Texto secundário, rodapés |
-| `primary` / `primary-hover` | `#b45309` / `#92400e` | Botão principal, links |
-| `border` | `#e5e2dc` | Divisórias decorativas |
-| `input` | `#8a8f98` | Borda de campos de formulário |
-| `ring` | `#b45309` | Anel de foco do teclado |
-| `destructive` | `#b91c1c` | Erros, ações destrutivas |
-| `brand` / `brand-deep` | `#163028` / `#0d1f1a` | Fundo do símbolo, painel institucional |
-| `brand-amber` / `brand-amber-light` | `#f59e0b` / `#fbbf24` | Folhas do broto e destaques **somente sobre fundos verdes** |
+| `background` | `#eef3f1` | Fundo das telas (neutro levemente frio) |
+| `card` | `#ffffff` | Superfícies (cartões), campos, gavetas |
+| `foreground` | `#12201c` | Texto principal |
+| `muted` / `muted-foreground` | `#e4ece8` / `#5a6863` | Preenchimentos discretos (trilhos, segmentos) / texto de apoio |
+| `primary` / `primary-hover` | `#1d6a51` / `#134e3b` | Ação principal, links, foco |
+| `border` / `input` / `ring` | `#dce3e0` / `#7a8882` / `#1d6a51` | Divisórias, borda de campos, anel de foco |
+| `destructive` | `#b42318` | Erros e ações destrutivas |
+| `estrutura` / `estrutura-foreground` / `estrutura-suave` | `#12342c` / `#ffffff` / `#a9c2b9` | Menu, barra inferior, faixa do caixa, destaques escuros |
+| `ambar` / `ambar-foreground` | `#f5a524` / `#1f1500` | **Só destaque da marca**: "Vender", "Finalizar venda", item ativo do menu, selo "Plano pago" |
 
 ### 3.2 Tema escuro
 
 | Token | Hex | Uso |
 |---|---|---|
-| `background` / `card` | `#0b1714` / `#12241f` | Fundo e cartões |
-| `foreground` / `muted-foreground` | `#ecebe7` / `#a7b0ab` | Texto principal e secundário |
-| `primary` / `primary-hover` | `#f59e0b` / `#fbbf24` | Botão principal (texto escuro sobre ele), links |
-| `border` / `input` / `ring` | `#24392f` / `#6f817a` / `#fbbf24` | Divisórias, campos, foco |
+| `background` / `card` / `muted` | `#0b1714` / `#12241f` / `#1a2e28` | Fundo, superfícies, preenchimentos |
+| `foreground` / `muted-foreground` | `#ecebe7` / `#a7b0ab` | Texto principal e de apoio |
+| `primary` / `primary-hover` | `#3dbf93` / `#62d3ab` | Ação principal (texto escuro sobre ele) |
+| `border` / `input` / `ring` | `#24392f` / `#6f817a` / `#f5a524` | Divisórias, campos, foco |
 | `destructive` | `#f87171` | Erros |
+| `estrutura` / `estrutura-suave` | `#0f2a23` / `#9db8ae` | Estrutura do app |
 
-O tema escuro foi definido **cor a cor** a partir das mesmas famílias, e não invertendo automaticamente o claro. Ele é ativado pela classe `.dark` no `<html>`.
+O tema escuro foi definido **cor a cor**, e não invertendo o claro. Ele é ativado pela classe `.dark` no `<html>`, aplicada antes da pintura a partir da escolha gravada (`he-tema`); o botão de tema existe no menu e nas telas públicas.
 
 ### 3.3 Contraste verificado
 
-Todos os pares de texto e de elementos de interface foram medidos pela WCAG 2.1: mínimo de **4,5:1** para texto e **3:1** para bordas e foco. São **36 pares (18 por tema) e todos passam**; o script [`identidade/tokens/validar_contraste.py`](identidade/tokens/validar_contraste.py) refaz a verificação e deve ser executado sempre que uma cor mudar.
+Todos os pares de texto e de interface foram medidos pela WCAG 2.1: **4,5:1** para texto e **3:1** para bordas, foco e marcas de gráfico. São **48 pares nos dois temas, todos OK**; o script [`identidade/tokens/validar_contraste.py`](identidade/tokens/validar_contraste.py) refaz a verificação e deve ser executado sempre que uma cor mudar. Destaques: texto sobre o fundo 14,99:1; branco sobre o verde de ação 6,50:1; âmbar sobre a estrutura 6,62:1; texto escuro sobre o âmbar 8,83:1.
 
-Correções em relação ao protótipo:
-
-| Elemento | Protótipo | Agora |
-|---|---|---|
-| Botão "Entrar" (branco sobre âmbar) | `#d97706` → 3,19:1 ✗ | `#b45309` → 5,02:1 ✓ |
-| Links âmbar | 3,03:1 ✗ | 4,77:1 ✓ |
-| Hover dos links (âmbar claro) | 1,59:1 ✗ | `#92400e` → 7,09:1 ✓ |
-| Mensagens de erro | `#ef4444` → 3,76:1 ✗ | `#b91c1c` → 6,47:1 ✓ |
-| Rodapé e textos apagados (opacidade) | ~2,3:1 ✗ | `muted-foreground` → 5,51:1 ✓ |
-| Borda dos campos | 1,47:1 ✗ | `#8a8f98` → 3,25:1 ✓ |
+Além do script, a varredura **axe** (WCAG 2.1 A/AA) roda em todas as telas, nos dois temas, sem nenhuma violação grave ou crítica (evidências da SPEC-016).
 
 ### 3.4 Pré-paleta
 
 ![Pré-paleta](identidade/tokens/pre-paleta.png)
 
-Escalas de 50 (mais claro) a 950 (mais escuro) nas famílias **Verde**, **Âmbar** e **Neutro**, ancoradas nas cores já aprovadas. São a fonte de onde novos tons devem sair (fundos de seção, ilustrações, estados), sem inventar cores fora delas.
-
-| Família | Tons que já são tokens | Texto sobre fundo claro | Texto sobre fundo escuro |
-|---|---|---|---|
-| Verde | 900 = `brand`, 950 = `brand-deep` | a partir de 600 | até 500 |
-| Âmbar | 400/500 = folhas do broto, 500 = `primary` escuro, 700 = `primary` claro, 800 = hover | a partir de 700 | até 600 |
-| Neutro | 50 = `background`, 100 = `muted`, 200 = `border` | a partir de 600 | até 500 |
-
-- No código: classes do Tailwind como `bg-verde-100`, `text-ambar-700`, `border-neutro-300` (definidas em `tokens.css`).
-- Arquivos: [`pre-paleta.json`](identidade/tokens/pre-paleta.json) (valores) e [`tokens-design-system.json`](identidade/tokens/tokens-design-system.json) (todos os tokens, com nota de uso).
-- O âmbar `600` (`#d97706`, a cor do protótipo original) **não** serve de fundo para texto branco (3,2:1).
-- Quando um tom passar a ter papel fixo na interface, crie um token semântico para ele e rode `validar_contraste.py`.
+Escalas de 50 a 950 nas famílias **Verde**, **Âmbar** e **Neutro** — a fonte de novos tons, sem inventar cores fora delas. Quando um tom passar a ter papel fixo na interface, crie um token semântico e rode `validar_contraste.py`. Arquivos: [`pre-paleta.json`](identidade/tokens/pre-paleta.json) e [`tokens-design-system.json`](identidade/tokens/tokens-design-system.json).
 
 ---
 
@@ -118,17 +98,17 @@ Escalas de 50 (mais claro) a 950 (mais escuro) nas famílias **Verde**, **Âmbar
 
 | Status | Ícone | Texto / fundo (claro) | Texto / fundo (escuro) |
 |---|---|---|---|
-| **Saudável** | ✓ (check) | `#166534` / `#e8f5ec` — 6,35:1 | `#4ade80` / `#123524` — 7,72:1 |
-| **Atenção** | ⚠ (triângulo) | `#8a5a00` / `#fdf6d8` — 5,46:1 | `#facc15` / `#3a3110` — 8,43:1 |
-| **Déficit** | ↓ (seta para baixo) | `#b91c1c` / `#fdeceb` — 5,66:1 | `#f87171` / `#3b1717` — 5,75:1 |
+| **Saudável** | ✓ (check) | `#166534` / `#e8f5ec` | `#4ade80` / `#123524` — 7,72:1 |
+| **Atenção** | ⚠ (triângulo) | `#8a5a00` / `#fdf6d8` | `#facc15` / `#3a3110` — 8,43:1 |
+| **Déficit** | ↓ (seta para baixo) | `#b42318` / `#fdeceb` | `#f87171` / `#3b1717` — 5,75:1 |
 
-**Regra:** o status **nunca é comunicado só pela cor**. Ele aparece sempre com ícone e rótulo escrito ("Saudável", "Atenção", "Déficit"). Isso evita que o âmbar da marca seja confundido com "atenção" e atende pessoas daltônicas. Componente de referência: [`identidade/componentes/SemaforoSaude.tsx`](identidade/componentes/SemaforoSaude.tsx).
-
-As cores de status são **reservadas**: não podem ser usadas em séries de gráficos nem para decoração.
+**Regra:** o status **nunca é comunicado só pela cor** — sempre ícone + rótulo escrito. O componente é o `Selo` (`src/components/ui/selo.tsx`, tons `ok`, `atencao`, `perigo`, `neutro`, `info`). As cores de status são **reservadas**: não servem para séries de gráficos nem para decoração.
 
 ---
 
-## 5. Cores dos gráficos (Dashboard)
+## 5. Gráficos
+
+### 5.1 Paleta
 
 | Série | Claro | Escuro |
 |---|---|---|
@@ -137,63 +117,102 @@ As cores de status são **reservadas**: não podem ser usadas em séries de grá
 | 3 | `#2a78d6` | `#3987e5` |
 | 4 | `#d55181` | `#d55181` |
 | 5 | `#4a3aa7` | `#9085e9` |
+| Contexto (`chart-neutro`) | `#84948d` | `#647770` |
 
-Paleta validada nos dois temas: separação para os principais tipos de daltonismo (protanopia, deuteranopia e tritanopia), separação para visão normal, faixa de luminosidade e contraste ≥ 3:1 com o fundo dos cartões. Regras de uso:
+Validada nos dois temas (daltonismo, visão normal, luminosidade, contraste ≥ 3:1 com o cartão). A série de contexto serve para "o resto" quando poucos itens estão em destaque.
 
-- As cores são atribuídas **sempre na mesma ordem** e seguem a entidade, não a posição (um filtro não repinta as séries que sobram).
-- **No máximo 5 séries.** A partir da 6ª, agrupe em "Outros" ou divida em gráficos menores.
-- Um único eixo vertical (nunca dois eixos com escalas diferentes).
-- Legenda sempre presente com 2 ou mais séries; valores e rótulos em cor de texto, nunca na cor da série.
+### 5.2 Regras (todas)
+
+- Cores **sempre na mesma ordem**, seguindo a entidade (um filtro não repinta o que sobra); no máximo 5 séries.
+- **Um único eixo vertical.** Entradas e saídas aparecem acima e abaixo da linha do zero — a posição separa, a cor só reforça.
+- Valores e rótulos na cor do texto, nunca na cor da série; legenda com 2 ou mais séries; rótulo direto só onde importa (ex.: o menor saldo da projeção).
+- **Balão** com o valor ao passar o mouse, tocar ou focar pelo teclado (um quadro acima do gráfico, região viva para leitores de tela); área de toque maior que a marca.
+- **"Ver os valores"**: toda figura tem a tabela com os mesmos números.
+- Desenhados em SVG no servidor; no navegador, só a camada do balão.
+
+### 5.3 Catálogo de gráficos
+
+| Gráfico | Componente | Onde |
+|---|---|---|
+| Vendas (30 dias / 12 meses), com média, parcial hachurado e ano anterior | `GraficoDeBarras` | Painel, Vendas |
+| Meta do mês (faturado, ritmo, equilíbrio, meta) | `Medidor` | Painel |
+| Caixa nos próximos meses | `GraficoDeProjecao` / `ProjecaoDoCaixa` | Painel, Financeiro |
+| Fluxo do mês, por dia | `GraficoDeFluxo` | Financeiro |
+| Como os clientes pagam; para onde vai cada venda | `BarraEmpilhada` | Painel, Relatórios, Calculadora |
+| O que mais deixa lucro | `BarrasHorizontais` | Painel, Relatórios |
+| Tendência do saldo | `Minigrafico` | Faixa do caixa, telas de acesso (ilustração) |
 
 ---
 
 ## 6. Tipografia
 
-| Papel | Fonte | Pesos | Uso |
-|---|---|---|---|
-| Títulos e valores de destaque | **Fraunces** (serifada) | 600, 700 | Títulos de tela, valores de KPI (ex.: "R$ 1.284,00"), logo |
-| Texto e interface | **Outfit** (sem serifa) | 400, 500, 600 | Texto corrido, rótulos, botões, tabelas |
+Uma família só: **Manrope** (sem serifa, geométrica e legível em números), servida pelo próprio app com `next/font` — sem chamada ao Google em tempo de execução.
 
-Escala sugerida: título de tela 30–36 px · título de seção 18–20 px · KPI 28 px · texto 14–16 px · auxiliar 12–13 px. Valores monetários usam algarismos tabulares (`font-variant-numeric: tabular-nums`) para alinhar em tabelas.
-
-**Carregamento:** na aplicação, as fontes devem ser **servidas pelo próprio app** com `next/font/google` (Next.js baixa e hospeda as fontes no build). Assim não há chamada ao Google em tempo de execução (melhor para desempenho e para a LGPD) e a tela não depende de serviço externo. O `@import` do Google Fonts em `tokens.css` serve só para visualizar os arquivos de referência.
-
----
-
-## 7. Componentes base
-
-![Componentes base nos temas claro e escuro](identidade/componentes/componentes-base.png)
-
-Referência visual em [`identidade/componentes/componentes-base.html`](identidade/componentes/componentes-base.html): botões (primário, secundário, contorno, destrutivo, desabilitado, com hover e foco), campos (normal, foco, erro com mensagem), selos do semáforo, cartões de indicador e alertas. Na implementação, os componentes vêm do **shadcn/ui**, que já lê os tokens de `tokens.css`. O selo do semáforo é um componente próprio (`SemaforoSaude.tsx`).
-
-Raio de borda padrão: 12 px (`--radius`), com 16 px em cartões.
-
----
-
-## 8. Tela de login revisada
-
-| Web | Web — tema escuro |
+| Papel | Tamanho / peso |
 |---|---|
-| ![](prototipo_revisado/login_web.png) | ![](prototipo_revisado/login_web_escuro.png) |
+| Título de tela | 28 px, 800 (`text-[28px] font-extrabold`) |
+| Título de superfície | 17 px, 700 |
+| Número de destaque | 32–46 px, 800, algarismos tabulares (`Numero`) |
+| Texto | 14–15 px, 400–600 |
+| Apoio | 12–13 px, cor `muted-foreground` |
 
-| Tablet | Smartphone | Smartphone — validação |
-|---|---|---|
-| ![](prototipo_revisado/login_tablet.png) | ![](prototipo_revisado/login_smartphone.png) | ![](prototipo_revisado/login_smartphone_erros.png) |
-
-Código em [`prototipo_revisado/App.tsx`](prototipo_revisado/App.tsx). Mudanças em relação ao protótipo original:
-
-- Nome e logo oficiais; "© 2026 Health Enterprise" no rodapé.
-- Botão **"Continuar com Google" removido**: a baseline define login só por e-mail e senha (RF01, ADR-003). Login social fica no roadmap.
-- Cores via tokens, com contraste corrigido; estados de hover legíveis.
-- Campos com `aria-invalid` e mensagem de erro ligada ao campo (`aria-describedby`); "Esqueci a senha" e "Crie gratuitamente" viraram links (`<a>`), pois navegam para outra página.
-- Título do painel alinhado ao slogan do produto: "A saúde do seu negócio, visual e sob controle."
-- Suporte ao tema escuro.
+Valores monetários e quantidades usam `tabular-nums`. Linhas de texto corrido com até ~72 caracteres (documentos legais).
 
 ---
 
-## 9. Aplicação nas Specs
+## 7. Estrutura do app e componentes
 
-- **SPEC-001 (Fundação):** copiar `tokens.css` para `src/app/globals.css`, configurar Fraunces e Outfit com `next/font/google`, colocar os arquivos de `favicon/` em `src/app/` e `public/`, e definir os metadados (nome, `theme-color` `#163028`).
-- **SPEC-002 (Acesso):** a tela de login segue `prototipo_revisado/`.
-- **SPEC-012 (Dashboard):** semáforo com `SemaforoSaude` e gráficos com a paleta da seção 5.
-- Qualquer cor nova deve entrar como token e passar por `validar_contraste.py` antes de ser usada.
+### 7.1 Estrutura
+
+| Largura | Navegação |
+|---|---|
+| ≥ 1024 px | Menu lateral verde-escuro com módulos, configurações e o seletor de negócio |
+| 640–1023 px | Trilho só com ícones |
+| < 640 px | Barra superior + barra inferior flutuante: Painel, Vendas, **Vender** (âmbar), Caixa (ou Estoque) e Mais (gaveta) |
+
+A **faixa do caixa** fica no topo de todas as telas (versão compacta) e em destaque no Painel (versão grande), só para quem vê o Dashboard completo. Depois de uma venda, o saldo ganha um destaque curto (o "momento-assinatura").
+
+### 7.2 Componentes (`src/components/ui/`)
+
+| Componente | Para quê |
+|---|---|
+| `classeDoBotao(variante, tamanho)` | Botões em pílula: `principal`, `secundario`, `perigo`, `fantasma`, `ambar`, `na-estrutura` |
+| `Superficie` / `TituloDaSuperficie` | Cartões por hierarquia: `cartao` (20 px), `estrutura` (24 px, destaque escuro), `recuo`, `atencao`, `perigo` — sem borda nem sombra repetidas |
+| `CabecalhoDePagina` | Título, descrição, ações e o "voltar" |
+| `Numero` | Número de destaque com rótulo e detalhe |
+| `Selo` | Status com ícone + texto |
+| `AvisoDaPagina` | Aviso na tela (sucesso, erro, atenção, informação) |
+| `avisar()` / `AvisosFlutuantes` | Confirmação flutuante depois de uma ação, com o mesmo verbo do botão |
+| `Segmentos` | Filtros e visões como links (funcionam sem JavaScript e mantêm a URL) |
+| `EstadoVazio` / `Esqueleto` | Tela vazia que convida à ação; carregamento |
+| `Gaveta` / `GavetaDaRota` | Formulários curtos por cima da tela, com URL própria (rotas interceptadas) |
+
+Raio: 20 px nas superfícies, 24 px nos destaques escuros, 16 px nos recuos; pílula em botões e segmentos.
+
+### 7.3 Movimento
+
+Tokens: `--duracao-toque` 120 ms, `--duracao-estado` 220 ms, `--duracao-layout` 360 ms e a curva `--ease-saida`. Só três usos: resposta ao toque (botão encolhe a 96%), troca de estado e a entrada da gaveta e da faixa. Nada de entradas em cascata, rolagem animada ou efeitos "elásticos". Com `prefers-reduced-motion`, **nenhuma animação** acontece.
+
+---
+
+## 8. Escrita da interface
+
+- Frases curtas e verbos simples; maiúscula só no começo da frase. **Nada de rótulos em MAIÚSCULAS** nem rótulos decorativos acima dos títulos.
+- Informações juntas por vírgula ou em linhas, não por "·".
+- O botão diz o que acontece ("Finalizar venda", "Registrar entrada") e a confirmação repete o verbo ("Venda registrada", "Entrada registrada").
+- Erros dizem o que aconteceu e como resolver, sem pedir desculpas; telas vazias convidam à ação ("Cadastrar o primeiro item").
+
+---
+
+## 9. Telas de acesso
+
+O painel da esquerda usa a cor da estrutura, com o slogan e uma **faixa do caixa de exemplo** como ilustração (valores fictícios, anunciados como exemplo para leitores de tela); o formulário fica ao lado e, no celular, sozinho. Login só por e-mail e senha (RF01, ADR-003). O protótipo da versão 1 continua em [`prototipo_revisado/`](prototipo_revisado/) como referência histórica.
+
+---
+
+## 10. Aplicação
+
+- **SPEC-001/002:** tokens, favicon, metadados e as telas de acesso (versão 1).
+- **SPEC-012:** semáforo e os primeiros gráficos.
+- **SPEC-016:** versão 2 — tokens v2, Manrope, componentes de interface e de gráfico, estrutura do app, faixa do caixa e as 40 telas migradas.
+- Qualquer cor nova entra como token e passa por `validar_contraste.py`; qualquer tela nova usa os componentes de `src/components/ui/` (o teste de varredura recusa estilos escritos à mão).

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { CabecalhoDePagina } from "@/components/ui/cabecalho-de-pagina";
 import { FormularioItem } from "@/components/catalogo/formularios";
 import { exigirPermissao } from "@/lib/auth/servidor";
 import { catalogo } from "@/lib/db";
@@ -23,8 +24,8 @@ export default async function EditarItem({ params }: PageProps<"/catalogo/[id]/e
     .map((m) => ({ id: m.materialId, nome: `${m.nome} (arquivado)`, unidadeMedida: m.unidadeMedida, custo: m.custo }));
 
   return (
-    <div className="mx-auto max-w-2xl space-y-8">
-      <h1 className="font-display text-3xl font-semibold break-words text-foreground">Editar {item.nome}</h1>
+    <div className="mx-auto max-w-3xl space-y-6">
+      <CabecalhoDePagina voltar={{ href: `/catalogo/${item.id}`, rotulo: item.nome }} titulo={`Editar ${item.nome}`} />
       <FormularioItem
         opcoes={[...disponiveis, ...jaVinculados]}
         valores={{

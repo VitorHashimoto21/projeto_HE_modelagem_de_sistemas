@@ -1,14 +1,22 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { ChevronRight, Package, Plus, Search } from "lucide-react";
 import { ROTULO_CATEGORIA, rotuloUnidade } from "@/components/catalogo/rotulos";
 import { quantidade, SeloDeSituacao } from "@/components/estoque/situacao";
+import { AvisoDaPagina } from "@/components/ui/aviso";
+import { CabecalhoDePagina } from "@/components/ui/cabecalho-de-pagina";
 import { classeDoCampo } from "@/components/ui/classes";
+import { EstadoVazio } from "@/components/ui/estado-vazio";
+import { classeDoBotao } from "@/components/ui/estilos";
+import { Segmentos } from "@/components/ui/segmentos";
+import { Superficie } from "@/components/ui/superficie";
 import type { CategoriaItem } from "@/generated/prisma/enums";
 import { exigirPermissao } from "@/lib/auth/servidor";
 import { CATEGORIAS } from "@/lib/catalogo/validacao";
 import { estoque } from "@/lib/db";
 import { hoje } from "@/lib/dominio/datas";
 import { emAlerta } from "@/lib/dominio/estoque";
+import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Estoque" };
 
@@ -26,95 +34,110 @@ export default async function Estoque({ searchParams }: PageProps<"/estoque">) {
   const [produtos, alertas] = await Promise.all([c.listar({ busca, categoria, situacao }, dia), c.contarAlertas(dia)]);
   const totalAlertas = alertas.baixo + alertas.semEstoque;
 
+  const filtrado = Boolean(busca || categoria || situacao);
+  const link = (sit?: string) => {
+    const q = new URLSearchParams();
+    if (busca) q.set("busca", busca);
+    if (categoria) q.set("categoria", categoria);
+    if (sit) q.set("situacao", sit);
+    const t = q.toString();
+    return t ? `/estoque?${t}` : "/estoque";
+  };
+
   return (
-    <div className="space-y-8">
-      <h1 className="font-display text-3xl font-semibold text-foreground">Estoque</h1>
+    <div className="space-y-6">
+      <CabecalhoDePagina titulo="Estoque" descricao="Os produtos físicos do catálogo, com o saldo e o mínimo de cada um." />
 
       {totalAlertas > 0 && situacao !== "baixo" && (
-        <p role="status" className="rounded-xl border border-status-warn/30 bg-status-warn-bg px-4 py-3 text-sm text-status-warn">
-          <span aria-hidden="true">▲ </span>
-          {totalAlertas === 1 ? "1 produto está" : `${totalAlertas} produtos estão`} com estoque baixo ou zerado.{" "}
-          <Link href="/estoque?situacao=baixo" className="font-semibold underline underline-offset-2">
-            Ver quais
-          </Link>
-        </p>
+        <AvisoDaPagina tom="atencao">
+          {totalAlertas === 1 ? "1 produto está" : `${totalAlertas} produtos estão`} com estoque baixo ou zerado. <Link href="/estoque?situacao=baixo">Ver quais</Link>
+        </AvisoDaPagina>
       )}
 
-      <form method="get" className="grid gap-3 sm:grid-cols-[1fr_auto_auto_auto]" role="search">
-        <label className="sr-only" htmlFor="busca">
-          Buscar por nome
-        </label>
-        <input id="busca" name="busca" defaultValue={busca} placeholder="Buscar produto…" className={classeDoCampo()} />
-        <label className="sr-only" htmlFor="categoria">
-          Categoria
-        </label>
-        <select id="categoria" name="categoria" defaultValue={categoria ?? ""} className={classeDoCampo()}>
-          <option value="">Todas as categorias</option>
-          {CATEGORIAS.map((cat) => (
-            <option key={cat} value={cat}>
-              {ROTULO_CATEGORIA[cat]}
-            </option>
-          ))}
-        </select>
-        <label className="sr-only" htmlFor="situacao">
-          Situação
-        </label>
-        <select id="situacao" name="situacao" defaultValue={situacao ?? ""} className={classeDoCampo()}>
-          <option value="">Todos</option>
-          <option value="baixo">Estoque baixo</option>
-          <option value="sem-estoque">Sem estoque</option>
-        </select>
-        <button type="submit" className="rounded-xl border border-input px-5 py-3 text-sm font-semibold text-foreground hover:bg-muted">
-          Filtrar
-        </button>
-      </form>
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <Segmentos
+          rotulo="Situação"
+          itens={[
+            { href: link(), rotulo: "Todos", ativo: !situacao },
+            { href: link("baixo"), rotulo: alertas.baixo + alertas.semEstoque > 0 ? `Baixo ou zerado (${totalAlertas})` : "Baixo ou zerado", ativo: situacao === "baixo" },
+            { href: link("sem-estoque"), rotulo: "Sem estoque", ativo: situacao === "sem-estoque" },
+          ]}
+        />
+        <form method="get" className="flex flex-wrap gap-2" role="search">
+          {situacao && <input type="hidden" name="situacao" value={situacao} />}
+          <label className="sr-only" htmlFor="busca">
+            Buscar por nome
+          </label>
+          <div className="relative min-w-0 flex-1 basis-52">
+            <Search aria-hidden="true" className="pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2 text-muted-foreground" />
+            <input id="busca" name="busca" type="search" defaultValue={busca} placeholder="Buscar produto" className={cn(classeDoCampo(), "h-11 rounded-full py-0 pl-10")} />
+          </div>
+          <label className="sr-only" htmlFor="categoria">
+            Categoria
+          </label>
+          <select id="categoria" name="categoria" defaultValue={categoria ?? ""} className={cn(classeDoCampo(), "h-11 w-auto min-w-0 flex-1 basis-40 rounded-full py-0")}>
+            <option value="">Todas as categorias</option>
+            {CATEGORIAS.map((cat) => (
+              <option key={cat} value={cat}>
+                {ROTULO_CATEGORIA[cat]}
+              </option>
+            ))}
+          </select>
+          <button type="submit" className={classeDoBotao("secundario")}>
+            Filtrar
+          </button>
+        </form>
+      </div>
 
       {produtos.length === 0 ? (
-        <section className="rounded-2xl border bg-card px-6 py-12 text-center shadow-sm">
-          <h2 className="mb-2 font-display text-2xl font-semibold text-card-foreground">
-            {busca || categoria || situacao ? "Nenhum produto encontrado" : "Nenhum produto físico ainda"}
-          </h2>
-          <p className="mx-auto max-w-md text-sm text-muted-foreground">
-            {busca || categoria || situacao ? (
-              "Tente outra busca ou limpe os filtros."
-            ) : (
-              <>
-                O estoque mostra os produtos físicos do{" "}
-                <Link href="/catalogo" className="font-medium text-primary underline-offset-2 hover:underline">
-                  Catálogo
+        <Superficie>
+          <EstadoVazio
+            Icone={Package}
+            titulo={filtrado ? "Nenhum produto encontrado" : "Nenhum produto físico ainda"}
+            acao={
+              filtrado ? (
+                <Link href="/estoque" className={classeDoBotao("secundario")}>
+                  Limpar filtros
                 </Link>
-                . Serviços não têm estoque: eles consomem os materiais.
-              </>
-            )}
-          </p>
-        </section>
+              ) : (
+                <Link href="/catalogo/novo" className={classeDoBotao("principal")}>
+                  <Plus aria-hidden="true" />
+                  Cadastrar produto
+                </Link>
+              )
+            }
+          >
+            {filtrado ? "Tente outra busca ou outra situação." : "O estoque mostra os produtos físicos do Catálogo. Serviços não têm estoque: eles consomem os materiais."}
+          </EstadoVazio>
+        </Superficie>
       ) : (
-        <ul className="grid gap-3" aria-label="Produtos em estoque">
-          {produtos.map((pr) => (
-            <li key={pr.id}>
-              <Link
-                href={`/estoque/${pr.id}`}
-                className={`flex flex-wrap items-center justify-between gap-x-6 gap-y-2 rounded-2xl border bg-card p-4 shadow-sm transition-colors hover:border-primary ${
-                  emAlerta(pr.situacao) ? "border-status-warn/40" : ""
-                }`}
-              >
-                <div className="min-w-0">
-                  <p className="truncate font-medium text-card-foreground">{pr.nome}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {ROTULO_CATEGORIA[pr.categoria]} · mínimo{" "}
-                    {pr.minimo ? `${quantidade(pr.minimo.valor)} (${pr.minimo.origem})` : "—"}
-                  </p>
-                </div>
-                <div className="flex items-center gap-3 text-right">
-                  <span className="font-semibold text-foreground">
-                    {quantidade(pr.saldo)} <span className="text-xs font-normal text-muted-foreground">{rotuloUnidade(pr.unidadeMedida)}</span>
+        <Superficie espaco="nenhum" className="overflow-hidden">
+          <ul className="divide-y" aria-label="Produtos em estoque">
+            {produtos.map((pr) => (
+              <li key={pr.id}>
+                <Link
+                  href={`/estoque/${pr.id}`}
+                  className={cn(
+                    "flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3.5 transition-colors duration-(--duracao-estado) hover:bg-accent focus-visible:bg-accent focus-visible:outline-none sm:px-5",
+                    emAlerta(pr.situacao) && "shadow-[inset_3px_0_0_var(--status-warn)]",
+                  )}
+                >
+                  <div className="min-w-0 flex-1 basis-48">
+                    <p className="truncate text-[15px] font-bold text-foreground">{pr.nome}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {ROTULO_CATEGORIA[pr.categoria]}, mínimo {pr.minimo ? `${quantidade(pr.minimo.valor)} (${pr.minimo.origem})` : "não definido"}
+                    </p>
+                  </div>
+                  <span className="text-right text-lg font-extrabold text-foreground tabular-nums">
+                    {quantidade(pr.saldo)} <span className="text-xs font-medium text-muted-foreground">{rotuloUnidade(pr.unidadeMedida)}</span>
                   </span>
-                  <SeloDeSituacao situacao={pr.situacao} />
-                </div>
-              </Link>
-            </li>
-          ))}
-        </ul>
+                  <SeloDeSituacao situacao={pr.situacao} className="w-32 justify-center" />
+                  <ChevronRight aria-hidden="true" className="hidden size-4 text-muted-foreground sm:block" />
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </Superficie>
       )}
     </div>
   );

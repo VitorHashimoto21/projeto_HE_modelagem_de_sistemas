@@ -186,9 +186,10 @@ export function montarProjecao(e: {
 
 // ---------- Cartões e acesso (RF44, RF63, 5.1) ----------
 
-export type CartaoDoDashboard = "vendasDoDia" | "saldo" | "estoque" | "semaforo" | "grafico" | "projecao";
+export type CartaoDoDashboard = "vendasDoDia" | "saldo" | "estoque" | "semaforo" | "grafico" | "projecao" | "formas" | "rentabilidade";
 
-type Permissoes = { dashboard: boolean; estoque: boolean; financeiro: boolean };
+/** `vendas` só pesa na rentabilidade (SPEC-013, OPEN-003: Vendas e Financeiro — ver). */
+type Permissoes = { dashboard: boolean; estoque: boolean; financeiro: boolean; vendas?: boolean };
 
 /**
  * Lista única dos cartões (RF44): a ordem da tela e o que cada um exige. Um indicador
@@ -202,8 +203,12 @@ export const CARTOES: { cartao: CartaoDoDashboard; exige: (p: Permissoes) => boo
   { cartao: "semaforo", exige: (p) => p.dashboard && p.financeiro },
   { cartao: "grafico", exige: (p) => p.dashboard && p.financeiro },
   { cartao: "projecao", exige: (p) => p.dashboard && p.financeiro },
+  // SPEC-016 (5.5): formas de pagamento e rentabilidade. A rentabilidade também segue o
+  // plano (OPEN-007): no gratuito o cartão mostra a oferta, sem valores.
+  { cartao: "formas", exige: (p) => p.dashboard && p.financeiro },
+  { cartao: "rentabilidade", exige: (p) => p.dashboard && p.financeiro && p.vendas === true },
 ];
 
 export const cartoesPermitidos = (p: Permissoes): CartaoDoDashboard[] => CARTOES.filter((c) => c.exige(p)).map((c) => c.cartao);
 
-export const CARTOES_FINANCEIROS: readonly CartaoDoDashboard[] = ["saldo", "semaforo", "grafico", "projecao"];
+export const CARTOES_FINANCEIROS: readonly CartaoDoDashboard[] = ["saldo", "semaforo", "grafico", "projecao", "formas", "rentabilidade"];

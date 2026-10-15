@@ -135,11 +135,11 @@ describe("T03 — projeção de caixa (RF68, OPEN-004)", () => {
 });
 
 describe("T09 — cartões por permissão (RF63, SPEC-005 OPEN-003)", () => {
-  const de = (m: Matriz) => cartoesPermitidos({ dashboard: pode(m, "dashboard", "ver"), estoque: pode(m, "estoque", "ver"), financeiro: pode(m, "financeiro", "ver") });
+  const de = (m: Matriz) => cartoesPermitidos({ dashboard: pode(m, "dashboard", "ver"), estoque: pode(m, "estoque", "ver"), financeiro: pode(m, "financeiro", "ver"), vendas: pode(m, "vendas", "ver") });
   const semFinanceiro = (m: Matriz): Matriz => ({ ...m, financeiro: { ver: false, criar: true, editar: false, excluir: false } });
 
   it("Dono e Gerente: todos, na ordem da lista", () => {
-    expect(de(PREDEFINICOES.DONO)).toEqual(["vendasDoDia", "saldo", "estoque", "semaforo", "grafico", "projecao"]);
+    expect(de(PREDEFINICOES.DONO)).toEqual(["vendasDoDia", "saldo", "estoque", "semaforo", "grafico", "projecao", "formas", "rentabilidade"]); // SPEC-016: formas e rentabilidade
     expect(de(PREDEFINICOES.GERENTE)).toEqual(de(PREDEFINICOES.DONO));
   });
 

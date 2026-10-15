@@ -39,7 +39,7 @@ export function MatrizDePermissoes({
     <fieldset className="space-y-3">
       <legend className="mb-1 text-sm font-medium text-foreground">{rotulo}</legend>
       {MODULOS.map((m) => (
-        <fieldset key={m} className="rounded-xl border bg-card px-4 py-3">
+        <fieldset key={m} className="rounded-lg bg-muted px-4 py-3">
           <legend className="sr-only">{ROTULO_MODULO[m]}</legend>
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <span aria-hidden="true" className="text-sm font-semibold text-card-foreground">

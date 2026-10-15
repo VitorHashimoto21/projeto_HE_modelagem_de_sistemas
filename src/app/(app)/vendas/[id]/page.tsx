@@ -1,21 +1,37 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { Plus, RotateCcw } from "lucide-react";
 import { rotuloUnidade } from "@/components/catalogo/rotulos";
+import { AvisoDaPagina } from "@/components/ui/aviso";
+import { CabecalhoDePagina } from "@/components/ui/cabecalho-de-pagina";
+import { classeDoBotao, classeDoLink } from "@/components/ui/estilos";
+import { Selo } from "@/components/ui/selo";
+import { Superficie, TituloDaSuperficie } from "@/components/ui/superficie";
 import { brl, qtd, ROTULO_CONTA, ROTULO_FORMA } from "@/components/vendas/rotulos";
 import { exigirPermissao } from "@/lib/auth/servidor";
 import { vendas } from "@/lib/db";
 import { VendaNaoEncontrada } from "@/lib/db/vendas";
 import { dataBrasileira } from "@/lib/dominio/datas";
 import { pode } from "@/lib/dominio/permissoes";
+import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Venda" };
 
 const quando = new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short", timeZone: "America/Sao_Paulo" });
-const cartao = "rounded-2xl border bg-card p-6 shadow-sm";
+
+function Linha({ rotulo, children }: { rotulo: string; children: React.ReactNode }) {
+  return (
+    <div className="flex flex-wrap justify-between gap-x-4 gap-y-0.5 py-2.5 text-sm">
+      <dt className="text-muted-foreground">{rotulo}</dt>
+      <dd className="text-right font-medium break-words text-foreground">{children}</dd>
+    </div>
+  );
+}
 
 // Detalhe da venda (SPEC-008, 5.4) e confirmação depois de registrar: Vendas — ver.
 // SPEC-011: auditoria do cancelamento, ligação com a troca e o botão de cancelar (Vendas — excluir).
+// Redesenhado na SPEC-016: resumo e ações à direita no computador, acima no celular.
 export default async function DetalheDaVenda({ params, searchParams }: PageProps<"/vendas/[id]">) {
   const membro = await exigirPermissao("vendas", "ver");
   const [{ id }, busca] = await Promise.all([params, searchParams]);
@@ -27,188 +43,171 @@ export default async function DetalheDaVenda({ params, searchParams }: PageProps
     });
   const podeVender = pode(membro.permissoes, "vendas", "criar");
   const podeCancelar = pode(membro.permissoes, "vendas", "excluir") && v.status === "CONCLUIDA";
+  const cancelada = v.status === "CANCELADA";
 
   return (
     <div className="space-y-6">
-      <p className="text-sm">
-        <Link href="/vendas" className="font-medium text-primary underline-offset-2 hover:underline">
-          ← Vendas
-        </Link>
-      </p>
+      <CabecalhoDePagina
+        voltar={{ href: "/vendas", rotulo: "Vendas" }}
+        titulo={
+          <span className="inline-flex flex-wrap items-center gap-3">
+            Venda nº {v.numero}
+            {cancelada && <Selo tom="perigo">Cancelada</Selo>}
+          </span>
+        }
+        descricao={`${quando.format(v.data)}, por ${v.registradaPor}${v.cliente ? `, cliente ${v.cliente}` : ""}`}
+      />
 
       {(busca.nova || busca.jaRegistrada) && (
-        <div role="status" className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-status-ok/30 bg-status-ok-bg px-5 py-4 text-status-ok">
-          <p className="font-medium">{busca.jaRegistrada ? `Esta venda já tinha sido registrada (nº ${v.numero}).` : `Venda nº ${v.numero} registrada.`}</p>
-          {podeVender && (
-            <Link href="/vendas/nova" className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary-hover">
-              Nova venda
-            </Link>
-          )}
-        </div>
+        <AvisoDaPagina
+          tom="sucesso"
+          acao={
+            podeVender && (
+              <Link href="/vendas/nova" className={classeDoBotao("principal", "sm")}>
+                <Plus aria-hidden="true" />
+                Nova venda
+              </Link>
+            )
+          }
+        >
+          <p className="font-semibold">{busca.jaRegistrada ? `Esta venda já tinha sido registrada (nº ${v.numero}).` : `Venda nº ${v.numero} registrada.`}</p>
+        </AvisoDaPagina>
       )}
-
       {busca.cancelada && v.cancelamento && (
-        <p role="status" className="rounded-2xl border border-status-ok/30 bg-status-ok-bg px-5 py-4 font-medium text-status-ok">
+        <AvisoDaPagina tom="sucesso">
           Venda nº {v.numero} cancelada.{v.cancelamento.reembolso ? ` Reembolso de ${brl(v.cancelamento.reembolso.valor)} registrado no caixa.` : ""}
-        </p>
+        </AvisoDaPagina>
       )}
       {busca.troca && v.trocaDe && (
-        <p role="status" className="rounded-2xl border border-status-ok/30 bg-status-ok-bg px-5 py-4 font-medium text-status-ok">
+        <AvisoDaPagina tom="sucesso">
           Troca registrada: a venda nº {v.trocaDe.numero} foi cancelada e esta é a venda nº {v.numero}.
-        </p>
+        </AvisoDaPagina>
       )}
 
-      <div className="flex flex-wrap items-baseline justify-between gap-3">
-        <div>
-          <h1 className="flex flex-wrap items-center gap-3 font-display text-3xl font-semibold text-foreground">
-            Venda nº {v.numero}
-            {v.status === "CANCELADA" && (
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-status-danger-bg px-3 py-1 font-sans text-sm font-medium text-status-danger">
-                <span aria-hidden="true">✕</span>
-                Cancelada
-              </span>
-            )}
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            {quando.format(v.data)} · por {v.registradaPor}
-            {v.cliente && ` · cliente ${v.cliente}`}
-          </p>
-        </div>
-        <div className="flex flex-col items-end gap-2">
-          <p className={`text-3xl font-semibold ${v.status === "CANCELADA" ? "text-muted-foreground line-through" : "text-foreground"}`}>{brl(v.valorTotal)}</p>
-          {podeCancelar && (
-            <Link href={`/vendas/${v.id}/cancelar`} className="rounded-xl border border-input px-4 py-2 text-sm font-semibold text-status-danger hover:bg-muted">
-              Cancelar venda
-            </Link>
+      <div className="flex flex-col-reverse gap-6 lg:flex-row lg:items-start">
+        <div className="flex min-w-0 flex-1 flex-col gap-6">
+          {v.trocaDe && (
+            <AvisoDaPagina tom="info">
+              Troca da <Link href={`/vendas/${v.trocaDe.id}`}>venda nº {v.trocaDe.numero}</Link>, cancelada.
+            </AvisoDaPagina>
+          )}
+
+          <Superficie aria-labelledby="titulo-itens">
+            <TituloDaSuperficie id="titulo-itens" titulo="Itens" />
+            <ul className="divide-y">
+              {v.itensVenda.map((i) => (
+                <li key={i.itemId} className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-3 text-sm">
+                  <span className="min-w-0 font-semibold text-foreground">{i.nome}</span>
+                  <span className="text-muted-foreground tabular-nums">
+                    {qtd(i.quantidade)} {rotuloUnidade(i.unidadeMedida).toLowerCase()} × {brl(i.precoUnitario)} = <span className="font-bold text-foreground">{brl(i.subtotal)}</span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </Superficie>
+
+          <Superficie aria-labelledby="titulo-pagamentos">
+            <TituloDaSuperficie id="titulo-pagamentos" titulo="Pagamento" />
+            <ul className="divide-y">
+              {v.pagamentos.map((p, idx) => (
+                <li key={idx} className="py-3 text-sm">
+                  <div className="flex flex-wrap justify-between gap-2">
+                    <span className="font-semibold text-foreground">
+                      {ROTULO_FORMA[p.forma]}
+                      {p.parcelas.length > 1 && ` em ${p.parcelas.length}x`}
+                    </span>
+                    <span className="font-bold text-foreground tabular-nums">{brl(p.valor)}</span>
+                  </div>
+                  {p.forma === "CREDITO_TROCA" ? (
+                    <p className="mt-1 text-xs text-muted-foreground">Abatido do valor já pago na venda original (não entra de novo no caixa).</p>
+                  ) : p.parcelas.length > 0 ? (
+                    <ol className="mt-2 space-y-1.5 text-xs text-muted-foreground">
+                      {p.parcelas.map((pa) => (
+                        <li key={pa.numero} className="flex flex-wrap items-center justify-between gap-2">
+                          <span>
+                            Parcela {pa.numero}/{p.parcelas.length}, vence {dataBrasileira(pa.vencimento)}
+                          </span>
+                          <span className="inline-flex items-center gap-2 tabular-nums">
+                            {brl(pa.valor)}
+                            <Selo tom={pa.status === "QUITADA" ? "ok" : pa.status === "CANCELADA" ? "neutro" : "info"} semIcone>
+                              {pa.status ? ROTULO_CONTA[pa.status] : "—"}
+                            </Selo>
+                          </span>
+                        </li>
+                      ))}
+                    </ol>
+                  ) : (
+                    <p className="mt-1 text-xs text-muted-foreground">Entrou no caixa na data da venda.</p>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </Superficie>
+
+          {v.movimentacoes.length > 0 && (
+            <Superficie aria-labelledby="titulo-estoque">
+              <TituloDaSuperficie id="titulo-estoque" titulo="Movimentações de estoque" />
+              <ul className="divide-y">
+                {v.movimentacoes.map((m, idx) => (
+                  <li key={idx} className="flex flex-wrap justify-between gap-2 py-3 text-sm">
+                    <Link href={`/estoque/${m.itemId}`} className={classeDoLink("font-medium")}>
+                      {m.nome}
+                    </Link>
+                    <span className="text-muted-foreground tabular-nums">
+                      {m.tipo === "ENTRADA_ESTORNO" ? `+${qtd(m.quantidade)} (estorno)` : `−${qtd(m.quantidade)}`}, {qtd(m.saldoAnterior)} → {qtd(m.saldoPosterior)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </Superficie>
           )}
         </div>
-      </div>
 
-      {v.trocaDe && (
-        <p className="rounded-xl border bg-muted/40 px-4 py-3 text-sm text-foreground">
-          Troca da{" "}
-          <Link href={`/vendas/${v.trocaDe.id}`} className="font-medium text-primary underline-offset-2 hover:underline">
-            venda nº {v.trocaDe.numero}
-          </Link>
-          , cancelada.
-        </p>
-      )}
-
-      {v.cancelamento && (
-        <section className="rounded-2xl border border-status-danger/30 bg-card p-6 shadow-sm" aria-labelledby="titulo-cancelamento">
-          <h2 id="titulo-cancelamento" className="mb-2 font-display text-xl font-semibold text-card-foreground">
-            Cancelamento
-          </h2>
-          <dl className="space-y-1 text-sm">
-            <div className="flex flex-wrap justify-between gap-2">
-              <dt className="text-muted-foreground">Quando e por quem</dt>
-              <dd className="font-medium text-foreground">
-                {quando.format(v.cancelamento.em)} · {v.cancelamento.por}
-              </dd>
-            </div>
-            <div className="flex flex-wrap justify-between gap-2">
-              <dt className="text-muted-foreground">Motivo</dt>
-              <dd className="font-medium break-words text-foreground">{v.cancelamento.motivo}</dd>
-            </div>
-            <div className="flex flex-wrap justify-between gap-2">
-              <dt className="text-muted-foreground">Reembolso</dt>
-              <dd className="font-medium text-foreground">
-                {v.cancelamento.reembolso ? (
-                  <>
-                    <span className="text-status-danger">− {brl(v.cancelamento.reembolso.valor)}</span> · {v.cancelamento.reembolso.descricao.split(" — ").pop()}
-                  </>
-                ) : (
-                  "Nenhum"
-                )}
-              </dd>
-            </div>
-            {v.trocadaPor && (
-              <div className="flex flex-wrap justify-between gap-2">
-                <dt className="text-muted-foreground">Trocada pela</dt>
-                <dd>
-                  <Link href={`/vendas/${v.trocadaPor.id}`} className="font-medium text-primary underline-offset-2 hover:underline">
-                    venda nº {v.trocadaPor.numero}
-                  </Link>
-                </dd>
-              </div>
+        <aside className="flex w-full flex-col gap-6 lg:sticky lg:top-6 lg:w-80">
+          <Superficie tom={cancelada ? "cartao" : "estrutura"} aria-label="Resumo da venda">
+            <p className={cn("text-sm", cancelada ? "text-muted-foreground" : "text-estrutura-suave")}>Total</p>
+            <p className={cn("mt-1 text-[34px] leading-none font-extrabold tracking-tight tabular-nums", cancelada && "text-muted-foreground line-through")}>{brl(v.valorTotal)}</p>
+            <p className={cn("mt-2 text-sm", cancelada ? "text-muted-foreground" : "text-estrutura-suave")}>
+              {v.itensVenda.length} {v.itensVenda.length === 1 ? "item" : "itens"}, {v.pagamentos.map((p) => ROTULO_FORMA[p.forma]).join(" + ")}
+            </p>
+            {podeCancelar && (
+              <Link href={`/vendas/${v.id}/cancelar`} className={classeDoBotao("na-estrutura", "md", "mt-5 w-full")}>
+                <RotateCcw aria-hidden="true" />
+                Cancelar venda
+              </Link>
             )}
-          </dl>
-          <p className="mt-3 text-xs text-muted-foreground">O estoque voltou, as parcelas em aberto foram canceladas e a venda saiu do faturamento.</p>
-        </section>
-      )}
+          </Superficie>
 
-      <section className={cartao} aria-labelledby="titulo-itens">
-        <h2 id="titulo-itens" className="mb-2 font-display text-xl font-semibold text-card-foreground">
-          Itens
-        </h2>
-        <ul className="divide-y">
-          {v.itensVenda.map((i) => (
-            <li key={i.itemId} className="flex flex-wrap justify-between gap-2 py-3 text-sm">
-              <span className="min-w-0 font-medium text-foreground">{i.nome}</span>
-              <span className="text-muted-foreground">
-                {qtd(i.quantidade)} {rotuloUnidade(i.unidadeMedida)} × {brl(i.precoUnitario)} = <span className="font-semibold text-foreground">{brl(i.subtotal)}</span>
-              </span>
-            </li>
-          ))}
-        </ul>
-      </section>
-
-      <section className={cartao} aria-labelledby="titulo-pagamentos">
-        <h2 id="titulo-pagamentos" className="mb-2 font-display text-xl font-semibold text-card-foreground">
-          Pagamento
-        </h2>
-        <ul className="divide-y">
-          {v.pagamentos.map((p, idx) => (
-            <li key={idx} className="py-3 text-sm">
-              <div className="flex flex-wrap justify-between gap-2">
-                <span className="font-medium text-foreground">
-                  {ROTULO_FORMA[p.forma]}
-                  {p.parcelas.length > 1 && ` em ${p.parcelas.length}x`}
-                </span>
-                <span className="font-semibold text-foreground">{brl(p.valor)}</span>
-              </div>
-              {p.forma === "CREDITO_TROCA" ? (
-                <p className="mt-1 text-xs text-muted-foreground">Abatido do valor já pago na venda original (não entra de novo no caixa).</p>
-              ) : p.parcelas.length > 0 ? (
-                <ol className="mt-2 space-y-1 text-xs text-muted-foreground">
-                  {p.parcelas.map((pa) => (
-                    <li key={pa.numero} className="flex flex-wrap justify-between gap-2">
-                      <span>
-                        Parcela {pa.numero}/{p.parcelas.length} · vence {dataBrasileira(pa.vencimento)}
-                      </span>
-                      <span>
-                        {brl(pa.valor)} · {pa.status ? ROTULO_CONTA[pa.status] : "—"}
-                      </span>
-                    </li>
-                  ))}
-                </ol>
-              ) : (
-                <p className="mt-1 text-xs text-muted-foreground">Entrou no caixa na data da venda.</p>
-              )}
-            </li>
-          ))}
-        </ul>
-      </section>
-
-      {v.movimentacoes.length > 0 && (
-        <section className={cartao} aria-labelledby="titulo-estoque">
-          <h2 id="titulo-estoque" className="mb-2 font-display text-xl font-semibold text-card-foreground">
-            Movimentações de estoque
-          </h2>
-          <ul className="divide-y">
-            {v.movimentacoes.map((m, idx) => (
-              <li key={idx} className="flex flex-wrap justify-between gap-2 py-3 text-sm">
-                <Link href={`/estoque/${m.itemId}`} className="font-medium text-foreground underline-offset-2 hover:underline">
-                  {m.nome}
-                </Link>
-                <span className="text-muted-foreground">
-                  {m.tipo === "ENTRADA_ESTORNO" ? `+${qtd(m.quantidade)} (estorno)` : `−${qtd(m.quantidade)}`} · {qtd(m.saldoAnterior)} → {qtd(m.saldoPosterior)}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
+          {v.cancelamento && (
+            <Superficie tom="perigo" aria-labelledby="titulo-cancelamento">
+              <TituloDaSuperficie id="titulo-cancelamento" titulo="Cancelamento" />
+              <dl className="divide-y divide-status-danger/15">
+                <Linha rotulo="Quando e por quem">
+                  {quando.format(v.cancelamento.em)}, {v.cancelamento.por}
+                </Linha>
+                <Linha rotulo="Motivo">{v.cancelamento.motivo}</Linha>
+                <Linha rotulo="Reembolso">
+                  {v.cancelamento.reembolso ? (
+                    <>
+                      <span className="text-status-danger">− {brl(v.cancelamento.reembolso.valor)}</span>, {v.cancelamento.reembolso.descricao.split(" — ").pop()}
+                    </>
+                  ) : (
+                    "Nenhum"
+                  )}
+                </Linha>
+                {v.trocadaPor && (
+                  <Linha rotulo="Trocada pela">
+                    <Link href={`/vendas/${v.trocadaPor.id}`} className={classeDoLink()}>
+                      venda nº {v.trocadaPor.numero}
+                    </Link>
+                  </Linha>
+                )}
+              </dl>
+              <p className="mt-3 text-xs text-muted-foreground">O estoque voltou, as parcelas em aberto foram canceladas e a venda saiu do faturamento.</p>
+            </Superficie>
+          )}
+        </aside>
+      </div>
     </div>
   );
 }

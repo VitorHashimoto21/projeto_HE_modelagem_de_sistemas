@@ -1,8 +1,11 @@
 "use client";
 
 import { useActionState, useEffect, useMemo, useState } from "react";
+import { Minus, Plus, Search, Trash2, UserPlus } from "lucide-react";
 import { Aviso, MensagemDeCampo } from "@/components/acesso/campos";
 import { classeDoCampo } from "@/components/ui/classes";
+import { classeDoBotao } from "@/components/ui/estilos";
+import { Superficie, TituloDaSuperficie } from "@/components/ui/superficie";
 import { lerNumero } from "@/lib/dominio/catalogo";
 import { somarDias } from "@/lib/dominio/estoque";
 import {
@@ -19,6 +22,7 @@ import {
   troco,
   type FormaDePagamento,
 } from "@/lib/dominio/venda";
+import { cn } from "@/lib/utils";
 import { acaoCadastrarCliente, acaoRegistrarVenda, acaoTrocarVenda } from "@/lib/vendas/acoes";
 import { VENDA_INICIAL, type EstadoDoCliente } from "@/lib/vendas/servicos";
 
@@ -33,18 +37,23 @@ export type ItemDaFrente = {
 };
 type Cliente = { id: string; nome: string; contato: string | null };
 type Linha = { itemId: string; quantidade: string };
-type Pagamento = { chave: number; forma: FormaDePagamento; valor: string; parcelas: number };
+/** `auto`: com um só pagamento, o valor acompanha o total até a pessoa editar o campo. */
+type Pagamento = { chave: number; forma: FormaDePagamento; valor: string; parcelas: number; auto?: boolean };
 
 /** Modo troca (SPEC-011, OPEN-004): a venda original, o limite e o que já foi recebido. */
 export type TrocaDaFrente = { vendaId: string; numero: number; limiteCentavos: number; recebidoCentavos: number };
 
-const botao =
-  "rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-60";
-const secundario = "rounded-xl border border-input px-4 py-2.5 text-sm font-semibold text-foreground hover:bg-muted disabled:opacity-50";
-const cartao = "rounded-2xl border bg-card p-5 shadow-sm";
+const MAX_NA_LISTA = 30;
 const reaisCampo = (centavos: number) => (centavos / 100).toFixed(2).replace(".", ",");
+const numeroCampo = (v: number) => v.toLocaleString("pt-BR", { maximumFractionDigits: 3, useGrouping: false });
+const quantos = (v: number) => v.toLocaleString("pt-BR", { maximumFractionDigits: 3 });
+const rotulo = "mb-1.5 block text-sm font-medium text-foreground";
 
-/** Frente de caixa (SPEC-008, 5.1): monta a venda; o servidor recalcula e valida tudo (5.2). */
+/**
+ * Frente de caixa (SPEC-008, 5.1): monta a venda; o servidor recalcula e valida tudo (5.2).
+ * SPEC-016: lista de itens sempre à vista (toque para adicionar), carrinho com botões de
+ * quantidade, forma de pagamento em segmentos e o resumo escuro com "Finalizar venda".
+ */
 export function FrenteDeCaixa({ itens, clientes: clientesIniciais, hoje, troca }: { itens: ItemDaFrente[]; clientes: Cliente[]; hoje: string; troca?: TrocaDaFrente }) {
   // Na troca, a ação é a de cancelar e trocar; os estados de erro têm a mesma forma e o sucesso redireciona.
   const [estado, executar, enviando] = useActionState(troca ? (acaoTrocarVenda as unknown as typeof acaoRegistrarVenda) : acaoRegistrarVenda, VENDA_INICIAL);
@@ -56,16 +65,16 @@ export function FrenteDeCaixa({ itens, clientes: clientesIniciais, hoje, troca }
   const [clienteId, setClienteId] = useState("");
   const [novoCliente, setNovoCliente] = useState(false);
   const [dia, setDia] = useState(hoje);
-  const [pagamentos, setPagamentos] = useState<Pagamento[]>(troca ? [] : [{ chave: 1, forma: "PIX", valor: "", parcelas: 1 }]);
+  const [pagamentos, setPagamentos] = useState<Pagamento[]>(troca ? [] : [{ chave: 1, forma: "PIX", valor: "", parcelas: 1, auto: true }]);
   const [recebido, setRecebido] = useState("");
   const [motivo, setMotivo] = useState("TROCA");
   const [detalhe, setDetalhe] = useState("");
   const [formaReembolso, setFormaReembolso] = useState("");
 
   const porId = useMemo(() => new Map(itens.map((i) => [i.id, i])), [itens]);
-  const encontrados = busca.trim()
-    ? itens.filter((i) => i.nome.toLowerCase().includes(busca.trim().toLowerCase())).slice(0, 8)
-    : [];
+  const termo = busca.trim().toLowerCase();
+  const filtrados = termo ? itens.filter((i) => i.nome.toLowerCase().includes(termo)) : itens;
+  const naLista = filtrados.slice(0, MAX_NA_LISTA);
 
   const linhasCalc = linhas.map((l) => {
     const item = porId.get(l.itemId)!;
@@ -73,12 +82,17 @@ export function FrenteDeCaixa({ itens, clientes: clientesIniciais, hoje, troca }
     const valida = q !== null && q > 0;
     return { ...l, item, q: valida ? q : 0, valida, subtotal: valida ? subtotalEmCentavos(paraCentavos(item.preco), q) : 0 };
   });
+  const noCarrinho = new Map(linhasCalc.map((l) => [l.itemId, l.q]));
   const total = linhasCalc.reduce((s, l) => s + l.subtotal, 0);
-  const pago = pagamentos.reduce((s, p) => s + paraCentavos(lerNumero(p.valor) ?? 0), 0);
   // Troca (RN26): o crédito cobre até o recebido; os pagamentos são só o restante.
   const acerto = troca ? acertoDoCancelamento(troca.recebidoCentavos, total) : null;
   const credito = acerto?.creditoCentavos ?? 0;
   const reembolso = acerto?.reembolsoCentavos ?? 0;
+  // O pagamento automático fica com o que os outros não cobrem; os demais valem o que foi digitado.
+  const digitado = (p: Pagamento) => paraCentavos(lerNumero(p.valor) ?? 0);
+  const manuais = pagamentos.reduce((s, p) => s + (p.auto ? 0 : digitado(p)), 0);
+  const efetivos = pagamentos.map((p) => (p.auto ? { ...p, valor: reaisCampo(Math.max(0, total - credito - manuais)) } : p));
+  const pago = efetivos.reduce((s, p) => s + digitado(p), 0);
   const acimaDoLimite = troca ? total > troca.limiteCentavos : false;
   const falta = total - credito - pago;
   const erroDe = (campo: string) => (estado.status === "erro" ? estado.erros?.[campo] : undefined);
@@ -101,23 +115,40 @@ export function FrenteDeCaixa({ itens, clientes: clientesIniciais, hoje, troca }
     linhasCalc.every((l) => l.valida) &&
     total > 0 &&
     falta === 0 &&
-    pagamentos.every((p) => (lerNumero(p.valor) ?? 0) > 0) &&
+    efetivos.every((p) => (lerNumero(p.valor) ?? 0) > 0) &&
     semEstoque.length === 0 &&
     !acimaDoLimite &&
     cancelamentoOk;
 
-  const dinheiro = pagamentos.find((p) => p.forma === "DINHEIRO");
-  const trocoCentavos = dinheiro && recebido ? troco(paraCentavos(lerNumero(recebido) ?? 0), paraCentavos(lerNumero(dinheiro.valor) ?? 0)) : null;
+  const dinheiro = efetivos.find((p) => p.forma === "DINHEIRO");
+  const trocoCentavos = dinheiro && recebido ? troco(paraCentavos(lerNumero(recebido) ?? 0), digitado(dinheiro)) : null;
 
   function adicionar(id: string) {
-    setLinhas((ls) => (ls.some((l) => l.itemId === id) ? ls : [...ls, { itemId: id, quantidade: "1" }]));
+    setLinhas((ls) =>
+      ls.some((l) => l.itemId === id)
+        ? ls.map((l) => (l.itemId === id ? { ...l, quantidade: numeroCampo((lerNumero(l.quantidade) ?? 0) + 1) } : l))
+        : [...ls, { itemId: id, quantidade: "1" }],
+    );
     setBusca("");
+  }
+  function mudarQuantidade(idx: number, passo: number) {
+    const atual = lerNumero(linhas[idx].quantidade) ?? 0;
+    const nova = Math.round((atual + passo) * 1000) / 1000;
+    setLinhas(nova <= 0 ? linhas.filter((_, j) => j !== idx) : linhas.map((x, j) => (j === idx ? { ...x, quantidade: numeroCampo(nova) } : x)));
+  }
+  function mudarPagamento(chave: number, mudanca: Partial<Pagamento>) {
+    setPagamentos((ps) => ps.map((p) => (p.chave === chave ? { ...p, ...mudanca } : p)));
   }
   function preencherRestante(chave: number) {
     setPagamentos((ps) => {
-      const outros = ps.filter((p) => p.chave !== chave).reduce((s, p) => s + paraCentavos(lerNumero(p.valor) ?? 0), 0);
-      return ps.map((p) => (p.chave === chave ? { ...p, valor: reaisCampo(Math.max(0, total - credito - outros)) } : p));
+      const outros = ps.filter((p) => p.chave !== chave).reduce((s, p) => s + digitado(p), 0);
+      return ps.map((p) => (p.chave === chave ? { ...p, auto: false, valor: reaisCampo(Math.max(0, total - credito - outros)) } : p));
     });
+  }
+  function outraForma() {
+    // Ao dividir, o valor automático fica fixo no que estava na tela e a pessoa ajusta cada parte.
+    const proxima = Math.max(0, ...pagamentos.map((p) => p.chave)) + 1;
+    setPagamentos([...efetivos.map((p) => ({ ...p, auto: false })), { chave: proxima, forma: troca ? "PIX" : "DINHEIRO", valor: "", parcelas: 1 }]);
   }
 
   const carrinhoJson = JSON.stringify({
@@ -125,103 +156,176 @@ export function FrenteDeCaixa({ itens, clientes: clientesIniciais, hoje, troca }
     dia,
     clienteId: clienteId || null,
     linhas: linhasCalc.map((l) => ({ itemId: l.itemId, quantidade: l.quantidade, precoVisto: l.item.preco })),
-    pagamentos: pagamentos.map((p) => ({ forma: p.forma, valor: p.valor, parcelas: p.forma === "CREDITO" ? p.parcelas : 1 })),
+    pagamentos: efetivos.map((p) => ({ forma: p.forma, valor: p.valor, parcelas: p.forma === "CREDITO" ? p.parcelas : 1 })),
   });
+  const unidades = linhasCalc.reduce((s, l) => s + l.q, 0);
+  const situacao =
+    total === 0
+      ? "Adicione itens à venda."
+      : falta === 0
+        ? troca && pago === 0
+          ? "Coberto pelo crédito de troca."
+          : "Pagamento completo."
+        : falta > 0
+          ? `Falta ${reaisDeCentavos(falta)}`
+          : `Pagamento passou ${reaisDeCentavos(-falta)} do total`;
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[1fr_22rem]">
-      <div className="space-y-6">
+    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_24rem]">
+      <div className="min-w-0 space-y-6">
         {estado.status === "erro" && (estado.mensagem || estado.erros) && (
           <Aviso tipo="erro">{estado.mensagem ?? Object.values(estado.erros ?? {}).filter(Boolean)[0]}</Aviso>
         )}
 
-        <section className={cartao} aria-labelledby="titulo-itens">
-          <h2 id="titulo-itens" className="mb-3 font-display text-xl font-semibold text-card-foreground">
-            Itens
-          </h2>
-          <label htmlFor="busca-item" className="sr-only">
-            Buscar item
-          </label>
-          <input
-            id="busca-item"
-            value={busca}
-            onChange={(e) => setBusca(e.target.value)}
-            placeholder={itens.length ? "Buscar produto ou serviço…" : "Nenhum item com preço oficial no catálogo"}
-            disabled={!itens.length}
-            autoComplete="off"
-            className={classeDoCampo()}
-          />
-          {encontrados.length > 0 && (
-            <ul className="mt-2 divide-y rounded-xl border" aria-label="Resultados da busca">
-              {encontrados.map((i) => (
-                <li key={i.id}>
-                  <button type="button" onClick={() => adicionar(i.id)} className="flex w-full items-center justify-between gap-3 px-4 py-2.5 text-left text-sm hover:bg-muted">
-                    <span className="min-w-0 truncate font-medium text-foreground">{i.nome}</span>
-                    <span className="shrink-0 text-muted-foreground">
-                      {reaisDeCentavos(paraCentavos(i.preco))}
-                      {i.saldo !== null && ` · ${i.saldo.toLocaleString("pt-BR", { maximumFractionDigits: 3 })} em estoque`}
-                    </span>
-                  </button>
-                </li>
-              ))}
+        <Superficie espaco="nenhum" aria-labelledby="titulo-itens" className="overflow-hidden">
+          <div className="p-4 sm:p-5">
+            <h2 id="titulo-itens" className="sr-only">
+              Itens
+            </h2>
+            <label htmlFor="busca-item" className={rotulo}>
+              Buscar produto ou serviço
+            </label>
+            <div className="relative">
+              <Search aria-hidden="true" className="pointer-events-none absolute top-1/2 left-4 size-4.5 -translate-y-1/2 text-muted-foreground" />
+              <input
+                id="busca-item"
+                type="search"
+                value={busca}
+                onChange={(e) => setBusca(e.target.value)}
+                placeholder={itens.length ? "Ex.: manicure" : "Nenhum item com preço oficial no catálogo"}
+                disabled={!itens.length}
+                autoComplete="off"
+                className={cn(classeDoCampo(), "h-12 rounded-full pl-11 text-base sm:text-sm")}
+              />
+            </div>
+          </div>
+          {naLista.length > 0 && (
+            <ul className="max-h-[26rem] divide-y overflow-y-auto border-t" aria-label="Resultados da busca">
+              {naLista.map((i) => {
+                const q = noCarrinho.get(i.id);
+                const semSaldo = i.saldo !== null && i.saldo <= 0;
+                return (
+                  <li key={i.id}>
+                    <button
+                      type="button"
+                      onClick={() => adicionar(i.id)}
+                      aria-label={`Adicionar ${i.nome}${q ? `, já tem ${quantos(q)} na venda` : ""}`}
+                      className="flex w-full items-center gap-3 py-2.5 pr-3 pl-4 text-left transition-colors duration-(--duracao-estado) hover:bg-accent focus-visible:bg-accent focus-visible:outline-none sm:pl-5"
+                    >
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-[15px] font-bold text-foreground">{i.nome}</span>
+                        <span className={cn("block text-xs font-semibold", semSaldo ? "text-status-warn" : "text-muted-foreground")}>
+                          {i.saldo === null ? "Serviço" : semSaldo ? "Sem estoque" : `${quantos(i.saldo)} em estoque`}
+                        </span>
+                      </span>
+                      <span className="shrink-0 text-[15px] font-extrabold text-foreground tabular-nums">{reaisDeCentavos(paraCentavos(i.preco))}</span>
+                      <span aria-hidden="true" className="relative grid size-11 shrink-0 place-items-center rounded-full bg-muted text-primary">
+                        <Plus className="size-5" strokeWidth={2.6} />
+                        {q ? (
+                          <span className="absolute -top-0.5 -right-0.5 grid h-5 min-w-5 place-items-center rounded-full bg-primary px-1.5 text-[11px] font-extrabold text-primary-foreground tabular-nums">
+                            {quantos(q)}
+                          </span>
+                        ) : null}
+                      </span>
+                    </button>
+                  </li>
+                );
+              })}
             </ul>
           )}
-          {busca.trim() && encontrados.length === 0 && <p className="mt-2 text-sm text-muted-foreground">Nenhum item encontrado. Só aparecem itens com preço oficial.</p>}
+          {termo && filtrados.length === 0 && <p className="border-t px-5 py-4 text-sm text-muted-foreground">Nenhum item encontrado. Só aparecem itens com preço oficial.</p>}
+          {filtrados.length > MAX_NA_LISTA && (
+            <p className="border-t px-5 py-3 text-xs text-muted-foreground">
+              Mostrando {MAX_NA_LISTA} de {filtrados.length}. Busque pelo nome para achar os outros.
+            </p>
+          )}
+        </Superficie>
 
-          {linhasCalc.length > 0 && (
-            <ul className="mt-4 space-y-2" aria-label="Carrinho">
+        <section aria-labelledby="titulo-carrinho">
+          <div className="mb-2 flex items-baseline justify-between gap-3 px-1">
+            <h2 id="titulo-carrinho" className="text-[17px] font-bold text-foreground">
+              Na venda
+            </h2>
+            {unidades > 0 && (
+              <span className="text-sm text-muted-foreground">
+                {quantos(unidades)} {unidades === 1 ? "item" : "itens"}
+              </span>
+            )}
+          </div>
+          {linhasCalc.length === 0 ? (
+            <p className="rounded-2xl border-2 border-dashed border-input px-4 py-4 text-sm text-muted-foreground">Toque em um item da lista para adicionar.</p>
+          ) : (
+            <ul className="space-y-2" aria-label="Carrinho">
               {linhasCalc.map((l, idx) => (
-                <li key={l.itemId} className="flex flex-wrap items-center gap-3 rounded-xl border px-4 py-3">
-                  <div className="min-w-0 flex-1 basis-40">
-                    <p className="truncate text-sm font-medium text-foreground">{l.item.nome}</p>
-                    <p className="text-xs text-muted-foreground">{reaisDeCentavos(paraCentavos(l.item.preco))} / {l.item.unidade}</p>
+                <li key={l.itemId} className="flex items-center gap-2 rounded-2xl bg-card py-2.5 pr-2 pl-4 sm:gap-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-[15px] font-bold text-foreground">{l.item.nome}</p>
+                    <p className="text-[13px] text-muted-foreground tabular-nums">
+                      {l.valida ? `${quantos(l.q)} × ` : ""}
+                      {reaisDeCentavos(paraCentavos(l.item.preco))}
+                      <span className="sr-only"> por {l.item.unidade.toLowerCase()}</span>
+                      {l.valida && (
+                        <>
+                          {" = "}
+                          <span className="font-semibold text-foreground">{reaisDeCentavos(l.subtotal)}</span>
+                        </>
+                      )}
+                    </p>
                   </div>
-                  <label className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <span className="sr-only">Quantidade de {l.item.nome}</span>
+                  <div role="group" aria-label={`Quantidade de ${l.item.nome}`} className="flex items-center gap-0.5 rounded-full bg-muted p-[3px]">
+                    <button type="button" aria-label="Diminuir" onClick={() => mudarQuantidade(idx, -1)} className={classeDoBotao("fantasma", "icone-sm", "bg-card text-foreground hover:bg-card")}>
+                      <Minus aria-hidden="true" />
+                    </button>
                     <input
                       inputMode="decimal"
+                      aria-label={`Quantidade de ${l.item.nome}`}
                       value={l.quantidade}
                       aria-invalid={l.valida ? undefined : true}
                       onChange={(e) => setLinhas(linhas.map((x, j) => (j === idx ? { ...x, quantidade: e.target.value } : x)))}
-                      className="w-20 rounded-lg border border-input bg-card px-2 py-1.5 text-right text-sm text-foreground"
+                      className="w-10 bg-transparent text-center sm:w-12 text-sm font-extrabold text-foreground tabular-nums outline-none aria-invalid:text-status-danger"
                     />
-                  </label>
-                  <span className="w-24 text-right text-sm font-semibold text-foreground">{reaisDeCentavos(l.subtotal)}</span>
-                  <button type="button" onClick={() => setLinhas(linhas.filter((_, j) => j !== idx))} className="text-sm font-medium text-destructive underline-offset-2 hover:underline">
-                    Remover
+                    <button type="button" aria-label="Aumentar" onClick={() => mudarQuantidade(idx, 1)} className={classeDoBotao("fantasma", "icone-sm", "bg-card text-foreground hover:bg-card")}>
+                      <Plus aria-hidden="true" />
+                    </button>
+                  </div>
+                  <button
+                    type="button"
+                    aria-label={`Remover ${l.item.nome}`}
+                    onClick={() => setLinhas(linhas.filter((_, j) => j !== idx))}
+                    className={classeDoBotao("fantasma", "icone-sm", "text-status-danger hover:bg-status-danger-bg")}
+                  >
+                    <Trash2 aria-hidden="true" />
                   </button>
                 </li>
               ))}
             </ul>
           )}
           {semEstoque.length > 0 && (
-            <p role="alert" className="mt-3 rounded-xl border border-status-warn/30 bg-status-warn-bg px-4 py-3 text-sm text-status-warn">
+            <p role="alert" className="mt-3 rounded-lg bg-status-warn-bg px-4 py-3 text-sm text-status-warn">
               <span aria-hidden="true">▲ </span>
-              Estoque insuficiente:{" "}
-              {semEstoque.map((s) => `${s.nome} (há ${s.saldo.toLocaleString("pt-BR", { maximumFractionDigits: 3 })})`).join(", ")}.
+              Estoque insuficiente: {semEstoque.map((s) => `${s.nome} (há ${quantos(s.saldo)})`).join(", ")}.
             </p>
           )}
         </section>
 
-        <section className={cartao} aria-labelledby="titulo-cliente">
-          <h2 id="titulo-cliente" className="mb-3 font-display text-xl font-semibold text-card-foreground">
-            Cliente <span className="text-sm font-normal text-muted-foreground">(opcional)</span>
-          </h2>
+        <Superficie aria-labelledby="titulo-cliente">
+          <TituloDaSuperficie id="titulo-cliente" titulo="Cliente" descricao="Opcional." />
           {!novoCliente ? (
             <div className="flex flex-wrap gap-3">
               <label htmlFor="cliente" className="sr-only">
                 Cliente
               </label>
-              <select id="cliente" value={clienteId} onChange={(e) => setClienteId(e.target.value)} className={`${classeDoCampo()} min-w-0 flex-1`}>
+              <select id="cliente" value={clienteId} onChange={(e) => setClienteId(e.target.value)} className={`${classeDoCampo()} min-w-0 flex-1 basis-48`}>
                 <option value="">Sem cliente</option>
                 {clientes.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.nome}
-                    {c.contato ? ` · ${c.contato}` : ""}
+                    {c.contato ? `, ${c.contato}` : ""}
                   </option>
                 ))}
               </select>
-              <button type="button" onClick={() => setNovoCliente(true)} className={secundario}>
+              <button type="button" onClick={() => setNovoCliente(true)} className={classeDoBotao("secundario")}>
+                <UserPlus aria-hidden="true" />
                 Novo cliente
               </button>
             </div>
@@ -235,156 +339,126 @@ export function FrenteDeCaixa({ itens, clientes: clientesIniciais, hoje, troca }
               aoCancelar={() => setNovoCliente(false)}
             />
           )}
-        </section>
+        </Superficie>
       </div>
 
-      <aside className="space-y-6 lg:sticky lg:top-6 lg:self-start">
-        <section className={cartao} aria-labelledby="titulo-pagamento">
-          <div className="mb-4 flex items-baseline justify-between">
-            <h2 id="titulo-pagamento" className="font-display text-xl font-semibold text-card-foreground">
-              Total
-            </h2>
-            <p className="text-2xl font-semibold text-foreground">{reaisDeCentavos(total)}</p>
-          </div>
+      <aside className="min-w-0 space-y-4 lg:sticky lg:top-6 lg:self-start">
+        <Superficie aria-labelledby="titulo-pagamento">
+          <TituloDaSuperficie id="titulo-pagamento" titulo={troca ? "Pagamento da diferença" : "Como vai pagar?"} />
 
-          {troca && (
-            <dl className="mb-4 space-y-1 rounded-xl bg-muted/50 px-4 py-3 text-sm">
-              <div className="flex justify-between gap-3">
-                <dt className="text-muted-foreground">Limite (venda nº {troca.numero})</dt>
-                <dd className="font-medium text-foreground">{reaisDeCentavos(troca.limiteCentavos)}</dd>
-              </div>
-              <div className="flex justify-between gap-3">
-                <dt className="text-muted-foreground">Crédito de troca</dt>
-                <dd className="font-medium text-foreground">− {reaisDeCentavos(credito)}</dd>
-              </div>
-              <div className="flex justify-between gap-3">
-                <dt className="text-muted-foreground">A pagar agora</dt>
-                <dd className="font-semibold text-foreground">{reaisDeCentavos(Math.max(0, total - credito))}</dd>
-              </div>
-              <div className="flex justify-between gap-3">
-                <dt className="text-muted-foreground">A devolver</dt>
-                <dd className="font-semibold text-foreground">{reaisDeCentavos(reembolso)}</dd>
-              </div>
-              <p className="pt-1 text-xs text-muted-foreground">
-                Já recebido na venda original: {reaisDeCentavos(troca.recebidoCentavos)}. O crédito usa até esse valor; o que sobrar é devolvido.
-              </p>
-            </dl>
-          )}
           {acimaDoLimite && troca && (
-            <p role="alert" className="mb-3 rounded-xl border border-status-danger/30 bg-status-danger-bg px-4 py-3 text-sm text-status-danger">
+            <p role="alert" className="mb-3 rounded-lg bg-status-danger-bg px-4 py-3 text-sm text-status-danger">
               A troca precisa ter valor menor ou igual a {reaisDeCentavos(troca.limiteCentavos)}.
             </p>
           )}
 
-          <ul className="space-y-3" aria-label="Formas de pagamento">
-            {pagamentos.map((p) => {
-              const valor = paraCentavos(lerNumero(p.valor) ?? 0);
-              return (
-                <li key={p.chave} className="space-y-2 rounded-xl border p-3">
-                  <div className="flex gap-2">
-                    <label className="sr-only" htmlFor={`forma-${p.chave}`}>
-                      Forma de pagamento
-                    </label>
-                    <select
-                      id={`forma-${p.chave}`}
-                      value={p.forma}
-                      onChange={(e) => setPagamentos(pagamentos.map((x) => (x.chave === p.chave ? { ...x, forma: e.target.value as FormaDePagamento, parcelas: 1 } : x)))}
-                      className={`${classeDoCampo()} min-w-0 flex-1`}
-                    >
-                      {Object.entries(FORMAS_DE_PAGAMENTO).map(([v, r]) => (
-                        <option key={v} value={v}>
-                          {r}
-                        </option>
-                      ))}
-                    </select>
-                    {(pagamentos.length > 1 || troca) && (
-                      <button
-                        type="button"
-                        aria-label="Remover forma de pagamento"
-                        onClick={() => setPagamentos(pagamentos.filter((x) => x.chave !== p.chave))}
-                        className="px-2 text-sm font-medium text-destructive"
-                      >
-                        ✕
-                      </button>
-                    )}
-                  </div>
-                  <div className="flex gap-2">
-                    <label className="sr-only" htmlFor={`valor-${p.chave}`}>
-                      Valor
-                    </label>
-                    <input
-                      id={`valor-${p.chave}`}
-                      inputMode="decimal"
-                      placeholder="0,00"
-                      value={p.valor}
-                      onChange={(e) => setPagamentos(pagamentos.map((x) => (x.chave === p.chave ? { ...x, valor: e.target.value } : x)))}
-                      className={`${classeDoCampo()} min-w-0 flex-1`}
-                    />
-                    <button type="button" onClick={() => preencherRestante(p.chave)} disabled={total === 0} className={secundario}>
-                      Restante
-                    </button>
-                  </div>
-                  {p.forma === "CREDITO" && (
-                    <div>
-                      <label className="sr-only" htmlFor={`parcelas-${p.chave}`}>
-                        Parcelas
+          {pagamentos.length > 0 && (
+            <ul className="space-y-4" aria-label="Formas de pagamento">
+              {efetivos.map((p, n) => {
+                const valor = digitado(p);
+                return (
+                  <li key={p.chave} className={cn("space-y-2.5", n > 0 && "border-t pt-4")}>
+                    <fieldset>
+                      <legend className="sr-only">Forma de pagamento{pagamentos.length > 1 ? ` ${n + 1}` : ""}</legend>
+                      <div className="flex items-center gap-2">
+                        <div className="grid min-w-0 flex-1 grid-cols-4 gap-1 rounded-full bg-muted p-1">
+                          {Object.entries(FORMAS_DE_PAGAMENTO).map(([v, r]) => (
+                            <label
+                              key={v}
+                              className="relative grid h-10 cursor-pointer place-items-center rounded-full px-1 text-[13px] font-bold text-foreground transition-colors duration-(--duracao-estado) hover:bg-accent has-checked:bg-estrutura has-checked:text-estrutura-foreground has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-ring sm:text-sm"
+                            >
+                              <input
+                                type="radio"
+                                name={`forma-${p.chave}`}
+                                value={v}
+                                checked={p.forma === v}
+                                onChange={() => mudarPagamento(p.chave, { forma: v as FormaDePagamento, parcelas: 1 })}
+                                className="sr-only"
+                              />
+                              {r}
+                            </label>
+                          ))}
+                        </div>
+                        {(pagamentos.length > 1 || troca) && (
+                          <button
+                            type="button"
+                            aria-label="Remover forma de pagamento"
+                            onClick={() => setPagamentos(pagamentos.filter((x) => x.chave !== p.chave))}
+                            className={classeDoBotao("fantasma", "icone-sm", "text-status-danger hover:bg-status-danger-bg")}
+                          >
+                            <Trash2 aria-hidden="true" />
+                          </button>
+                        )}
+                      </div>
+                    </fieldset>
+                    <div className="flex gap-2">
+                      <label className="sr-only" htmlFor={`valor-${p.chave}`}>
+                        Valor
                       </label>
-                      <select
-                        id={`parcelas-${p.chave}`}
-                        value={p.parcelas}
-                        onChange={(e) => setPagamentos(pagamentos.map((x) => (x.chave === p.chave ? { ...x, parcelas: Number(e.target.value) } : x)))}
-                        className={classeDoCampo()}
-                      >
-                        {Array.from({ length: MAX_PARCELAS }, (_, i) => i + 1).map((n) => (
-                          <option key={n} value={n}>
-                            {n}x{valor > 0 ? ` de ${reaisDeCentavos(dividirEmParcelas(valor, n)[n - 1])}${valor % n ? " (1ª com centavos a mais)" : ""}` : ""}
-                          </option>
-                        ))}
-                      </select>
+                      <input
+                        id={`valor-${p.chave}`}
+                        inputMode="decimal"
+                        placeholder="0,00"
+                        value={p.valor}
+                        onChange={(e) => mudarPagamento(p.chave, { valor: e.target.value, auto: false })}
+                        onFocus={(e) => p.auto && e.currentTarget.select()}
+                        className={`${classeDoCampo()} min-w-0 flex-1 tabular-nums`}
+                      />
+                      <button type="button" onClick={() => preencherRestante(p.chave)} disabled={total === 0} className={classeDoBotao("secundario")}>
+                        Restante
+                      </button>
                     </div>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
+                    {p.forma === "CREDITO" && (
+                      <div>
+                        <label className="sr-only" htmlFor={`parcelas-${p.chave}`}>
+                          Parcelas
+                        </label>
+                        <select
+                          id={`parcelas-${p.chave}`}
+                          value={p.parcelas}
+                          onChange={(e) => mudarPagamento(p.chave, { parcelas: Number(e.target.value) })}
+                          className={classeDoCampo()}
+                        >
+                          {Array.from({ length: MAX_PARCELAS }, (_, i) => i + 1).map((k) => (
+                            <option key={k} value={k}>
+                              {k}x{valor > 0 ? ` de ${reaisDeCentavos(dividirEmParcelas(valor, k)[k - 1])}${valor % k ? " (1ª com centavos a mais)" : ""}` : ""}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
           <button
             type="button"
-            onClick={() => setPagamentos([...pagamentos, { chave: Math.max(0, ...pagamentos.map((p) => p.chave)) + 1, forma: troca ? "PIX" : "DINHEIRO", valor: "", parcelas: 1 }])}
-            className={`${secundario} mt-3 w-full`}
+            onClick={outraForma}
+            className={classeDoBotao("fantasma", "sm", cn("w-full", pagamentos.length > 0 && "mt-3"))}
           >
-            {troca && pagamentos.length === 0 ? "+ Pagar a diferença" : "+ Outra forma de pagamento"}
+            <Plus aria-hidden="true" />
+            {troca && pagamentos.length === 0 ? "Pagar a diferença" : "Outra forma de pagamento"}
           </button>
 
-          <p className={`mt-4 text-sm font-medium ${falta === 0 && total > 0 ? "text-status-ok" : "text-muted-foreground"}`} aria-live="polite">
-            {total === 0
-              ? "Adicione itens ao carrinho."
-              : falta === 0
-                ? troca && pago === 0
-                  ? "Coberto pelo crédito de troca."
-                  : "Pagamento completo."
-                : falta > 0
-                  ? `Falta ${reaisDeCentavos(falta)}`
-                  : `Pagamento passou ${reaisDeCentavos(-falta)} do total`}
-          </p>
-
           {dinheiro && (
-            <div className="mt-3">
-              <label htmlFor="recebido" className="text-sm font-medium text-foreground">
+            <div className="mt-4">
+              <label htmlFor="recebido" className={rotulo}>
                 Valor recebido em dinheiro <span className="font-normal text-muted-foreground">(para o troco)</span>
               </label>
-              <input id="recebido" inputMode="decimal" value={recebido} onChange={(e) => setRecebido(e.target.value)} className={`${classeDoCampo()} mt-1.5`} />
+              <input id="recebido" inputMode="decimal" value={recebido} onChange={(e) => setRecebido(e.target.value)} className={`${classeDoCampo()} tabular-nums`} />
               {trocoCentavos !== null && trocoCentavos > 0 && <p className="mt-1.5 text-sm font-semibold text-foreground">Troco: {reaisDeCentavos(trocoCentavos)}</p>}
             </div>
           )}
 
           {troca ? (
-            <div className="mt-4 space-y-3 border-t pt-4">
-              <p className="text-sm font-semibold text-foreground">Cancelamento da venda nº {troca.numero}</p>
+            <div className="mt-5 space-y-3 border-t pt-4">
+              <p className="text-sm font-bold text-foreground">Cancelamento da venda nº {troca.numero}</p>
               <div>
-                <label htmlFor="motivo" className="text-sm font-medium text-foreground">
+                <label htmlFor="motivo" className={rotulo}>
                   Motivo
                 </label>
-                <select id="motivo" value={motivo} onChange={(e) => setMotivo(e.target.value)} className={`${classeDoCampo(erroDe("motivo"))} mt-1.5`}>
+                <select id="motivo" value={motivo} onChange={(e) => setMotivo(e.target.value)} className={classeDoCampo(erroDe("motivo"))}>
                   {Object.entries(MOTIVOS_CANCELAMENTO).map(([v, r]) => (
                     <option key={v} value={v}>
                       {r}
@@ -393,18 +467,18 @@ export function FrenteDeCaixa({ itens, clientes: clientesIniciais, hoje, troca }
                 </select>
               </div>
               <div>
-                <label htmlFor="detalhe" className="text-sm font-medium text-foreground">
+                <label htmlFor="detalhe" className={rotulo}>
                   Detalhe {motivo === "OUTRO" ? "(obrigatório)" : "(opcional)"}
                 </label>
-                <input id="detalhe" maxLength={200} value={detalhe} onChange={(e) => setDetalhe(e.target.value)} className={`${classeDoCampo(erroDe("detalhe"))} mt-1.5`} />
+                <input id="detalhe" maxLength={200} value={detalhe} onChange={(e) => setDetalhe(e.target.value)} className={classeDoCampo(erroDe("detalhe"))} />
                 <MensagemDeCampo id="detalhe-erro" erro={erroDe("detalhe")} />
               </div>
               {reembolso > 0 && (
                 <div>
-                  <label htmlFor="formaReembolso" className="text-sm font-medium text-foreground">
+                  <label htmlFor="formaReembolso" className={rotulo}>
                     Devolver {reaisDeCentavos(reembolso)} em
                   </label>
-                  <select id="formaReembolso" value={formaReembolso} onChange={(e) => setFormaReembolso(e.target.value)} className={`${classeDoCampo(erroDe("formaReembolso"))} mt-1.5`}>
+                  <select id="formaReembolso" value={formaReembolso} onChange={(e) => setFormaReembolso(e.target.value)} className={classeDoCampo(erroDe("formaReembolso"))}>
                     <option value="">Selecione…</option>
                     {Object.entries(FORMAS_DE_REEMBOLSO).map(([v, r]) => (
                       <option key={v} value={v}>
@@ -417,8 +491,8 @@ export function FrenteDeCaixa({ itens, clientes: clientesIniciais, hoje, troca }
               )}
             </div>
           ) : (
-            <div className="mt-4">
-              <label htmlFor="dia" className="text-sm font-medium text-foreground">
+            <div className="mt-5 border-t pt-4">
+              <label htmlFor="dia" className={rotulo}>
                 Data da venda
               </label>
               <input
@@ -428,12 +502,45 @@ export function FrenteDeCaixa({ itens, clientes: clientesIniciais, hoje, troca }
                 max={hoje}
                 min={somarDias(hoje, -DIAS_RETROATIVOS)}
                 onChange={(e) => setDia(e.target.value)}
-                className={`${classeDoCampo()} mt-1.5`}
+                className={classeDoCampo()}
               />
             </div>
           )}
+        </Superficie>
 
-          <form action={executar} className="mt-5">
+        <Superficie tom="estrutura" aria-label="Resumo da venda">
+          {troca && (
+            <dl className="mb-4 space-y-1.5 text-sm">
+              <div className="flex justify-between gap-3">
+                <dt className="text-estrutura-suave">Limite (venda nº {troca.numero})</dt>
+                <dd className="font-semibold tabular-nums">{reaisDeCentavos(troca.limiteCentavos)}</dd>
+              </div>
+              <div className="flex justify-between gap-3">
+                <dt className="text-estrutura-suave">Crédito de troca</dt>
+                <dd className="font-semibold tabular-nums">− {reaisDeCentavos(credito)}</dd>
+              </div>
+              <div className="flex justify-between gap-3">
+                <dt className="text-estrutura-suave">A pagar agora</dt>
+                <dd className="font-bold tabular-nums">{reaisDeCentavos(Math.max(0, total - credito))}</dd>
+              </div>
+              <div className="flex justify-between gap-3">
+                <dt className="text-estrutura-suave">A devolver</dt>
+                <dd className="font-bold tabular-nums">{reaisDeCentavos(reembolso)}</dd>
+              </div>
+              <p className="pt-1 text-xs text-estrutura-suave">
+                Já recebido na venda original: {reaisDeCentavos(troca.recebidoCentavos)}. O crédito usa até esse valor; o que sobrar é devolvido.
+              </p>
+            </dl>
+          )}
+          <div className="flex items-baseline justify-between gap-3">
+            <span className="text-sm text-estrutura-suave">Total</span>
+            <span className="text-[30px] leading-none font-extrabold tracking-tight tabular-nums">{reaisDeCentavos(total)}</span>
+          </div>
+          <p className={cn("mt-2 text-right text-sm font-semibold", falta === 0 && total > 0 ? "text-ambar" : "text-estrutura-suave")} aria-live="polite">
+            {situacao}
+          </p>
+
+          <form action={executar} className="mt-4">
             <input type="hidden" name="carrinho" value={carrinhoJson} />
             {troca && (
               <>
@@ -443,15 +550,15 @@ export function FrenteDeCaixa({ itens, clientes: clientesIniciais, hoje, troca }
                 <input type="hidden" name="formaReembolso" value={reembolso > 0 ? formaReembolso : ""} />
               </>
             )}
-            <button type="submit" disabled={!podeFinalizar || enviando} className={`${botao} w-full py-3.5`}>
-              {enviando
-                ? "Registrando…"
-                : troca
-                  ? `Cancelar a venda nº ${troca.numero} e registrar a troca`
-                  : `Finalizar venda${total ? ` · ${reaisDeCentavos(total)}` : ""}`}
+            <button
+              type="submit"
+              disabled={!podeFinalizar || enviando}
+              className={classeDoBotao("ambar", "lg", "h-auto min-h-13 w-full py-3 font-extrabold whitespace-normal disabled:bg-estrutura-foreground/15 disabled:text-estrutura-suave disabled:opacity-100")}
+            >
+              {enviando ? "Registrando…" : troca ? `Cancelar a venda nº ${troca.numero} e registrar a troca` : "Finalizar venda"}
             </button>
           </form>
-        </section>
+        </Superficie>
       </aside>
     </div>
   );
@@ -468,7 +575,7 @@ function NovoCliente({ aoCriar, aoCancelar }: { aoCriar: (c: Cliente) => void; a
   return (
     <form action={executar} className="space-y-3">
       <div>
-        <label htmlFor="nome-cliente" className="text-sm font-medium text-foreground">
+        <label htmlFor="nome-cliente" className={rotulo}>
           Nome
         </label>
         <input
@@ -477,22 +584,22 @@ function NovoCliente({ aoCriar, aoCancelar }: { aoCriar: (c: Cliente) => void; a
           maxLength={120}
           aria-invalid={erros.nome ? true : undefined}
           aria-describedby={erros.nome ? "nome-cliente-erro" : undefined}
-          className={`${classeDoCampo(erros.nome)} mt-1.5`}
+          className={classeDoCampo(erros.nome)}
         />
         <MensagemDeCampo id="nome-cliente-erro" erro={erros.nome} />
       </div>
       <div>
-        <label htmlFor="contato-cliente" className="text-sm font-medium text-foreground">
-          Contato <span className="font-normal text-muted-foreground">(opcional — telefone ou e-mail)</span>
+        <label htmlFor="contato-cliente" className={rotulo}>
+          Contato <span className="font-normal text-muted-foreground">(opcional: telefone ou e-mail)</span>
         </label>
-        <input id="contato-cliente" name="contato" maxLength={120} className={`${classeDoCampo(erros.contato)} mt-1.5`} />
+        <input id="contato-cliente" name="contato" maxLength={120} className={classeDoCampo(erros.contato)} />
         <MensagemDeCampo id="contato-cliente-erro" erro={erros.contato} />
       </div>
-      <div className="flex gap-3">
-        <button type="submit" disabled={enviando} className={botao}>
+      <div className="flex flex-wrap gap-3">
+        <button type="submit" disabled={enviando} className={classeDoBotao("principal")}>
           Cadastrar cliente
         </button>
-        <button type="button" onClick={aoCancelar} className={secundario}>
+        <button type="button" onClick={aoCancelar} className={classeDoBotao("secundario")}>
           Cancelar
         </button>
       </div>
