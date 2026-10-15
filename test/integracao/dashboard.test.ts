@@ -220,6 +220,58 @@ describe("projeção de caixa", () => {
   });
 });
 
+describe("consultas da SPEC-016 (T05)", () => {
+  it("formas do mês: o que entrou por forma nas vendas concluídas, crédito parcelado inteiro no mês da venda", async () => {
+    await vender([{ forma: "PIX", valor: 50 }]);
+    await vender([{ forma: "DINHEIRO", valor: 30 }, { forma: "CREDITO", valor: 300, parcelas: 3 }]);
+    await venda(new Date(), 999, { status: "CANCELADA" });
+    const linhas = await deps().dashboard.formasDoMes(HOJE);
+    expect(Object.fromEntries(linhas.map((l) => [l.forma, l.valorCentavos]))).toEqual({ PIX: 5000, DINHEIRO: 3000, CREDITO: 30000 });
+    const formas = await dash.carregarFormas(deps());
+    expect(formas.itens.map((i) => [i.nome, i.valorCentavos])).toEqual([
+      ["PIX", 5000],
+      ["Dinheiro", 3000],
+      ["Crédito", 30000],
+      ["Débito", 0],
+    ]);
+    expect(await deps(negocioB).dashboard.formasDoMes(HOJE)).toEqual([]);
+  });
+
+  it("ano anterior: só os 12 meses um ano antes da janela, na chave do mês correspondente; cancelada fora", async () => {
+    const mesAnoPassado = somarMeses(MES, -12);
+    await venda(meioDia(`${mesAnoPassado}-15`), 120);
+    await venda(meioDia(`${mesAnoPassado}-16`), 80, { status: "CANCELADA" });
+    await venda(meioDia(`${somarMeses(MES, -11)}-15`), 500); // já é da janela atual
+    await venda(meioDia(`${somarMeses(MES, -24)}-15`), 700); // dois anos antes
+    await venda(meioDia(`${mesAnoPassado}-15`), 333, { negocioId: negocioB });
+    expect(await deps().dashboard.vendasPorMesAnoAnterior(HOJE)).toEqual({ [MES]: 12000 });
+  });
+
+  it("saldo diário: 30 pontos, o último igual ao 'Saldo atual' do Financeiro, ontem sem o que entrou hoje", async () => {
+    expect(await financeiro.informarSaldoInicial({ valor: "100", data: HOJE }, depsFin())).toMatchObject({ status: "salvo" });
+    await vender([{ forma: "PIX", valor: 50 }]);
+    const pontos = await deps().dashboard.saldoDiario(HOJE);
+    expect(pontos).toHaveLength(30);
+    expect(pontos[29]).toEqual({ dia: HOJE, saldoCentavos: await deps().saldoAtual(HOJE) });
+    expect(pontos[29].saldoCentavos).toBe(15000);
+    expect(pontos[28]).toEqual({ dia: somarDias(HOJE, -1), saldoCentavos: 0 });
+  });
+
+  it("movimentos de hoje: só os do negócio, do mais recente ao mais antigo, com a descrição da venda", async () => {
+    await vender([{ forma: "PIX", valor: 50 }]);
+    expect(await financeiro.lancarAvulso({ tipo: "SAIDA", valor: "12", categoria: "FORNECEDORES", descricao: "Algodão", data: HOJE }, depsFin())).toMatchObject({ status: "salvo" });
+    expect(await financeiro.lancarAvulso({ tipo: "ENTRADA", valor: "99", categoria: "OUTROS", descricao: "Do outro negócio", data: HOJE }, depsFin(negocioB))).toMatchObject({ status: "salvo" });
+    const lista = await deps().dashboard.movimentosDeHoje(HOJE);
+    expect(lista.map((m) => [m.descricao, m.tipo, m.valorCentavos]).sort()).toEqual(
+      [
+        ["Algodão", "SAIDA", 1200],
+        ["Venda nº 1", "ENTRADA", 5000],
+      ].sort(),
+    );
+    expect(lista.every((m) => /^\d{2}:\d{2}$/.test(m.hora))).toBe(true);
+  });
+});
+
 describe("desempenho", () => {
   it("T11 — CA-13: 10 mil vendas em 12 meses e 500 contas: Dashboard completo em menos de 2 s (RNF06)", async () => {
     await base.negocio.update({ where: { id: negocioA }, data: { regimeTributario: "AUTONOMO", impostoPercentualManual: 6, cmvEstimado: 30, margemLucroMeta: 10 } });

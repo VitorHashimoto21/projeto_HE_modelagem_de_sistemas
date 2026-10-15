@@ -332,7 +332,7 @@ flowchart LR
 - **Justificativa da ordem:** fora do caminho crítico do MVP; só substitui o ponto de troca de plano criado na SPEC-013. Feita se sobrar tempo no semestre ou na continuação rumo à produção.
 
 #### SPEC-016 — Design system e redesign (Direção "Balcão")
-- **Spec:** [`specs/SPEC-016.md`](./specs/SPEC-016.md) (✅ aprovada; um único PR)
+- **Spec:** [`specs/SPEC-016.md`](./specs/SPEC-016.md) (🔵 implementada em 15/10/2026 num único PR; aguardando merge e homologação — [evidências](./specs/evidencias/SPEC-016/README.md))
 - **Objetivo:** criar os componentes de interface e de gráfico, os tokens de movimento e a nova estrutura do app, e migrar todas as telas para a Direção B aprovada (estrutura verde-escura, Manrope, faixa do caixa, gráficos interativos), sem mudar comportamento.
 - **Valor entregue:** produto fácil de ler, agradável de manusear e consistente em qualquer tela; visual mantido em componentes, não em cópias.
 - **RF:** RF43, RF44, RF57, RF68, RF70 (apresentação) · **RN:** RN18 (plano nos cartões novos) · **RNF:** RNF01, RNF02, RNF10

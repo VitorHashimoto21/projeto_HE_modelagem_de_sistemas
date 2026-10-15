@@ -1,6 +1,6 @@
 # SPEC-016 — Design system e redesign (Direção "Balcão")
 
-> **Status:** ✅ **Aprovada em 14/10/2026** — questões em aberto decididas pela equipe (seção 13): OPEN-001 a OPEN-005 e OPEN-007 pela opção recomendada; OPEN-006 por **um PR único**. Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar).
+> **Status:** 🔵 **Implementada em 15/10/2026, aguardando o merge e a homologação** — aprovada em 14/10/2026 (OPEN-001 a OPEN-005 e OPEN-007 pela opção recomendada; OPEN-006 por **um PR único**); as 6 etapas num único PR, testes T01–T06 no CI, roteiros, acessibilidade e desempenho em build de produção (T07–T09) — [evidências](evidencias/SPEC-016/README.md); notas da implementação na seção 15. Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar).
 > **Mapa:** [`MAPA_DE_SPECS.md`](../MAPA_DE_SPECS.md) · **Anteriores:** todas as telas das SPECs 002 a 014; [SPEC-012](SPEC-012.md) (gráficos em SVG próprio, OPEN-002) · **Base visual:** [`IDENTIDADE_VISUAL.md`](../design/IDENTIDADE_VISUAL.md) e o protótipo aprovado da Direção B (quadro "HE — Direções visuais", linha B, 14/10/2026).
 
 ---
@@ -290,13 +290,30 @@ Opções consideradas:
 
 A SPEC-016 estará concluída quando:
 
-- [ ] todos os critérios de aceitação (CA-01 a CA-11) estiverem implementados, nas 6 etapas;
-- [ ] todos os invariantes (INV-001 a INV-008) estiverem preservados;
-- [ ] os testes derivados (T01 a T10) estiverem aprovados, com o CI verde no PR;
-- [ ] os RNFs aplicáveis (RNF01, RNF02, RNF10 e desempenho) tiverem sido verificados como descrito na seção 10;
+- [x] todos os critérios de aceitação (CA-01 a CA-11) estiverem implementados, nas 6 etapas — por testes e em build de produção; a homologação (T10) fica para depois do merge;
+- [x] todos os invariantes (INV-001 a INV-008) estiverem preservados;
+- [ ] os testes derivados (T01 a T10) estiverem aprovados, com o CI verde no PR — T01 a T09 aprovados (T07 pela regressão descrita na seção 15); falta o CI do PR e a homologação (T10);
+- [x] os RNFs aplicáveis (RNF01, RNF02, RNF10 e desempenho) tiverem sido verificados como descrito na seção 10;
 - [x] as questões OPEN-001 a OPEN-007 tiverem sido decididas e registradas;
-- [ ] `IDENTIDADE_VISUAL.md` estiver na versão 2;
-- [ ] não existir divergência conhecida entre a implementação e esta Spec;
-- [ ] toda divergência em relação à baseline tiver sido explicitamente analisada e registrada nos documentos.
+- [x] `IDENTIDADE_VISUAL.md` estiver na versão 2;
+- [ ] não existir divergência conhecida entre a implementação e esta Spec — as da seção 15 aguardam a decisão da equipe;
+- [x] toda divergência em relação à baseline tiver sido explicitamente analisada e registrada nos documentos (seção 15).
 
 **Regra fundamental:** a implementação obedece a esta Spec aprovada. Se surgir conflito entre código, Spec e documentos de modelagem, o comportamento não é alterado em silêncio: a divergência é registrada com a proposta de (1) corrigir a implementação ou (2) alterar a baseline, e a decisão é da equipe.
+
+---
+
+## 15. Notas da implementação (15/10/2026)
+
+Registradas conforme a regra fundamental: cada ponto traz a proposta e a decisão é da equipe.
+
+| # | O que | Situação | Proposta |
+|---|---|---|---|
+| N1 | **Valor automático na Nova venda.** Com um único pagamento, o valor acompanha o total até a pessoa editar o campo; ao dividir em mais de uma forma, fica fixo e cada parte é ajustada à mão. As validações e a ação são as mesmas da SPEC-008 (o servidor recalcula tudo). | Melhoria de interface não escrita na seção 5 | (2) aceitar na baseline como comportamento da frente de caixa; ou (1) voltar ao campo vazio |
+| N2 | **Gráficos além da seção 5.5:** "Para onde vai cada venda" na Calculadora (barra empilhada com as parcelas do próprio cálculo), a parte de cada despesa fixa no total do mês e a régua saldo × mínimo no detalhe do estoque. Usam só números que a tela já calculava. | Acréscimo | (2) registrar na seção 5.5 |
+| N3 | **"Cancelar conta" do OPEN-003** não virou gaveta: não ficou claro se é cancelar uma conta a pagar (hoje um botão com confirmação no detalhe da conta) ou excluir a conta do usuário (formulário em página, SPEC-014). As gavetas entregues: entrada e saída de estoque, novo lançamento, nova conta e convidar. | Ponto em aberto | Equipe esclarecer; se for a conta a pagar, vira um diálogo de confirmação |
+| N4 | **T07:** os roteiros das SPECs 002–014 dependiam de bases preparadas para cada Spec (ex.: a primeira venda ser a nº 1). No lugar deles, um roteiro de regressão cobre os mesmos fluxos sem depender do estado da base (42 verificações), mais os roteiros de cada etapa (99) — evidências. | Troca de método | (2) aceitar a regressão como T07 |
+| N5 | **"Como os clientes pagam" nos Relatórios** sem a taxa da maquininha (a seção 5.5 pede a taxa média dos parâmetros, que o Painel mostra); os Relatórios não carregam os parâmetros da Calculadora. | Diferença pequena | (1) incluir a taxa num ajuste futuro, ou (2) manter só no Painel |
+| N6 | **Desempenho:** a primeira medição passou do limite (+39,3 KB); a gaveta do "Mais" e a biblioteca de avisos passaram a ser baixadas só quando usadas. Resultado: +17 KB no pior caso. | Resolvido | — |
+| N7 | **Acessibilidade:** dois achados do axe corrigidos (contraste de um rótulo no estoque; `<p>` dentro de `<dl>` na Calculadora, vindo da SPEC-010). | Resolvido | — |
+
