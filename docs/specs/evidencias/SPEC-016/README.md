@@ -70,4 +70,4 @@ JavaScript comprimido baixado por tela, cache desligado, DEVELOP (`339c4c1`) × 
 
 ## Verificação na homologação (T10)
 
-Pendente: depois do merge do PR único.
+Pendente. O PR único (#72) foi mergeado na DEVELOP em 15/10/2026 com o CI verde; falta percorrer as telas em https://he-homol.vercel.app.
