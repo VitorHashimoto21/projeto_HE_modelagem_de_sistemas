@@ -95,6 +95,9 @@ export default async function Painel({ searchParams }: PageProps<"/painel">) {
     vendas: pode(permissoes, "vendas", "ver"),
   });
   const tem = (c: CartaoDoDashboard) => cartoes.includes(c);
+  // Sem as partes financeiras (Dashboard restrito), não há coluna principal: os cartões
+  // laterais ocupam a largura toda em vez de ficarem presos à direita de uma coluna vazia.
+  const temColunaPrincipal = tem("semaforo") || tem("grafico") || tem("projecao");
 
   // Conferência do Financeiro (SPEC-009, 5.5): antes de ler saldo e projeção; sem as partes
   // financeiras, depois da resposta.
@@ -199,124 +202,126 @@ export default async function Painel({ searchParams }: PageProps<"/painel">) {
           <Falha cartao="saldo" />
         ))}
 
-      <div className="flex flex-wrap items-start gap-6">
-        <div className="flex min-w-0 flex-[2_1_560px] flex-col gap-6">
-          {semaforo &&
-            (!semaforo.ok ? (
-              <Falha cartao="semaforo" />
-            ) : semaforo.dados.status === "indisponivel" ? (
-              <Superficie aria-labelledby="titulo-mes">
-                <TituloDaSuperficie id="titulo-mes" titulo={`Como está ${mesPorExtenso(comp)}`} acoes={<Selo tom="neutro">Indisponível</Selo>} />
-                <p className="text-sm">{semaforo.dados.mensagem}</p>
-                {pode(permissoes, "calculadora", "editar") && (
-                  <p className="mt-3 text-sm">
-                    <Link href="/calculadora/parametros" className={classeDoLink()}>
-                      Abrir os parâmetros de precificação
-                    </Link>
-                  </p>
-                )}
-              </Superficie>
-            ) : (
-              (() => {
-                const e = semaforo.dados;
-                const t = textoDoMes(e);
-                return (
-                  <Superficie aria-labelledby="titulo-mes">
-                    <TituloDaSuperficie id="titulo-mes" titulo={`Como está ${mesPorExtenso(comp)}`} acoes={<Selo tom={t.tom}>{t.selo}</Selo>} />
-                    <div className="flex flex-wrap items-end gap-x-8 gap-y-3">
-                      <Numero rotulo={`Faturado até hoje, dia ${Number(deps.hoje.slice(8, 10))}`} valor={reais(e.semaforo.faturamentoCentavos)} tamanho="lg" />
-                      <p className="max-w-sm pb-1 text-[15px] leading-relaxed">{t.texto}</p>
-                    </div>
-                    <div className="mt-6">
-                      <Medidor
-                        faturadoCentavos={e.semaforo.faturamentoCentavos}
-                        equilibrioCentavos={e.semaforo.pontoDeEquilibrioCentavos}
-                        metaCentavos={e.semaforo.metaCentavos}
-                        ritmoCentavos={e.semaforo.ritmoCentavos}
-                        tom={t.tom}
+      <div className={temColunaPrincipal ? "flex flex-wrap items-start gap-6" : "grid items-start gap-6 md:grid-cols-2"}>
+        {temColunaPrincipal && (
+          <div className="flex min-w-0 flex-[2_1_560px] flex-col gap-6">
+            {semaforo &&
+              (!semaforo.ok ? (
+                <Falha cartao="semaforo" />
+              ) : semaforo.dados.status === "indisponivel" ? (
+                <Superficie aria-labelledby="titulo-mes">
+                  <TituloDaSuperficie id="titulo-mes" titulo={`Como está ${mesPorExtenso(comp)}`} acoes={<Selo tom="neutro">Indisponível</Selo>} />
+                  <p className="text-sm">{semaforo.dados.mensagem}</p>
+                  {pode(permissoes, "calculadora", "editar") && (
+                    <p className="mt-3 text-sm">
+                      <Link href="/calculadora/parametros" className={classeDoLink()}>
+                        Abrir os parâmetros de precificação
+                      </Link>
+                    </p>
+                  )}
+                </Superficie>
+              ) : (
+                (() => {
+                  const e = semaforo.dados;
+                  const t = textoDoMes(e);
+                  return (
+                    <Superficie aria-labelledby="titulo-mes">
+                      <TituloDaSuperficie id="titulo-mes" titulo={`Como está ${mesPorExtenso(comp)}`} acoes={<Selo tom={t.tom}>{t.selo}</Selo>} />
+                      <div className="flex flex-wrap items-end gap-x-8 gap-y-3">
+                        <Numero rotulo={`Faturado até hoje, dia ${Number(deps.hoje.slice(8, 10))}`} valor={reais(e.semaforo.faturamentoCentavos)} tamanho="lg" />
+                        <p className="max-w-sm pb-1 text-[15px] leading-relaxed">{t.texto}</p>
+                      </div>
+                      <div className="mt-6">
+                        <Medidor
+                          faturadoCentavos={e.semaforo.faturamentoCentavos}
+                          equilibrioCentavos={e.semaforo.pontoDeEquilibrioCentavos}
+                          metaCentavos={e.semaforo.metaCentavos}
+                          ritmoCentavos={e.semaforo.ritmoCentavos}
+                          tom={t.tom}
+                        />
+                      </div>
+                      <Legenda
+                        className="mt-2"
+                        itens={[
+                          { rotulo: "Faturado", marca: "barra", cor: "var(--primary)" },
+                          ...(e.semaforo.ritmoCentavos !== null
+                            ? [{ rotulo: <>No ritmo atual, o mês fecha em <strong>{reais(e.semaforo.ritmoCentavos)}</strong> (estimativa)</>, marca: "hachurado" as const }]
+                            : []),
+                        ]}
                       />
-                    </div>
-                    <Legenda
-                      className="mt-2"
-                      itens={[
-                        { rotulo: "Faturado", marca: "barra", cor: "var(--primary)" },
-                        ...(e.semaforo.ritmoCentavos !== null
-                          ? [{ rotulo: <>No ritmo atual, o mês fecha em <strong>{reais(e.semaforo.ritmoCentavos)}</strong> (estimativa)</>, marca: "hachurado" as const }]
-                          : []),
-                      ]}
-                    />
-                    {e.semaforo.metaCentavos === null && (
-                      <p className="mt-3 text-sm text-muted-foreground">
-                        {MENSAGENS_DASHBOARD.semMeta}{" "}
-                        {pode(permissoes, "calculadora", "editar") && (
-                          <Link href="/calculadora/parametros" className={classeDoLink()}>
-                            Configurar
-                          </Link>
-                        )}
-                      </p>
-                    )}
-                  </Superficie>
-                );
-              })()
-            ))}
+                      {e.semaforo.metaCentavos === null && (
+                        <p className="mt-3 text-sm text-muted-foreground">
+                          {MENSAGENS_DASHBOARD.semMeta}{" "}
+                          {pode(permissoes, "calculadora", "editar") && (
+                            <Link href="/calculadora/parametros" className={classeDoLink()}>
+                              Configurar
+                            </Link>
+                          )}
+                        </p>
+                      )}
+                    </Superficie>
+                  );
+                })()
+              ))}
 
-          {grafico &&
-            (grafico.ok && pontos ? (
-              <Superficie aria-labelledby="titulo-vendas">
-                <TituloDaSuperficie
-                  id="titulo-vendas"
-                  titulo="Vendas"
-                  descricao={`Total ${visao === "dias" ? "nos últimos 30 dias" : "nos últimos 12 meses"}: ${reais(grafico.dados.totalCentavos)}`}
-                  acoes={
-                    <Segmentos
-                      rotulo="Período do gráfico"
-                      itens={[
-                        { href: "/painel", rotulo: "30 dias", ativo: visao === "dias" },
-                        { href: "/painel?grafico=meses", rotulo: "12 meses", ativo: visao === "meses" },
-                      ]}
-                    />
-                  }
-                />
-                <GraficoDeBarras
-                  pontos={pontos}
-                  descricao={`Vendas ${visao === "dias" ? "por dia nos últimos 30 dias" : "por mês nos últimos 12 meses"}; total ${reais(grafico.dados.totalCentavos)}`}
-                  rotuloParcial={visao === "dias" ? "até agora" : "até hoje"}
-                />
-                <Legenda
-                  className="mt-3"
-                  itens={[
-                    { rotulo: "Vendas", marca: "barra", cor: "var(--chart-1)" },
-                    { rotulo: visao === "dias" ? "Hoje, até agora" : `${mesPorExtenso(comp)}, até hoje`, marca: "hachurado" },
-                    { rotulo: "Média do período", marca: "tracejado" },
-                    ...(anterior?.ok ? [{ rotulo: "Mesmo mês, ano anterior", marca: "linha" as const }] : []),
-                  ]}
-                />
-                {visao === "meses" && !pago && (
-                  <p className="mt-3 text-[13px] text-muted-foreground">
-                    <Star className="mr-1 inline size-3.5 text-ambar" aria-hidden="true" />
-                    No plano pago, cada mês mostra também o mesmo mês do ano anterior.
-                  </p>
-                )}
-                <TabelaDeValores
-                  className="mt-3"
-                  legenda="Vendas por período"
-                  colunas={anterior?.ok ? [visao === "dias" ? "Dia" : "Mês", "Vendas", "Ano anterior"] : [visao === "dias" ? "Dia" : "Mês", "Vendas"]}
-                  linhas={[...pontos].reverse().map((p) => [p.rotulo + (p.parcial ? " (até agora)" : ""), reais(p.valorCentavos), ...(anterior?.ok ? [reais(p.anteriorCentavos ?? 0)] : [])])}
-                />
-              </Superficie>
-            ) : (
-              <Falha cartao="grafico" />
-            ))}
+            {grafico &&
+              (grafico.ok && pontos ? (
+                <Superficie aria-labelledby="titulo-vendas">
+                  <TituloDaSuperficie
+                    id="titulo-vendas"
+                    titulo="Vendas"
+                    descricao={`Total ${visao === "dias" ? "nos últimos 30 dias" : "nos últimos 12 meses"}: ${reais(grafico.dados.totalCentavos)}`}
+                    acoes={
+                      <Segmentos
+                        rotulo="Período do gráfico"
+                        itens={[
+                          { href: "/painel", rotulo: "30 dias", ativo: visao === "dias" },
+                          { href: "/painel?grafico=meses", rotulo: "12 meses", ativo: visao === "meses" },
+                        ]}
+                      />
+                    }
+                  />
+                  <GraficoDeBarras
+                    pontos={pontos}
+                    descricao={`Vendas ${visao === "dias" ? "por dia nos últimos 30 dias" : "por mês nos últimos 12 meses"}; total ${reais(grafico.dados.totalCentavos)}`}
+                    rotuloParcial={visao === "dias" ? "até agora" : "até hoje"}
+                  />
+                  <Legenda
+                    className="mt-3"
+                    itens={[
+                      { rotulo: "Vendas", marca: "barra", cor: "var(--chart-1)" },
+                      { rotulo: visao === "dias" ? "Hoje, até agora" : `${mesPorExtenso(comp)}, até hoje`, marca: "hachurado" },
+                      { rotulo: "Média do período", marca: "tracejado" },
+                      ...(anterior?.ok ? [{ rotulo: "Mesmo mês, ano anterior", marca: "linha" as const }] : []),
+                    ]}
+                  />
+                  {visao === "meses" && !pago && (
+                    <p className="mt-3 text-[13px] text-muted-foreground">
+                      <Star className="mr-1 inline size-3.5 text-ambar" aria-hidden="true" />
+                      No plano pago, cada mês mostra também o mesmo mês do ano anterior.
+                    </p>
+                  )}
+                  <TabelaDeValores
+                    className="mt-3"
+                    legenda="Vendas por período"
+                    colunas={anterior?.ok ? [visao === "dias" ? "Dia" : "Mês", "Vendas", "Ano anterior"] : [visao === "dias" ? "Dia" : "Mês", "Vendas"]}
+                    linhas={[...pontos].reverse().map((p) => [p.rotulo + (p.parcial ? " (até agora)" : ""), reais(p.valorCentavos), ...(anterior?.ok ? [reais(p.anteriorCentavos ?? 0)] : [])])}
+                  />
+                </Superficie>
+              ) : (
+                <Falha cartao="grafico" />
+              ))}
 
-          {projecao &&
-            (projecao.ok ? (
-              <ProjecaoDoCaixa dados={projecao.dados} />
-            ) : (
-              <Falha cartao="projecao" />
-            ))}
-        </div>
+            {projecao &&
+              (projecao.ok ? (
+                <ProjecaoDoCaixa dados={projecao.dados} />
+              ) : (
+                <Falha cartao="projecao" />
+              ))}
+          </div>
+        )}
 
-        <div className="flex min-w-0 flex-[1_1_300px] flex-col gap-6">
+        <div className={temColunaPrincipal ? "flex min-w-0 flex-[1_1_300px] flex-col gap-6" : "contents"}>
           {vendasDoDia &&
             (vendasDoDia.ok ? (
               <Superficie aria-labelledby="titulo-hoje">
