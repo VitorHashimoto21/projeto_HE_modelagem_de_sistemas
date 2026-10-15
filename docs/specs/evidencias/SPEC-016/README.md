@@ -70,4 +70,31 @@ JavaScript comprimido baixado por tela, cache desligado, DEVELOP (`339c4c1`) × 
 
 ## Verificação na homologação (T10)
 
-Pendente. O PR único (#72) foi mergeado na DEVELOP em 15/10/2026 com o CI verde; falta percorrer as telas em https://he-homol.vercel.app.
+Feita em 15/10/2026 em https://he-homol.vercel.app, com o negócio de teste "HE Testing" (estúdio de beleza: produtos, serviços com materiais, 14 vendas com as quatro formas de pagamento, cancelamento, despesas fixas e meta do mês). As fotos estão em [`homologacao/`](homologacao/).
+
+| Foto | Tela | Comprova |
+|---|---|---|
+| [01](homologacao/homol_01_financeiro_gaveta_390_claro.png) | Novo lançamento em gaveta, 390 px | Gaveta com a própria URL (OPEN-003), fundo sólido |
+| [02](homologacao/homol_02_financeiro_gaveta_1440_claro.png) | Novo lançamento em gaveta, 1440 px | Gaveta lateral sobre o Financeiro, faixa compacta (OPEN-005) |
+| [03](homologacao/homol_03_painel_390_claro.png) | Painel, 390 px | Barra inferior com "Vender" (CA-03), faixa do caixa (CA-04) |
+| [04](homologacao/homol_04_painel_768_claro.png) | Painel, 768 px | Trilho só com ícones (CA-03) |
+| [05](homologacao/homol_05_painel_1440_claro.png) | Painel, 1440 px | Menu lateral, medidor da meta, gráficos e saldo igual ao do Financeiro (CA-03, CA-04, CA-05) |
+| [06](homologacao/homol_06_painel_1440_escuro.png) | Painel, 1440 px, escuro | Tema escuro (CA-11) |
+| [07](homologacao/homol_07_painel_390_plano_gratuito.png) | Painel, plano gratuito | "O que mais deixa lucro" mostra só a oferta, sem valores (CA-06) |
+| [08](homologacao/homol_08_painel_colaborador_390.png) | Painel do Colaborador, 390 px | Sem faixa do caixa nem saldo; "Estoque" no lugar de "Caixa" (CA-04) |
+| [09](homologacao/homol_09_painel_1440_ver_os_valores.png) | Painel com "Ver os valores" aberto | Tabela de valores do gráfico (CA-05) |
+| [10](homologacao/homol_10_painel_390_escuro.png) | Painel, 390 px, escuro | Tema escuro no celular (CA-11) |
+| [11](homologacao/homol_11_painel_390_plano_pago.png) | Painel, plano pago | Rentabilidade com valores e destaque dos 3 primeiros (CA-06) |
+| [12](homologacao/homol_12_relatorios_1440.png) | Relatórios, 1440 px | Rentabilidade, formas de pagamento, tabela e exportação |
+| [13](homologacao/homol_13_venda_registrada_1440.png) | Venda nº 14 registrada | Confirmação com o verbo do botão e o saldo da faixa atualizado (CA-09, CA-10) |
+
+**Problemas encontrados e corrigidos** (o fluxo da homologação seguiu; as correções vêm em PRs próprios):
+
+| Problema | Correção |
+|---|---|
+| Painel do Colaborador em 1440 px com os cartões presos à direita (a coluna principal vazia ocupava espaço); no celular, um espaço extra no topo | PR #74 |
+| Projeção de caixa: o rótulo "menor saldo" ficava por cima do nome de fevereiro e da linha | PR #75 |
+| Extrato: as duas linhas de um pagamento misto apareciam iguais ("Venda nº 5") | PR #75: a forma vai na descrição ("Venda nº 5 — PIX"); vale para as vendas novas, porque os lançamentos são imutáveis |
+| Gráfico de vendas sem vendas repetia "R$ 0" no eixo | PR #75: escala mínima de R$ 3 |
+
+**Não eram problemas:** nas capturas de página inteira (Chrome, "Capture full size screenshot") a barra inferior aparece no meio da página e a gaveta aparece semitransparente quando a foto é tirada durante a animação de abertura; na tela, ambas estão corretas (fotos 01–03). A diferença de saldo entre duas fotos antigas (R$ 90) era uma venda registrada entre elas; nas fotos finais, Painel e Financeiro mostram o mesmo saldo (R$ 1.812,21).
