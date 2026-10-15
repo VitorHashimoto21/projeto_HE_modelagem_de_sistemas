@@ -138,7 +138,7 @@ describe("registro da venda", () => {
   it("T06 — pagamento misto e parcelado: lançamento, parcelas (RN11) e contas a receber (CA-04, INV-004)", async () => {
     const kit = await item("Kit", { precoAtual: 250 });
     const vendaId = id(await vender([{ itemId: kit, quantidade: 1 }], [{ forma: "DINHEIRO", valor: "50,00" }, { forma: "CREDITO", valor: 200, parcelas: 3 }]));
-    expect((await base.lancamentoFinanceiro.findMany()).map((l) => Number(l.valor))).toEqual([50]);
+    expect((await base.lancamentoFinanceiro.findMany()).map((l) => [Number(l.valor), l.descricao])).toEqual([[50, "Venda nº 1 — Dinheiro"]]);
     const parcelas = await base.parcela.findMany({ orderBy: { numero: "asc" }, include: { conta: true } });
     expect(parcelas.map((p) => Number(p.valor))).toEqual([66.68, 66.66, 66.66]);
     const dias = parcelas.map((p) => intervaloDoDia(vencimentoDaParcela(HOJE, p.numero)).inicio.getTime() <= p.vencimento.getTime());
@@ -152,6 +152,16 @@ describe("registro da venda", () => {
     expect(d.pagamentos.find((p) => p.forma === "CREDITO")?.parcelas.map((p) => p.status)).toEqual(["ABERTA", "ABERTA", "ABERTA"]);
   });
 
+
+  it("pagamento misto à vista: um lançamento por forma, com a forma na descrição (homologação da SPEC-016)", async () => {
+    const kit = await item("Kit", { precoAtual: 100 });
+    id(await vender([{ itemId: kit, quantidade: 1 }], [{ forma: "PIX", valor: 60 }, { forma: "DINHEIRO", valor: 40 }]));
+    const lancamentos = await base.lancamentoFinanceiro.findMany();
+    expect(lancamentos.map((l) => [l.descricao, Number(l.valor)]).sort()).toEqual([
+      ["Venda nº 1 — Dinheiro", 40],
+      ["Venda nº 1 — PIX", 60],
+    ]);
+  });
   it("T07 — soma divergente e preço adulterado/alterado (CA-05, CA-06, INV-002)", async () => {
     const esmalte = await item("Esmalte");
     expect(await vender([{ itemId: esmalte, quantidade: 1 }], [{ forma: "PIX", valor: 10 }])).toEqual({ status: "erro", mensagem: F.somaDivergente(1800) });

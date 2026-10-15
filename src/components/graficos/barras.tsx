@@ -27,7 +27,9 @@ const reaisCurtos = (centavos: number) => `R$ ${Math.round(centavos / 100).toLoc
 export function GraficoDeBarras({ pontos, descricao, rotuloParcial = "até agora" }: { pontos: PontoDeBarra[]; descricao: string; rotuloParcial?: string }) {
   const [sel, setSel] = useState(pontos.length - 1);
   const valores = pontos.flatMap((p) => [p.valorCentavos, p.anteriorCentavos ?? 0]);
-  const { teto, grade } = escalaAmigavel(Math.max(...valores, 1));
+  // Escala mínima de R$ 3: sem vendas (ou com valores de centavos), a grade não repete "R$ 0",
+  // já que os rótulos são arredondados para reais inteiros.
+  const { teto, grade } = escalaAmigavel(Math.max(...valores, 300));
   const media = pontos.reduce((s, p) => s + p.valorCentavos, 0) / Math.max(1, pontos.length);
   const altura = (v: number) => Math.round(proporcao(v, teto) * ALTURA);
   const atual = pontos[Math.min(sel, pontos.length - 1)];

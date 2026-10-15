@@ -5,6 +5,7 @@ import {
   acertoDoCancelamento,
   dividirEmParcelas,
   ehImediato,
+  FORMAS_DE_PAGAMENTO,
   FORMAS_DE_REEMBOLSO,
   paraCentavos,
   subtotalEmCentavos,
@@ -296,8 +297,20 @@ export function criarConsultasDeVendas(cliente: ClienteDoNegocio, negocioId: str
         select: { id: true },
       });
       if (ehImediato(p.forma)) {
+        // A forma vai na descrição para distinguir os lançamentos de um pagamento misto no
+        // extrato (como já acontece no reembolso).
         await tx.lancamentoFinanceiro.create({
-          data: { negocioId, vendaId: venda.id, origem: "VENDA", tipo: "ENTRADA", categoria: "VENDAS", valor: reais(p.valorCentavos), data, usuarioId },
+          data: {
+            negocioId,
+            vendaId: venda.id,
+            origem: "VENDA",
+            tipo: "ENTRADA",
+            categoria: "VENDAS",
+            descricao: `Venda nº ${venda.numero} — ${FORMAS_DE_PAGAMENTO[p.forma]}`,
+            valor: reais(p.valorCentavos),
+            data,
+            usuarioId,
+          },
         });
         continue;
       }
