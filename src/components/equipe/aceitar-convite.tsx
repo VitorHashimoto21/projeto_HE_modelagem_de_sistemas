@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { Aviso, BotaoEnviar } from "@/components/acesso/campos";
+import { classeDoBotao } from "@/components/ui/estilos";
 import { acaoAceitarConvite } from "@/lib/equipe/acoes";
 import { ACAO_INICIAL } from "@/lib/equipe/servicos";
 
@@ -17,7 +18,7 @@ export function AceitarConvite({ token, conviteId, compacto = false }: { token?:
         <button
           type="submit"
           disabled={enviando}
-          className="rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary-hover disabled:opacity-70 active:scale-[0.96] transition-[background-color,transform] duration-(--duracao-estado)"
+          className={classeDoBotao("principal", "sm")}
         >
           {enviando ? "Aceitando…" : "Aceitar"}
         </button>

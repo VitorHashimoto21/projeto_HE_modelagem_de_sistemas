@@ -1,7 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { Star } from "lucide-react";
 import { Aviso } from "@/components/acesso/campos";
+import { AvisoDaPagina } from "@/components/ui/aviso";
+import { CabecalhoDePagina } from "@/components/ui/cabecalho-de-pagina";
+import { classeDaSuperficie, classeDoBotao } from "@/components/ui/estilos";
 import { exigirDono } from "@/lib/auth/servidor";
 import { planos } from "@/lib/db";
 import { dataBrasileira } from "@/lib/dominio/datas";
@@ -11,9 +15,9 @@ import { acaoAlterarPlano } from "@/lib/planos/acoes";
 
 export const metadata: Metadata = { title: "Plano" };
 
-const botao = "inline-flex items-center justify-center rounded-full bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground hover:bg-primary-hover active:scale-[0.96] transition-[background-color,transform] duration-(--duracao-estado)";
-const botaoSecundario = "inline-flex items-center justify-center rounded-full border bg-card px-5 py-3 text-sm font-semibold text-foreground hover:bg-accent active:scale-[0.96] transition-[background-color,transform] duration-(--duracao-estado)";
-const cartao = "rounded-2xl bg-card p-5 sm:p-6";
+const botao = classeDoBotao("principal");
+const botaoSecundario = classeDoBotao("secundario");
+const cartao = classeDaSuperficie("cartao", "p-5 sm:p-6");
 
 // Plano do negócio (SPEC-013, UC15): só o Dono (RN02). A troca é simulada (RF73) e passa
 // sempre por alterarPlano; a SPEC-015 troca só esse ponto pelo gateway de pagamento.
@@ -28,20 +32,18 @@ export default async function Plano({ searchParams }: PageProps<"/negocio/plano"
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
-      <div>
-        <h1 className="text-[28px] leading-tight font-extrabold text-foreground">Plano</h1>
-      </div>
+      <CabecalhoDePagina titulo="Plano" descricao="O que cada plano inclui e a troca entre eles." />
 
       {typeof busca.aviso === "string" && <Aviso tipo="sucesso">{busca.aviso}</Aviso>}
       {typeof busca.erro === "string" && <Aviso tipo="erro">{busca.erro}</Aviso>}
 
-      <section aria-labelledby="titulo-atual" className={`${cartao} ${pago ? "ring-1 ring-primary/30" : ""}`}>
-        <p className="text-sm text-muted-foreground">Plano atual</p>
-        <h2 id="titulo-atual" className="mt-1 flex items-center gap-2 text-xl font-extrabold text-card-foreground">
-          {pago && <span aria-hidden="true">★</span>}
+      <section aria-labelledby="titulo-atual" className={classeDaSuperficie("estrutura", "p-5 sm:p-6")}>
+        <p className="text-sm text-estrutura-suave">Plano atual</p>
+        <h2 id="titulo-atual" className="mt-1 flex items-center gap-2 text-[32px] leading-tight font-extrabold">
+          {pago && <Star className="size-6 text-ambar" fill="currentColor" aria-hidden="true" />}
           {ROTULO_PLANO[s.plano]}
         </h2>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <p className="mt-2 text-sm text-estrutura-suave">
           {s.alteradoEm ? `Desde ${dataBrasileira(s.alteradoEm)}${s.alteradoPor ? `, por ${s.alteradoPor}` : ""}.` : "Desde o cadastro do negócio."}
           {suspensos > 0 && ` ${suspensos} ${suspensos === 1 ? "colaborador está" : "colaboradores estão"} sem acesso pelo limite do plano gratuito.`}
         </p>
@@ -64,9 +66,10 @@ export default async function Plano({ searchParams }: PageProps<"/negocio/plano"
             </li>
           </ul>
         </div>
-        <div className={`${cartao} ring-1 ring-primary/20`}>
-          <h2 className="text-[17px] font-bold text-card-foreground">
-            <span aria-hidden="true">★ </span>Pago
+        <div className={`${cartao} ring-1 ring-ambar/50`}>
+          <h2 className="flex items-center gap-2 text-[17px] font-bold text-card-foreground">
+            <Star className="size-4 text-ambar" fill="currentColor" aria-hidden="true" />
+            Pago
           </h2>
           <ul className="mt-3 space-y-2 text-sm text-foreground">
             <li className="flex gap-2">
@@ -88,7 +91,7 @@ export default async function Plano({ searchParams }: PageProps<"/negocio/plano"
       </section>
 
       {!confirmar && (
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3 px-1">
           <Link href={`/negocio/plano?confirmar=${pago ? "GRATUITO" : "PAGO"}`} className={pago ? botaoSecundario : botao}>
             {pago ? "Voltar ao plano gratuito" : "Mudar para o plano pago"}
           </Link>
@@ -97,7 +100,7 @@ export default async function Plano({ searchParams }: PageProps<"/negocio/plano"
       )}
 
       {confirmar === "PAGO" && !pago && (
-        <section aria-labelledby="titulo-confirmar" className={`${cartao} ring-1 ring-primary/40`}>
+        <section aria-labelledby="titulo-confirmar" className={`${cartao} ring-1 ring-primary`}>
           <h2 id="titulo-confirmar" className="text-[17px] font-bold text-card-foreground">
             Confirmar o plano pago
           </h2>
@@ -105,9 +108,9 @@ export default async function Plano({ searchParams }: PageProps<"/negocio/plano"
             Os relatórios avançados, o histórico completo e a equipe sem limite ficam disponíveis na hora
             {suspensos > 0 && `, e ${suspensos === 1 ? "o colaborador sem acesso volta" : `os ${suspensos} colaboradores sem acesso voltam`} a ter acesso`}.
           </p>
-          <p className="mt-2 rounded-lg bg-status-warn-bg px-4 py-2 text-sm text-status-warn">
-            <span aria-hidden="true">▲ </span>Simulação: nenhuma cobrança é feita nesta versão.
-          </p>
+          <AvisoDaPagina tom="atencao" className="mt-3">
+            Simulação: nenhuma cobrança é feita nesta versão.
+          </AvisoDaPagina>
           <form action={acaoAlterarPlano} className="mt-4 flex flex-wrap gap-3">
             <input type="hidden" name="para" value="PAGO" />
             <button type="submit" className={botao}>
@@ -121,7 +124,7 @@ export default async function Plano({ searchParams }: PageProps<"/negocio/plano"
       )}
 
       {confirmar === "GRATUITO" && pago && (
-        <section aria-labelledby="titulo-confirmar" className={`${cartao} ring-1 ring-status-warn/40`}>
+        <section aria-labelledby="titulo-confirmar" className={`${cartao} ring-1 ring-status-warn`}>
           <h2 id="titulo-confirmar" className="text-[17px] font-bold text-card-foreground">
             Voltar ao plano gratuito
           </h2>
@@ -136,12 +139,12 @@ export default async function Plano({ searchParams }: PageProps<"/negocio/plano"
               <fieldset className="space-y-2">
                 <legend className="text-sm font-medium text-foreground">No gratuito, só 1 colaborador tem acesso. Quem continua?</legend>
                 {ativos.map((c, i) => (
-                  <label key={c.id} className="flex items-start gap-3 rounded-xl border px-4 py-3 text-sm has-[:checked]:border-primary">
+                  <label key={c.id} className="flex cursor-pointer items-start gap-3 rounded-lg bg-muted px-4 py-3 text-sm ring-1 ring-transparent has-checked:bg-card has-checked:ring-primary">
                     <input type="radio" name="manter" value={c.id} defaultChecked={i === 0} className="mt-1" />
                     <span className="min-w-0">
                       <span className="block font-medium break-words text-foreground">{c.nome}</span>
                       <span className="block text-xs break-words text-muted-foreground">
-                        {ROTULO_PAPEL[c.papel]} · {c.email}
+                        {ROTULO_PAPEL[c.papel]}, {c.email}
                       </span>
                     </span>
                   </label>
@@ -152,8 +155,7 @@ export default async function Plano({ searchParams }: PageProps<"/negocio/plano"
               ativos.length === 1 && <input type="hidden" name="manter" value={ativos[0].id} />
             )}
             {s.convitesPendentes > 0 && (
-              <p className="text-sm text-status-warn">
-                <span aria-hidden="true">▲ </span>
+              <p className="text-sm font-semibold text-status-warn">
                 {s.convitesPendentes === 1 ? "O convite pendente será cancelado" : `Os ${s.convitesPendentes} convites pendentes serão cancelados`} (pode ser reenviado depois).
               </p>
             )}

@@ -46,7 +46,7 @@ export default async function CancelarVenda({ params }: PageProps<"/vendas/[id]/
             <dd className="text-muted-foreground">
               {p.devolucoes.length === 0
                 ? "Nada (a venda não baixou estoque)."
-                : p.devolucoes.map((d) => `${d.nome}: +${qtd(d.quantidade)} ${rotuloUnidade(d.unidadeMedida).toLowerCase()}`).join(" · ")}
+                : p.devolucoes.map((d) => `${d.nome}: +${qtd(d.quantidade)} ${rotuloUnidade(d.unidadeMedida).toLowerCase()}`).join(", ")}
             </dd>
           </div>
           <div>

@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { TituloDeAcesso } from "@/components/acesso/titulo";
 import { AceitarConvite } from "@/components/equipe/aceitar-convite";
+import { AvisoDaPagina } from "@/components/ui/aviso";
+import { classeDoBotao, classeDoLink } from "@/components/ui/estilos";
 import { acaoSair } from "@/lib/auth/acoes";
 import { obterContexto } from "@/lib/auth/servidor";
 import { equipe } from "@/lib/db";
@@ -10,9 +12,8 @@ import { lerConvite } from "@/lib/equipe/servicos";
 
 export const metadata: Metadata = { title: "Convite", robots: { index: false } };
 
-const link = "font-semibold text-primary underline-offset-2 hover:text-primary-hover hover:underline";
-const botao =
-  "flex w-full items-center justify-center rounded-xl bg-primary py-3.5 text-sm font-semibold tracking-wide text-primary-foreground transition-colors hover:bg-primary-hover";
+const link = classeDoLink();
+const botao = classeDoBotao("principal", "lg", "w-full");
 
 // Aceitação do convite (SPEC-005, 5.3): aberta com e sem sessão; decide sozinha o que mostrar.
 export default async function Convite({ params }: PageProps<"/convite/[token]">) {
@@ -40,7 +41,7 @@ export default async function Convite({ params }: PageProps<"/convite/[token]">)
     <>
       <TituloDeAcesso titulo={`Convite para ${convite.negocio}`} subtitulo={`${convite.convidadoPor} convidou você para a equipe como ${ROTULO_PAPEL[convite.papel]}.`} />
       <div className="space-y-6">
-        <details className="rounded-xl border bg-card px-4 py-3 text-sm">
+        <details className="rounded-lg bg-muted px-4 py-3 text-sm">
           <summary className="cursor-pointer font-medium text-card-foreground">O que você poderá fazer</summary>
           <ul className="mt-2 space-y-1 text-muted-foreground">
             {convite.permissoes.map((p) => (
@@ -71,9 +72,7 @@ export default async function Convite({ params }: PageProps<"/convite/[token]">)
           <AceitarConvite token={token} />
         ) : (
           <div className="space-y-4">
-            <p role="alert" className="rounded-lg bg-status-warn-bg px-4 py-3 text-sm text-status-warn">
-              Este convite foi enviado para outro e-mail ({convite.emailMascarado}). Entre com essa conta para aceitar.
-            </p>
+            <AvisoDaPagina tom="atencao">Este convite foi enviado para outro e-mail ({convite.emailMascarado}). Entre com essa conta para aceitar.</AvisoDaPagina>
             <form action={acaoSair}>
               <button type="submit" className={botao}>
                 Sair e entrar com outra conta

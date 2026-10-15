@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { FormularioDiasCobertura } from "@/components/estoque/formularios";
+import { CabecalhoDePagina } from "@/components/ui/cabecalho-de-pagina";
+import { Superficie, TituloDaSuperficie } from "@/components/ui/superficie";
 import { FormularioDadosDoNegocio } from "@/components/negocio/formularios";
 import { exigirDono } from "@/lib/auth/servidor";
 import { negocios } from "@/lib/db";
@@ -15,17 +17,16 @@ export default async function DadosDoNegocio() {
   if (!dados) redirect("/painel");
 
   return (
-    <div className="mx-auto max-w-xl space-y-8">
-      <div>
-        <h1 className="text-[28px] leading-tight font-extrabold text-foreground">Dados do negócio</h1>
-        <p className="mt-1.5 text-sm text-muted-foreground">
-          {dados.cnpj ? "O CNPJ não muda depois do cadastro." : "Para virar MEI ou Simples, informe o CNPJ."}
-        </p>
-      </div>
-      <FormularioDadosDoNegocio valores={dados} />
-      <section className="rounded-2xl bg-card p-5 sm:p-6" aria-label="Estoque">
+    <div className="mx-auto max-w-2xl space-y-6">
+      <CabecalhoDePagina titulo="Dados do negócio" descricao={dados.cnpj ? "O CNPJ não muda depois do cadastro." : "Para virar MEI ou Simples, informe o CNPJ."} />
+      <Superficie aria-labelledby="titulo-enquadramento">
+        <TituloDaSuperficie id="titulo-enquadramento" titulo="Enquadramento" descricao="Regime e dados fiscais: definem o imposto embutido no preço de venda." />
+        <FormularioDadosDoNegocio valores={dados} />
+      </Superficie>
+      <Superficie aria-labelledby="titulo-estoque">
+        <TituloDaSuperficie id="titulo-estoque" titulo="Estoque" />
         <FormularioDiasCobertura atual={diasCobertura} />
-      </section>
+      </Superficie>
     </div>
   );
 }

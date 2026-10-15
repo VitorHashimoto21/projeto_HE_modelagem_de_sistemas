@@ -10,6 +10,7 @@ import { CONVITE_INICIAL } from "@/lib/equipe/servicos";
 import { validarConvite, type PapelDoConvite } from "@/lib/equipe/validacao";
 import { AvisoDoEnvio, LinkDoConvite } from "./link-do-convite";
 import { MatrizDePermissoes } from "./matriz-de-permissoes";
+import { classeDoLink } from "@/components/ui/estilos";
 
 const PAPEIS: { valor: PapelDoConvite; rotulo: string; descricao: string }[] = [
   { valor: "COLABORADOR", rotulo: "Colaborador", descricao: "Vendas, estoque e o Dashboard restrito. Sem Financeiro e sem Calculadora." },
@@ -46,7 +47,7 @@ export function FormularioConvite() {
         </AvisoDoEnvio>
         <LinkDoConvite link={estado.link} />
         <div className="flex flex-wrap gap-4 text-sm font-medium">
-          <Link href="/negocio/equipe" className="text-primary underline-offset-2 hover:underline">
+          <Link href="/negocio/equipe" className={classeDoLink()}>
             Voltar para a equipe
           </Link>
         </div>
@@ -75,7 +76,7 @@ export function FormularioConvite() {
             {PAPEIS.map((p) => (
               <label
                 key={p.valor}
-                className={`flex cursor-pointer gap-3 rounded-xl border bg-card p-4 ${papel === p.valor ? "border-primary ring-4 ring-ring/15" : "border-input"}`}
+                className={`flex cursor-pointer gap-3 rounded-lg p-4 ring-1 transition-[box-shadow,background-color] duration-(--duracao-estado) ${papel === p.valor ? "bg-card ring-primary" : "bg-muted ring-transparent"}`}
               >
                 <input
                   type="radio"

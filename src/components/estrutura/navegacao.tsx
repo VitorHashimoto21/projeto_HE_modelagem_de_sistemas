@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import {
   ArrowDownCircle,
   BarChart3,
@@ -27,6 +27,7 @@ import { Gaveta } from "@/components/ui/gaveta";
 import { acaoSair } from "@/lib/auth/acoes";
 import type { ItemDoMenu } from "@/lib/equipe/menu";
 import { acaoTrocarNegocio } from "@/lib/negocio/acoes";
+import { useTema } from "@/components/tema/alternar-tema";
 import { cn } from "@/lib/utils";
 
 // Estrutura do app (SPEC-016, 5.2): menu lateral verde-escuro no computador, trilho de
@@ -121,24 +122,7 @@ function SeletorNaEstrutura({ negocios, ativo, compacto }: { negocios: Props["ne
 }
 
 function BotaoTema({ comRotulo }: { comRotulo?: boolean }) {
-  // O tema vive na classe .dark do <html> (aplicada antes da pintura pelo layout raiz);
-  // os botões do computador e do celular observam a classe para ficarem coerentes.
-  const [escuro, setEscuro] = useState(false);
-  useEffect(() => {
-    const html = document.documentElement;
-    const ler = () => setEscuro(html.classList.contains("dark"));
-    ler();
-    const observador = new MutationObserver(ler);
-    observador.observe(html, { attributes: true, attributeFilter: ["class"] });
-    return () => observador.disconnect();
-  }, []);
-  const alternar = () => {
-    const proximo = !document.documentElement.classList.contains("dark");
-    document.documentElement.classList.toggle("dark", proximo);
-    try {
-      localStorage.setItem("he-tema", proximo ? "escuro" : "claro");
-    } catch {}
-  };
+  const { escuro, alternar } = useTema();
   const rotulo = escuro ? "Tema claro" : "Tema escuro";
   const Icone = escuro ? Sun : Moon;
   return (

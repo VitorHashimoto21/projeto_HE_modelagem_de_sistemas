@@ -3,6 +3,7 @@
 import { useActionState, useState } from "react";
 import { Aviso, MensagemDeCampo } from "@/components/acesso/campos";
 import { classeDoCampo } from "@/components/ui/classes";
+import { classeDoBotao } from "@/components/ui/estilos";
 import { acaoExcluirConta } from "@/lib/lgpd/acoes";
 import { EXCLUSAO_INICIAL } from "@/lib/lgpd/servicos";
 
@@ -51,7 +52,7 @@ export function FormularioExclusao({ email }: { email: string }) {
       <button
         type="submit"
         disabled={!pronto || enviando}
-        className="inline-flex w-full items-center justify-center rounded-full bg-destructive px-5 py-3 text-sm font-semibold text-destructive-foreground disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto active:scale-[0.96] transition-[background-color,transform] duration-(--duracao-estado)"
+        className={classeDoBotao("perigo", "md", "w-full sm:w-auto")}
       >
         {enviando ? "Excluindo…" : "Excluir minha conta definitivamente"}
       </button>

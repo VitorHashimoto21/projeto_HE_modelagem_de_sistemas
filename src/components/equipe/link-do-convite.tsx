@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { classeDoBotao } from "@/components/ui/estilos";
 
 /** Link do convite para copiar (OPEN-004): aparece uma única vez, logo depois de criar ou reenviar. */
 export function LinkDoConvite({ link }: { link: string }) {
@@ -29,7 +30,7 @@ export function LinkDoConvite({ link }: { link: string }) {
         <button
           type="button"
           onClick={copiar}
-          className="rounded-full bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground hover:bg-primary-hover active:scale-[0.96] transition-[background-color,transform] duration-(--duracao-estado)"
+          className={classeDoBotao("principal")}
         >
           {copiado ? "Copiado" : "Copiar link"}
         </button>

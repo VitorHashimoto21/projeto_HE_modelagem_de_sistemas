@@ -166,7 +166,7 @@ export default async function Relatorios({ searchParams }: PageProps<"/relatorio
                   <dl className="mt-1 grid grid-cols-2 gap-x-4 gap-y-0.5">
                     <dt className="text-muted-foreground">Margem</dt>
                     <dd className={cn("text-right font-semibold tabular-nums", i.margemCentavos < 0 ? "text-status-danger" : "text-foreground")}>
-                      {reais(i.margemCentavos)} · {pct(i.margemPercentual)}
+                      {reais(i.margemCentavos)} ({pct(i.margemPercentual)})
                     </dd>
                     <dt className="text-muted-foreground">Faturamento</dt>
                     <dd className="text-right tabular-nums">{reais(i.faturamentoCentavos)}</dd>
@@ -182,7 +182,7 @@ export default async function Relatorios({ searchParams }: PageProps<"/relatorio
                 <dl className="mt-1 grid grid-cols-2 gap-x-4 gap-y-0.5">
                   <dt className="font-normal text-muted-foreground">Margem</dt>
                   <dd className="text-right tabular-nums">
-                    {reais(rent.totais.margemCentavos)} · {pct(rent.totais.margemPercentual)}
+                    {reais(rent.totais.margemCentavos)} ({pct(rent.totais.margemPercentual)})
                   </dd>
                   <dt className="font-normal text-muted-foreground">Faturamento</dt>
                   <dd className="text-right tabular-nums">{reais(rent.totais.faturamentoCentavos)}</dd>

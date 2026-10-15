@@ -11,16 +11,16 @@ export async function PaginaDocumentoLegal({ documento }: { documento: Documento
 
   return (
     <div className="flex min-h-screen flex-1 flex-col bg-background">
-      <header className="border-b bg-card">
+      <header className="bg-estrutura text-estrutura-foreground">
         <div className="mx-auto flex w-full max-w-3xl items-center justify-between gap-3 px-4 py-3">
-          <Link href="/entrar" aria-label="Health Enterprise — página inicial">
-            <Logo className="h-8 w-auto" />
+          <Link href="/entrar" aria-label="Health Enterprise, página inicial" className="rounded-sm focus-visible:outline-2 focus-visible:outline-ambar">
+            <Logo negativo className="h-8 w-auto" />
           </Link>
           <AlternarTema />
         </div>
       </header>
       <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-10">
-        <article className="space-y-4 text-sm leading-relaxed text-foreground">
+        <article className="max-w-[72ch] space-y-4 text-[15px] leading-relaxed text-foreground">
           <Markdown
             remarkPlugins={[remarkGfm]}
             components={{
@@ -34,7 +34,7 @@ export async function PaginaDocumentoLegal({ documento }: { documento: Documento
               ),
               code: (p) => <code className="rounded bg-muted px-1 py-0.5 text-[0.85em]" {...p} />,
               a: ({ href, children }) => (
-                <Link href={rotaDoLink(href) ?? "#"} className="font-medium text-primary underline underline-offset-2">
+                <Link href={rotaDoLink(href) ?? "#"} className="font-semibold text-primary underline underline-offset-2">
                   {children}
                 </Link>
               ),
@@ -52,11 +52,11 @@ export async function PaginaDocumentoLegal({ documento }: { documento: Documento
         </article>
       </main>
       <footer className="py-6 text-center text-xs text-muted-foreground">
-        © 2026 Health Enterprise ·{" "}
+        © 2026 Health Enterprise.{" "}
         <Link href="/termos" className="hover:underline">
           Termos
         </Link>{" "}
-        ·{" "}
+        e{" "}
         <Link href="/privacidade" className="hover:underline">
           Privacidade
         </Link>

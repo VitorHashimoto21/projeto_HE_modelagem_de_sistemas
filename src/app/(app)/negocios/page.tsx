@@ -1,19 +1,24 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { ChevronRight, Mail, Plus, Store } from "lucide-react";
 import { AceitarConvite } from "@/components/equipe/aceitar-convite";
 import { SairDoNegocio } from "@/components/equipe/sair-do-negocio";
 import { ROTULO_PAPEL, ROTULO_REGIME } from "@/components/negocio/rotulos";
+import { AvisoDaPagina } from "@/components/ui/aviso";
+import { CabecalhoDePagina } from "@/components/ui/cabecalho-de-pagina";
+import { EstadoVazio } from "@/components/ui/estado-vazio";
+import { classeDoBotao } from "@/components/ui/estilos";
+import { Selo } from "@/components/ui/selo";
+import { Superficie } from "@/components/ui/superficie";
 import { exigirSessao } from "@/lib/auth/servidor";
 import { negocios } from "@/lib/db";
 import { dataBrasileira } from "@/lib/dominio/datas";
 import { convitesParaVoce } from "@/lib/equipe/servicos";
 import { dependenciasDaEquipe } from "@/lib/equipe/servidor";
 import { acaoTrocarNegocio } from "@/lib/negocio/acoes";
+import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Meus negócios" };
-
-const botaoPrincipal =
-  "inline-flex items-center justify-center rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary-hover";
 
 // "Meus negócios" (SPEC-004, escopo 1): negócios em que o usuário é membro; escolher um
 // o torna o negócio ativo (UC2). SPEC-005: "Convites para você" (OPEN-006) e "Sair deste
@@ -27,41 +32,41 @@ export default async function MeusNegocios({ searchParams }: PageProps<"/negocio
   ]);
 
   return (
-    <div className="space-y-8">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="text-[28px] leading-tight font-extrabold text-foreground">Meus negócios</h1>
-        {lista.length > 0 && (
-          <Link href="/negocios/novo" className={botaoPrincipal}>
-            Cadastrar negócio
-          </Link>
-        )}
-      </div>
+    <div className="space-y-6">
+      <CabecalhoDePagina
+        titulo="Meus negócios"
+        descricao="Escolha o negócio para abrir. Cada um tem o próprio caixa, estoque e equipe."
+        acoes={
+          lista.length > 0 && (
+            <Link href="/negocios/novo" className={classeDoBotao("principal")}>
+              <Plus aria-hidden="true" />
+              Cadastrar negócio
+            </Link>
+          )
+        }
+      />
 
-      {contexto.negocioRecusado && (
-        <p role="status" className="rounded-lg bg-status-warn-bg px-4 py-3 text-sm text-status-warn">
-          O negócio que estava aberto não está disponível para a sua conta. Escolha um negócio abaixo.
-        </p>
-      )}
-
-      {saiu && (
-        <p role="status" className="rounded-lg bg-status-ok-bg px-4 py-3 text-sm text-status-ok">
-          Você saiu do negócio.
-        </p>
-      )}
+      {contexto.negocioRecusado && <AvisoDaPagina tom="atencao">O negócio que estava aberto não está disponível para a sua conta. Escolha um negócio abaixo.</AvisoDaPagina>}
+      {saiu && <AvisoDaPagina tom="sucesso">Você saiu do negócio.</AvisoDaPagina>}
 
       {convites.length > 0 && (
         <section aria-labelledby="titulo-convites" className="space-y-3">
-          <h2 id="titulo-convites" className="text-[17px] font-bold text-foreground">
+          <h2 id="titulo-convites" className="px-1 text-[17px] font-bold text-foreground">
             Convites para você
           </h2>
           <ul className="grid gap-4 sm:grid-cols-2">
             {convites.map((c) => (
-              <li key={c.id} className="space-y-3 rounded-2xl bg-card p-5 ring-1 ring-primary/30">
-                <div>
-                  <p className="truncate text-lg font-bold text-card-foreground">{c.negocio}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {c.convidadoPor} convidou você como {ROTULO_PAPEL[c.papel]} · vale até {dataBrasileira(c.expiraEm)}
-                  </p>
+              <li key={c.id} className="flex flex-col gap-4 rounded-2xl bg-card p-5 ring-1 ring-ambar/50">
+                <div className="flex items-start gap-3">
+                  <span aria-hidden="true" className="grid size-10 shrink-0 place-items-center rounded-full bg-ambar text-ambar-foreground">
+                    <Mail className="size-4.5" />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="truncate text-lg font-bold text-card-foreground">{c.negocio}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {c.convidadoPor} convidou você como {ROTULO_PAPEL[c.papel]}, vale até {dataBrasileira(c.expiraEm)}
+                    </p>
+                  </div>
                 </div>
                 <AceitarConvite conviteId={c.id} compacto />
               </li>
@@ -71,30 +76,37 @@ export default async function MeusNegocios({ searchParams }: PageProps<"/negocio
       )}
 
       {lista.length === 0 ? (
-        <section className="rounded-2xl bg-card px-6 py-12 text-center" aria-labelledby="titulo-vazio">
-          <h2 id="titulo-vazio" className="mb-2 text-xl font-extrabold text-card-foreground">
-            Você ainda não tem um negócio
-          </h2>
-          <p className="mx-auto mb-6 max-w-md text-sm text-muted-foreground">
-            Cadastre seu negócio para controlar o estoque, precificar e acompanhar o caixa. Se alguém convidou você para uma
-            equipe, use o link do convite recebido ou aguarde o convite aparecer aqui.
-          </p>
-          <Link href="/negocios/novo" className={botaoPrincipal}>
-            Cadastrar meu negócio
-          </Link>
-        </section>
+        <Superficie>
+          <EstadoVazio
+            Icone={Store}
+            titulo="Você ainda não tem um negócio"
+            acao={
+              <Link href="/negocios/novo" className={classeDoBotao("principal")}>
+                <Plus aria-hidden="true" />
+                Cadastrar meu negócio
+              </Link>
+            }
+          >
+            Cadastre seu negócio para controlar o estoque, precificar e acompanhar o caixa. Se alguém convidou você para uma equipe, use o link do convite recebido ou aguarde o
+            convite aparecer aqui.
+          </EstadoVazio>
+        </Superficie>
       ) : (
         <ul className="grid gap-4 sm:grid-cols-2" aria-label="Seus negócios">
           {lista.map((n) => {
             const ativo = n.id === contexto.negocioId;
+            const inicial = n.nome.trim().charAt(0).toUpperCase();
             return (
               <li key={n.id}>
                 {n.suspenso ? (
                   // SPEC-013 (5.2): membro suspenso pela volta ao plano gratuito — sem entrar.
-                  <div className="w-full rounded-2xl border-dashed bg-card p-5">
-                    <span className="block truncate text-lg font-bold text-muted-foreground">{n.nome}</span>
-                    <span className="mt-1 block text-sm text-status-warn">
-                      <span aria-hidden="true">▲ </span>Acesso suspenso — o negócio voltou ao plano gratuito. Fale com o Dono.
+                  <div className="flex w-full items-start gap-4 rounded-2xl border-2 border-dashed border-input p-5">
+                    <span aria-hidden="true" className="grid size-12 shrink-0 place-items-center rounded-2xl bg-muted text-lg font-extrabold text-muted-foreground">
+                      {inicial}
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block truncate text-lg font-bold text-muted-foreground">{n.nome}</span>
+                      <span className="mt-1 block text-sm text-status-warn">Acesso suspenso: o negócio voltou ao plano gratuito. Fale com o Dono.</span>
                     </span>
                   </div>
                 ) : (
@@ -103,15 +115,25 @@ export default async function MeusNegocios({ searchParams }: PageProps<"/negocio
                     <button
                       type="submit"
                       aria-current={ativo ? "true" : undefined}
-                      className={`w-full rounded-2xl border border-transparent bg-card p-5 text-left transition-colors duration-(--duracao-estado) hover:border-primary ${
-                        ativo ? "border-primary ring-4 ring-ring/15" : ""
-                      }`}
+                      className={cn(
+                        "flex w-full items-center gap-4 rounded-2xl bg-card p-5 text-left ring-1 transition-[box-shadow,transform] duration-(--duracao-estado) hover:ring-primary active:scale-[0.99] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+                        ativo ? "ring-primary" : "ring-transparent",
+                      )}
                     >
-                      <span className="block truncate text-lg font-bold text-card-foreground">{n.nome}</span>
-                      <span className="mt-1 block text-sm text-muted-foreground">
-                        {ROTULO_REGIME[n.regime]} · {ROTULO_PAPEL[n.papel]}
-                        {ativo && " · aberto agora"}
+                      <span aria-hidden="true" className="grid size-12 shrink-0 place-items-center rounded-2xl bg-estrutura text-lg font-extrabold text-estrutura-foreground">
+                        {inicial}
                       </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-lg font-bold text-card-foreground">{n.nome}</span>
+                        <span className="mt-0.5 block text-sm text-muted-foreground">
+                          {ROTULO_REGIME[n.regime]}, {ROTULO_PAPEL[n.papel].toLowerCase()}
+                        </span>
+                      </span>
+                      {ativo ? (
+                        <Selo tom="ok">Aberto agora</Selo>
+                      ) : (
+                        <ChevronRight aria-hidden="true" className="size-5 shrink-0 text-muted-foreground" />
+                      )}
                     </button>
                   </form>
                 )}

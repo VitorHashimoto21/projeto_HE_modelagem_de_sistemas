@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
+import { Download, TriangleAlert } from "lucide-react";
 import { FormularioExclusao } from "@/components/conta/exclusao";
+import { CabecalhoDePagina } from "@/components/ui/cabecalho-de-pagina";
+import { classeDaSuperficie, classeDoBotao } from "@/components/ui/estilos";
 import { exigirSessao } from "@/lib/auth/servidor";
 import { ROTA_ENTRAR } from "@/lib/auth/rotas";
 import { lgpd } from "@/lib/db";
@@ -9,7 +12,7 @@ import { ROTULO_PAPEL } from "@/lib/dominio/permissoes";
 
 export const metadata: Metadata = { title: "Minha conta" };
 
-const cartao = "rounded-2xl bg-card p-5 sm:p-6";
+const cartao = classeDaSuperficie("cartao", "p-5 sm:p-6");
 
 function Linha({ rotulo, valor }: { rotulo: string; valor: React.ReactNode }) {
   return (
@@ -30,7 +33,7 @@ export default async function MinhaConta() {
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
-      <h1 className="text-[28px] leading-tight font-extrabold text-foreground">Minha conta</h1>
+      <CabecalhoDePagina titulo="Minha conta" descricao="Seus dados pessoais, a exportação e a exclusão da conta." />
 
       <section aria-labelledby="titulo-dados" className={cartao}>
         <h2 id="titulo-dados" className="mb-1 text-[17px] font-bold text-card-foreground">
@@ -44,7 +47,7 @@ export default async function MinhaConta() {
             rotulo="Consentimento (política e termos)"
             valor={
               perfil.consentimentoLgpdEm
-                ? `${dataBrasileira(perfil.consentimentoLgpdEm)}${perfil.versaoTermosAceita ? ` · versão ${perfil.versaoTermosAceita}` : ""}`
+                ? `${dataBrasileira(perfil.consentimentoLgpdEm)}${perfil.versaoTermosAceita ? `, versão ${perfil.versaoTermosAceita}` : ""}`
                 : "—"
             }
           />
@@ -59,18 +62,16 @@ export default async function MinhaConta() {
           Um arquivo .zip com tudo em JSON e uma planilha (CSV) por tabela: seus dados, seus vínculos, os dados completos dos negócios em que você é o Dono e, dos
           negócios de outros Donos, o que você registrou.
         </p>
-        <a
-          href="/conta/exportar"
-          download
-          className="mt-4 inline-flex items-center justify-center rounded-full bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground hover:bg-primary-hover active:scale-[0.96] transition-[background-color,transform] duration-(--duracao-estado)"
-        >
-          <span aria-hidden="true">↓&nbsp;</span>Exportar meus dados (.zip)
+        <a href="/conta/exportar" download className={classeDoBotao("secundario", "md", "mt-4")}>
+          <Download aria-hidden="true" />
+          Exportar meus dados (.zip)
         </a>
       </section>
 
       <section aria-labelledby="titulo-excluir" className="rounded-2xl bg-card p-5 ring-1 ring-status-danger/30 sm:p-6">
         <h2 id="titulo-excluir" className="flex items-center gap-2 text-[17px] font-bold text-status-danger">
-          <span aria-hidden="true">▲</span>Excluir minha conta
+          <TriangleAlert className="size-4.5" aria-hidden="true" />
+          Excluir minha conta
         </h2>
         <div className="mt-2 space-y-2 text-sm text-foreground">
           <p>Seu acesso é bloqueado na hora e seus dados pessoais (nome, e-mail e senha) são anonimizados. Exporte seus dados antes, se quiser guardá-los.</p>
