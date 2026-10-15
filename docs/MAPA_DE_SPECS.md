@@ -332,7 +332,7 @@ flowchart LR
 - **Justificativa da ordem:** fora do caminho crítico do MVP; só substitui o ponto de troca de plano criado na SPEC-013. Feita se sobrar tempo no semestre ou na continuação rumo à produção.
 
 #### SPEC-016 — Design system e redesign (Direção "Balcão")
-- **Spec:** [`specs/SPEC-016.md`](./specs/SPEC-016.md) (🔵 implementada em 15/10/2026 num único PR; aguardando merge e homologação — [evidências](./specs/evidencias/SPEC-016/README.md))
+- **Spec:** [`specs/SPEC-016.md`](./specs/SPEC-016.md) (🔵 implementada e mergeada em 15/10/2026 num único PR, #72; aguardando a verificação na homologação — [evidências](./specs/evidencias/SPEC-016/README.md))
 - **Objetivo:** criar os componentes de interface e de gráfico, os tokens de movimento e a nova estrutura do app, e migrar todas as telas para a Direção B aprovada (estrutura verde-escura, Manrope, faixa do caixa, gráficos interativos), sem mudar comportamento.
 - **Valor entregue:** produto fácil de ler, agradável de manusear e consistente em qualquer tela; visual mantido em componentes, não em cópias.
 - **RF:** RF43, RF44, RF57, RF68, RF70 (apresentação) · **RN:** RN18 (plano nos cartões novos) · **RNF:** RNF01, RNF02, RNF10
@@ -368,4 +368,14 @@ Todos os 113 requisitos (RF01–RF73, RN01–RN29, RNF01–RNF11) estão associa
 
 A conferência do seed fiscal foi concluída em 03/10/2026 (DAS do MEI atualizado para o salário mínimo de 2026), e a SPEC-003 não tem mais pré-requisito pendente. A SPEC-015 depende da aprovação do ADR-007.
 
-**Andamento:** [SPEC-001](specs/SPEC-001.md) e [SPEC-002](specs/SPEC-002.md) implementadas e verificadas na homologação. [SPEC-003](specs/SPEC-003.md) implementada e verificada na homologação. [SPEC-004](specs/SPEC-004.md) implementada e verificada no preview da Vercel (04/10/2026). [SPEC-005](specs/SPEC-005.md) implementada e verificada no navegador em build local (07/10/2026); falta o e-mail real na homologação (Resend). [SPEC-006](specs/SPEC-006.md) implementada e verificada na homologação (08/10/2026). [SPEC-007](specs/SPEC-007.md) aprovada (08/10/2026), questões em aberto decididas; pronta para implementar.
+**Andamento (15/10/2026):**
+
+- [SPEC-001](specs/SPEC-001.md) a [SPEC-003](specs/SPEC-003.md): implementadas e verificadas na homologação.
+- [SPEC-004](specs/SPEC-004.md): implementada e verificada no preview da Vercel (04/10/2026).
+- [SPEC-005](specs/SPEC-005.md): implementada e verificada (07/10/2026); falta o e-mail real do convite na homologação (Resend não configurado).
+- [SPEC-006](specs/SPEC-006.md): implementada e verificada na homologação (08/10/2026).
+- [SPEC-007](specs/SPEC-007.md) e [SPEC-008](specs/SPEC-008.md): implementadas e verificadas na homologação (09/10/2026; PRs #56 e #58).
+- [SPEC-009](specs/SPEC-009.md) a [SPEC-014](specs/SPEC-014.md): implementadas e verificadas na homologação (11/10/2026; PRs #60, #62, #64, #66, #68 e #70).
+- SPEC-015 (opcional): não iniciada; depende da aprovação do ADR-007.
+- [SPEC-016](specs/SPEC-016.md): implementada e mergeada na DEVELOP (15/10/2026; PR #72); falta a verificação na homologação (T10).
+- `main`: atualizada até a SPEC-006 (PR #54); as SPECs 007 a 016 estão só na DEVELOP.
