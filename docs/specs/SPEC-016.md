@@ -1,6 +1,6 @@
 # SPEC-016 — Design system e redesign (Direção "Balcão")
 
-> **Status:** 🔵 **Implementada e mergeada na DEVELOP em 15/10/2026 (PR #72, CI verde); aguardando a verificação na homologação (T10)** — aprovada em 14/10/2026 (OPEN-001 a OPEN-005 e OPEN-007 pela opção recomendada; OPEN-006 por **um PR único**); as 6 etapas num único PR, testes T01–T06 no CI, roteiros, acessibilidade e desempenho em build de produção (T07–T09) — [evidências](evidencias/SPEC-016/README.md); notas da implementação na seção 15. Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar).
+> **Status:** 🔵 **Implementada (PR #72) e verificada na homologação em 15/10/2026 (T10)**; os quatro ajustes encontrados na homologação estão nos PRs #74 e #75, e as notas N1–N5 da seção 15 aguardam a decisão da equipe — aprovada em 14/10/2026 (OPEN-001 a OPEN-005 e OPEN-007 pela opção recomendada; OPEN-006 por **um PR único**); as 6 etapas num único PR, testes T01–T06 no CI, roteiros, acessibilidade e desempenho em build de produção (T07–T09) — [evidências](evidencias/SPEC-016/README.md); notas da implementação na seção 15. Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar).
 > **Mapa:** [`MAPA_DE_SPECS.md`](../MAPA_DE_SPECS.md) · **Anteriores:** todas as telas das SPECs 002 a 014; [SPEC-012](SPEC-012.md) (gráficos em SVG próprio, OPEN-002) · **Base visual:** [`IDENTIDADE_VISUAL.md`](../design/IDENTIDADE_VISUAL.md) e o protótipo aprovado da Direção B (quadro "HE — Direções visuais", linha B, 14/10/2026).
 
 ---
@@ -292,7 +292,7 @@ A SPEC-016 estará concluída quando:
 
 - [x] todos os critérios de aceitação (CA-01 a CA-11) estiverem implementados, nas 6 etapas — por testes e em build de produção; a homologação (T10) fica para depois do merge;
 - [x] todos os invariantes (INV-001 a INV-008) estiverem preservados;
-- [ ] os testes derivados (T01 a T10) estiverem aprovados, com o CI verde no PR — T01 a T09 aprovados (T07 pela regressão descrita na seção 15) e CI verde no PR #72; falta a homologação (T10);
+- [x] os testes derivados (T01 a T10) estiverem aprovados, com o CI verde no PR — T01 a T09 aprovados (T07 pela regressão descrita na seção 15), CI verde no PR #72 e T10 na homologação em 15/10/2026 ([fotos](evidencias/SPEC-016/README.md#verificação-na-homologação-t10)), com os ajustes dos PRs #74 e #75;
 - [x] os RNFs aplicáveis (RNF01, RNF02, RNF10 e desempenho) tiverem sido verificados como descrito na seção 10;
 - [x] as questões OPEN-001 a OPEN-007 tiverem sido decididas e registradas;
 - [x] `IDENTIDADE_VISUAL.md` estiver na versão 2;
