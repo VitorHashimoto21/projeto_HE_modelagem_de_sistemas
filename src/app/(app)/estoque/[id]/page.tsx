@@ -112,7 +112,7 @@ export default async function EstoqueDoProduto({ params, searchParams }: PagePro
 
         <Superficie as="div">
           <Numero
-            rotulo={<span className="text-muted-foreground">Estoque mínimo em uso</span>}
+            rotulo="Estoque mínimo em uso"
             tamanho="lg"
             valor={
               <>

@@ -47,7 +47,7 @@ function Linha({ rotulo, valor, detalhe, forte }: { rotulo: string; valor: React
     <div className="grid grid-cols-[1fr_auto] gap-x-4 gap-y-0.5 border-b py-3 last:border-b-0">
       <dt className={`text-sm ${forte ? "font-semibold text-foreground" : "text-foreground"}`}>{rotulo}</dt>
       <dd className={`text-right text-sm tabular-nums ${forte ? "font-semibold text-foreground" : "font-medium text-foreground"}`}>{valor}</dd>
-      {detalhe && <p className="col-span-2 text-xs break-words text-muted-foreground">{detalhe}</p>}
+      {detalhe && <dd className="col-span-2 text-xs break-words text-muted-foreground">{detalhe}</dd>}
     </div>
   );
 }
