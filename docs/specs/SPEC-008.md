@@ -98,7 +98,7 @@
 - **Fluxo principal:**
   1. Em "Nova venda", a pessoa busca itens e os adiciona ao carrinho (quantidade inicial 1, editável). Só aparecem itens não arquivados com preço oficial (RN23).
   2. Opcionalmente escolhe ou cadastra o cliente.
-  3. Adiciona as formas de pagamento até que a soma seja igual ao total. No Crédito, escolhe as parcelas (1 a 12) e vê a simulação (RN11).
+  3. Adiciona as formas de pagamento até que a soma seja igual ao total. Com uma única forma, o valor acompanha o total do carrinho até a pessoa editá-lo; com mais de uma, cada parte é ajustada à mão (SPEC-016, nota N1). No Crédito, escolhe as parcelas (1 a 12) e vê a simulação (RN11).
   4. Clica em "Finalizar venda".
 - **Exceções na interface:** carrinho vazio, quantidade inválida, soma diferente do total ou parcelas fora de 1–12 → mensagem no campo e o botão continua desabilitado; o servidor repete todas as validações.
 

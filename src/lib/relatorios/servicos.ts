@@ -1,6 +1,7 @@
 import type { ConsultasDeRelatorios } from "@/lib/db/relatorios";
 import { pode, type Matriz } from "@/lib/dominio/permissoes";
 import { podeNoPlano, type Plano } from "@/lib/dominio/planos";
+import { custoDaMaquininha } from "@/lib/dominio/precificacao";
 import { calcularRentabilidade, diaBrasileiro, lerPeriodo, nomeDoArquivo, somarFormas, type OrdemDaRentabilidade, type Relatorio, type Rentabilidade } from "@/lib/dominio/relatorios";
 import { csvDaTabela, pdfDaTabela } from "./arquivos";
 import { tabelaDeContas, tabelaDeRentabilidade, tabelaDeVendas, tabelaDoFluxo, type Tabela } from "./tabelas";
@@ -33,9 +34,21 @@ export async function carregarRentabilidade(de: string, ate: string, ordem: Orde
   return calcularRentabilidade(await deps.relatorios.rentabilidade(de, ate), ordem);
 }
 
-/** Formas de pagamento das vendas do período (gráfico dos Relatórios — exige o relatório de vendas). */
-export async function carregarFormasDoPeriodo(de: string, ate: string, deps: DependenciasDosRelatorios) {
-  return somarFormas(await deps.relatorios.vendas(de, ate));
+export type FormasDoPeriodo = { itens: { nome: string; valorCentavos: number }[]; taxaCartao: number | null; taxaCentavos: number };
+
+/**
+ * Formas de pagamento das vendas do período (gráfico dos Relatórios — exige o relatório de
+ * vendas). Com a taxa média da maquininha (só para quem vê o Financeiro, como no Painel —
+ * SPEC-016, nota N5), soma também quanto ela fica das vendas no cartão.
+ */
+export async function carregarFormasDoPeriodo(de: string, ate: string, deps: DependenciasDosRelatorios, taxaCartao: number | null = null): Promise<FormasDoPeriodo> {
+  const vendas = await deps.relatorios.vendas(de, ate);
+  const cartao = vendas
+    .filter((v) => v.status === "CONCLUIDA")
+    .flatMap((v) => v.pagamentos)
+    .filter((p) => p.forma === "CREDITO" || p.forma === "DEBITO")
+    .reduce((s, p) => s + p.valorCentavos, 0);
+  return { itens: somarFormas(vendas), taxaCartao, taxaCentavos: taxaCartao === null ? 0 : custoDaMaquininha(cartao, taxaCartao) };
 }
 
 async function tabela(r: Relatorio, de: string, ate: string, deps: DependenciasDosRelatorios): Promise<Tabela> {

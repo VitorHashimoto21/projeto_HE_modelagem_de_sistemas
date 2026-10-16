@@ -2,6 +2,7 @@ import { analisarNegocio, type DependenciasDaCalculadora, type MotivoDoBloqueio 
 import type { ConsultasDoDashboard, VendasDoDia } from "@/lib/db/dashboard";
 import { montarProjecao, semaforo, serieDiaria, serieMensal, type Projecao, type Semaforo, type Serie } from "@/lib/dominio/dashboard";
 import { competenciaDoDia } from "@/lib/dominio/financeiro";
+import { custoDaMaquininha } from "@/lib/dominio/precificacao";
 
 /**
  * Dashboard (SPEC-012, 5.1–5.5): carregadores dos cartões. Cada cartão carrega por conta
@@ -129,7 +130,7 @@ export async function carregarFormas(deps: DependenciasDoDashboard): Promise<For
   const valor = (f: keyof typeof NOMES_DAS_FORMAS) => linhas.find((l) => l.forma === f)?.valorCentavos ?? 0;
   const itens = (Object.keys(NOMES_DAS_FORMAS) as (keyof typeof NOMES_DAS_FORMAS)[]).map((f) => ({ nome: NOMES_DAS_FORMAS[f], valorCentavos: valor(f) }));
   const taxaCartao = parametros.taxaCartao;
-  return { itens, taxaCartao, taxaCentavos: Math.round(((valor("CREDITO") + valor("DEBITO")) * taxaCartao) / 100) };
+  return { itens, taxaCartao, taxaCentavos: custoDaMaquininha(valor("CREDITO") + valor("DEBITO"), taxaCartao) };
 }
 
 /** Vendas dos mesmos 12 meses do ano anterior (só no pago — OPEN-007). */

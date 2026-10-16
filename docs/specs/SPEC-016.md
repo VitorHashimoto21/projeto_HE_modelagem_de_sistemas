@@ -1,6 +1,6 @@
 # SPEC-016 — Design system e redesign (Direção "Balcão")
 
-> **Status:** 🔵 **Implementada (PR #72) e verificada na homologação em 15/10/2026 (T10)**; os quatro ajustes encontrados na homologação foram corrigidos nos PRs #74 e #75 e aprovados nos testes da equipe em 16/10/2026, e as notas N1–N5 da seção 15 aguardam a decisão da equipe — aprovada em 14/10/2026 (OPEN-001 a OPEN-005 e OPEN-007 pela opção recomendada; OPEN-006 por **um PR único**); as 6 etapas num único PR, testes T01–T06 no CI, roteiros, acessibilidade e desempenho em build de produção (T07–T09) — [evidências](evidencias/SPEC-016/README.md); notas da implementação na seção 15. Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar).
+> **Status:** ✅ **Implementada (PR #72) e verificada na homologação em 15/10/2026 (T10)**; os quatro ajustes encontrados na homologação foram corrigidos nos PRs #74 e #75 e aprovados nos testes da equipe em 16/10/2026, e as notas N1–N5 da seção 15 foram decididas pela equipe em 16/10/2026 (todas pela proposta; N3 e N5 implementadas) — aprovada em 14/10/2026 (OPEN-001 a OPEN-005 e OPEN-007 pela opção recomendada; OPEN-006 por **um PR único**); as 6 etapas num único PR, testes T01–T06 no CI, roteiros, acessibilidade e desempenho em build de produção (T07–T09) — [evidências](evidencias/SPEC-016/README.md); notas da implementação na seção 15. Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar).
 > **Mapa:** [`MAPA_DE_SPECS.md`](../MAPA_DE_SPECS.md) · **Anteriores:** todas as telas das SPECs 002 a 014; [SPEC-012](SPEC-012.md) (gráficos em SVG próprio, OPEN-002) · **Base visual:** [`IDENTIDADE_VISUAL.md`](../design/IDENTIDADE_VISUAL.md) e o protótipo aprovado da Direção B (quadro "HE — Direções visuais", linha B, 14/10/2026).
 
 ---
@@ -109,6 +109,8 @@
 - **Listas** viram tabela no computador e lista no celular, com as mesmas informações (nunca uma coluna escondida sem alternativa).
 - **Formulários curtos** conforme o OPEN-003; formulários longos (cadastro de item, dados do negócio, parâmetros) seguem em página, em colunas no computador.
 - **Estados vazios** convidam à ação ("Cadastre o primeiro produto"), **erros** dizem o que aconteceu e como resolver, **confirmações** usam o aviso flutuante com o mesmo verbo do botão ("Salvar" → "Salvo").
+- **Ações que não se desfazem** (cancelar venda, **cancelar conta a pagar ou a receber**, estornar lançamento) pedem confirmação no **Diálogo de confirmação** do design system (`src/components/ui/confirmacao.tsx`), nunca na janela padrão do navegador: título com a pergunta, a consequência em uma frase, "Voltar" com o foco inicial e o botão de perigo com o mesmo verbo da ação (nota N3).
+- **Valor do pagamento na Nova venda** (nota N1): com uma única forma de pagamento, o valor acompanha o total do carrinho até a pessoa editar o campo; ao dividir em mais de uma forma, os valores ficam fixos e cada parte é ajustada à mão. O servidor recalcula e valida tudo como na SPEC-008.
 - **Carregamento**: esqueletos no lugar dos cartões; ao trocar um filtro, o conteúdo anterior fica esmaecido até o novo chegar (sem tela piscando).
 
 ### 5.5 Gráficos
@@ -122,6 +124,11 @@
 | O que mais deixa lucro | Painel (OPEN-007), Relatórios | Barras horizontais ordenadas; os 3 primeiros em destaque, o resto em cinza |
 | Tendência do saldo | Faixa do caixa | Minigráfico |
 | Fluxo do mês | Financeiro | Barras acima/abaixo do zero por dia (entradas e saídas) |
+| Para onde vai cada venda | Calculadora | Barra empilhada com as parcelas do próprio cálculo (custo, despesas fixas, taxa, comissão, imposto, margem) — nota N2 |
+| Parte de cada despesa fixa | Financeiro (despesas fixas) | Barra empilhada com a parte de cada despesa no total do mês — nota N2 |
+| Saldo × mínimo | Estoque (detalhe do produto) | Régua do saldo em relação ao estoque mínimo em vigor — nota N2 |
+
+A taxa média da maquininha em "Como os clientes pagam" aparece no Painel e nos Relatórios (sobre o período escolhido), só para quem vê o Financeiro (nota N5).
 
 **Regras (todas):** balão ao passar o mouse, tocar ou focar pelo teclado, com o valor em destaque; área de toque maior que a marca; legenda com 2 ou mais séries; texto sempre na cor da tinta, nunca na cor da série; cores dos status reservadas; paleta categórica validada (`validate_palette`) nos dois temas; tabela "Ver os valores" em todos; filtro de período numa linha acima, valendo para a tela toda.
 
@@ -251,7 +258,7 @@ Nenhuma entidade muda. **Mudanças previstas no schema: nenhuma.** As consultas 
 | T04 | Menu por largura e permissão; faixa do caixa por permissão | Unitário + integração | CA-03, CA-04, INV-002 |
 | T05 | Consultas novas (formas de pagamento, ano anterior, fluxo diário) | Integração | CA-05, CA-06 |
 | T06 | Suíte completa sem mudança de regra | Unitário + integração | CA-02, INV-001 |
-| T07 | Roteiros das SPECs 002–014 adaptados, com axe, em 390/768/1440, claro e escuro | Navegador | CA-02, CA-08, CA-11 |
+| T07 | Roteiro de regressão dos fluxos das SPECs 002–014, independente do estado da base (42 verificações), mais os roteiros de cada etapa (99), com axe, em 390/768/1440, claro e escuro (nota N4) | Navegador | CA-02, CA-08, CA-11 |
 | T08 | Movimento com e sem `prefers-reduced-motion`; momento-assinatura | Navegador | CA-07, CA-09 |
 | T09 | Tamanho do JavaScript antes e depois | Build | Desempenho |
 | T10 | Homologação depois do merge do PR único | Manual (uma vez) | CA-01 a CA-11 |
@@ -266,7 +273,7 @@ Decididas pela equipe em 14/10/2026:
 |---|---|
 | **OPEN-001** — Ícones | **Biblioteca Lucide** (`lucide-react`). |
 | **OPEN-002** — Base dos componentes | **Híbrido**: shadcn/ui (Radix) para diálogo, gaveta, menu suspenso, seleção, dica e aviso flutuante, reestilizados com os tokens; o resto próprio. |
-| **OPEN-003** — Formulários curtos | **Gaveta com a própria URL preservada** (rotas interceptadas), acessível também pelo link direto. |
+| **OPEN-003** — Formulários curtos | **Gaveta com a própria URL preservada** (rotas interceptadas), acessível também pelo link direto. "Cancelar conta" na lista do OPEN-003 é **cancelar uma conta a pagar ou a receber** (não a exclusão da conta do usuário, que segue em página — SPEC-014); por ser uma confirmação, não um formulário, usa o Diálogo de confirmação (nota N3). |
 | **OPEN-004** — Tema escuro | **Mantém claro e escuro**, com o escuro da Direção B definido cor a cor e validado. |
 | **OPEN-005** — Faixa do caixa fora do Painel | **Versão compacta no topo de todas as telas**, só para quem vê o Dashboard completo. |
 | **OPEN-006** — Entregas | **Um único PR** (diferente da recomendação de 6 PRs): as 6 etapas viram commits separados no mesmo PR, com evidências por etapa para facilitar a revisão; homologação uma vez, depois do merge. **Risco aceito:** PR grande para revisar e um único momento de verificação na homologação. |
@@ -278,7 +285,7 @@ Opções consideradas:
 |---|---|---|---|
 | **OPEN-001** — Ícones | De onde vêm? | (a) **Biblioteca Lucide** (`lucide-react`, só os ícones usados entram no pacote), traço uniforme; (b) SVGs desenhados à mão no projeto | **(a)** — conjunto completo e consistente, acessível e leve; desenhar dezenas de ícones à mão gera inconsistência. |
 | **OPEN-002** — Base dos componentes | Escrever tudo ou usar shadcn/ui? | (a) **Híbrido: shadcn/ui (com Radix) para os componentes de comportamento difícil** — diálogo, gaveta, menu suspenso, seleção, dica, aviso flutuante — reestilizados com os tokens; o resto (botão, superfície, selo, lista…) próprio; (b) tudo próprio; (c) tudo do shadcn/ui | **(a)** — diálogo e gaveta acessíveis (foco preso, Esc, leitor de tela) são difíceis de acertar à mão; a baseline já prevê shadcn/ui (AD-QA04); o código fica no projeto e segue os tokens. |
-| **OPEN-003** — Formulários curtos | Gaveta ou página? | (a) **Gaveta para formulários curtos** (lançar despesa, nova conta, entrada/saída de estoque, convidar, cancelar conta) **com a própria URL preservada** — aberta por cima da lista e também acessível direto pelo link (rotas interceptadas do Next); (b) manter tudo em página | **(a)** — a pessoa não perde a lista de vista, o fluxo fica mais rápido, e links e atualização da página continuam funcionando. |
+| **OPEN-003** — Formulários curtos | Gaveta ou página? | (a) **Gaveta para formulários curtos** (lançar despesa, nova conta, entrada/saída de estoque, convidar, cancelar conta a pagar ou a receber) **com a própria URL preservada** — aberta por cima da lista e também acessível direto pelo link (rotas interceptadas do Next); (b) manter tudo em página | **(a)** — a pessoa não perde a lista de vista, o fluxo fica mais rápido, e links e atualização da página continuam funcionando. |
 | **OPEN-004** — Tema escuro | Mantém? | (a) **Mantém claro e escuro**, com o tema escuro da Direção B definido cor a cor e validado; (b) só o claro no redesign | **(a)** — já existe e as pessoas usam; abandonar seria regressão. |
 | **OPEN-005** — Faixa do caixa fora do Painel | Onde aparece? | (a) **Versão compacta no topo de todas as telas** (saldo, tendência, saúde; toque abre o dia), para quem vê o Dashboard completo; (b) só no Painel | **(a)** — é a assinatura do produto e responde "como está meu dinheiro?" de qualquer lugar; quem não tem permissão não vê. |
 | **OPEN-006** — Entregas | Em quantos passos? | (a) **6 fases, um PR e uma homologação por fase** (seção 5.7); (b) um único PR | **(a)** — PRs revisáveis, risco menor e o sistema continua utilizável entre as fases. |
@@ -296,7 +303,7 @@ A SPEC-016 estará concluída quando:
 - [x] os RNFs aplicáveis (RNF01, RNF02, RNF10 e desempenho) tiverem sido verificados como descrito na seção 10;
 - [x] as questões OPEN-001 a OPEN-007 tiverem sido decididas e registradas;
 - [x] `IDENTIDADE_VISUAL.md` estiver na versão 2;
-- [ ] não existir divergência conhecida entre a implementação e esta Spec — as da seção 15 aguardam a decisão da equipe;
+- [x] não existir divergência conhecida entre a implementação e esta Spec — as notas N1–N5 da seção 15 foram decididas em 16/10/2026 e incorporadas (N3 e N5 implementadas);
 - [x] toda divergência em relação à baseline tiver sido explicitamente analisada e registrada nos documentos (seção 15).
 
 **Regra fundamental:** a implementação obedece a esta Spec aprovada. Se surgir conflito entre código, Spec e documentos de modelagem, o comportamento não é alterado em silêncio: a divergência é registrada com a proposta de (1) corrigir a implementação ou (2) alterar a baseline, e a decisão é da equipe.
@@ -306,6 +313,18 @@ A SPEC-016 estará concluída quando:
 ## 15. Notas da implementação (15/10/2026)
 
 Registradas conforme a regra fundamental: cada ponto traz a proposta e a decisão é da equipe.
+
+**Decisões da equipe (16/10/2026, em entrevista), todas pela proposta:**
+
+| # | Decisão |
+|---|---|
+| N1 | **Aceito na baseline**: o valor automático passa a fazer parte da seção 5.4 (e da SPEC-008, 5.1). |
+| N2 | **Registrados na seção 5.5**: os três gráficos ficam, com as mesmas regras dos demais. |
+| N3 | **"Cancelar conta" = cancelar conta a pagar ou a receber.** Criado o componente **Diálogo de confirmação** (Radix AlertDialog, tokens, tema escuro, foco inicial em "Voltar"), usado em cancelar conta, estornar lançamento e cancelar venda no lugar do `window.confirm`. Texto do OPEN-003 explicitado para não haver nova ambiguidade. |
+| N4 | **Aceita a regressão como T07** (seção 12 atualizada). |
+| N5 | **Taxa da maquininha também nos Relatórios**, sobre o período escolhido e só para quem vê o Financeiro (como no Painel); o cálculo é a mesma função de domínio (`custoDaMaquininha`) nos dois lugares. |
+
+Notas originais:
 
 | # | O que | Situação | Proposta |
 |---|---|---|---|

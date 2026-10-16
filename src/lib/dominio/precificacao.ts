@@ -116,6 +116,9 @@ export function calcularPreco(c: ComponentesDoPreco): PrecoCalculado {
 /** "Arredondar para cima" ao próximo real inteiro — nunca abaixo do sugerido (OPEN-004). */
 export const arredondarParaCimaAoReal = (centavos: number) => Math.ceil(centavos / 100) * 100;
 
+/** Quanto a maquininha fica das vendas no cartão (crédito + débito), pela taxa média (RF51). */
+export const custoDaMaquininha = (cartaoCentavos: number, taxaCartao: number) => Math.round((cartaoCentavos * taxaCartao) / 100);
+
 /**
  * Ponto de equilíbrio (RF55) e faturamento meta (RF56):
  * despesas fixas ÷ (1 − CMV% − Imp% − taxa de cartão% [− margem meta%]); null se o denominador ≤ 0.
