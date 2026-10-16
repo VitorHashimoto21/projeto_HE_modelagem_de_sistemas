@@ -71,7 +71,7 @@
 | Recebimento das contas a receber, fluxo de caixa, saldo | SPEC-009 (esta Spec só cria os registros) |
 | RBT12, faturamento e CMV% | SPEC-010 (usa `Venda.valorTotal` e `ItemVenda.custoUnitario`) |
 | Vendas do dia no dashboard | SPEC-012 |
-| Desconto ou alteração de preço na venda | Fora do MVP (OPEN-001) — o preço é sempre o oficial (RN15) |
+| Desconto ou alteração de preço na venda | Fora do MVP (OPEN-001) — o preço é sempre o oficial (RN15). **Revisto pela SPEC-017:** ajuste de preço por linha (com permissão e motivo) e de materiais por venda |
 | Taxa de maquininha e comissão descontadas do recebimento | Fora do MVP (RN11, RN20) |
 | Tela de clientes (lista, edição, histórico por cliente) | Fora desta Spec (OPEN-005) |
 | Emissão de nota fiscal, recibo impresso, leitor de código de barras | Evolução futura |
@@ -162,7 +162,7 @@
 | ID | Invariante | Como verificar |
 |---|---|---|
 | **INV-001** | A venda é atômica: venda, itens, baixas, pagamentos, lançamentos, parcelas e contas são gravados juntos ou nada é gravado. | Teste com falha simulada em cada etapa final (ex.: conta a receber). |
-| **INV-002** | Preço unitário e total são calculados no servidor a partir do `precoAtual`; nenhum valor de preço vindo do navegador é usado. | Teste chamando o servidor com preço adulterado. |
+| **INV-002** | Preço unitário e total são calculados no servidor a partir do `precoAtual`; nenhum valor de preço vindo do navegador é usado — exceto o preço ajustado da SPEC-017, aceito só com *Vendas: editar* e motivo, e registrado na linha. | Teste chamando o servidor com preço adulterado. |
 | **INV-003** | Σ pagamentos = `Venda.valorTotal` = Σ arredondamento(preço × quantidade) das linhas. | Teste de integração e restrição verificada após cada venda. |
 | **INV-004** | Para cada pagamento no crédito, Σ parcelas = valor do pagamento; a 1ª parcela recebe a diferença de centavos; cada parcela tem exatamente uma conta a receber com o mesmo valor e vencimento. | Testes unitários (RN11) e de integração. |
 | **INV-005** | Cada pagamento em Dinheiro, PIX ou Débito tem exatamente um lançamento de entrada, categoria Vendas, com o mesmo valor; Crédito nunca gera lançamento imediato. | Teste de integração. |
@@ -308,7 +308,7 @@ Todas decididas pela equipe em 09/10/2026, pela opção recomendada:
 
 | ID | Decisão |
 |---|---|
-| **OPEN-001** — Desconto | **Sem desconto no MVP:** o preço é sempre o oficial (RN15). |
+| **OPEN-001** — Desconto | **Sem desconto no MVP:** o preço é sempre o oficial (RN15). **Revista em 16/10/2026 pela [SPEC-017](SPEC-017.md):** preço ajustável por linha, com *Vendas: editar* e motivo obrigatório. |
 | **OPEN-002** — Data da venda | **Agora por padrão, com data retroativa de até 7 dias** (dia local de São Paulo). A baixa de estoque e os lançamentos usam a mesma data. |
 | **OPEN-003** — Vencimento das parcelas | **Parcela k vence no mesmo dia da venda, k meses depois**; se o mês não tiver esse dia, no último dia do mês. 1x vence no mês seguinte. |
 | **OPEN-004** — Troco | **Só calculado na tela** ("valor recebido"); o pagamento grava o valor da venda. |

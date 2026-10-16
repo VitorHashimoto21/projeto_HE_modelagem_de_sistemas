@@ -1,6 +1,6 @@
 # SPEC-017 — Ajustes na venda: materiais e preço por venda
 
-> **Status:** 📝 **Rascunho para aprovação (16/10/2026)**. Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar), a partir de uma melhoria identificada pela equipe na aula de 15/10/2026. As questões em aberto da seção 13 trazem uma **recomendação**, mas a decisão é da equipe. Nenhuma implementação antes da aprovação.
+> **Status:** ✅ **Aprovada em 16/10/2026** — questões em aberto decididas pela equipe em entrevista (seção 13), todas pela opção recomendada; RN05, RN15 e SPEC-008 ajustadas. Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar), a partir de uma melhoria identificada pela equipe na aula de 15/10/2026. Pronta para implementar.
 > **Mapa:** [`MAPA_DE_SPECS.md`](../MAPA_DE_SPECS.md) · **Altera:** [SPEC-008](SPEC-008.md) (registro de venda), com efeitos na [SPEC-006](SPEC-006.md) (preço oficial) e na [SPEC-011](SPEC-011.md) (troca) · **Usa:** [SPEC-005](SPEC-005.md) (permissões), [SPEC-007](SPEC-007.md) (baixa de estoque) e [SPEC-016](SPEC-016.md) (componentes).
 
 ---
@@ -29,8 +29,8 @@ O eletricista cadastrou o serviço **"Troca de lâmpadas"** com o material **"L�
 | Tipo | Itens | Como esta Spec atende / altera |
 |---|---|---|
 | **RF** | RF23, RF24 (venda multi-itens), RF62 (custo na venda) | O custo gravado na linha passa a usar as quantidades de material ajustadas. |
-| **RN** | **RN05** | **Alterada:** o serviço baixa os materiais vinculados **nas quantidades da venda** (por padrão, as do catálogo; ajustáveis na venda). |
-| | **RN15** | **Alterada (se aprovada a OPEN-003):** o preço oficial continua sendo o padrão de toda venda; um ajuste de preço vale só para aquela linha, com registro de quem ajustou, o preço oficial do momento e o motivo. O preço oficial e o histórico de preços **não mudam**. |
+| **RN** | **RN05** | **Alterada (texto ajustado na baseline):** o serviço baixa os materiais vinculados **nas quantidades da venda** (por padrão, as do catálogo; ajustáveis na venda). |
+| | **RN15** | **Alterada (OPEN-003; texto ajustado na baseline):** o preço oficial continua sendo o padrão de toda venda; um ajuste de preço vale só para aquela linha, com registro de quem ajustou, o preço oficial do momento e o motivo. O preço oficial e o histórico de preços **não mudam**. |
 | | RN06, RN23 | Mantidas: estoque insuficiente bloqueia a venda; item sem preço oficial continua sem poder ser vendido. |
 | **RNF** | RNF05 (auditoria) | O ajuste fica registrado na linha da venda e aparece no detalhe. |
 | | RNF02 | O ajuste de preço segue a permissão decidida na OPEN-005, conferida no servidor. |
@@ -46,11 +46,11 @@ O eletricista cadastrou o serviço **"Troca de lâmpadas"** com o material **"L�
 
 1. **"Editar materiais"** em cada linha de **serviço com materiais** no carrinho da Nova venda:
    - abre uma gaveta (SPEC-016, OPEN-003) com os materiais do serviço e as quantidades **da linha** (OPEN-002), preenchidas com o padrão do catálogo × quantidade da linha;
-   - a pessoa altera as quantidades (OPEN-001 decide se também pode incluir ou remover materiais);
+   - a pessoa altera as quantidades dos materiais já vinculados, inclusive para 0 (OPEN-001);
    - a linha passa a mostrar "Materiais ajustados", com o resumo (ex.: "6 Lâmpada LED"), e o aviso de estoque do carrinho usa as quantidades novas;
    - "Voltar ao padrão" desfaz o ajuste.
-2. **"Editar preço"** em cada linha (OPEN-004 decide se só serviços ou também produtos), para quem tem a permissão da OPEN-005:
-   - informa o preço unitário cobrado nesta venda (e o motivo, conforme a OPEN-006);
+2. **"Editar preço"** em cada linha, de serviço ou produto (OPEN-004), para quem tem *Vendas: editar* (OPEN-005):
+   - informa o preço unitário cobrado nesta venda e o motivo, obrigatório e curto (OPEN-006);
    - a linha mostra o preço ajustado e o oficial riscado; o total e o valor do pagamento automático (SPEC-016, N1) acompanham;
    - aviso, sem bloquear, quando o preço fica abaixo do custo da linha (OPEN-007);
    - "Voltar ao preço oficial" desfaz o ajuste.
@@ -65,7 +65,7 @@ O eletricista cadastrou o serviço **"Troca de lâmpadas"** com o material **"L�
 | Desconto no total da venda (em vez de por linha) | Evolução futura; o ajuste é por linha |
 | Mudar o catálogo a partir da venda ("salvar como padrão") | Fora: o catálogo muda só pelo Catálogo e pela Calculadora (SPEC-006, SPEC-010) |
 | Ajustes ao editar uma venda já registrada | Não existe edição de venda; a correção continua sendo cancelar ou trocar (SPEC-011) |
-| Ajustes na nova venda de uma **troca** | Decidido na OPEN-008 |
+| Ajustes na nova venda de uma **troca** | Fora desta Spec (OPEN-008) |
 
 ---
 
@@ -83,7 +83,7 @@ O eletricista cadastrou o serviço **"Troca de lâmpadas"** com o material **"L�
 
 1. No carrinho, a linha de um serviço com materiais mostra **"Editar materiais"**.
 2. A gaveta lista cada material com a **quantidade da linha** (padrão = quantidade do catálogo × quantidade do serviço na linha), a unidade e o saldo em estoque.
-3. A pessoa altera as quantidades (≥ 0, até 3 casas). Com a OPEN-001 (b), também inclui um Produto Físico do catálogo ou remove um material.
+3. A pessoa altera as quantidades (≥ 0, até 3 casas) dos materiais já vinculados (OPEN-001).
 4. Ao confirmar, a linha mostra "Materiais ajustados" e o resumo. Se a pessoa mudar depois a quantidade do serviço na linha, a tela pergunta se mantém os materiais ajustados ou volta ao padrão proporcional.
 5. O custo exibido da linha (se a pessoa puder ver custos) e o aviso de estoque usam as quantidades ajustadas.
 
@@ -221,18 +221,18 @@ Migração: os três campos novos em `ItemVenda`, opcionais ou com padrão, sem 
 
 ## 13. Questões em aberto
 
-Cada questão traz a **recomendação** de quem gerou a Spec; a decisão é da equipe.
+Todas decididas pela equipe em 16/10/2026, em entrevista, pela opção recomendada:
 
-| ID | Questão | Opções | Recomendação |
-|---|---|---|---|
-| **OPEN-001** — O que pode mudar nos materiais | Só a quantidade, ou também quais materiais? | (a) **só a quantidade** dos materiais já vinculados (pode ser 0); (b) também incluir outro Produto Físico ou remover um material; (c) só aumentar, nunca diminuir. | **(a)**: resolve o caso do eletricista e o de gasto extra, com uma tela simples; quantidade 0 já cobre "não usei este material". Incluir materiais novos na venda (b) pode vir depois sem mudar o que foi gravado. |
-| **OPEN-002** — Como informar a quantidade | O número digitado é por execução ou o total da linha? Onde guardar? | (a) **total da linha** ("6 lâmpadas nesta venda"), guardado nas próprias movimentações; (b) por execução (6 ÷ quantidade da linha); (c) total da linha numa tabela nova `ItemVendaMaterial`. | **(a)**: é como a pessoa pensa no balcão ("troquei 6"), e as movimentações já registram a quantidade de cada material da venda, que é o que o cancelamento usa. A tabela nova (c) só seria necessária para separar o mesmo material entre várias linhas. |
-| **OPEN-003** — Ajuste de preço | Revê a decisão "sem desconto no MVP" (SPEC-008, OPEN-001) e a RN15. | (a) **preço unitário ajustável por linha**, registrado (preço oficial do momento, quem, motivo), sem mudar o oficial; (b) só desconto ou acréscimo em % ou R$ sobre o oficial; (c) não permitir: usar só a quantidade e cadastrar o serviço por unidade. | **(a)**: cobre o preço combinado e o desconto numa regra só, e mantém o preço oficial e a auditoria intactos. Ajustar a RN15: "o preço oficial é o padrão de toda venda; ajustes por venda são registrados na linha". |
-| **OPEN-004** — Onde vale o ajuste de preço | Só serviços ou também produtos? | (a) **serviços e produtos**; (b) só serviços. | **(a)**: o mesmo botão e a mesma regra; desconto num produto (ex.: peça com defeito) é tão comum quanto preço combinado num serviço. |
-| **OPEN-005** — Quem pode ajustar o preço | Hoje *Vendas: editar* está sem uso (SPEC-008). | (a) ***Vendas: editar*** (Dono e Gerente têm; o Colaborador só se o Dono der); (b) qualquer um com *Vendas: criar*; (c) só o Dono. | **(a)**: reaproveita a matriz sem campo novo e protege o caixa: o Colaborador padrão vende pelo preço oficial, e o Dono libera quando quiser. Ajustar **materiais** fica com *Vendas: criar* (é registro do que foi usado, não preço). |
-| **OPEN-006** — Motivo do ajuste de preço | Exigir um motivo? | (a) **motivo obrigatório curto** (até 120 caracteres, ex.: "preço combinado", "desconto cliente fiel"); (b) opcional; (c) sem motivo. | **(a)**: é o que torna o ajuste auditável (RNF05) sem atrasar a venda: uma frase curta. |
-| **OPEN-007** — Preço abaixo do custo | Avisar ou bloquear? | (a) **avisar sem bloquear** (como no preço manual da SPEC-006); (b) bloquear; (c) nada. | **(a)**: há motivos legítimos (brinde, cliente antigo), e o aviso já ensina o risco; a rentabilidade mostra o efeito depois. |
-| **OPEN-008** — Ajustes na troca (SPEC-011) | A nova venda de uma troca também pode ter ajustes? | (a) **não nesta Spec**: a troca continua com preço e materiais oficiais; (b) sim, com as mesmas regras. | **(a)**: a troca tem regras próprias de crédito (RN26) e ficou estável; os ajustes podem ser estendidos a ela depois, se a equipe sentir falta. |
+| ID | Decisão |
+|---|---|
+| **OPEN-001** — O que pode mudar nos materiais | **Só a quantidade** dos materiais já vinculados ao serviço (pode ser 0, "não usei"). Incluir ou remover materiais na venda fica para depois. |
+| **OPEN-002** — Como informar a quantidade | **Total da linha**: a pessoa digita quanto usou nesta venda (ex.: "5 lâmpadas" num serviço com quantidade 3, cujo padrão seria 6). Guardado nas próprias movimentações `SAIDA_VENDA` da venda, sem tabela nova. |
+| **OPEN-003** — Ajuste de preço | **Preço unitário ajustável por linha**, registrado na linha (preço oficial do momento, quem ajustou e motivo), sem mudar o preço oficial nem o histórico. Revê a OPEN-001 da SPEC-008 e ajusta a RN15. |
+| **OPEN-004** — Onde vale | **Serviços e produtos.** |
+| **OPEN-005** — Quem pode ajustar o preço | ***Vendas: editar*** (Dono e Gerente por padrão; o Colaborador só se o Dono liberar). Ajustar **materiais** fica com *Vendas: criar*. |
+| **OPEN-006** — Motivo | **Obrigatório e curto** (até 120 caracteres), gravado na linha e mostrado no detalhe. |
+| **OPEN-007** — Abaixo do custo | **Avisar sem bloquear**, como no preço manual do catálogo (SPEC-006). |
+| **OPEN-008** — Troca (SPEC-011) | **Fora desta Spec**: a nova venda da troca continua com preço e materiais oficiais. |
 
 ---
 
@@ -244,7 +244,7 @@ A SPEC-017 estará concluída quando:
 - [ ] todos os invariantes (INV-001 a INV-006) estiverem preservados;
 - [ ] os testes derivados (T01 a T10) estiverem aprovados, com o CI verde no PR;
 - [ ] os RNFs aplicáveis (RNF01, RNF02, RNF05) tiverem sido verificados como descrito na seção 10;
-- [ ] as questões OPEN-001 a OPEN-008 tiverem sido decididas e registradas, com a RN05, a RN15 e a SPEC-008 (OPEN-001, INV-002, seção 3 "Fora do escopo") ajustadas conforme as decisões;
+- [x] as questões OPEN-001 a OPEN-008 tiverem sido decididas e registradas (16/10/2026), com a RN05, a RN15 e a SPEC-008 (OPEN-001, INV-002, seção 3 "Fora do escopo") ajustadas conforme as decisões;
 - [ ] não existir divergência conhecida entre a implementação e esta Spec;
 - [ ] toda divergência em relação à baseline tiver sido explicitamente analisada e registrada nos documentos.
 
