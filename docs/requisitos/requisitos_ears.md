@@ -43,7 +43,7 @@
 | RN04 | Orientado a estado | **ENQUANTO** o item for do tipo Serviço, o sistema deve excluí-lo do controle de estoque e permitir vincular materiais; **ENQUANTO** for Produto Físico, deve incluí-lo no controle de estoque. |
 | RF64 | Feature opcional | **ONDE** o usuário informar manualmente o preço de venda de um item, o sistema deve salvá-lo como preço oficial e registrar no histórico a origem Manual. |
 | RN23 | Comportamento indesejado | **SE** o usuário tentar adicionar a uma venda um item sem preço oficial confirmado, **ENTÃO** o sistema deve impedir a inclusão e orientar a definição do preço. |
-| RN05 | Orientado a evento | **QUANDO** um Serviço com materiais vinculados for vendido, o sistema deve dar baixa automática no estoque desses materiais, na quantidade configurada. |
+| RN05 | Orientado a evento | **QUANDO** um Serviço com materiais vinculados for vendido, o sistema deve dar baixa automática no estoque desses materiais, na quantidade configurada; **ONDE** a quantidade usada for ajustada na venda, o sistema deve baixar a quantidade ajustada (SPEC-017). |
 
 ---
 
@@ -127,7 +127,7 @@
 | RN19 | Comportamento indesejado | **SE** a soma de Desp. Fixas% + Desp. Variáveis% + Imposto% + Margem% for maior ou igual a 100%, **ENTÃO** o sistema deve bloquear o cálculo e informar que o preço é inviável com os parâmetros atuais. |
 | RN20 | Ubíquo | O sistema deve utilizar taxa de cartão e comissão somente na formação do preço, sem descontá-las dos lançamentos financeiros nem gerar repasse automático no MVP. |
 | RN21 | Complexo (Evento + Indesejado) | **QUANDO** uma venda for registrada, inclusive com pagamento em cartão de crédito ainda não recebido, o sistema deve considerar seu valor total no faturamento bruto do mês da venda e, a partir do mês seguinte, no RBT12; **SE** houver menos de 12 meses anteriores com vendas, **ENTÃO** o sistema deve usar RBT12 = média mensal desses meses × 12 ou, sem nenhum mês anterior, faturamento mensal estimado × 12. |
-| RN15 | Ubíquo | O sistema deve utilizar sempre o último preço confirmado pelo usuário como preço de venda oficial do produto/serviço nas vendas. |
+| RN15 | Ubíquo | O sistema deve utilizar sempre o último preço confirmado pelo usuário como preço de venda oficial do produto/serviço nas vendas; **ONDE** um membro com permissão ajustar o preço de uma linha da venda, informando o motivo, o sistema deve cobrar o preço ajustado e registrar o preço oficial do momento, quem ajustou e o motivo (SPEC-017). |
 | RN17 | Ubíquo | O sistema deve manter as faixas e percentuais de alíquota de MEI e Simples Nacional como configuração parametrizável, permitindo atualização sem alteração de código. |
 
 ---

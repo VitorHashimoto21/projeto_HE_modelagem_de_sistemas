@@ -67,7 +67,7 @@
 
 - **RN03** — Todo Produto Físico é criado com estoque inicial igual a zero.
 - **RN04** — O tipo do item (Físico/Serviço) determina se ele participa do controle de Estoque e se pode receber materiais vinculados.
-- **RN05** — Um Serviço com materiais vinculados consome (dá baixa) automaticamente do estoque desses materiais quando o serviço é vendido.
+- **RN05** — Um Serviço com materiais vinculados consome (dá baixa) automaticamente do estoque desses materiais quando o serviço é vendido, nas quantidades do catálogo; na venda, a quantidade de cada material pode ser ajustada para o que foi de fato usado (SPEC-017), sem alterar o catálogo.
 - **RN23** — Um item sem preço oficial confirmado não pode ser adicionado a uma venda.
 
 ---
@@ -168,7 +168,7 @@
 
 ### Regras de Negócio
 
-- **RN15** — O preço de venda usado nas vendas do sistema é sempre o último preço confirmado pelo usuário via Calculadora (ou cadastro manual), nunca um valor calculado e não confirmado.
+- **RN15** — O preço de venda usado nas vendas do sistema é sempre o último preço confirmado pelo usuário via Calculadora (ou cadastro manual), nunca um valor calculado e não confirmado. Numa venda, quem tem permissão (*Vendas: editar*) pode ajustar o preço de uma linha, com motivo obrigatório; o ajuste fica registrado na linha (preço oficial do momento, quem ajustou e motivo) e não altera o preço oficial nem o histórico (SPEC-017).
 - **RN16** — Cada nova confirmação de preço gera um novo registro no histórico, preservando os valores anteriores.
 - **RN17** — Os parâmetros fiscais devem ser parametrizáveis no sistema, permitindo atualização sem alteração de código, já que a legislação pode mudar: faixas, alíquotas e parcelas a deduzir por Anexo do Simples, tabela CNAE → Anexo, valores do DAS e limite anual do MEI e margens padrão por categoria. Cada parâmetro registra sua fonte legal e data de vigência.
 - **RN19** — A soma Desp. Fixas% + Desp. Variáveis% + Imposto% + Margem% deve ser menor que 100%; caso contrário, o sistema bloqueia o cálculo e informa ao usuário que o preço é inviável com os parâmetros atuais.
@@ -247,7 +247,7 @@
 | RN02 | Apenas o Dono pode convidar/remover colaboradores e alterar permissões. |
 | RN03 | Produto Físico é criado com estoque inicial zero. |
 | RN04 | Tipo do item (Físico/Serviço) determina participação no Estoque e possibilidade de materiais vinculados. |
-| RN05 | Serviço com materiais vinculados dá baixa automática desses materiais no estoque ao ser vendido. |
+| RN05 | Serviço com materiais vinculados dá baixa automática desses materiais no estoque ao ser vendido; quantidades ajustáveis na venda (SPEC-017). |
 | RN06 | Vendas com estoque insuficiente não são permitidas; o sistema bloqueia a operação. |
 | RN07 | Alerta pelo mínimo sugerido fica desativado até o produto completar 1 ciclo (ao menos 1 entrada e 1 saída); com mínimo manual, alerta desde já. |
 | RN08 | Estoque mínimo sugerido automaticamente após o 1º ciclo; sobrescrevível manualmente a qualquer momento. |
@@ -257,7 +257,7 @@
 | RN12 | Toda venda dispara baixa de estoque + lançamento financeiro automaticamente. |
 | RN13 | Lançamentos automáticos de venda usam a categoria "Vendas". |
 | RN14 | Saldo de caixa reflete apenas valores já recebidos/pagos, não contas a receber futuras. |
-| RN15 | Preço de venda oficial é sempre o último preço confirmado pelo usuário. |
+| RN15 | Preço de venda oficial é sempre o último preço confirmado pelo usuário; ajuste por linha na venda, com permissão e motivo, sem mudar o oficial (SPEC-017). |
 | RN16 | Toda confirmação de novo preço gera registro em histórico. |
 | RN17 | Parâmetros fiscais (faixas por Anexo, CNAE → Anexo, DAS e limite do MEI, margens padrão) são parametrizáveis, com fonte legal e vigência. |
 | RN18 | Limitação do plano Freemium é por funcionalidade, nunca por volume de uso. |
