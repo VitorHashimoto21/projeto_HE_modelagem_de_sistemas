@@ -5,6 +5,7 @@ import {
   DIAS_RETROATIVOS,
   FORMAS_DE_PAGAMENTO,
   FORMAS_DE_REEMBOLSO,
+  MAX_MOTIVO_AJUSTE,
   MAX_PARCELAS,
   MOTIVOS_CANCELAMENTO,
   paraCentavos,
@@ -15,7 +16,8 @@ import {
 
 /**
  * Validação da venda (SPEC-008, 5.5). Roda no navegador e no servidor. O carrinho chega
- * como JSON; o preço nunca vem daqui (INV-002) — só o "preço visto", para avisar se mudou.
+ * como JSON; o preço oficial nunca vem daqui (INV-002) — só o "preço visto", para avisar se
+ * mudou, e o preço ajustado da SPEC-017, que o servidor só aceita com Vendas — editar.
  */
 
 export const MAX_LINHAS = 100;
@@ -40,9 +42,24 @@ export const MENSAGENS_VENDA = {
   detalheObrigatorio: 'Descreva o motivo quando escolher "Outro"',
   detalheLongo: "Use no máximo 200 caracteres",
   formaReembolsoInvalida: "Forma de reembolso inválida",
+  // SPEC-017
+  materiaisInvalidos: "Não foi possível ler os materiais ajustados. Recarregue a página e tente de novo.",
+  quantidadeMaterialInvalida: "Use uma quantidade de 0 ou mais, com até 3 casas decimais",
+  precoAjusteInvalido: "Use um preço maior que zero, com até 2 casas",
+  motivoAjusteObrigatorio: "Informe o motivo do ajuste de preço",
+  motivoAjusteLongo: `Use no máximo ${MAX_MOTIVO_AJUSTE} caracteres`,
+  ajusteNaTroca: "Na troca, os itens usam o preço e os materiais do catálogo.",
 } as const;
 
-export type LinhaDoCarrinho = { itemId: string; quantidade: number; precoVistoCentavos: number | null };
+/** Ajustes da linha (SPEC-017): materiais = total usado na linha (OPEN-002); preço com motivo. */
+export type AjusteDePreco = { precoCentavos: number; motivo: string };
+export type LinhaDoCarrinho = {
+  itemId: string;
+  quantidade: number;
+  precoVistoCentavos: number | null;
+  materiais?: { materialId: string; quantidade: number }[] | null;
+  ajustePreco?: AjusteDePreco | null;
+};
 export type PagamentoDoCarrinho = { forma: FormaDePagamento; valorCentavos: number; parcelas: number };
 export type DadosDoCarrinho = {
   /** Identificador do carrinho = id da venda (proteção contra envio duplicado, INV-009). */
@@ -59,8 +76,9 @@ export type Validacao<T> = { ok: true; dados: T } | { ok: false; erros: ErrosDeC
 const lerValor = (v: unknown) => (typeof v === "number" ? v : lerNumero(typeof v === "string" ? v : undefined));
 
 /**
- * Valida a forma do carrinho (sem consultar o banco). Linhas do mesmo item são somadas.
- * A soma dos pagamentos é conferida no servidor contra o total calculado com o preço oficial.
+ * Valida a forma do carrinho (sem consultar o banco). Linhas do mesmo item sem ajustes são
+ * somadas; linhas com ajustes (SPEC-017) ficam separadas. A soma dos pagamentos é conferida
+ * no servidor contra o total calculado com o preço oficial (ou o ajustado).
  */
 export function validarCarrinho(entrada: unknown, hoje: string, opcoes: { troca?: boolean } = {}): Validacao<DadosDoCarrinho> {
   const c = entrada as Record<string, unknown> | null;
@@ -80,7 +98,8 @@ export function validarCarrinho(entrada: unknown, hoje: string, opcoes: { troca?
     else erros.cliente = MENSAGENS_VENDA.clienteInvalido;
   }
 
-  const somadas = new Map<string, LinhaDoCarrinho>();
+  const resultado: LinhaDoCarrinho[] = [];
+  const somaveis = new Map<string, LinhaDoCarrinho>();
   const linhas = Array.isArray(c.linhas) ? c.linhas : [];
   if (linhas.length === 0) erros.itens = MENSAGENS_VENDA.carrinhoVazio;
   else if (linhas.length > MAX_LINHAS) erros.itens = MENSAGENS_VENDA.muitasLinhas;
@@ -95,12 +114,25 @@ export function validarCarrinho(entrada: unknown, hoje: string, opcoes: { troca?
       continue;
     }
     const precoVisto = typeof l.precoVisto === "number" ? paraCentavos(l.precoVisto) : null;
-    const anterior = somadas.get(l.itemId);
-    somadas.set(l.itemId, {
-      itemId: l.itemId,
-      quantidade: anterior ? Math.round((anterior.quantidade + quantidade) * 1000) / 1000 : quantidade,
-      precoVistoCentavos: precoVisto,
-    });
+    const ajustes = lerAjustes(l, l.itemId, erros);
+    if (ajustes === null) continue;
+    if (opcoes.troca && (ajustes.materiais || ajustes.ajustePreco)) {
+      erros.itens = MENSAGENS_VENDA.ajusteNaTroca; // SPEC-017, OPEN-008
+      continue;
+    }
+    if (ajustes.materiais || ajustes.ajustePreco) {
+      resultado.push({ itemId: l.itemId, quantidade, precoVistoCentavos: precoVisto, ...ajustes });
+      continue;
+    }
+    const anterior = somaveis.get(l.itemId);
+    if (anterior) {
+      anterior.quantidade = Math.round((anterior.quantidade + quantidade) * 1000) / 1000;
+      anterior.precoVistoCentavos = precoVisto;
+    } else {
+      const linha: LinhaDoCarrinho = { itemId: l.itemId, quantidade, precoVistoCentavos: precoVisto };
+      somaveis.set(l.itemId, linha);
+      resultado.push(linha);
+    }
   }
 
   const pagamentos: PagamentoDoCarrinho[] = [];
@@ -128,7 +160,56 @@ export function validarCarrinho(entrada: unknown, hoje: string, opcoes: { troca?
   }
 
   if (Object.keys(erros).length) return { ok: false, erros };
-  return { ok: true, dados: { id: c.id, dia, clienteId, linhas: [...somadas.values()], pagamentos } };
+  return { ok: true, dados: { id: c.id, dia, clienteId, linhas: resultado, pagamentos } };
+}
+
+/**
+ * Ajustes de uma linha (SPEC-017): materiais (lista com o total usado de cada material, sem
+ * repetição — OPEN-001/OPEN-002) e preço com motivo obrigatório (OPEN-003, OPEN-006).
+ * Devolve null quando há erro (já registrado em `erros`).
+ */
+function lerAjustes(l: Record<string, unknown>, itemId: string, erros: ErrosDeCampo): Pick<LinhaDoCarrinho, "materiais" | "ajustePreco"> | null {
+  let materiais: LinhaDoCarrinho["materiais"] = null;
+  if (l.materiais !== undefined && l.materiais !== null) {
+    if (!Array.isArray(l.materiais) || l.materiais.length === 0 || l.materiais.length > 50) {
+      erros[`materiais_${itemId}`] = MENSAGENS_VENDA.materiaisInvalidos;
+      return null;
+    }
+    const vistos = new Set<string>();
+    materiais = [];
+    for (const m of l.materiais as Record<string, unknown>[]) {
+      const q = lerValor(m?.quantidade);
+      if (typeof m?.materialId !== "string" || !UUID.test(m.materialId) || vistos.has(m.materialId)) {
+        erros[`materiais_${itemId}`] = MENSAGENS_VENDA.materiaisInvalidos;
+        return null;
+      }
+      if (q === null || q < 0 || q > 9_999_999.999 || casasDecimais(q) > 3) {
+        erros[`materiais_${itemId}`] = MENSAGENS_VENDA.quantidadeMaterialInvalida;
+        return null;
+      }
+      vistos.add(m.materialId);
+      materiais.push({ materialId: m.materialId, quantidade: q });
+    }
+  }
+  let ajustePreco: LinhaDoCarrinho["ajustePreco"] = null;
+  if (l.precoAjustado !== undefined && l.precoAjustado !== null && l.precoAjustado !== "") {
+    const preco = lerValor(l.precoAjustado);
+    const motivo = typeof l.motivoAjuste === "string" ? l.motivoAjuste.trim().replace(/\s+/g, " ") : "";
+    if (preco === null || !(preco > 0) || preco > 9_999_999.99 || casasDecimais(preco) > 2) {
+      erros[`preco_${itemId}`] = MENSAGENS_VENDA.precoAjusteInvalido;
+      return null;
+    }
+    if (!motivo) {
+      erros[`motivo_${itemId}`] = MENSAGENS_VENDA.motivoAjusteObrigatorio;
+      return null;
+    }
+    if (motivo.length > MAX_MOTIVO_AJUSTE) {
+      erros[`motivo_${itemId}`] = MENSAGENS_VENDA.motivoAjusteLongo;
+      return null;
+    }
+    ajustePreco = { precoCentavos: paraCentavos(preco), motivo };
+  }
+  return { materiais, ajustePreco };
 }
 
 /** Cadastro rápido de cliente (OPEN-005). */

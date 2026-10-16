@@ -3,10 +3,12 @@ import { custoTotal } from "@/lib/dominio/catalogo";
 import { intervaloDoDia } from "@/lib/dominio/datas";
 import {
   acertoDoCancelamento,
+  custoUnitarioComMateriais,
   dividirEmParcelas,
   ehImediato,
   FORMAS_DE_PAGAMENTO,
   FORMAS_DE_REEMBOLSO,
+  materiaisPadraoDaLinha,
   paraCentavos,
   subtotalEmCentavos,
   vencimentoDaParcela,
@@ -19,7 +21,8 @@ import { EstoqueInsuficiente, instanteDaOcorrencia, movimentar } from "./estoque
 /**
  * Vendas do negócio ativo (SPEC-008). A venda inteira é uma transação (INV-001): número,
  * venda, itens, baixas de estoque (primitiva da SPEC-007), pagamentos, lançamentos e
- * parcelas com contas a receber. Preço e custo vêm sempre do banco (INV-002, INV-007).
+ * parcelas com contas a receber. Preço e custo vêm sempre do banco (INV-002, INV-007), salvo os
+ * ajustes da SPEC-017: preço da linha (com Vendas — editar e motivo) e materiais usados.
  * O cancelamento e a troca (SPEC-011) desfazem esses efeitos numa única transação.
  */
 
@@ -45,6 +48,20 @@ export class EstoqueInsuficienteNaVenda extends Error {
   constructor(public readonly nome: string, public readonly saldo: number, public readonly unidade: string) {
     super("Estoque insuficiente.");
     this.name = "EstoqueInsuficienteNaVenda";
+  }
+}
+/** SPEC-017: material ajustado que não é do serviço, ou ajuste de materiais num produto. */
+export class MaterialInvalido extends Error {
+  constructor(public readonly nome: string) {
+    super("Material inválido para este item.");
+    this.name = "MaterialInvalido";
+  }
+}
+/** SPEC-017 (OPEN-005, INV-003): ajuste de preço sem Vendas — editar. */
+export class AjusteDePrecoSemPermissao extends Error {
+  constructor() {
+    super("Sem permissão para ajustar o preço.");
+    this.name = "AjusteDePrecoSemPermissao";
   }
 }
 export class ClienteInvalido extends Error {
@@ -97,11 +114,17 @@ type Tx = Parameters<typeof movimentar>[0] &
 type LinhaPreparada = DadosDoCarrinho["linhas"][number] & {
   nome: string;
   tipo: TipoItem;
+  /** Preço cobrado: o oficial, ou o ajustado (SPEC-017). */
   precoCentavos: number;
+  /** Preço oficial no momento da gravação (comparado com o "preço visto" e gravado no ajuste). */
+  precoOficialCentavos: number;
   custo: number;
-  materiais: { materialId: string; quantidade: number; custo: number }[];
+  /** Quantidade de cada material baixada por esta linha (padrão ou ajustada). */
+  baixas: { materialId: string; quantidade: number }[];
   subtotal: number;
 };
+
+export type OpcoesDaVenda = { podeAjustarPreco?: boolean };
 
 export type ItemVendavel = {
   id: string;
@@ -111,7 +134,9 @@ export type ItemVendavel = {
   preco: number;
   /** Saldo do produto físico (null para serviço). */
   saldo: number | null;
-  materiais: { materialId: string; nome: string; quantidade: number; saldo: number; unidadeMedida: string }[];
+  /** Custo próprio e dos materiais (SPEC-017: aviso de preço abaixo do custo). */
+  custoBase: number;
+  materiais: { materialId: string; nome: string; quantidade: number; saldo: number; unidadeMedida: string; custo: number }[];
 };
 
 export type VendaResumida = {
@@ -124,10 +149,23 @@ export type VendaResumida = {
   registradaPor: string;
   itens: number;
   formas: FormaPagamento[];
+  /** SPEC-017: alguma linha com preço ajustado. */
+  precoAjustado: boolean;
 };
 
 export type DetalheDaVenda = VendaResumida & {
-  itensVenda: { itemId: string; nome: string; unidadeMedida: string; quantidade: number; precoUnitario: number; subtotal: number }[];
+  itensVenda: {
+    itemId: string;
+    nome: string;
+    unidadeMedida: string;
+    quantidade: number;
+    precoUnitario: number;
+    subtotal: number;
+    /** SPEC-017: preço oficial e motivo quando o preço foi ajustado; materiais ajustados. */
+    precoOficial: number | null;
+    motivoAjustePreco: string | null;
+    materiaisAjustados: boolean;
+  }[];
   pagamentos: {
     forma: FormaPagamento;
     valor: number;
@@ -168,8 +206,11 @@ export type PreviaDoCancelamento = {
 };
 
 export function criarConsultasDeVendas(cliente: ClienteDoNegocio, negocioId: string) {
-  /** Linhas com preço e custo do banco (INV-002, INV-007) e o total — antes da transação. */
-  async function prepararVenda(c: DadosDoCarrinho): Promise<{ linhas: LinhaPreparada[]; total: number }> {
+  /**
+   * Linhas com preço e custo do banco (INV-002, INV-007) e o total — antes da transação. Com
+   * os ajustes da SPEC-017: preço cobrado (exige `podeAjustarPreco`) e materiais usados.
+   */
+  async function prepararVenda(c: DadosDoCarrinho, opcoes: OpcoesDaVenda = {}): Promise<{ linhas: LinhaPreparada[]; total: number }> {
     const itens = await cliente.item.findMany({
       where: { id: { in: c.linhas.map((l) => l.itemId) } },
       select: {
@@ -188,15 +229,32 @@ export function criarConsultasDeVendas(cliente: ClienteDoNegocio, negocioId: str
       if (!i) throw new ItemNaoVendavel("Item", "inexistente");
       if (i.arquivadoEm) throw new ItemNaoVendavel(i.nome, "arquivado");
       if (i.precoAtual === null) throw new ItemNaoVendavel(i.nome, "sem-preco");
-      const precoCentavos = paraCentavos(num(i.precoAtual)!);
-      const materiais = i.materiais.map((m) => ({ materialId: m.materialId, quantidade: num(m.quantidade)!, custo: num(m.material.custoBase)! }));
+      if (l.ajustePreco && !opcoes.podeAjustarPreco) throw new AjusteDePrecoSemPermissao();
+      const precoOficialCentavos = paraCentavos(num(i.precoAtual)!);
+      const precoCentavos = l.ajustePreco?.precoCentavos ?? precoOficialCentavos;
+      const vinculos = i.materiais.map((m) => ({ materialId: m.materialId, quantidade: num(m.quantidade)!, custo: num(m.material.custoBase)! }));
+      let baixas = i.tipo === "PRODUTO_FISICO" ? [] : materiaisPadraoDaLinha(vinculos, l.quantidade);
+      let custo = custoTotal(num(i.custoBase)!, vinculos);
+      if (l.materiais) {
+        // OPEN-001: só a quantidade dos materiais já vinculados ao serviço; o que não vier, fica no padrão.
+        if (i.tipo !== "SERVICO") throw new MaterialInvalido(i.nome);
+        const informados = new Map(l.materiais.map((m) => [m.materialId, m.quantidade]));
+        if ([...informados.keys()].some((id) => !vinculos.some((v) => v.materialId === id))) throw new MaterialInvalido(i.nome);
+        baixas = baixas.map((b) => ({ ...b, quantidade: informados.get(b.materialId) ?? b.quantidade }));
+        custo = custoUnitarioComMateriais(
+          num(i.custoBase)!,
+          vinculos.map((v) => ({ custo: v.custo, quantidade: baixas.find((b) => b.materialId === v.materialId)!.quantidade })),
+          l.quantidade,
+        );
+      }
       return {
         ...l,
         nome: i.nome,
         tipo: i.tipo,
         precoCentavos,
-        custo: custoTotal(num(i.custoBase)!, materiais),
-        materiais,
+        precoOficialCentavos,
+        custo,
+        baixas,
         subtotal: subtotalEmCentavos(precoCentavos, l.quantidade),
       };
     });
@@ -209,8 +267,9 @@ export function criarConsultasDeVendas(cliente: ClienteDoNegocio, negocioId: str
   /** Soma dos pagamentos = esperado; se não, diz se foi o preço que mudou (INV-002). */
   function conferirSoma(linhas: LinhaPreparada[], total: number, pago: number, esperado: number, credito?: number) {
     if (pago === esperado) return;
-    const mudaram = linhas.filter((l) => l.precoVistoCentavos !== null && l.precoVistoCentavos !== l.precoCentavos);
-    if (mudaram.length) throw new PrecoMudou(mudaram.map((l) => ({ nome: l.nome, precoCentavos: l.precoCentavos })));
+    // Linhas com preço ajustado cobram o ajuste: a mudança do oficial não muda o total (SPEC-017, 5.3).
+    const mudaram = linhas.filter((l) => !l.ajustePreco && l.precoVistoCentavos !== null && l.precoVistoCentavos !== l.precoOficialCentavos);
+    if (mudaram.length) throw new PrecoMudou(mudaram.map((l) => ({ nome: l.nome, precoCentavos: l.precoOficialCentavos })));
     if (credito !== undefined) throw new RestanteDaTroca(esperado, credito);
     throw new SomaDivergente(total);
   }
@@ -259,6 +318,10 @@ export function criarConsultasDeVendas(cliente: ClienteDoNegocio, negocioId: str
         quantidade: l.quantidade.toFixed(3),
         precoUnitario: reais(l.precoCentavos),
         custoUnitario: l.custo.toFixed(2),
+        // SPEC-017 (INV-002): o ajuste guarda o preço oficial do momento e o motivo.
+        precoOficial: l.ajustePreco ? reais(l.precoOficialCentavos) : null,
+        motivoAjustePreco: l.ajustePreco?.motivo ?? null,
+        materiaisAjustados: Boolean(l.materiais),
       })),
     });
 
@@ -277,10 +340,10 @@ export function criarConsultasDeVendas(cliente: ClienteDoNegocio, negocioId: str
     for (const l of linhas) {
       if (l.tipo === "PRODUTO_FISICO") await baixar(l.itemId, l.quantidade, l.nome, true);
       else {
-        for (const m of l.materiais) {
-          const q = Math.round(l.quantidade * m.quantidade * 1000) / 1000;
+        // Quantidades padrão (catálogo × quantidade) ou as usadas na venda (SPEC-017, INV-004).
+        for (const b of l.baixas) {
           // Material arquivado continua sendo consumido pelo serviço (SPEC-006, OPEN-006).
-          if (q > 0) await baixar(m.materialId, q, l.nome, false);
+          if (b.quantidade > 0) await baixar(b.materialId, b.quantidade, l.nome, false);
         }
       }
     }
@@ -349,8 +412,9 @@ export function criarConsultasDeVendas(cliente: ClienteDoNegocio, negocioId: str
           tipo: true,
           unidadeMedida: true,
           precoAtual: true,
+          custoBase: true,
           quantidadeEstoque: true,
-          materiais: { select: { materialId: true, quantidade: true, material: { select: { nome: true, quantidadeEstoque: true, unidadeMedida: true } } } },
+          materiais: { select: { materialId: true, quantidade: true, material: { select: { nome: true, quantidadeEstoque: true, unidadeMedida: true, custoBase: true } } } },
         },
         orderBy: { nome: "asc" },
         take: 2000,
@@ -362,12 +426,14 @@ export function criarConsultasDeVendas(cliente: ClienteDoNegocio, negocioId: str
         unidadeMedida: i.unidadeMedida,
         preco: num(i.precoAtual)!,
         saldo: i.tipo === "PRODUTO_FISICO" ? num(i.quantidadeEstoque) : null,
+        custoBase: num(i.custoBase)!,
         materiais: i.materiais.map((m) => ({
           materialId: m.materialId,
           nome: m.material.nome,
           quantidade: num(m.quantidade)!,
           saldo: num(m.material.quantidadeEstoque)!,
           unidadeMedida: m.material.unidadeMedida,
+          custo: num(m.material.custoBase)!,
         })),
       }));
     },
@@ -389,10 +455,10 @@ export function criarConsultasDeVendas(cliente: ClienteDoNegocio, negocioId: str
      * Registra a venda (5.2). Se o carrinho já virou venda (clique duplo, rede lenta),
      * devolve a venda existente em vez de criar outra (INV-009).
      */
-    async registrar(c: DadosDoCarrinho, usuarioId: string, agora = new Date()): Promise<{ id: string; numero: number; jaExistia: boolean }> {
+    async registrar(c: DadosDoCarrinho, usuarioId: string, agora = new Date(), opcoes: OpcoesDaVenda = {}): Promise<{ id: string; numero: number; jaExistia: boolean }> {
       const existente = await cliente.venda.findFirst({ where: { id: c.id }, select: { id: true, numero: true } });
       if (existente) return { ...existente, jaExistia: true };
-      const { linhas, total } = await prepararVenda(c);
+      const { linhas, total } = await prepararVenda(c, opcoes);
       conferirSoma(linhas, total, c.pagamentos.reduce((s, p) => s + p.valorCentavos, 0), total);
       const data = instanteDaOcorrencia(c.dia, agora);
       try {
@@ -570,6 +636,7 @@ export function criarConsultasDeVendas(cliente: ClienteDoNegocio, negocioId: str
           registradaPor: { select: { nome: true } },
           pagamentos: { select: { forma: true } },
           _count: { select: { itens: true } },
+          itens: { where: { precoOficial: { not: null } }, select: { id: true }, take: 1 },
         },
       });
       const lista = vendas.map((v) => ({
@@ -582,6 +649,7 @@ export function criarConsultasDeVendas(cliente: ClienteDoNegocio, negocioId: str
         registradaPor: v.registradaPor.nome,
         itens: v._count.itens,
         formas: [...new Set(v.pagamentos.map((p) => p.forma))],
+        precoAjustado: v.itens.length > 0,
       }));
       const totalConcluidas = lista.filter((v) => v.status === "CONCLUIDA").reduce((s, v) => s + paraCentavos(v.valorTotal), 0) / 100;
       return { vendas: lista, totalConcluidas };
@@ -615,6 +683,7 @@ export function criarConsultasDeVendas(cliente: ClienteDoNegocio, negocioId: str
         registradaPor: v.registradaPor.nome,
         itens: v.itens.length,
         formas: [...new Set(v.pagamentos.map((p) => p.forma))],
+        precoAjustado: v.itens.some((i) => i.precoOficial !== null),
         itensVenda: v.itens.map((i) => ({
           itemId: i.itemId,
           nome: i.item.nome,
@@ -622,6 +691,9 @@ export function criarConsultasDeVendas(cliente: ClienteDoNegocio, negocioId: str
           quantidade: num(i.quantidade)!,
           precoUnitario: num(i.precoUnitario)!,
           subtotal: subtotalEmCentavos(paraCentavos(num(i.precoUnitario)!), num(i.quantidade)!) / 100,
+          precoOficial: num(i.precoOficial),
+          motivoAjustePreco: i.motivoAjustePreco,
+          materiaisAjustados: i.materiaisAjustados,
         })),
         pagamentos: v.pagamentos.map((p) => ({
           forma: p.forma,

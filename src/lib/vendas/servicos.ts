@@ -1,10 +1,12 @@
 import type { ErrosDeCampo } from "@/lib/auth/validacao";
 import { ItemArquivado, ItemSemEstoque } from "@/lib/db/estoque";
 import {
+  AjusteDePrecoSemPermissao,
   ClienteInvalido,
   EstoqueInsuficienteNaVenda,
   FormaDeReembolsoAusente,
   ItemNaoVendavel,
+  MaterialInvalido,
   PrecoMudou,
   RestanteDaTroca,
   SomaDivergente,
@@ -44,6 +46,9 @@ export const MENSAGENS_FLUXO_VENDA = {
     `Com o crédito de troca de ${reaisDeCentavos(credito)}, os pagamentos precisam somar ${reaisDeCentavos(restante)}. Os valores mudaram: revise e envie de novo.`,
   formaReembolso: (valor: number) => `Escolha como os ${reaisDeCentavos(valor)} serão devolvidos.`,
   falhaNoCancelamento: "Não foi possível cancelar agora. Nada foi alterado; tente novamente.",
+  // SPEC-017
+  materialInvalido: (nome: string) => `Os materiais de ${nome} não puderam ser ajustados: só a quantidade dos materiais do próprio serviço pode mudar.`,
+  ajusteSemPermissao: "Você não tem permissão para ajustar preços. Peça ao Dono do negócio ou registre pelo preço do catálogo.",
 } as const;
 
 export type EstadoDaVenda =
@@ -53,7 +58,14 @@ export type EstadoDaVenda =
 
 export const VENDA_INICIAL: EstadoDaVenda = { status: "ocioso" };
 
-export type DependenciasDaVenda = { vendas: ConsultasDeVendas; usuarioId: string; hoje: string; agora: Date };
+export type DependenciasDaVenda = {
+  vendas: ConsultasDeVendas;
+  usuarioId: string;
+  hoje: string;
+  agora: Date;
+  /** SPEC-017 (OPEN-005): Vendas — editar permite ajustar o preço da linha. */
+  podeAjustarPreco?: boolean;
+};
 
 /** Registrar a venda (5.2). O carrinho chega como JSON no campo "carrinho". */
 export async function registrarVenda(campos: Record<string, string>, deps: DependenciasDaVenda): Promise<EstadoDaVenda> {
@@ -66,7 +78,7 @@ export async function registrarVenda(campos: Record<string, string>, deps: Depen
   const v = validarCarrinho(bruto, deps.hoje);
   if (!v.ok) return { status: "erro", erros: v.erros, mensagem: v.erros.carrinho };
   try {
-    const r = await deps.vendas.registrar(v.dados, deps.usuarioId, deps.agora);
+    const r = await deps.vendas.registrar(v.dados, deps.usuarioId, deps.agora, { podeAjustarPreco: deps.podeAjustarPreco ?? false });
     return { status: "registrada", vendaId: r.id, numero: r.numero, jaExistia: r.jaExistia };
   } catch (e) {
     if (e instanceof EstoqueInsuficienteNaVenda) return { status: "erro", mensagem: MENSAGENS_FLUXO_VENDA.estoque(e.nome, e.saldo, e.unidade) };
@@ -74,6 +86,8 @@ export async function registrarVenda(campos: Record<string, string>, deps: Depen
     if (e instanceof PrecoMudou) return { status: "erro", mensagem: MENSAGENS_FLUXO_VENDA.precoMudou(e.itens) };
     if (e instanceof SomaDivergente) return { status: "erro", mensagem: MENSAGENS_FLUXO_VENDA.somaDivergente(e.totalCentavos) };
     if (e instanceof ClienteInvalido) return { status: "erro", mensagem: MENSAGENS_FLUXO_VENDA.clienteInvalido };
+    if (e instanceof MaterialInvalido) return { status: "erro", mensagem: MENSAGENS_FLUXO_VENDA.materialInvalido(e.nome) };
+    if (e instanceof AjusteDePrecoSemPermissao) return { status: "erro", mensagem: MENSAGENS_FLUXO_VENDA.ajusteSemPermissao };
     if (e instanceof ItemArquivado || e instanceof ItemSemEstoque) return { status: "erro", mensagem: MENSAGENS_FLUXO_VENDA.naoVendavel("Um dos itens", "arquivado") };
     console.error("[vendas] falha ao registrar:", e instanceof Error ? e.name : "erro");
     return { status: "erro", mensagem: MENSAGENS_FLUXO_VENDA.falhaInterna };

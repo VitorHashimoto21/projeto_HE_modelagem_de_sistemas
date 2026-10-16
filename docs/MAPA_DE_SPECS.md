@@ -345,7 +345,7 @@ flowchart LR
 - **Justificativa da ordem:** depois de todas as funcionalidades do MVP, antes da produção: o redesign muda a apresentação de telas que já existem e estão testadas; feito em 6 etapas num único PR (OPEN-006), com homologação ao final.
 
 #### SPEC-017 — Ajustes na venda: materiais e preço por venda
-- **Spec:** [`specs/SPEC-017.md`](./specs/SPEC-017.md) (✅ aprovada — questões em aberto decididas em 16/10/2026)
+- **Spec:** [`specs/SPEC-017.md`](./specs/SPEC-017.md) (🔵 aprovada e implementada em 16/10/2026; homologação pendente — [evidências](./specs/evidencias/SPEC-017/README.md))
 - **Objetivo:** ajustar, numa venda específica, a quantidade de materiais que um serviço consumiu e o preço cobrado por uma linha, sem mudar o catálogo, com baixa, custo, total e auditoria refletindo o ajuste.
 - **Origem:** melhoria identificada pela equipe na aula de 15/10/2026 (caso do eletricista: "Troca de lâmpadas" com quantidade variável de lâmpadas e preço combinado).
 - **RF:** RF23, RF24, RF62 · **RN:** RN05 e RN15 (alteradas em 16/10/2026), RN06, RN23 · **RNF:** RNF01, RNF02, RNF05
@@ -390,7 +390,7 @@ A conferência do seed fiscal foi concluída em 03/10/2026 (DAS do MEI atualizad
 - [SPEC-009](specs/SPEC-009.md) a [SPEC-014](specs/SPEC-014.md): implementadas e verificadas na homologação (11/10/2026; PRs #60, #62, #64, #66, #68 e #70).
 - SPEC-015 (opcional): não iniciada; depende da aprovação do ADR-007.
 - [SPEC-016](specs/SPEC-016.md): implementada (PR #72) e verificada na homologação (15/10/2026); ajustes da homologação corrigidos (PRs #74 e #75) e aprovados nos testes da equipe (16/10/2026); notas N1–N5 da seção 15 decididas em 16/10/2026 (diálogo de confirmação e taxa da maquininha nos Relatórios implementados).
-- [SPEC-017](specs/SPEC-017.md): aprovada (16/10/2026), questões em aberto decididas; pronta para implementar.
+- [SPEC-017](specs/SPEC-017.md): aprovada e implementada (16/10/2026); falta a verificação na homologação (T10).
 - `main`: atualizada até a SPEC-006 (PR #54); as SPECs 007 a 016 estão só na DEVELOP.
 
 ### Pendências abertas
@@ -399,7 +399,7 @@ Lista mantida até cada item ser resolvido; quem retomar o projeto (em qualquer 
 
 | # | Pendência | Situação |
 |---|---|---|
-| 1 | **SPEC-017** (ajustes na venda): implementar (decisões tomadas em 16/10/2026) | Em andamento |
+| 1 | **SPEC-017** (ajustes na venda): homologação (T10) e decisão da divergência da seção 9 (quantidade depois do ajuste) | Em andamento |
 | 2 | **Textos legais** (`docs/legal/`): preencher os campos entre colchetes (responsável, e-mail de contato, cidade/UF, região do Supabase) e revisão do grupo | Aberta |
 | 3 | **SPEC-015** (cobrança real pelo Stripe): decidir se fica fora do MVP; depende do ADR-007 (proposta) | Aberta |
 | 4 | **Domínio no Resend** (opcional): para enviar convites a qualquer e-mail; hoje só chega ao e-mail da conta Resend | Aberta (opcional) |

@@ -240,7 +240,7 @@ describe("registro da venda", () => {
     expect(deHoje.totalConcluidas).toBe(18);
     const d = await c.detalhar(ontem);
     expect(d).toMatchObject({ numero: 2, registradaPor: "Gisele", formas: ["DEBITO"] });
-    expect(d.itensVenda).toEqual([{ itemId: esmalte, nome: "Esmalte", unidadeMedida: "un", quantidade: 2, precoUnitario: 18, subtotal: 36 }]);
+    expect(d.itensVenda).toEqual([{ itemId: esmalte, nome: "Esmalte", unidadeMedida: "un", quantidade: 2, precoUnitario: 18, subtotal: 36, precoOficial: null, motivoAjustePreco: null, materiaisAjustados: false }]);
     expect(d.movimentacoes.map((m) => [m.tipo, m.quantidade])).toEqual([["SAIDA_VENDA", 2]]);
     // A movimentação de estoque usa a mesma data retroativa.
     const mov = await base.movimentacaoEstoque.findFirstOrThrow({ where: { vendaId: ontem } });

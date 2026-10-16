@@ -162,6 +162,11 @@ export default async function Vendas({ searchParams }: PageProps<"/vendas">) {
                         Cancelada
                       </Selo>
                     )}
+                    {v.precoAjustado && (
+                      <Selo tom="atencao" className="ml-2">
+                        Preço ajustado
+                      </Selo>
+                    )}
                     <span className="block text-xs text-muted-foreground">
                       {v.itens} {v.itens === 1 ? "item" : "itens"}
                       {v.cliente && `, ${v.cliente}`}
@@ -185,6 +190,11 @@ export default async function Vendas({ searchParams }: PageProps<"/vendas">) {
                       {v.status === "CANCELADA" && (
                         <Selo tom="neutro" className="ml-2">
                           Cancelada
+                        </Selo>
+                      )}
+                      {v.precoAjustado && (
+                        <Selo tom="atencao" className="ml-2">
+                          Preço ajustado
                         </Selo>
                       )}
                     </p>
