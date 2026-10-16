@@ -3,6 +3,7 @@
 import { useActionState, useState } from "react";
 import { Aviso, MensagemDeCampo } from "@/components/acesso/campos";
 import { classeDoCampo } from "@/components/ui/classes";
+import { DialogoDeConfirmacao, useConfirmacaoDoEnvio } from "@/components/ui/confirmacao";
 import { classeDoBotao } from "@/components/ui/estilos";
 import { FORMAS_DE_REEMBOLSO, MOTIVOS_CANCELAMENTO, reaisDeCentavos } from "@/lib/dominio/venda";
 import { acaoCancelarVenda } from "@/lib/vendas/acoes";
@@ -13,15 +14,22 @@ export function FormularioCancelamento({ vendaId, numero, reembolsoCentavos }: {
   const [estado, executar, enviando] = useActionState(acaoCancelarVenda, CANCELAMENTO_INICIAL);
   const [motivo, setMotivo] = useState("");
   const erros = estado.status === "erro" ? (estado.erros ?? {}) : {};
+  const confirmacao = useConfirmacaoDoEnvio();
 
   return (
     <form
       action={executar}
-      onSubmit={(e) => {
-        if (!window.confirm(`Cancelar a venda nº ${numero}? Esta ação não pode ser desfeita.`)) e.preventDefault();
-      }}
+      onSubmit={confirmacao.aoEnviar}
       className="space-y-4"
     >
+      <DialogoDeConfirmacao
+        aberto={confirmacao.aberto}
+        aoMudar={confirmacao.setAberto}
+        titulo={`Cancelar a venda nº ${numero}?`}
+        descricao="Esta ação não pode ser desfeita."
+        confirmar="Cancelar venda"
+        aoConfirmar={confirmacao.confirmar}
+      />
       <input type="hidden" name="vendaId" value={vendaId} />
       {estado.status === "erro" && estado.mensagem && <Aviso tipo="erro">{estado.mensagem}</Aviso>}
       <div className="grid gap-4 sm:grid-cols-2">

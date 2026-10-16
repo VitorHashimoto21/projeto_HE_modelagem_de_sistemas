@@ -11,6 +11,8 @@ import { Segmentos } from "@/components/ui/segmentos";
 import { Selo } from "@/components/ui/selo";
 import { Superficie, TituloDaSuperficie } from "@/components/ui/superficie";
 import { exigirMembro } from "@/lib/auth/servidor";
+import { precificacao } from "@/lib/db";
+import { pode } from "@/lib/dominio/permissoes";
 import { ROTA_SEM_ACESSO } from "@/lib/auth/rotas";
 import { podeNoPlano } from "@/lib/dominio/planos";
 import { ATALHOS_DE_PERIODO, diaBrasileiro, lerPeriodo, RELATORIOS, type OrdemDaRentabilidade } from "@/lib/dominio/relatorios";
@@ -66,9 +68,11 @@ export default async function Relatorios({ searchParams }: PageProps<"/relatorio
   if (!periodo.ok) redirect("/relatorios");
   const ordem = ORDENS.some((o) => o.chave === busca.ordem) ? (busca.ordem as OrdemDaRentabilidade) : "margem";
   const vePermitido = (r: keyof typeof RELATORIOS) => permitidos.includes(r);
+  // Taxa da maquininha (nota N5): como no Painel, só para quem vê o Financeiro.
+  const taxaCartao = vePermitido("vendas") && pode(membro.permissoes, "financeiro", "ver") ? (await precificacao(membro).parametros()).taxaCartao : null;
   const [rent, formas] = await Promise.all([
     vePermitido("rentabilidade") ? carregarRentabilidade(periodo.de, periodo.ate, ordem, deps) : null,
-    vePermitido("vendas") ? carregarFormasDoPeriodo(periodo.de, periodo.ate, deps) : null,
+    vePermitido("vendas") ? carregarFormasDoPeriodo(periodo.de, periodo.ate, deps, taxaCartao) : null,
   ]);
   // "O que mais deixa lucro" (5.5): sempre pela margem, os 8 primeiros, os 3 primeiros em destaque.
   const ranking = rent ? [...rent.itens].sort((a, b) => b.margemCentavos - a.margemCentavos).slice(0, 8) : [];
@@ -124,7 +128,13 @@ export default async function Relatorios({ searchParams }: PageProps<"/relatorio
           {formas && (
             <Superficie aria-labelledby="titulo-formas">
               <TituloDaSuperficie id="titulo-formas" titulo="Como os clientes pagam" descricao="Vendas concluídas no período, por forma de pagamento." />
-              <BarraEmpilhada itens={formas} descricao={`Formas de pagamento no período: ${formas.map((f) => `${f.nome} ${reais(f.valorCentavos)}`).join(", ")}`} />
+              <BarraEmpilhada itens={formas.itens} descricao={`Formas de pagamento no período: ${formas.itens.map((f) => `${f.nome} ${reais(f.valorCentavos)}`).join(", ")}`} />
+              {formas.taxaCartao !== null && formas.taxaCentavos > 0 && (
+                <p className="mt-3 text-[13px] leading-relaxed text-muted-foreground">
+                  No cartão, a taxa média da maquininha ({formas.taxaCartao.toLocaleString("pt-BR")}%) fica com cerca de{" "}
+                  <strong className="text-foreground">{reais(formas.taxaCentavos)}</strong> no período.
+                </p>
+              )}
             </Superficie>
           )}
         </div>

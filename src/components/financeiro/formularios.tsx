@@ -3,6 +3,7 @@
 import { useActionState, useEffect, useState, type FormEvent } from "react";
 import { Aviso, MensagemDeCampo } from "@/components/acesso/campos";
 import { classeDoCampo } from "@/components/ui/classes";
+import { DialogoDeConfirmacao, useConfirmacaoDoEnvio } from "@/components/ui/confirmacao";
 import { camposDoFormulario, type ErrosDeCampo } from "@/lib/auth/validacao";
 import { somarDias } from "@/lib/dominio/estoque";
 import { CATEGORIAS, DIAS_RETROATIVOS_FINANCEIRO } from "@/lib/dominio/financeiro";
@@ -193,15 +194,18 @@ export function FormularioSaldoInicial({ hoje }: { hoje: string }) {
 /** Estorno (OPEN-003): pede confirmação; o original fica marcado como estornado. */
 export function BotaoEstornar({ lancamentoId, descricao }: { lancamentoId: string; descricao: string }) {
   const f = useFormulario(acaoEstornar);
+  const confirmacao = useConfirmacaoDoEnvio();
   if (f.estado.status === "salvo") return <span className="text-xs text-status-ok">Estornado</span>;
   return (
-    <form
-      action={f.executar}
-      onSubmit={(e) => {
-        if (!window.confirm(`Estornar "${descricao}"? Será gravado um lançamento contrário de mesmo valor.`)) e.preventDefault();
-      }}
-      className="inline"
-    >
+    <form action={f.executar} onSubmit={confirmacao.aoEnviar} className="inline">
+      <DialogoDeConfirmacao
+        aberto={confirmacao.aberto}
+        aoMudar={confirmacao.setAberto}
+        titulo={`Estornar "${descricao}"?`}
+        descricao="Será gravado um lançamento contrário de mesmo valor."
+        confirmar="Estornar"
+        aoConfirmar={confirmacao.confirmar}
+      />
       <input type="hidden" name="lancamentoId" value={lancamentoId} />
       <button type="submit" disabled={f.enviando} className="text-xs font-medium text-primary underline-offset-2 hover:underline disabled:opacity-60">
         {f.enviando ? "Estornando…" : "Estornar"}
@@ -246,17 +250,20 @@ export function FormularioConta({ hoje, conta, tipoPadrao = "PAGAR" }: { hoje: s
   );
 }
 
-/** Cancelar conta manual sem pagamento (OPEN-003): nada é apagado. */
+/** Cancelar conta a pagar ou a receber manual, sem pagamento (OPEN-003): nada é apagado. */
 export function BotaoCancelarConta({ contaId }: { contaId: string }) {
   const f = useFormulario(acaoCancelarConta);
+  const confirmacao = useConfirmacaoDoEnvio();
   return (
-    <form
-      action={f.executar}
-      onSubmit={(e) => {
-        if (!window.confirm("Cancelar esta conta? Ela continua no histórico como cancelada.")) e.preventDefault();
-      }}
-      className="space-y-2"
-    >
+    <form action={f.executar} onSubmit={confirmacao.aoEnviar} className="space-y-2">
+      <DialogoDeConfirmacao
+        aberto={confirmacao.aberto}
+        aoMudar={confirmacao.setAberto}
+        titulo="Cancelar esta conta?"
+        descricao="Ela continua no histórico como cancelada."
+        confirmar="Cancelar conta"
+        aoConfirmar={confirmacao.confirmar}
+      />
       <input type="hidden" name="contaId" value={contaId} />
       {f.estado.status === "erro" && <Aviso tipo="erro">{f.estado.mensagem}</Aviso>}
       <button type="submit" disabled={f.enviando} className={`${botaoSecundario} text-status-danger`}>

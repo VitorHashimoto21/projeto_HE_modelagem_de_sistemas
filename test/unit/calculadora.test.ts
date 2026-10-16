@@ -6,6 +6,7 @@ import {
   arredondarParaCimaAoReal,
   calcularPreco,
   calcularRbt12,
+  custoDaMaquininha,
   despesasFixasPercentual,
   janelaDoRbt12,
   maiorParcela,
@@ -161,5 +162,14 @@ describe("T10 — permissões da Calculadora (OPEN-003, CA-12)", () => {
     const comCalc = (calculadora: Matriz["calculadora"]): Matriz => ({ ...MATRIZ_VAZIA, calculadora });
     expect(menuDoMembro("COLABORADOR", comCalc({ ver: true, criar: false, editar: false, excluir: false })).map((i) => i.rotulo)).toContain("Calculadora");
     expect(menuDoMembro("COLABORADOR", PREDEFINICOES.COLABORADOR).map((i) => i.rotulo)).not.toContain("Calculadora");
+  });
+});
+
+describe("custo da maquininha (SPEC-016, N5)", () => {
+  it("aplica a taxa média sobre as vendas no cartão, arredondando ao centavo", () => {
+    expect(custoDaMaquininha(15000, 3.5)).toBe(525);
+    expect(custoDaMaquininha(17490 + 19921, 3.5)).toBe(1309); // números da homologação
+    expect(custoDaMaquininha(0, 3.5)).toBe(0);
+    expect(custoDaMaquininha(10000, 0)).toBe(0);
   });
 });

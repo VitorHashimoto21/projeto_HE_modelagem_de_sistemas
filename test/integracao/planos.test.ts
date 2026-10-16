@@ -14,7 +14,7 @@ import { hoje as hojeLocal, intervaloDoDia } from "@/lib/dominio/datas";
 import { somarDias } from "@/lib/dominio/estoque";
 import { MATRIZ_COMPLETA } from "@/lib/dominio/permissoes";
 import { inicioDoHistorico } from "@/lib/dominio/planos";
-import { carregarRentabilidade, exportar, type DependenciasDosRelatorios } from "@/lib/relatorios/servicos";
+import { carregarFormasDoPeriodo, carregarRentabilidade, exportar, type DependenciasDosRelatorios } from "@/lib/relatorios/servicos";
 import { urlDoBancoDeTeste } from "../apoio/banco-de-teste";
 
 // SPEC-013 — testes de integração (seção 12): banco real, troca de plano em transação,
@@ -46,7 +46,7 @@ const meioDia = (dia: string) => new Date(intervaloDoDia(dia).inicio.getTime() +
 async function item(nome: string, negocioId = negocioA) {
   return (await base.item.create({ data: { negocioId, tipo: "SERVICO", nome, nomeChave: `${nome}-${randomUUID()}`, categoria: "BELEZA", unidadeMedida: "un", custoBase: 1 } })).id;
 }
-async function vender(itemId: string, preco: number, custo: number, extra: { quantidade?: number; status?: "CONCLUIDA" | "CANCELADA"; data?: Date; negocioId?: string } = {}) {
+async function vender(itemId: string, preco: number, custo: number, extra: { quantidade?: number; status?: "CONCLUIDA" | "CANCELADA"; data?: Date; negocioId?: string; forma?: "PIX" | "DINHEIRO" | "DEBITO" | "CREDITO" } = {}) {
   const negocioId = extra.negocioId ?? negocioA;
   const quantidade = extra.quantidade ?? 1;
   const data = extra.data ?? new Date();
@@ -62,7 +62,7 @@ async function vender(itemId: string, preco: number, custo: number, extra: { qua
     },
   });
   await base.itemVenda.create({ data: { negocioId, vendaId: v.id, itemId, quantidade, precoUnitario: preco, custoUnitario: custo } });
-  await base.pagamento.create({ data: { negocioId, vendaId: v.id, forma: "PIX", valor: preco * quantidade } });
+  await base.pagamento.create({ data: { negocioId, vendaId: v.id, forma: extra.forma ?? "PIX", valor: preco * quantidade } });
   return v.id;
 }
 const depsRel = (negocioId = negocioA): DependenciasDosRelatorios => ({
@@ -210,6 +210,24 @@ describe("relatórios", () => {
     ]);
     const fat = await base.venda.aggregate({ where: { negocioId: negocioA, status: "CONCLUIDA" }, _sum: { valorTotal: true } });
     expect(r.totais.faturamentoCentavos).toBe(Math.round(Number(fat._sum.valorTotal) * 100));
+  });
+
+  it("SPEC-016 N5: formas de pagamento do período com a taxa da maquininha só sobre crédito e débito concluídos", async () => {
+    const mani = await item("Manicure");
+    await vender(mani, 100, 10, { forma: "CREDITO" });
+    await vender(mani, 50, 10, { forma: "DEBITO" });
+    await vender(mani, 40, 10, { forma: "PIX" });
+    await vender(mani, 999, 10, { forma: "CREDITO", status: "CANCELADA" });
+    const comTaxa = await carregarFormasDoPeriodo(somarDias(HOJE, -1), HOJE, depsRel(), 3.5);
+    expect(comTaxa.itens.map((f) => [f.nome, f.valorCentavos])).toEqual([
+      ["PIX", 4000],
+      ["Dinheiro", 0],
+      ["Crédito", 10000],
+      ["Débito", 5000],
+    ]);
+    expect(comTaxa).toMatchObject({ taxaCartao: 3.5, taxaCentavos: 525 }); // 3,5% de R$ 150
+    // Sem a taxa (quem não vê o Financeiro): só o gráfico.
+    expect(await carregarFormasDoPeriodo(somarDias(HOJE, -1), HOJE, depsRel(), null)).toMatchObject({ taxaCartao: null, taxaCentavos: 0 });
   });
 
   it("T09/T10 — CA-09/CA-10/CA-12: exportações batem com as fontes; gratuito e sem permissão recusados no servidor (INV-002)", async () => {
