@@ -564,6 +564,13 @@ model ItemVenda {
   precoUnitario Decimal @db.Decimal(10, 2)
   custoUnitario Decimal @db.Decimal(10, 2) // RF62: custo total do item (inclui materiais) no momento da venda
 
+  // SPEC-017: ajustes na venda. precoOficial/motivoAjustePreco só quando o preço da linha foi
+  // ajustado (precoUnitario = preço cobrado); materiaisAjustados quando a baixa dos materiais
+  // seguiu as quantidades informadas na venda (as movimentações SAIDA_VENDA guardam os valores).
+  precoOficial       Decimal? @db.Decimal(10, 2)
+  motivoAjustePreco  String?  @db.VarChar(120)
+  materiaisAjustados Boolean  @default(false)
+
   negocio Negocio @relation(fields: [negocioId], references: [id])
   venda   Venda   @relation(fields: [vendaId], references: [id])
   item    Item    @relation(fields: [itemId], references: [id])

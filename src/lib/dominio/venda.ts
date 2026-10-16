@@ -90,3 +90,27 @@ export function acertoDoCancelamento(recebidoCentavos: number, trocaCentavos: nu
     restanteCentavos: trocaCentavos === null ? 0 : trocaCentavos - creditoCentavos,
   };
 }
+
+// ---------- Ajustes na venda (SPEC-017) ----------
+
+/** Motivo do ajuste de preço: obrigatório e curto (OPEN-006). */
+export const MAX_MOTIVO_AJUSTE = 120;
+
+const milesimos = (v: number) => Math.round(v * 1000) / 1000;
+
+/**
+ * Quantidades padrão dos materiais na linha: quantidade do catálogo × quantidade do serviço
+ * (RN05), em milésimos — o mesmo arredondamento da baixa sem ajuste (SPEC-008).
+ */
+export function materiaisPadraoDaLinha(materiais: { materialId: string; quantidade: number }[], quantidadeDaLinha: number) {
+  return materiais.map((m) => ({ materialId: m.materialId, quantidade: milesimos(quantidadeDaLinha * m.quantidade) }));
+}
+
+/**
+ * Custo unitário da linha com os materiais informados na venda (INV-005): custo próprio +
+ * Σ (custo do material × quantidade usada na linha) ÷ quantidade da linha, em reais com 2 casas.
+ */
+export function custoUnitarioComMateriais(custoBase: number, materiais: { custo: number; quantidade: number }[], quantidadeDaLinha: number): number {
+  const materiaisNaLinha = materiais.reduce((s, m) => s + m.custo * m.quantidade, 0);
+  return Math.round((custoBase + materiaisNaLinha / quantidadeDaLinha) * 100) / 100;
+}

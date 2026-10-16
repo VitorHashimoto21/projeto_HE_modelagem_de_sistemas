@@ -1,6 +1,6 @@
 # SPEC-017 — Ajustes na venda: materiais e preço por venda
 
-> **Status:** ✅ **Aprovada em 16/10/2026** — questões em aberto decididas pela equipe em entrevista (seção 13), todas pela opção recomendada; RN05, RN15 e SPEC-008 ajustadas. Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar), a partir de uma melhoria identificada pela equipe na aula de 15/10/2026. Pronta para implementar.
+> **Status:** 🔵 **Aprovada e implementada em 16/10/2026; verificação na homologação pendente (T10)** — questões em aberto decididas pela equipe em entrevista (seção 13), todas pela opção recomendada; RN05, RN15 e SPEC-008 ajustadas; testes T01–T08 automatizados e telas verificadas em build local (T09) — [evidências](evidencias/SPEC-017/README.md). Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar), a partir de uma melhoria identificada pela equipe na aula de 15/10/2026.
 > **Mapa:** [`MAPA_DE_SPECS.md`](../MAPA_DE_SPECS.md) · **Altera:** [SPEC-008](SPEC-008.md) (registro de venda), com efeitos na [SPEC-006](SPEC-006.md) (preço oficial) e na [SPEC-011](SPEC-011.md) (troca) · **Usa:** [SPEC-005](SPEC-005.md) (permissões), [SPEC-007](SPEC-007.md) (baixa de estoque) e [SPEC-016](SPEC-016.md) (componentes).
 
 ---
@@ -84,7 +84,7 @@ O eletricista cadastrou o serviço **"Troca de lâmpadas"** com o material **"L�
 1. No carrinho, a linha de um serviço com materiais mostra **"Editar materiais"**.
 2. A gaveta lista cada material com a **quantidade da linha** (padrão = quantidade do catálogo × quantidade do serviço na linha), a unidade e o saldo em estoque.
 3. A pessoa altera as quantidades (≥ 0, até 3 casas) dos materiais já vinculados (OPEN-001).
-4. Ao confirmar, a linha mostra "Materiais ajustados" e o resumo. Se a pessoa mudar depois a quantidade do serviço na linha, a tela pergunta se mantém os materiais ajustados ou volta ao padrão proporcional.
+4. Ao confirmar, a linha mostra "Materiais ajustados" e o resumo. Se a pessoa mudar depois a quantidade do serviço na linha, os materiais ajustados são mantidos, sem pergunta; "Voltar ao padrão" na gaveta desfaz o ajuste (decisão da equipe em 16/10/2026, seção 9).
 5. O custo exibido da linha (se a pessoa puder ver custos) e o aviso de estoque usam as quantidades ajustadas.
 
 ### 5.2 Ajustar preço (na tela)
@@ -168,6 +168,19 @@ Migração: os três campos novos em `ItemVenda`, opcionais ou com padrão, sem 
 
 ---
 
+**Implementação (16/10/2026):** domínio em `src/lib/dominio/venda.ts` (`materiaisPadraoDaLinha`, `custoUnitarioComMateriais`, `MAX_MOTIVO_AJUSTE`); validação em `src/lib/vendas/validacao.ts`; baixa, custo e gravação em `src/lib/db/vendas.ts` (`MaterialInvalido`, `AjusteDePrecoSemPermissao`); permissão na ação (`podeAjustarPreco = Vendas — editar`); tela em `src/components/vendas/ajustes-da-linha.tsx` (gavetas) e `frente-de-caixa.tsx`; detalhe e histórico em `src/app/(app)/vendas/`; migração `20261016180000_ajustes_venda`.
+
+**Divergências registradas na implementação:**
+
+- **Mudar a quantidade depois de ajustar os materiais (5.1, passo 4):** a tela **não pergunta**; os materiais ajustados são mantidos (são o total usado na linha, OPEN-002) e continuam visíveis na linha ("Materiais ajustados: …"), e a gaveta mostra o padrão da quantidade atual para comparar. "Voltar ao padrão" desfaz. **Aceita pela equipe em 16/10/2026** (opção 2, baseline atualizada no passo 4 da 5.1) — uma pergunta a cada toque no +/− atrapalharia a frente de caixa.
+- **Material vinculado que não vier na lista ajustada:** fica com a quantidade padrão (a tela sempre envia todos).
+- **Restrição no banco:** `precoOficial` e `motivoAjustePreco` são gravados juntos (CHECK `ItemVenda_ajuste_de_preco_completo`), reforçando o INV-002.
+- **Troca:** o servidor recusa ajustes no carrinho da troca com "Na troca, os itens usam o preço e os materiais do catálogo." (OPEN-008).
+- **Campos das gavetas:** o valor é selecionado ao entrar no campo, para digitar por cima do padrão (melhoria percebida no roteiro do navegador).
+- **Custos na tela:** só quem tem *Vendas: editar* recebe os custos (para o aviso de preço abaixo do custo); o Colaborador predefinido não recebe.
+
+---
+
 ## 10. Requisitos não funcionais aplicáveis
 
 | RNF | Aplicação | Verificação |
@@ -240,12 +253,12 @@ Todas decididas pela equipe em 16/10/2026, em entrevista, pela opção recomenda
 
 A SPEC-017 estará concluída quando:
 
-- [ ] todos os critérios de aceitação (CA-01 a CA-10) estiverem implementados;
-- [ ] todos os invariantes (INV-001 a INV-006) estiverem preservados;
-- [ ] os testes derivados (T01 a T10) estiverem aprovados, com o CI verde no PR;
-- [ ] os RNFs aplicáveis (RNF01, RNF02, RNF05) tiverem sido verificados como descrito na seção 10;
+- [x] todos os critérios de aceitação (CA-01 a CA-10) estiverem implementados — por testes e no navegador (build local); a homologação (T10) fica para depois do merge;
+- [x] todos os invariantes (INV-001 a INV-006) estiverem preservados;
+- [ ] os testes derivados (T01 a T10) estiverem aprovados, com o CI verde no PR — T01 a T08 automatizados, T09 com capturas; falta o T10 (homologação);
+- [x] os RNFs aplicáveis (RNF01, RNF02, RNF05) tiverem sido verificados como descrito na seção 10;
 - [x] as questões OPEN-001 a OPEN-008 tiverem sido decididas e registradas (16/10/2026), com a RN05, a RN15 e a SPEC-008 (OPEN-001, INV-002, seção 3 "Fora do escopo") ajustadas conforme as decisões;
-- [ ] não existir divergência conhecida entre a implementação e esta Spec;
-- [ ] toda divergência em relação à baseline tiver sido explicitamente analisada e registrada nos documentos.
+- [x] não existir divergência conhecida entre a implementação e esta Spec — a da quantidade depois do ajuste (seção 9) foi aceita pela equipe em 16/10/2026;
+- [x] toda divergência em relação à baseline tiver sido explicitamente analisada e registrada nos documentos (seção 9).
 
 **Regra fundamental:** a implementação obedece a esta Spec aprovada. Se surgir conflito entre código, Spec e documentos de modelagem, o comportamento não é alterado em silêncio: a divergência é registrada com a proposta de (1) corrigir a implementação ou (2) alterar a baseline, e a decisão é da equipe.

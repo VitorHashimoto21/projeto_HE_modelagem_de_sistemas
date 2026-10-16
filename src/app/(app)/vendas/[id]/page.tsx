@@ -95,12 +95,21 @@ export default async function DetalheDaVenda({ params, searchParams }: PageProps
           <Superficie aria-labelledby="titulo-itens">
             <TituloDaSuperficie id="titulo-itens" titulo="Itens" />
             <ul className="divide-y">
-              {v.itensVenda.map((i) => (
-                <li key={i.itemId} className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-3 text-sm">
-                  <span className="min-w-0 font-semibold text-foreground">{i.nome}</span>
-                  <span className="text-muted-foreground tabular-nums">
-                    {qtd(i.quantidade)} {rotuloUnidade(i.unidadeMedida).toLowerCase()} × {brl(i.precoUnitario)} = <span className="font-bold text-foreground">{brl(i.subtotal)}</span>
-                  </span>
+              {v.itensVenda.map((i, idx) => (
+                <li key={`${i.itemId}-${idx}`} className="py-3 text-sm">
+                  <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+                    <span className="min-w-0 font-semibold text-foreground">{i.nome}</span>
+                    <span className="text-muted-foreground tabular-nums">
+                      {qtd(i.quantidade)} {rotuloUnidade(i.unidadeMedida).toLowerCase()} × {brl(i.precoUnitario)} = <span className="font-bold text-foreground">{brl(i.subtotal)}</span>
+                    </span>
+                  </div>
+                  {/* SPEC-017: ajustes registrados na linha (INV-002) */}
+                  {i.precoOficial !== null && (
+                    <p className="mt-1 text-xs text-status-warn">
+                      Preço ajustado (catálogo: {brl(i.precoOficial)}). Motivo: {i.motivoAjustePreco}.
+                    </p>
+                  )}
+                  {i.materiaisAjustados && <p className="mt-1 text-xs text-status-warn">Materiais ajustados nesta venda (ver as movimentações de estoque).</p>}
                 </li>
               ))}
             </ul>

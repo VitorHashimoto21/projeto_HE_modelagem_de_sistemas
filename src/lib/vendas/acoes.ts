@@ -17,7 +17,14 @@ import type { EstadoDaVenda, EstadoDoCancelamento, EstadoDoCliente } from "./ser
 
 const deps = (m: ContextoDoMembro): servicos.DependenciasDaVenda => {
   const agora = new Date();
-  return { vendas: vendas({ negocioId: m.negocioId, usuarioId: m.usuarioId }), usuarioId: m.usuarioId, hoje: hoje(agora), agora };
+  return {
+    vendas: vendas({ negocioId: m.negocioId, usuarioId: m.usuarioId }),
+    usuarioId: m.usuarioId,
+    hoje: hoje(agora),
+    agora,
+    // SPEC-017 (OPEN-005): ajustar o preço da linha exige também Vendas — editar (conferido no servidor).
+    podeAjustarPreco: pode(m.permissoes, "vendas", "editar"),
+  };
 };
 
 export const acaoRegistrarVenda = acaoComPermissao("vendas", "criar", async (membro, _: EstadoDaVenda, form: FormData) => {

@@ -25,6 +25,7 @@ import {
 import { cn } from "@/lib/utils";
 import { acaoCadastrarCliente, acaoRegistrarVenda, acaoTrocarVenda } from "@/lib/vendas/acoes";
 import { VENDA_INICIAL, type EstadoDoCliente } from "@/lib/vendas/servicos";
+import { GavetaDeMateriais, GavetaDePreco, type MaterialDaLinha } from "./ajustes-da-linha";
 
 export type ItemDaFrente = {
   id: string;
@@ -33,10 +34,13 @@ export type ItemDaFrente = {
   unidade: string;
   preco: number;
   saldo: number | null;
-  materiais: { materialId: string; nome: string; quantidade: number; saldo: number }[];
+  materiais: MaterialDaLinha[];
+  /** Custo próprio (só para quem ajusta preço: aviso de preço abaixo do custo — SPEC-017, OPEN-007). */
+  custoBase?: number | null;
 };
 type Cliente = { id: string; nome: string; contato: string | null };
-type Linha = { itemId: string; quantidade: string };
+/** SPEC-017: materiais usados na linha (total, OPEN-002) e preço cobrado com motivo; null = padrão do catálogo. */
+type Linha = { itemId: string; quantidade: string; materiais?: Record<string, string> | null; ajuste?: { preco: string; motivo: string } | null };
 /** `auto`: com um só pagamento, o valor acompanha o total até a pessoa editar o campo. */
 type Pagamento = { chave: number; forma: FormaDePagamento; valor: string; parcelas: number; auto?: boolean };
 
@@ -54,7 +58,20 @@ const rotulo = "mb-1.5 block text-sm font-medium text-foreground";
  * SPEC-016: lista de itens sempre à vista (toque para adicionar), carrinho com botões de
  * quantidade, forma de pagamento em segmentos e o resumo escuro com "Finalizar venda".
  */
-export function FrenteDeCaixa({ itens, clientes: clientesIniciais, hoje, troca }: { itens: ItemDaFrente[]; clientes: Cliente[]; hoje: string; troca?: TrocaDaFrente }) {
+export function FrenteDeCaixa({
+  itens,
+  clientes: clientesIniciais,
+  hoje,
+  troca,
+  podeAjustarPreco = false,
+}: {
+  itens: ItemDaFrente[];
+  clientes: Cliente[];
+  hoje: string;
+  troca?: TrocaDaFrente;
+  /** SPEC-017 (OPEN-005): Vendas — editar. Na troca não há ajustes (OPEN-008). */
+  podeAjustarPreco?: boolean;
+}) {
   // Na troca, a ação é a de cancelar e trocar; os estados de erro têm a mesma forma e o sucesso redireciona.
   const [estado, executar, enviando] = useActionState(troca ? (acaoTrocarVenda as unknown as typeof acaoRegistrarVenda) : acaoRegistrarVenda, VENDA_INICIAL);
   // Identificador do carrinho = id da venda: reenviar o mesmo carrinho não cria outra venda (INV-009).
@@ -70,6 +87,9 @@ export function FrenteDeCaixa({ itens, clientes: clientesIniciais, hoje, troca }
   const [motivo, setMotivo] = useState("TROCA");
   const [detalhe, setDetalhe] = useState("");
   const [formaReembolso, setFormaReembolso] = useState("");
+  const [editando, setEditando] = useState<{ tipo: "materiais" | "preco"; itemId: string } | null>(null);
+  const ajustaMateriais = !troca;
+  const ajustaPreco = podeAjustarPreco && !troca;
 
   const porId = useMemo(() => new Map(itens.map((i) => [i.id, i])), [itens]);
   const termo = busca.trim().toLowerCase();
@@ -80,7 +100,18 @@ export function FrenteDeCaixa({ itens, clientes: clientesIniciais, hoje, troca }
     const item = porId.get(l.itemId)!;
     const q = lerNumero(l.quantidade);
     const valida = q !== null && q > 0;
-    return { ...l, item, q: valida ? q : 0, valida, subtotal: valida ? subtotalEmCentavos(paraCentavos(item.preco), q) : 0 };
+    const oficial = paraCentavos(item.preco);
+    const preco = l.ajuste ? paraCentavos(lerNumero(l.ajuste.preco) ?? 0) : oficial;
+    // Materiais usados na linha: os informados (SPEC-017) ou o padrão do catálogo × quantidade.
+    const usados = item.materiais.map((m) => ({
+      ...m,
+      usado: l.materiais ? (lerNumero(l.materiais[m.materialId]) ?? 0) : Math.round((valida ? q : 0) * m.quantidade * 1000) / 1000,
+    }));
+    const custoUnitario =
+      item.custoBase === undefined || item.custoBase === null || !valida
+        ? null
+        : paraCentavos(item.custoBase + usados.reduce((s, m) => s + (m.custo ?? 0) * m.usado, 0) / q);
+    return { ...l, item, q: valida ? q : 0, valida, oficial, preco, usados, custoUnitario, subtotal: valida ? subtotalEmCentavos(preco, q) : 0 };
   });
   const noCarrinho = new Map(linhasCalc.map((l) => [l.itemId, l.q]));
   const total = linhasCalc.reduce((s, l) => s + l.subtotal, 0);
@@ -105,7 +136,7 @@ export function FrenteDeCaixa({ itens, clientes: clientesIniciais, hoje, troca }
       consumo.set(id, { ...atual, pedido: atual.pedido + q });
     };
     if (l.item.tipo === "PRODUTO_FISICO") somar(l.item.id, l.item.nome, l.q, l.item.saldo ?? 0);
-    else for (const m of l.item.materiais) somar(m.materialId, m.nome, l.q * m.quantidade, m.saldo);
+    else for (const m of l.usados) somar(m.materialId, m.nome, m.usado, m.saldo);
   }
   const semEstoque = [...consumo.values()].filter((c) => c.pedido > c.saldo + 1e-9);
 
@@ -155,7 +186,13 @@ export function FrenteDeCaixa({ itens, clientes: clientesIniciais, hoje, troca }
     id: carrinhoId,
     dia,
     clienteId: clienteId || null,
-    linhas: linhasCalc.map((l) => ({ itemId: l.itemId, quantidade: l.quantidade, precoVisto: l.item.preco })),
+    linhas: linhasCalc.map((l) => ({
+      itemId: l.itemId,
+      quantidade: l.quantidade,
+      precoVisto: l.item.preco,
+      ...(l.materiais ? { materiais: Object.entries(l.materiais).map(([materialId, quantidade]) => ({ materialId, quantidade })) } : {}),
+      ...(l.ajuste ? { precoAjustado: l.ajuste.preco, motivoAjuste: l.ajuste.motivo } : {}),
+    })),
     pagamentos: efetivos.map((p) => ({ forma: p.forma, valor: p.valor, parcelas: p.forma === "CREDITO" ? p.parcelas : 1 })),
   });
   const unidades = linhasCalc.reduce((s, l) => s + l.q, 0);
@@ -172,6 +209,35 @@ export function FrenteDeCaixa({ itens, clientes: clientesIniciais, hoje, troca }
 
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_24rem]">
+      {(() => {
+        // Gavetas dos ajustes da linha (SPEC-017). A chave recria o formulário a cada abertura.
+        const l = editando && linhasCalc.find((x) => x.itemId === editando.itemId);
+        if (!editando || !l) return null;
+        const atualizar = (mudanca: Partial<Linha>) => setLinhas((ls) => ls.map((x) => (x.itemId === l.itemId ? { ...x, ...mudanca } : x)));
+        return editando.tipo === "materiais" ? (
+          <GavetaDeMateriais
+            key={`materiais-${l.itemId}`}
+            aberta
+            aoFechar={() => setEditando(null)}
+            nome={l.item.nome}
+            quantidadeDaLinha={l.q}
+            materiais={l.item.materiais}
+            valores={l.materiais ?? null}
+            aoAplicar={(valores) => atualizar({ materiais: valores })}
+          />
+        ) : (
+          <GavetaDePreco
+            key={`preco-${l.itemId}`}
+            aberta
+            aoFechar={() => setEditando(null)}
+            nome={l.item.nome}
+            precoOficialCentavos={l.oficial}
+            custoUnitarioCentavos={l.custoUnitario}
+            valor={l.ajuste ?? null}
+            aoAplicar={(ajuste) => atualizar({ ajuste })}
+          />
+        );
+      })()}
       <div className="min-w-0 space-y-6">
         {estado.status === "erro" && (estado.mensagem || estado.erros) && (
           <Aviso tipo="erro">{estado.mensagem ?? Object.values(estado.erros ?? {}).filter(Boolean)[0]}</Aviso>
@@ -257,12 +323,19 @@ export function FrenteDeCaixa({ itens, clientes: clientesIniciais, hoje, troca }
           ) : (
             <ul className="space-y-2" aria-label="Carrinho">
               {linhasCalc.map((l, idx) => (
-                <li key={l.itemId} className="flex items-center gap-2 rounded-2xl bg-card py-2.5 pr-2 pl-4 sm:gap-3">
+                <li key={l.itemId} className="flex flex-wrap items-center gap-2 rounded-2xl bg-card py-2.5 pr-2 pl-4 sm:gap-x-3">
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-[15px] font-bold text-foreground">{l.item.nome}</p>
                     <p className="text-[13px] text-muted-foreground tabular-nums">
                       {l.valida ? `${quantos(l.q)} × ` : ""}
-                      {reaisDeCentavos(paraCentavos(l.item.preco))}
+                      {reaisDeCentavos(l.preco)}
+                      {l.ajuste && (
+                        <>
+                          {" "}
+                          <s className="opacity-70">{reaisDeCentavos(l.oficial)}</s>
+                          <span className="sr-only"> (preço do catálogo)</span>
+                        </>
+                      )}
                       <span className="sr-only"> por {l.item.unidade.toLowerCase()}</span>
                       {l.valida && (
                         <>
@@ -296,6 +369,29 @@ export function FrenteDeCaixa({ itens, clientes: clientesIniciais, hoje, troca }
                   >
                     <Trash2 aria-hidden="true" />
                   </button>
+                  {/* SPEC-017: observações e botões dos ajustes, numa linha própria (cabe no celular) */}
+                  <div className="basis-full space-y-0.5 empty:hidden">
+                    {l.ajuste && <p className="text-xs font-semibold text-status-warn">Preço ajustado: {l.ajuste.motivo}</p>}
+                    {l.materiais && (
+                      <p className="text-xs font-semibold text-status-warn">
+                        Materiais ajustados: {l.usados.map((m) => `${quantos(m.usado)} ${m.nome}`).join(", ")}
+                      </p>
+                    )}
+                    {((ajustaMateriais && l.item.tipo === "SERVICO" && l.item.materiais.length > 0) || ajustaPreco) && (
+                      <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1">
+                        {ajustaMateriais && l.item.tipo === "SERVICO" && l.item.materiais.length > 0 && (
+                          <button type="button" onClick={() => setEditando({ tipo: "materiais", itemId: l.itemId })} className="text-xs font-semibold text-primary underline-offset-2 hover:underline">
+                            Editar materiais<span className="sr-only"> de {l.item.nome}</span>
+                          </button>
+                        )}
+                        {ajustaPreco && (
+                          <button type="button" onClick={() => setEditando({ tipo: "preco", itemId: l.itemId })} className="text-xs font-semibold text-primary underline-offset-2 hover:underline">
+                            Editar preço<span className="sr-only"> de {l.item.nome}</span>
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </li>
               ))}
             </ul>
