@@ -399,7 +399,7 @@ Lista mantida até cada item ser resolvido; quem retomar o projeto (em qualquer 
 
 | # | Pendência | Situação |
 |---|---|---|
-| 1 | **SPEC-017** (ajustes na venda): homologação (T10) e decisão da divergência da seção 9 (quantidade depois do ajuste) | Em andamento |
+| 1 | **SPEC-017** (ajustes na venda): homologação (T10) na he-homol depois do merge da PR #82 | Em andamento |
 | 2 | **Textos legais** (`docs/legal/`): preencher os campos entre colchetes (responsável, e-mail de contato, cidade/UF, região do Supabase) e revisão do grupo | Aberta |
 | 3 | **SPEC-015** (cobrança real pelo Stripe): decidir se fica fora do MVP; depende do ADR-007 (proposta) | Aberta |
 | 4 | **Domínio no Resend** (opcional): para enviar convites a qualquer e-mail; hoje só chega ao e-mail da conta Resend | Aberta (opcional) |

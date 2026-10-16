@@ -84,7 +84,7 @@ O eletricista cadastrou o serviço **"Troca de lâmpadas"** com o material **"L�
 1. No carrinho, a linha de um serviço com materiais mostra **"Editar materiais"**.
 2. A gaveta lista cada material com a **quantidade da linha** (padrão = quantidade do catálogo × quantidade do serviço na linha), a unidade e o saldo em estoque.
 3. A pessoa altera as quantidades (≥ 0, até 3 casas) dos materiais já vinculados (OPEN-001).
-4. Ao confirmar, a linha mostra "Materiais ajustados" e o resumo. Se a pessoa mudar depois a quantidade do serviço na linha, a tela pergunta se mantém os materiais ajustados ou volta ao padrão proporcional.
+4. Ao confirmar, a linha mostra "Materiais ajustados" e o resumo. Se a pessoa mudar depois a quantidade do serviço na linha, os materiais ajustados são mantidos, sem pergunta; "Voltar ao padrão" na gaveta desfaz o ajuste (decisão da equipe em 16/10/2026, seção 9).
 5. O custo exibido da linha (se a pessoa puder ver custos) e o aviso de estoque usam as quantidades ajustadas.
 
 ### 5.2 Ajustar preço (na tela)
@@ -172,7 +172,7 @@ Migração: os três campos novos em `ItemVenda`, opcionais ou com padrão, sem 
 
 **Divergências registradas na implementação:**
 
-- **Mudar a quantidade depois de ajustar os materiais (5.1, passo 4):** a tela **não pergunta**; os materiais ajustados são mantidos (são o total usado na linha, OPEN-002) e continuam visíveis na linha ("Materiais ajustados: …"), e a gaveta mostra o padrão da quantidade atual para comparar. "Voltar ao padrão" desfaz. Proposta: (2) aceitar na baseline — uma pergunta a cada toque no +/− atrapalharia a frente de caixa.
+- **Mudar a quantidade depois de ajustar os materiais (5.1, passo 4):** a tela **não pergunta**; os materiais ajustados são mantidos (são o total usado na linha, OPEN-002) e continuam visíveis na linha ("Materiais ajustados: …"), e a gaveta mostra o padrão da quantidade atual para comparar. "Voltar ao padrão" desfaz. **Aceita pela equipe em 16/10/2026** (opção 2, baseline atualizada no passo 4 da 5.1) — uma pergunta a cada toque no +/− atrapalharia a frente de caixa.
 - **Material vinculado que não vier na lista ajustada:** fica com a quantidade padrão (a tela sempre envia todos).
 - **Restrição no banco:** `precoOficial` e `motivoAjustePreco` são gravados juntos (CHECK `ItemVenda_ajuste_de_preco_completo`), reforçando o INV-002.
 - **Troca:** o servidor recusa ajustes no carrinho da troca com "Na troca, os itens usam o preço e os materiais do catálogo." (OPEN-008).
@@ -258,7 +258,7 @@ A SPEC-017 estará concluída quando:
 - [ ] os testes derivados (T01 a T10) estiverem aprovados, com o CI verde no PR — T01 a T08 automatizados, T09 com capturas; falta o T10 (homologação);
 - [x] os RNFs aplicáveis (RNF01, RNF02, RNF05) tiverem sido verificados como descrito na seção 10;
 - [x] as questões OPEN-001 a OPEN-008 tiverem sido decididas e registradas (16/10/2026), com a RN05, a RN15 e a SPEC-008 (OPEN-001, INV-002, seção 3 "Fora do escopo") ajustadas conforme as decisões;
-- [ ] não existir divergência conhecida entre a implementação e esta Spec — a da quantidade depois do ajuste (seção 9) aguarda a equipe;
+- [x] não existir divergência conhecida entre a implementação e esta Spec — a da quantidade depois do ajuste (seção 9) foi aceita pela equipe em 16/10/2026;
 - [x] toda divergência em relação à baseline tiver sido explicitamente analisada e registrada nos documentos (seção 9).
 
 **Regra fundamental:** a implementação obedece a esta Spec aprovada. Se surgir conflito entre código, Spec e documentos de modelagem, o comportamento não é alterado em silêncio: a divergência é registrada com a proposta de (1) corrigir a implementação ou (2) alterar a baseline, e a decisão é da equipe.
