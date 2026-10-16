@@ -277,7 +277,7 @@ A SPEC-014 estará concluída quando:
 - [x] todos os invariantes (INV-001 a INV-006) estiverem preservados;
 - [x] os testes derivados (T01 a T13) estiverem aprovados, com o CI verde no PR — T01 a T11 no CI do PR #70; T12 com capturas; T13 na homologação;
 - [x] os RNFs aplicáveis (RNF01, RNF02, RNF04, RNF06) tiverem sido verificados como descrito na seção 10;
-- [ ] as questões OPEN-001 a OPEN-006 tiverem sido decididas e registradas;
+- [x] as questões OPEN-001 a OPEN-006 tiverem sido decididas e registradas (seção 13, 11/10/2026);
 - [x] não existir divergência conhecida entre a implementação e esta Spec;
 - [x] toda divergência em relação à baseline tiver sido explicitamente analisada e registrada nos documentos (seção 8).
 
