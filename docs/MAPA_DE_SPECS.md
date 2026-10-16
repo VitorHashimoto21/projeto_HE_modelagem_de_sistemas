@@ -133,6 +133,7 @@ Também foram corrigidos, sem decisão nova: a ordem do cronograma da Visão (Ca
 | SPEC-014 | LGPD: exportação e exclusão de conta | 002, 004, 008 |
 | SPEC-015 *(opcional)* | Cobrança real do plano pago | 013 |
 | SPEC-016 | Design system e redesign (Direção "Balcão") | 002–014 |
+| SPEC-017 | Ajustes na venda: materiais e preço por venda | 005, 006, 007, 008, 016 |
 
 ```mermaid
 flowchart LR
@@ -164,6 +165,8 @@ flowchart LR
     S8 --> S14
     S13 -.-> S15[SPEC-015 Cobrança real - opcional]
     S14 --> S16[SPEC-016 Design system e redesign]
+    S8 --> S17[SPEC-017 Ajustes na venda]
+    S16 --> S17
 ```
 
 ### 2.2 Detalhamento
@@ -341,6 +344,15 @@ flowchart LR
 - **Dependências:** SPECs 002 a 014 (todas as telas)
 - **Justificativa da ordem:** depois de todas as funcionalidades do MVP, antes da produção: o redesign muda a apresentação de telas que já existem e estão testadas; feito em 6 etapas num único PR (OPEN-006), com homologação ao final.
 
+#### SPEC-017 — Ajustes na venda: materiais e preço por venda
+- **Spec:** [`specs/SPEC-017.md`](./specs/SPEC-017.md) (📝 rascunho para aprovação — questões em aberto OPEN-001 a OPEN-008)
+- **Objetivo:** ajustar, numa venda específica, a quantidade de materiais que um serviço consumiu e o preço cobrado por uma linha, sem mudar o catálogo, com baixa, custo, total e auditoria refletindo o ajuste.
+- **Origem:** melhoria identificada pela equipe na aula de 15/10/2026 (caso do eletricista: "Troca de lâmpadas" com quantidade variável de lâmpadas e preço combinado).
+- **RF:** RF23, RF24, RF62 · **RN:** RN05 e RN15 (alteradas conforme as decisões), RN06, RN23 · **RNF:** RNF01, RNF02, RNF05
+- **Entidades:** ItemVenda (campos novos), MovimentacaoEstoque, MaterialServico e Item (só leitura)
+- **Dependências:** SPEC-005, SPEC-006, SPEC-007, SPEC-008, SPEC-016
+- **Justificativa da ordem:** evolução do MVP depois dos testes em aula; revê a decisão "sem desconto no MVP" da SPEC-008 (OPEN-001), por isso é uma Spec própria, com decisão da equipe.
+
 ---
 
 ## 3. Cobertura da baseline
@@ -368,7 +380,7 @@ Todos os 113 requisitos (RF01–RF73, RN01–RN29, RNF01–RNF11) estão associa
 
 A conferência do seed fiscal foi concluída em 03/10/2026 (DAS do MEI atualizado para o salário mínimo de 2026), e a SPEC-003 não tem mais pré-requisito pendente. A SPEC-015 depende da aprovação do ADR-007.
 
-**Andamento (15/10/2026):**
+**Andamento (16/10/2026):**
 
 - [SPEC-001](specs/SPEC-001.md) a [SPEC-003](specs/SPEC-003.md): implementadas e verificadas na homologação.
 - [SPEC-004](specs/SPEC-004.md): implementada e verificada no preview da Vercel (04/10/2026).
@@ -378,4 +390,17 @@ A conferência do seed fiscal foi concluída em 03/10/2026 (DAS do MEI atualizad
 - [SPEC-009](specs/SPEC-009.md) a [SPEC-014](specs/SPEC-014.md): implementadas e verificadas na homologação (11/10/2026; PRs #60, #62, #64, #66, #68 e #70).
 - SPEC-015 (opcional): não iniciada; depende da aprovação do ADR-007.
 - [SPEC-016](specs/SPEC-016.md): implementada (PR #72) e verificada na homologação (15/10/2026); ajustes da homologação corrigidos (PRs #74 e #75) e aprovados nos testes da equipe (16/10/2026); notas N1–N5 da seção 15 decididas em 16/10/2026 (diálogo de confirmação e taxa da maquininha nos Relatórios implementados).
+- [SPEC-017](specs/SPEC-017.md): gerada (16/10/2026), aguardando a decisão das questões em aberto.
 - `main`: atualizada até a SPEC-006 (PR #54); as SPECs 007 a 016 estão só na DEVELOP.
+
+### Pendências abertas
+
+Lista mantida até cada item ser resolvido; quem retomar o projeto (em qualquer PC ou conversa) começa por aqui.
+
+| # | Pendência | Situação |
+|---|---|---|
+| 1 | **SPEC-017** (ajustes na venda): decidir OPEN-001 a OPEN-008 e implementar | Em andamento |
+| 2 | **Textos legais** (`docs/legal/`): preencher os campos entre colchetes (responsável, e-mail de contato, cidade/UF, região do Supabase) e revisão do grupo | Aberta |
+| 3 | **SPEC-015** (cobrança real pelo Stripe): decidir se fica fora do MVP; depende do ADR-007 (proposta) | Aberta |
+| 4 | **Domínio no Resend** (opcional): para enviar convites a qualquer e-mail; hoje só chega ao e-mail da conta Resend | Aberta (opcional) |
+| 5 | **PR da DEVELOP para a `main`**: só quando a equipe pedir | Aguardando a equipe |
