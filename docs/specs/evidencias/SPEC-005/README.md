@@ -33,10 +33,6 @@ Build de produção (`next build` + `next start`) com o PostgreSQL local e um du
 | "Sair deste negócio" → confirmação → sai; o painel do negócio deixa de abrir (CA-18) | ✅ `meus_negocios_membro_390_claro.png` |
 | **T18:** convidar, convite criado, convite sem e com sessão, Equipe, membro, convites para você, "Sem acesso" e "Meus negócios" em 390, 768 e 1440 px, claro e escuro — **sem rolagem horizontal em nenhuma combinação** | ✅ `convidar_390_escuro.png` e as demais |
 
-## Pendente
-
-- **T19** — fluxo completo na homologação com e-mail real: depende de configurar o Resend (`RESEND_API_KEY` e `EMAIL_REMETENTE`) com domínio verificado. Até lá, o convite funciona pelo link copiável, que pode ser verificado no preview da Vercel.
-
 ## Verificação na homologação (08/10/2026)
 
 Feita pela equipe em <https://he-homol.vercel.app>, com duas contas reais (Dono e convidado). O Resend ainda não está configurado, então o convite seguiu pelo link copiável (OPEN-004). Nas capturas, o e-mail do convidado e o token do link foram ocultados.
@@ -48,4 +44,18 @@ Feita pela equipe em <https://he-homol.vercel.app>, com duas contas reais (Dono 
 | Dono promove o membro a Gerente: papel alterado, matriz volta ao padrão completo do Gerente (CA-12) | ✅ | `homol_membro_promovido_gerente_1920_claro.png`, `homol_membro_promovido_gerente_1920_escuro.png` |
 | Membro sai do negócio → "Você saiu do negócio" (CA-18) | ✅ | `homol_saiu_do_negocio_1920_claro.png`, `homol_saiu_do_negocio_1920_escuro.png` |
 
-O envio real do e-mail do convite (parte do T19) continua dependendo do Resend.
+O envio real do e-mail do convite (parte do T19) ficou para depois da configuração do Resend (abaixo).
+
+## E-mail real do convite na homologação — T19 (16/10/2026)
+
+Resend configurado na Vercel (`RESEND_API_KEY` e `EMAIL_REMETENTE = Health Enterprise <onboarding@resend.dev>`). Nas capturas, os e-mails e o token do link foram ocultados.
+
+| Passo | Resultado | Captura |
+|---|---|---|
+| Dono convida → "Convite criado… Enviamos o convite por e-mail" (sem o aviso âmbar) e o link para copiar (CA-01) | ✅ | `homol_t19_convite_enviado_escuro.png` |
+| O e-mail chega com o nome do negócio, o papel, o resumo das permissões, a validade e o link (CA-01) | ✅ | `homol_t19_email_do_convite_recebido.png` |
+| O link abre a página do convite com o papel e as permissões e o botão "Aceitar convite" (CA-04) | ✅ | `homol_t19_pagina_do_convite_1366_claro.png` |
+
+Com a verificação de 08/10 (aceite, menu do Colaborador, promoção e saída pelo mesmo fluxo, com o link copiável), o T19 está completo.
+
+**Limitação conhecida (sem domínio próprio):** com o remetente `onboarding@resend.dev`, o Resend só entrega para o e-mail dono da conta Resend; para outro destinatário ele responde **403** e o sistema mostra "Não conseguimos enviar o e-mail. Copie o link…" (o convite continua válido pelo link — OPEN-004). Foi o que aconteceu na primeira tentativa. Para convidar qualquer pessoa, verificar um domínio no Resend e trocar o `EMAIL_REMETENTE`.

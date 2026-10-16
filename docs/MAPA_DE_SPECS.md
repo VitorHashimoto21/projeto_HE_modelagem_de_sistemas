@@ -372,7 +372,7 @@ A conferência do seed fiscal foi concluída em 03/10/2026 (DAS do MEI atualizad
 
 - [SPEC-001](specs/SPEC-001.md) a [SPEC-003](specs/SPEC-003.md): implementadas e verificadas na homologação.
 - [SPEC-004](specs/SPEC-004.md): implementada e verificada no preview da Vercel (04/10/2026).
-- [SPEC-005](specs/SPEC-005.md): implementada e verificada (07/10/2026); falta o e-mail real do convite na homologação (Resend não configurado).
+- [SPEC-005](specs/SPEC-005.md): implementada e verificada (07/10/2026); e-mail real do convite verificado na homologação com o Resend (16/10/2026).
 - [SPEC-006](specs/SPEC-006.md): implementada e verificada na homologação (08/10/2026).
 - [SPEC-007](specs/SPEC-007.md) e [SPEC-008](specs/SPEC-008.md): implementadas e verificadas na homologação (09/10/2026; PRs #56 e #58).
 - [SPEC-009](specs/SPEC-009.md) a [SPEC-014](specs/SPEC-014.md): implementadas e verificadas na homologação (11/10/2026; PRs #60, #62, #64, #66, #68 e #70).

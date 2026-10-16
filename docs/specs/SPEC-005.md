@@ -1,6 +1,6 @@
 # SPEC-005 — Equipe, papéis e permissões
 
-> **Status:** ✅ **Aprovada e implementada em 07/10/2026** — questões em aberto decididas pela equipe (seção 13), todas pela opção recomendada; testes T01–T17, T20 e T21 no CI e fluxo completo verificado no navegador, em build de produção local ([evidências](evidencias/SPEC-005/README.md)). Pendente: T19 (e-mail real na homologação, depende do Resend). Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar). Nenhum código foi escrito.
+> **Status:** ✅ **Aprovada e implementada em 07/10/2026** — questões em aberto decididas pela equipe (seção 13), todas pela opção recomendada; testes T01–T17, T20 e T21 no CI e fluxo completo verificado no navegador, em build de produção local ([evidências](evidencias/SPEC-005/README.md)). T19 (e-mail real na homologação) concluído em 16/10/2026, com o Resend configurado. Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar). Nenhum código foi escrito.
 > **Mapa:** [`MAPA_DE_SPECS.md`](../MAPA_DE_SPECS.md) · **Anterior:** [SPEC-004](SPEC-004.md) (negócio e Dono) · **Próximas que dependem desta:** SPEC-006 a SPEC-013 (todas usam as guardas de papel e a matriz módulo × ação).
 
 ---
@@ -79,7 +79,7 @@
   - SPEC-004: `Negocio` com o Dono, negócio ativo e "Dados do negócio".
 - **Decisões arquiteturais:** ADR-002, ADR-003.
 - **Pré-requisitos externos:**
-  - **Envio de e-mail pelo Resend** (`RESEND_API_KEY` e `EMAIL_REMETENTE`), o mesmo serviço do aviso de "você já tem conta" da SPEC-002, **ainda não configurado** na homologação. Não bloqueia a implementação: sem o Resend, o Dono manda o link copiável (OPEN-004). O teste manual completo com e-mail (T19) depende dele.
+  - **Envio de e-mail pelo Resend** (`RESEND_API_KEY` e `EMAIL_REMETENTE`), o mesmo serviço do aviso de "você já tem conta" da SPEC-002, configurado na homologação em 16/10/2026 (T19). Não bloqueia a implementação: sem o Resend, o Dono manda o link copiável (OPEN-004). O teste manual completo com e-mail (T19) depende dele.
   - Para que o convite chegue a qualquer endereço (e não só aos da equipe), o domínio do remetente precisa estar verificado no Resend.
 
 ---
@@ -470,7 +470,7 @@ A SPEC-005 estará concluída quando:
 
 - [x] todos os critérios de aceitação (CA-01 a CA-18) estiverem implementados — por testes e no navegador; o envio real do e-mail (CA-01) depende do Resend;
 - [x] todos os invariantes (INV-001 a INV-010) estiverem preservados;
-- [ ] os testes derivados (T01 a T21) estiverem aprovados, com o CI verde no PR — T01–T17, T20 e T21 automatizados; T18 com capturas (build de produção local); **T19 pendente** (Resend);
+- [x] os testes derivados (T01 a T21) estiverem aprovados, com o CI verde no PR — T01–T17, T20 e T21 automatizados; T18 com capturas (build de produção local); T19 na homologação (aceite e permissões em 08/10/2026; e-mail real pelo Resend em 16/10/2026);
 - [x] os RNFs aplicáveis (RNF01, RNF02, RNF04, RNF07) tiverem sido verificados como descrito na seção 10;
 - [x] as questões OPEN-001 a OPEN-010 tiverem sido decididas e registradas (07/10/2026);
 - [x] não existir divergência conhecida entre a implementação e esta Spec (as da seção 9 estão registradas);
