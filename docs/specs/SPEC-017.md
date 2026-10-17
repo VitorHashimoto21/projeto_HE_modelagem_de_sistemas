@@ -1,6 +1,6 @@
 # SPEC-017 — Ajustes na venda: materiais e preço por venda
 
-> **Status:** 🔵 **Aprovada e implementada em 16/10/2026; verificação na homologação pendente (T10)** — questões em aberto decididas pela equipe em entrevista (seção 13), todas pela opção recomendada; RN05, RN15 e SPEC-008 ajustadas; testes T01–T08 automatizados e telas verificadas em build local (T09) — [evidências](evidencias/SPEC-017/README.md). Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar), a partir de uma melhoria identificada pela equipe na aula de 15/10/2026.
+> **Status:** ✅ **Aprovada e implementada em 16/10/2026 (PR #82); verificada na homologação em 17/10/2026 (T10)** — questões em aberto decididas pela equipe em entrevista (seção 13), todas pela opção recomendada; RN05, RN15 e SPEC-008 ajustadas; testes T01–T08 automatizados e telas verificadas em build local (T09) — [evidências](evidencias/SPEC-017/README.md). Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar), a partir de uma melhoria identificada pela equipe na aula de 15/10/2026.
 > **Mapa:** [`MAPA_DE_SPECS.md`](../MAPA_DE_SPECS.md) · **Altera:** [SPEC-008](SPEC-008.md) (registro de venda), com efeitos na [SPEC-006](SPEC-006.md) (preço oficial) e na [SPEC-011](SPEC-011.md) (troca) · **Usa:** [SPEC-005](SPEC-005.md) (permissões), [SPEC-007](SPEC-007.md) (baixa de estoque) e [SPEC-016](SPEC-016.md) (componentes).
 
 ---
@@ -253,9 +253,9 @@ Todas decididas pela equipe em 16/10/2026, em entrevista, pela opção recomenda
 
 A SPEC-017 estará concluída quando:
 
-- [x] todos os critérios de aceitação (CA-01 a CA-10) estiverem implementados — por testes e no navegador (build local); a homologação (T10) fica para depois do merge;
+- [x] todos os critérios de aceitação (CA-01 a CA-10) estiverem implementados — por testes, no navegador (build local) e na homologação (T10, 17/10/2026);
 - [x] todos os invariantes (INV-001 a INV-006) estiverem preservados;
-- [ ] os testes derivados (T01 a T10) estiverem aprovados, com o CI verde no PR — T01 a T08 automatizados, T09 com capturas; falta o T10 (homologação);
+- [x] os testes derivados (T01 a T10) estiverem aprovados, com o CI verde no PR — T01 a T08 automatizados, T09 com capturas em build local e T10 com capturas da homologação (17/10/2026);
 - [x] os RNFs aplicáveis (RNF01, RNF02, RNF05) tiverem sido verificados como descrito na seção 10;
 - [x] as questões OPEN-001 a OPEN-008 tiverem sido decididas e registradas (16/10/2026), com a RN05, a RN15 e a SPEC-008 (OPEN-001, INV-002, seção 3 "Fora do escopo") ajustadas conforme as decisões;
 - [x] não existir divergência conhecida entre a implementação e esta Spec — a da quantidade depois do ajuste (seção 9) foi aceita pela equipe em 16/10/2026;
