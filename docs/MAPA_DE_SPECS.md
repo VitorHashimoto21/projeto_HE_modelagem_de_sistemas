@@ -134,6 +134,8 @@ Também foram corrigidos, sem decisão nova: a ordem do cronograma da Visão (Ca
 | SPEC-015 *(opcional)* | Cobrança real do plano pago | 013 |
 | SPEC-016 | Design system e redesign (Direção "Balcão") | 002–014 |
 | SPEC-017 | Ajustes na venda: materiais e preço por venda | 005, 006, 007, 008, 016 |
+| SPEC-018 | Administrador da plataforma e acesso de suporte (somente leitura) | 001, 002, 005, 014, 016 |
+| SPEC-019 *(a gerar)* | Suporte com edição, emergência, ações de plataforma e 2º fator | 018 |
 
 ```mermaid
 flowchart LR
@@ -167,6 +169,9 @@ flowchart LR
     S14 --> S16[SPEC-016 Design system e redesign]
     S8 --> S17[SPEC-017 Ajustes na venda]
     S16 --> S17
+    S14 --> S18[SPEC-018 Administrador e suporte]
+    S16 --> S18
+    S18 -.-> S19[SPEC-019 Suporte com edição e 2º fator - a gerar]
 ```
 
 ### 2.2 Detalhamento
@@ -353,11 +358,24 @@ flowchart LR
 - **Dependências:** SPEC-005, SPEC-006, SPEC-007, SPEC-008, SPEC-016
 - **Justificativa da ordem:** evolução do MVP depois dos testes em aula; revê a decisão "sem desconto no MVP" da SPEC-008 (OPEN-001), por isso é uma Spec própria, com decisão da equipe.
 
+#### SPEC-018 — Administrador da plataforma e acesso de suporte (somente leitura)
+- **Spec:** [`specs/SPEC-018.md`](./specs/SPEC-018.md) (🟢 aprovada em 17/10/2026 — OPEN-001 a OPEN-012 decididas em entrevista; implementação não iniciada)
+- **Objetivo:** criar o Administrador da plataforma (conta exclusiva, painel só com metadados) e o acesso de suporte que o Dono libera por módulos e prazo, em somente leitura, com dados pessoais mascarados, registro de auditoria imutável e novo aceite da Política e dos Termos.
+- **Origem:** decisão da equipe em 17/10/2026 (um centralizador para atender pedidos dos usuários, sem quebrar a privacidade).
+- **RF:** RF74–RF78 (novos) · **RN:** RN30–RN32 (novas), RN01 (complementada), RN27 · **RNF:** RNF02 (ajustado), RNF04, RNF05, RNF12 (novo) · **ADR:** ADR-008 (nova)
+- **Entidades:** Usuario (campos novos), AcessoSuporte e RegistroSuporte (novas); Negocio, MembroNegocio e Cliente (leitura)
+- **Dependências:** SPEC-001, SPEC-002, SPEC-005, SPEC-014, SPEC-016
+- **Justificativa da ordem:** depois do MVP completo; a parte de privacidade (liberação, máscara e auditoria) é entregue e homologada antes de qualquer edição pelo suporte.
+
+#### SPEC-019 — Suporte com edição, emergência, ações de plataforma e 2º fator *(a gerar)*
+- **Escopo combinado (17/10/2026):** **camada de segurança da autenticação do Administrador (2º fator TOTP), em destaque e antes da edição**; edição em modo suporte; acesso de emergência sem liberação (justificativa, só leitura, aviso posterior); ações de plataforma (suspender/reativar negócio, trocar plano).
+- **Dependências:** SPEC-018
+
 ---
 
 ## 3. Cobertura da baseline
 
-Todos os 113 requisitos (RF01–RF73, RN01–RN29, RNF01–RNF11) estão associados a pelo menos uma Spec. Requisitos compartilhados aparecem em mais de uma Spec com escopos complementares:
+Todos os 122 requisitos (RF01–RF78, RN01–RN32, RNF01–RNF12) estão associados a pelo menos uma Spec. Requisitos compartilhados aparecem em mais de uma Spec com escopos complementares:
 
 | Requisito | Specs | Divisão |
 |---|---|---|
@@ -371,6 +389,8 @@ Todos os 113 requisitos (RF01–RF73, RN01–RN29, RNF01–RNF11) estão associa
 | RN29 | 001, 008, 010, 012 | Utilitário de datas (001); aplicado nas vendas do dia, RBT12, competência e gráficos |
 | RF73 | 013, 015 | Troca de plano simulada (013); troca pelo gateway de pagamento (015, opcional) |
 | RNF11 | 001, 015 | Ambientes e variáveis por ambiente (001); chaves de teste × produção do gateway (015) |
+| RN01 / RNF02 | 001, 018 | Isolamento por negócio (001); única exceção: acesso de suporte liberado pelo Dono (018) |
+| RNF12 | 018, 019 | Sessão de 8 h do Administrador (018); 2º fator obrigatório (019) |
 
 ---
 
@@ -380,7 +400,7 @@ Todos os 113 requisitos (RF01–RF73, RN01–RN29, RNF01–RNF11) estão associa
 
 A conferência do seed fiscal foi concluída em 03/10/2026 (DAS do MEI atualizado para o salário mínimo de 2026), e a SPEC-003 não tem mais pré-requisito pendente. A SPEC-015 depende da aprovação do ADR-007.
 
-**Andamento (16/10/2026):**
+**Andamento (17/10/2026):**
 
 - [SPEC-001](specs/SPEC-001.md) a [SPEC-003](specs/SPEC-003.md): implementadas e verificadas na homologação.
 - [SPEC-004](specs/SPEC-004.md): implementada e verificada no preview da Vercel (04/10/2026).
@@ -391,6 +411,8 @@ A conferência do seed fiscal foi concluída em 03/10/2026 (DAS do MEI atualizad
 - SPEC-015 (opcional): não iniciada; depende da aprovação do ADR-007.
 - [SPEC-016](specs/SPEC-016.md): implementada (PR #72) e verificada na homologação (15/10/2026); ajustes da homologação corrigidos (PRs #74 e #75) e aprovados nos testes da equipe (16/10/2026); notas N1–N5 da seção 15 decididas em 16/10/2026 (diálogo de confirmação e taxa da maquininha nos Relatórios implementados).
 - [SPEC-017](specs/SPEC-017.md): implementada (PR #82, 16/10/2026) e verificada na homologação (17/10/2026).
+- [SPEC-018](specs/SPEC-018.md): gerada e aprovada (17/10/2026), com as OPEN-001 a OPEN-012 decididas; implementação não iniciada.
+- SPEC-019: a gerar depois da SPEC-018 (escopo combinado na seção 2.2).
 - `main`: atualizada até a SPEC-006 (PR #54); as SPECs 007 a 017 estão só na DEVELOP.
 
 ### Pendências abertas
@@ -399,7 +421,9 @@ Lista mantida até cada item ser resolvido; quem retomar o projeto (em qualquer 
 
 | # | Pendência | Situação |
 |---|---|---|
-| 1 | **Textos legais** (`docs/legal/`): preencher os campos entre colchetes (responsável, e-mail de contato, cidade/UF, região do Supabase) e revisão do grupo | Aberta |
-| 2 | **SPEC-015** (cobrança real pelo Stripe): decidir se fica fora do MVP; depende do ADR-007 (proposta) | Aberta |
-| 3 | **Domínio no Resend** (opcional): para enviar convites a qualquer e-mail; hoje só chega ao e-mail da conta Resend | Aberta (opcional) |
-| 4 | **PR da DEVELOP para a `main`**: só quando a equipe pedir | Aguardando a equipe |
+| 1 | **SPEC-018** (Administrador e acesso de suporte): implementar e homologar | Aberta |
+| 2 | **SPEC-019** (suporte com edição, emergência, ações de plataforma e **2º fator do Administrador**): gerar depois da SPEC-018 | Aberta |
+| 3 | **Textos legais** (`docs/legal/`): preencher os campos entre colchetes (responsável, e-mail de contato, cidade/UF, região do Supabase) e revisão do grupo; a nova versão com o acesso de suporte entra na SPEC-018 | Aberta |
+| 4 | **SPEC-015** (cobrança real pelo Stripe): decidir se fica fora do MVP; depende do ADR-007 (proposta) | Aberta |
+| 5 | **Domínio no Resend** (opcional): para enviar convites e os avisos do suporte (SPEC-018) a qualquer e-mail; hoje só chega ao e-mail da conta Resend | Aberta (opcional) |
+| 6 | **PR da DEVELOP para a `main`**: só quando a equipe pedir | Aguardando a equipe |

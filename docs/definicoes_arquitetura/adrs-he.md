@@ -21,6 +21,7 @@ Este documento reúne o conjunto inicial de **ADRs (Architecture Decision Record
 |**ADR-005**|Motor de Precificação Determinístico (Markup Completo) em TypeScript Puro|Reescrever o motor de cálculo, seus testes e o formato do histórico de preços.|**Aceita**|
 |**ADR-006**|Consulta de CNPJ em Base Pública da Receita via Adaptador com Fallback Manual|Trocar o provedor afeta o cadastro de negócios e a origem dos dados fiscais (CNAE, regime, anexo).|**Aceita**|
 |**ADR-007**|Cobrança do Plano Pago via Adaptador de Gateway de Pagamento (Stripe)|Trocar o gateway afeta assinaturas ativas, webhooks e dados de cobrança dos clientes.|**Proposta**|
+|**ADR-008**|Administrador da Plataforma com Acesso de Suporte Liberado pelo Dono|Mudar o modelo de acesso altera a Política de Privacidade (novo aceite de todos os usuários), o contexto de autorização e o registro de auditoria.|**Aceita**|
 
 ---
 
@@ -254,3 +255,38 @@ O modelo freemium (RF45–RF47) precisa de um caminho para o negócio passar ao 
 * **Negativas:** quando ativada, exige campos de assinatura no `Negocio` (id do cliente e da assinatura no gateway, status e validade), tratamento de inadimplência com período de tolerância, rota de webhook com verificação de assinatura e idempotência, e conta verificada (CNPJ) para cobrar em produção. Taxas por transação a confirmar na tabela oficial do gateway na época da ativação.
 
 **Drivers Relacionados:** AD-QA05, RF45, RF46, RF47, RF73, RN18, RNF10, RNF11.
+
+---
+
+#### ADR-008 — Administrador da Plataforma com Acesso de Suporte Liberado pelo Dono
+
+> **Status: Aceita em 17/10/2026.** Implementação na SPEC-018 (somente leitura) e na SPEC-019 (edição, emergência, ações de plataforma e 2º fator).
+
+##### Decisão
+
+O HE terá um **Administrador da plataforma**: um atributo da conta (`Usuario.administradorEm`), concedido e retirado só por script, numa conta **exclusiva** que nunca é membro de negócio. Sem nenhuma liberação, o Administrador vê apenas os **metadados** dos negócios. Para ver dados de um negócio, precisa de uma **liberação do Dono** (`AcessoSuporte`), com motivo, módulos e prazo, revogável a qualquer momento. Com ela, entra em **modo suporte**: um contexto de autorização próprio, montado no servidor a cada requisição a partir da liberação, com a matriz módulo × ação restrita ao que foi liberado (só *ver* na SPEC-018), dados pessoais mascarados e cada passo gravado num **registro de auditoria só de inclusão** (`RegistroSuporte`), visível ao Dono.
+
+##### Contexto e Problema
+
+A equipe precisa atender pedidos dos usuários (entender um problema, conferir e, na SPEC-019, corrigir registros) sem pedir senhas. Ao mesmo tempo, a Política de Privacidade define o HE como **operador** dos dados do negócio: o acesso só é legítimo por instrução do Dono (controlador). O isolamento entre negócios é garantido no código (`comNegocio`, autorização no servidor — ADR-003) e no banco (gatilhos e RLS — ADR-002); o Prisma conecta como dono das tabelas, então um caminho de acesso mal desenhado exporia todos os negócios.
+
+##### Por que foi tomada
+
+1. **LGPD:** o acesso acontece por liberação do controlador, com finalidade (motivo), escopo, prazo e registro — princípios de finalidade, necessidade e transparência.
+2. **Isolamento preservado:** a exceção é estreita e conferida no servidor a cada requisição; sem liberação ativa, nada muda em relação ao ADR-002.
+3. **Responsabilização:** o Administrador age em nome próprio e tudo fica num log imutável que o Dono consulta.
+4. **Entrega em etapas:** somente leitura primeiro (SPEC-018); escrita, emergência e 2º fator depois (SPEC-019).
+
+##### Alternativas Consideradas
+
+* **Superusuário com acesso livre a todos os negócios:** rejeitado — contraria o papel de operador, a promessa de isolamento da Política e o RNF02.
+* **"Entrar como o usuário" (impersonation):** rejeitado — as ações apareceriam como se fossem do usuário, sem responsabilização real.
+* **Pedir a senha do usuário:** rejeitado — viola o RNF03 e qualquer prática de segurança.
+* **Administrador como membro do negócio (convite):** rejeitado — misturaria o suporte com a equipe, contaria no limite do plano gratuito e não teria prazo nem registro próprio.
+
+##### Consequências
+
+* **Positivas:** suporte possível sem senha; Dono no controle; trilha de auditoria completa; base pronta para a edição da SPEC-019.
+* **Negativas:** nova versão da Política e dos Termos, com novo aceite de todos os usuários; um segundo tipo de contexto de autorização a manter em todas as ações; até a SPEC-019, a conta de Administrador fica sem 2º fator (risco mitigado por somente leitura, liberação do Dono, sessão de 8 h e registro).
+
+**Drivers Relacionados:** RF74–RF78, RN01, RN30–RN32, RNF02, RNF03, RNF04, RNF05, RNF12.

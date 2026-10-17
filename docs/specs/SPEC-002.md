@@ -2,6 +2,7 @@
 
 > **Status:** ✅ **Implementada e verificada na homologação em 04/10/2026** (PR #41) — questões em aberto decididas pela equipe (seção 13); testes T01–T15 no CI, telas e fluxos com e-mail real verificados ([evidências](evidencias/SPEC-002/README.md)). Pendências de configuração (não de código): Resend como SMTP, com os modelos de e-mail editados e o aviso de "você já tem conta" (seção 14). Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar).
 > **Mapa:** [`MAPA_DE_SPECS.md`](../MAPA_DE_SPECS.md) · **Anterior:** [SPEC-001](SPEC-001.md) · **Próximas que dependem desta:** SPEC-004 e SPEC-014.
+> **Evolução prevista pela [SPEC-018](SPEC-018.md) (aprovada em 17/10/2026):** a versão dos termos passa a exigir **novo aceite** a cada mudança (RF78), e a conta de Administrador da plataforma tem sessão de 8 h (RNF12). O comportamento desta Spec continua valendo até a implementação da SPEC-018.
 
 ---
 

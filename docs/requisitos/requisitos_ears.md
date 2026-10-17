@@ -17,13 +17,21 @@
 | RF05 | Ubíquo | O sistema deve disponibilizar três papéis de acesso para atribuição a colaboradores: Dono (acesso total), Gerente (acesso total exceto configurações) e Colaborador (acesso restrito a Vendas, Estoque e Dashboard restrito). |
 | RF06 | Feature opcional | **ONDE** o Dono configurar permissões granulares customizadas para um colaborador (matriz módulo × ação: ver, criar, editar, excluir/cancelar), o sistema deve aplicar essas permissões em vez do papel fixo padrão. |
 | RF72 | Complexo (Evento + Indesejado) | **QUANDO** o Dono convidar um colaborador, o sistema deve enviar por e-mail um link de uso único e com validade, que ao ser aceito torna o convidado membro do negócio com o papel do convite, mesmo que ele ainda não tenha conta; **SE** o link estiver expirado, cancelado ou já usado, **ENTÃO** o sistema deve recusar o aceite. |
-| RN01 | Ubíquo | O sistema deve restringir o acesso de cada colaborador exclusivamente aos negócios aos quais ele foi convidado. |
+| RN01 | Ubíquo | O sistema deve restringir o acesso de cada colaborador exclusivamente aos negócios aos quais ele foi convidado, exceto o acesso de suporte liberado pelo Dono (RN30, RN31). |
 | RN02 | Comportamento indesejado | **SE** um usuário sem o papel de Dono tentar convidar/remover colaboradores ou alterar permissões, **ENTÃO** o sistema deve impedir a ação e manter as permissões inalteradas. |
 | RF58 | Orientado a evento | **QUANDO** o usuário informar o CNPJ no cadastro de um negócio, o sistema deve consultar a base pública de CNPJ da Receita Federal e preencher razão social, CNAE principal e regime tributário (Simples Nacional/MEI). |
 | RF59 | Complexo (Evento + resposta condicional) | **QUANDO** o CNAE principal for obtido, o sistema deve sugerir o Anexo do Simples (ou o tipo de atividade, para MEI) e permitir edição; **SE** a consulta estiver indisponível, **ENTÃO** o sistema deve permitir o preenchimento manual desses dados; **SE** o usuário não possuir CNPJ, **ENTÃO** o sistema deve cadastrar o negócio no regime Autônomo e solicitar o percentual de imposto que ele paga. |
 | RN24 | Ubíquo | O sistema deve aplicar um único Anexo do Simples por negócio sobre todo o faturamento (RBT12) do negócio. |
 | RF69 | Complexo (Estado + Evento) | **ENQUANTO** o CNAE do negócio do Simples for sujeito ao Fator R, **QUANDO** o cálculo de preço for solicitado, o sistema deve calcular Fator R = folha de salários ÷ receita bruta, ambas no mesmo período usado no RBT12, aplicar o Anexo III se Fator R ≥ 28% ou o Anexo V caso contrário (valores parametrizáveis), e avisar quando o anexo efetivo mudar. |
 | RN28 | Comportamento indesejado | **SE** um negócio sujeito ao Fator R ainda não tiver RBT12, **ENTÃO** o sistema deve usar o Anexo V até haver histórico de vendas. |
+| RF74 | Complexo (Estado + Indesejado) | **ENQUANTO** a conta tiver o papel de Administrador da plataforma (concedido apenas por script), o sistema deve mostrar o painel de negócios somente com metadados; **SE** a conta for membro de algum negócio ou tiver convite pendente, **ENTÃO** o sistema deve recusar a concessão do papel. |
+| RF75 | Orientado a evento | **QUANDO** o Dono liberar o acesso do suporte informando motivo, módulos e prazo (1 h, 24 h, 3 dias ou 7 dias), o sistema deve registrar a liberação, que vale até expirar ou até o Dono revogá-la. |
+| RF76 | Complexo (Estado + Indesejado) | **ENQUANTO** houver liberação ativa, o sistema deve permitir que o Administrador veja somente os módulos liberados, em somente leitura e com dados pessoais mascarados; **SE** o Administrador tentar qualquer escrita ou acessar o negócio sem liberação ativa, **ENTÃO** o sistema deve recusar a operação. |
+| RF77 | Orientado a evento | **QUANDO** houver liberação, revogação, entrada, tela aberta ou saída do modo suporte, o sistema deve registrar o evento com data, hora e autor e exibi-lo ao Dono em "Acessos do suporte". |
+| RF78 | Comportamento indesejado | **SE** a versão aceita da Política de Privacidade e dos Termos for diferente da vigente, **ENTÃO** o sistema deve exigir o novo aceite antes de liberar o uso do app, permitindo apenas Minha conta e Sair. |
+| RN30 | Comportamento indesejado | **SE** o Administrador tentar acessar dados operacionais de um negócio sem liberação ativa do Dono, **ENTÃO** o sistema deve recusar o acesso. |
+| RN31 | Comportamento indesejado | **SE** alguém que não seja o Dono tentar liberar ou revogar o acesso do suporte, **ENTÃO** o sistema deve recusar a operação. |
+| RN32 | Comportamento indesejado | **SE** houver tentativa de alterar ou apagar um registro de auditoria do suporte, **ENTÃO** o sistema deve recusar a operação. |
 
 ---
 
@@ -167,7 +175,7 @@
 | ID | Padrão | Requisito EARS |
 |---|---|---|
 | RNF01 | Ubíquo | O sistema deve ser uma aplicação web acessível via navegador, com layout responsivo para desktop e mobile. |
-| RNF02 | Ubíquo | O sistema deve isolar logicamente os dados de cada negócio, impedindo acesso cruzado entre contas (arquitetura multi-tenant), inclusive por acesso direto à API pública do provedor do banco. |
+| RNF02 | Ubíquo | O sistema deve isolar logicamente os dados de cada negócio, impedindo acesso cruzado entre contas (arquitetura multi-tenant), inclusive por acesso direto à API pública do provedor do banco, exceto o acesso de suporte liberado pelo Dono (RN30, RN31). |
 | RNF03 | Ubíquo | O sistema deve armazenar as senhas dos usuários utilizando hash seguro. |
 | RNF04 | Orientado a evento | **QUANDO** o titular solicitar a exportação dos seus dados, o sistema deve gerar um arquivo .zip com os dados em JSON (completo) e CSV (por tabela); o sistema deve ainda manter política de privacidade e consentimento explícito. |
 | RN27 | Orientado a evento | **QUANDO** o usuário solicitar a exclusão da conta, o sistema deve bloquear o acesso, anonimizar seus dados pessoais e os dos clientes dos negócios em que for o único Dono, e manter por 5 anos os registros fiscais e financeiros sem identificação pessoal. |
@@ -179,3 +187,4 @@
 | RNF09 | Ubíquo | O sistema deve manter backup diário do banco: dump automatizado e privado enquanto estiver no plano gratuito do Supabase; backup nativo do plano pago em produção, mantendo o dump como cópia externa. |
 | RNF10 | Ubíquo | O sistema deve manter uma arquitetura extensível nos módulos e no dashboard, suportando novos indicadores e integrações (Nota Fiscal, PIX, gateway de pagamento) sem reestruturação do core. |
 | RNF11 | Ubíquo | O sistema deve manter ambientes separados de desenvolvimento, homologação e produção, com banco e credenciais próprios em cada um. |
+| RNF12 | Comportamento indesejado | **SE** a sessão de uma conta de Administrador tiver mais de 8 h desde a entrada, **ENTÃO** o sistema deve recusá-la e exigir novo login. |

@@ -37,13 +37,21 @@
 | RF58 | Ao cadastrar um negócio, o sistema deve solicitar o CNPJ e consultar a base pública de CNPJ da Receita Federal para preencher automaticamente razão social, CNAE principal e opção pelo Simples Nacional/MEI (regime tributário). |
 | RF69 | Para negócios do Simples Nacional cujo CNAE seja sujeito ao **Fator R**, o sistema deve calcular Fator R = folha de salários (lançamentos da categoria Salário) ÷ receita bruta, ambas no mesmo período usado no RBT12 (RN21), e aplicar o Anexo III quando Fator R ≥ 28% ou o Anexo V caso contrário (limite e anexos parametrizáveis — RN17), avisando o usuário quando o anexo efetivo mudar. |
 | RF59 | A partir do CNAE principal, o sistema deve sugerir o **Anexo do Simples Nacional** do negócio (tabela oficial CNAE → Anexo) ou, para MEI, o tipo de atividade (comércio/indústria, serviços ou ambos), permitindo edição. Quando a consulta estiver indisponível, esses dados devem ser preenchidos manualmente. Para **autônomos sem CNPJ**, o regime do negócio é **Autônomo** e o usuário informa o percentual de imposto que paga (ex.: ISS e IR estimados), usado como Imposto% na Calculadora (RF38). |
+| RF74 | O sistema deve ter o papel de **Administrador da plataforma**, concedido e retirado apenas por script da equipe (nunca por tela), numa conta **exclusiva** que não é membro de nenhum negócio. O Administrador vê um painel com os negócios da plataforma **somente por metadados** (nome, regime, plano, data de criação, número de membros, situação, nome e e-mail do Dono e situação do acesso de suporte), sem dados operacionais (SPEC-018). |
+| RF75 | O Dono deve poder **liberar o acesso do suporte** ao seu negócio, informando o motivo, os módulos liberados e o prazo (1 h, 24 h, 3 dias ou 7 dias), e **revogar** a liberação a qualquer momento (SPEC-018). |
+| RF76 | Com uma liberação ativa, o Administrador deve poder entrar no negócio em **modo suporte**, vendo apenas os módulos liberados, **somente leitura** (a edição é da SPEC-019), com faixa de aviso e com nome e contato de clientes e e-mails de membros mascarados (SPEC-018). |
+| RF77 | O sistema deve registrar cada liberação, revogação, entrada, tela aberta e saída do modo suporte, com data, hora e autor, e mostrar esse registro ao Dono na tela "Acessos do suporte"; os membros veem uma faixa enquanto a liberação estiver ativa, e o Dono recebe e-mail ao liberar e na primeira entrada do suporte (SPEC-018). |
+| RF78 | Quando a Política de Privacidade ou os Termos de Uso mudarem de versão, o sistema deve exigir o **novo aceite** de cada usuário no próximo acesso, mostrando o resumo das mudanças e registrando a versão e a data do aceite; até aceitar, o usuário só acessa Minha conta e Sair (SPEC-018). |
 
 ### Regras de Negócio
 
-- **RN01** — Todos os dados (produtos, estoque, vendas, financeiro) são isolados por negócio; um colaborador só acessa os dados do(s) negócio(s) ao qual foi convidado.
+- **RN01** — Todos os dados (produtos, estoque, vendas, financeiro) são isolados por negócio; um colaborador só acessa os dados do(s) negócio(s) ao qual foi convidado. A única exceção é o acesso de suporte liberado pelo Dono (RN30, RN31).
 - **RN02** — Apenas o papel Dono pode convidar/remover colaboradores e alterar permissões.
 - **RN24** — O Anexo do Simples é definido **por negócio** e aplicado a todo o faturamento (RBT12) do negócio. A separação do imposto por atividade (negócios com produto e serviço em anexos diferentes) fica fora do MVP, e o sistema exibe um aviso sobre essa simplificação.
 - **RN28** — O anexo efetivo de um negócio sujeito ao Fator R é recalculado a cada cálculo de preço; sem RBT12 (negócio sem vendas), usa-se o Anexo V até haver histórico.
+- **RN30** — O Administrador da plataforma não acessa nenhum dado operacional de um negócio sem uma liberação ativa do Dono; com ela, acessa só os módulos liberados, somente para leitura (edição e acesso de emergência: SPEC-019), sempre em seu próprio nome, nunca "entrando como" o usuário.
+- **RN31** — Apenas o Dono libera e revoga o acesso do suporte; o prazo é de 1 h, 24 h, 3 dias ou 7 dias; existe no máximo uma liberação ativa por negócio (uma nova substitui a anterior); negócio encerrado não pode ser liberado.
+- **RN32** — O registro de auditoria do suporte nunca é alterado nem apagado e é guardado por 5 anos, inclusive depois da exclusão da conta do Dono (já sem identificação pessoal).
 
 ---
 
@@ -219,7 +227,7 @@
 | ID | Descrição |
 |---|---|
 | RNF01 | A aplicação deve ser web, acessível via navegador, com layout responsivo para desktop e mobile. |
-| RNF02 | Os dados de cada negócio devem ser isolados logicamente dos demais (arquitetura multi-tenant), impedindo acesso cruzado entre contas — inclusive por acesso direto à API pública do provedor do banco. |
+| RNF02 | Os dados de cada negócio devem ser isolados logicamente dos demais (arquitetura multi-tenant), impedindo acesso cruzado entre contas — inclusive por acesso direto à API pública do provedor do banco. A única exceção é o acesso de suporte liberado pelo Dono (RN30, RN31), conferido no servidor a cada requisição. |
 | RNF03 | Senhas de usuário devem ser armazenadas com hash seguro, nunca em texto plano. |
 | RNF04 | O sistema deve estar em conformidade com a LGPD, incluindo política de privacidade, consentimento explícito e mecanismos de exportação/exclusão de dados pessoais. A exportação gera um arquivo .zip com os dados do titular em JSON (completo) e CSV (por tabela). A exclusão de conta segue a RN27. |
 | RNF05 | Alterações em estoque (entrada, saída manual) e em preço devem manter registro auditável (data, usuário responsável, valor anterior e novo, motivo quando aplicável). Os próprios registros de movimentação de estoque e de histórico de preço são o log: nunca são alterados nem apagados. |
@@ -229,6 +237,7 @@
 | RNF09 | O sistema deve manter rotina de backup diário dos dados: enquanto o banco estiver no plano gratuito do Supabase, um dump diário automatizado (GitHub Actions) guardado de forma privada; em produção, o backup diário nativo do plano pago do Supabase, mantendo o dump como cópia externa. |
 | RNF10 | A arquitetura do Dashboard e dos módulos deve ser extensível, suportando a adição de novos indicadores e integrações (Nota Fiscal, PIX, gateway de pagamento) sem necessidade de reestruturação do core. |
 | RNF11 | O sistema deve ter ambientes separados de **desenvolvimento**, **homologação** e **produção**, cada um com banco e credenciais próprios: homologação atualizada a cada integração na branch `DEVELOP` e produção a cada versão estável na `main`. Dados reais de clientes existem somente em produção. |
+| RNF12 | A sessão de uma conta de Administrador da plataforma deve expirar 8 h após a entrada, exigindo novo login. O segundo fator de autenticação (TOTP) do Administrador é obrigatório a partir da SPEC-019, antes da edição em modo suporte. |
 
 ---
 
@@ -243,7 +252,7 @@
 
 | ID | Regra |
 |---|---|
-| RN01 | Dados isolados por negócio; colaborador só acessa negócios aos quais foi convidado. |
+| RN01 | Dados isolados por negócio; colaborador só acessa negócios aos quais foi convidado; exceção: acesso de suporte liberado pelo Dono (RN30, RN31). |
 | RN02 | Apenas o Dono pode convidar/remover colaboradores e alterar permissões. |
 | RN03 | Produto Físico é criado com estoque inicial zero. |
 | RN04 | Tipo do item (Físico/Serviço) determina participação no Estoque e possibilidade de materiais vinculados. |
@@ -272,6 +281,9 @@
 | RN27 | Exclusão de conta anonimiza dados pessoais e mantém registros fiscais/financeiros por 5 anos sem identificação. |
 | RN28 | Anexo efetivo sujeito ao Fator R recalculado a cada cálculo; sem RBT12, usa o Anexo V. |
 | RN29 | Datas em UTC; dia, mês e competência calculados em America/Sao_Paulo. |
+| RN30 | Administrador sem liberação ativa do Dono não acessa dados operacionais; com ela, só os módulos liberados, somente leitura, em nome próprio. |
+| RN31 | Só o Dono libera e revoga o suporte; prazo de 1 h, 24 h, 3 dias ou 7 dias; uma liberação ativa por negócio. |
+| RN32 | Registro de auditoria do suporte imutável, guardado por 5 anos. |
 
 ---
 
