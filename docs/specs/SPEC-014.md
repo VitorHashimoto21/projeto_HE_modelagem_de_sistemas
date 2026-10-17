@@ -2,6 +2,7 @@
 
 > **Status:** ✅ **Implementada e verificada na homologação em 11/10/2026** (PR #70) — questões em aberto decididas pela equipe (seção 13), todas pela opção recomendada; testes T01–T11 no CI, telas em build de produção com login (T12) e fluxo na homologação (T13) — [evidências](evidencias/SPEC-014/README.md). Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar).
 > **Mapa:** [`MAPA_DE_SPECS.md`](../MAPA_DE_SPECS.md) · **Anteriores:** [SPEC-002](SPEC-002.md) (conta, consentimento e bloqueio de conta excluída), [SPEC-004](SPEC-004.md) (negócios e o Dono), [SPEC-005](SPEC-005.md) (equipe e convites), [SPEC-008](SPEC-008.md) (clientes nas vendas) e [SPEC-013](SPEC-013.md) (CSV e arquivos de exportação) · **Próximas que dependem desta:** nenhuma.
+> **Evolução prevista pela [SPEC-018](SPEC-018.md) (aprovada em 17/10/2026):** a exportação passa a incluir as liberações e o registro do acesso de suporte dos negócios do titular, e a exclusão de conta revoga as liberações ativas dos negócios encerrados (o registro é mantido por 5 anos, RN32).
 
 ---
 
