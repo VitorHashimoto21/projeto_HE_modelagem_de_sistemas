@@ -77,8 +77,9 @@ describe("T02 — liberação: validação, prazos, situação e matriz só de l
     expect(Object.values(m).every((acoes) => !acoes.criar && !acoes.editar && !acoes.excluir)).toBe(true);
   });
 
-  it("menu do suporte: só o que se lê, sem Nova venda nem Configurações", () => {
-    expect(menuDoSuporte(matrizDoSuporte(["vendas", "estoque"])).map((i) => i.href)).toEqual(["/estoque", "/vendas", "/relatorios"]);
+  it("menu do suporte: só o que se lê, sem Nova venda, Relatórios nem Configurações", () => {
+    expect(menuDoSuporte(matrizDoSuporte(["vendas", "estoque"])).map((i) => i.href)).toEqual(["/estoque", "/vendas"]);
+    expect(menuDoSuporte(matrizDoSuporte(["vendas", "financeiro"])).map((i) => i.href)).toEqual(["/vendas", "/financeiro"]);
     expect(menuDoSuporte(matrizDoSuporte(["dashboard"])).map((i) => i.href)).toEqual(["/painel"]);
   });
 

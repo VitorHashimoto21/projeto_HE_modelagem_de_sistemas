@@ -191,6 +191,15 @@ export async function exigirMembro(): Promise<ContextoDoMembro> {
   return r.membro;
 }
 
+/**
+ * Relatórios (página e exportação): cruzam módulos e ficam fora do modo suporte (SPEC-018,
+ * decisão da homologação). A recusa vem antes da guarda, para não registrar a tela.
+ */
+export async function exigirMembroForaDoSuporte(): Promise<ContextoDoMembro> {
+  if ((await obterContexto())?.suporte) redirect(ROTA_SEM_ACESSO);
+  return exigirMembro();
+}
+
 /** Configurações do negócio: só o Dono (OPEN-002); os demais veem "Sem acesso". */
 export async function exigirDono(): Promise<ContextoDoMembro> {
   return (await exigirNivel({ tipo: "dono" })).membro!;

@@ -53,12 +53,13 @@ export function menuDoMembro(papel: Papel | null, permissoes: Matriz | null, pla
 /**
  * Menu do modo suporte (SPEC-018, 5.5): só os módulos liberados, só o que se lê — sem
  * "Nova venda", "Lançar despesa" nem Configurações. O Painel entra só com o Dashboard liberado.
+ * Relatórios (`algum`) cruzam módulos e ficam fora do modo suporte (decisão da homologação, 18/10/2026).
  */
-export function menuDoSuporte(permissoes: Matriz, plano: Plano = "PAGO"): ItemDoMenu[] {
+export function menuDoSuporte(permissoes: Matriz): ItemDoMenu[] {
   return ITENS.filter(({ exige }) => {
     if (exige === "dono") return false;
     if (exige === "membro") return pode(permissoes, "dashboard", "ver");
-    if ("algum" in exige) return exige.algum.some((e) => pode(permissoes, e.modulo, e.acao));
+    if ("algum" in exige) return false;
     return exige.acao === "ver" && pode(permissoes, exige.modulo, exige.acao) && !exige.semAcao;
-  }).map(({ rotulo, href }) => (href === "/relatorios" && !podeNoPlano(plano, "relatorios") ? { rotulo, href, selo: "Plano pago" } : { rotulo, href }));
+  }).map(({ rotulo, href }) => ({ rotulo, href }));
 }
