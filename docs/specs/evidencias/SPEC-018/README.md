@@ -43,6 +43,7 @@ Feita pela equipe em <https://he-homol.vercel.app> (DEVELOP, depois dos PRs #85 
 | Venda nº 19: "cliente V*** F***", sem "Cancelar venda" nem outras ações de escrita (CA-04, CA-05) | ✅ | `homol_11_modo_suporte_venda_19_1365_escuro.png` |
 | Registro para o Dono: "liberou o acesso", "entrou em modo suporte", cada tela vista ("Vendas — histórico (ontem)", "Vendas — venda nº 19"…) e "saiu do modo suporte", com data, hora e nome; as liberações anteriores aparecem como revogadas (CA-06) | ✅ | `homol_12_registro_1440_escuro.png` |
 | Dono revoga com o suporte dentro: a próxima tela leva o suporte ao painel com "O Dono revogou o acesso do suporte." e o negócio passa a "Sem liberação" (CA-07) | ✅ | `homol_13_admin_revogado_1365_escuro.png` |
+| Celular (390 px), ao rolar o Estoque e as Vendas em modo suporte: a faixa âmbar passava **por cima** do cabeçalho fixo (nome do negócio e perfil). Corrigido no PR #89: no celular, a faixa rola por baixo do cabeçalho; a partir de 768 px continua fixa no topo (verificado em build local) | ❌ → ✅ | — |
 
 Não verificado na homologação: o **e-mail ao Dono** (liberação e primeira entrada), que depende do domínio próprio no Resend ([ADR-009](../../../definicoes_arquitetura/adrs-he.md)); o aviso no sistema (faixa e registro) cobre, como previsto na seção 5.6.
 
