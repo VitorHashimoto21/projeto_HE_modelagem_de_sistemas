@@ -26,18 +26,25 @@ Roteiro automatizado no navegador: **47 verificações, todas aprovadas**. As ca
 | Dono revoga (diálogo de confirmação) com o Administrador dentro → a próxima tela leva o Administrador ao painel com "O Dono revogou o acesso do suporte."; entrada desabilitada | ✅ | `revogar_dialogo_1440_claro.png` |
 | Sem rolagem horizontal em todas as telas capturadas | ✅ | — |
 
-## Homologação (T13) — em andamento desde 18/10/2026
+## Homologação (T13) — 18/10/2026
 
-Feita pela equipe em <https://he-homol.vercel.app> (DEVELOP, depois do merge do PR #85), com a conta exclusiva do suporte (papel concedido pelo workflow **Administradores**, ambiente `homologacao`) e o Dono do negócio **HE Testing**. Capturas em [`homologacao/`](homologacao/); nelas, os e-mails pessoais foram ocultados.
+Feita pela equipe em <https://he-homol.vercel.app> (DEVELOP, depois dos PRs #85 e #87), com a conta exclusiva do suporte (papel concedido pelo workflow **Administradores**, ambiente `homologacao`) e o Dono do negócio **HE Testing**, em dois navegadores. Capturas em [`homologacao/`](homologacao/); nelas, os e-mails pessoais foram ocultados.
 
 | Passo | Resultado | Captura |
 |---|---|---|
-| Dono que aceitou a versão anterior entra e vê "Atualizamos nossos termos", com o resumo do que mudou (acesso do suporte), a caixa de aceite e os atalhos "Exportar meus dados ou excluir a conta" e "Sair" (CA-10) | ✅ | `homol_01_aceite_2000_claro.png`, `homol_02_aceite_2000_escuro.png` |
-| Painel do administrador: 4 negócios só com os dados de cadastro (nome, regime, plano, criação, membros, Dono) e a situação do acesso; "HE Testing" com "Liberado até 19/10, 17:50" (CA-01) | ✅ | `homol_03_admin_painel_1365_claro.png`, `homol_04_admin_painel_1365_escuro.png` |
-| Ficha do negócio: cadastro sem vendas, valores, clientes ou estoque; liberação com o motivo, os módulos (Estoque, Vendas — somente leitura) e o botão "Entrar em modo suporte" (CA-01, CA-03) | ✅ | `homol_05_admin_ficha_1365_escuro.png` |
-| Modo suporte com Vendas e Estoque liberados: o item **"Relatórios"** apareceu no menu (regra da SPEC-013: Vendas *ou* Financeiro). Decisão da equipe: Relatórios fora do modo suporte — corrigido no PR #87 (SPEC-018, seção 9) | ❌ → corrigido | refazer depois do PR #87 |
+| Dono que aceitou a versão anterior entra e vê "Atualizamos nossos termos", com o resumo do que mudou, a caixa de aceite e os atalhos "Exportar meus dados ou excluir a conta" e "Sair"; depois do aceite, volta ao app (CA-10) | ✅ | `homol_01_aceite_1440_claro.png`, `homol_02_aceite_1440_escuro.png`, `homol_03_meus_negocios_apos_aceite_1440_claro.png` |
+| Dono libera o acesso: motivo "as vendas de ontem não aparecem no caixa", **Estoque e Vendas**, 24 horas (CA-03) | ✅ | `homol_04_liberar_acesso_1440_claro.png` |
+| Liberação ativa até 19/10, 17:50, com o registro "Rafael Leader liberou o acesso" e a faixa do Dono com "Ver acessos do suporte" (CA-03) | ✅ | `homol_05_acesso_liberado_1440_claro.png` |
+| Painel do administrador: 4 negócios só com os dados de cadastro (nome, regime, plano, criação, membros, Dono) e a situação do acesso (CA-01) | ✅ | `homol_06_admin_painel_1365_claro.png`, `homol_07_admin_painel_1365_escuro.png` |
+| Ficha do HE Testing: cadastro sem vendas, valores, clientes ou estoque; liberação com motivo, módulos e "Entrar em modo suporte". É também a tela a que o suporte volta ao sair do modo suporte (CA-01, CA-03) | ✅ | `homol_08_admin_ficha_1365_escuro.png` |
+| Negócio sem liberação (RafaEletroServices): "O Dono ainda não liberou o acesso" e o botão de entrada desabilitado (CA-02) | ✅ | `homol_09_admin_sem_liberacao_1365_escuro.png` |
+| Primeira rodada: o item **"Relatórios"** apareceu no menu do suporte com só Vendas e Estoque liberados (regra da SPEC-013). Decisão da equipe: Relatórios fora do modo suporte — corrigido no PR #87 (seção 9 da Spec) | ❌ → ✅ | — |
+| Modo suporte (depois do PR #87), Vendas de ontem: faixa âmbar "Modo suporte · HE Testing · somente leitura", menu só com **Estoque e Vendas**, sem "Nova venda", clientes como "V*** F***" (CA-04, CA-05) | ✅ | `homol_10_modo_suporte_vendas_1365_escuro.png` |
+| Venda nº 19: "cliente V*** F***", sem "Cancelar venda" nem outras ações de escrita (CA-04, CA-05) | ✅ | `homol_11_modo_suporte_venda_19_1365_escuro.png` |
+| Registro para o Dono: "liberou o acesso", "entrou em modo suporte", cada tela vista ("Vendas — histórico (ontem)", "Vendas — venda nº 19"…) e "saiu do modo suporte", com data, hora e nome; as liberações anteriores aparecem como revogadas (CA-06) | ✅ | `homol_12_registro_1440_escuro.png` |
+| Dono revoga com o suporte dentro: a próxima tela leva o suporte ao painel com "O Dono revogou o acesso do suporte." e o negócio passa a "Sem liberação" (CA-07) | ✅ | `homol_13_admin_revogado_1365_escuro.png` |
 
-Próximas capturas: modo suporte (faixa, menu só com Estoque e Vendas, venda com cliente mascarado), saída, registro para o Dono e revogação (CA-04 a CA-07).
+Não verificado na homologação: o **e-mail ao Dono** (liberação e primeira entrada), que depende do domínio próprio no Resend ([ADR-009](../../../definicoes_arquitetura/adrs-he.md)); o aviso no sistema (faixa e registro) cobre, como previsto na seção 5.6.
 
 ## Testes automatizados
 
@@ -47,5 +54,4 @@ Próximas capturas: modo suporte (faixa, menu só com Estoque e Vendas, venda co
 
 ## Pendente
 
-- **T13** — em andamento (seção acima): faltam as capturas do modo suporte, do registro e da revogação.
 - A sessão de 8 h do Administrador está coberta pelos testes unitários; não foi exercitada no navegador (exigiria esperar 8 h ou forjar o horário da entrada).

@@ -411,7 +411,7 @@ A conferência do seed fiscal foi concluída em 03/10/2026 (DAS do MEI atualizad
 - SPEC-015 (opcional): não iniciada; depende da aprovação do ADR-007.
 - [SPEC-016](specs/SPEC-016.md): implementada (PR #72) e verificada na homologação (15/10/2026); ajustes da homologação corrigidos (PRs #74 e #75) e aprovados nos testes da equipe (16/10/2026); notas N1–N5 da seção 15 decididas em 16/10/2026 (diálogo de confirmação e taxa da maquininha nos Relatórios implementados).
 - [SPEC-017](specs/SPEC-017.md): implementada (PR #82, 16/10/2026) e verificada na homologação (17/10/2026).
-- [SPEC-018](specs/SPEC-018.md): aprovada e implementada (17/10/2026); homologação (T13) em andamento desde 18/10/2026 — "Relatórios" fora do modo suporte, decidido na homologação e corrigido no PR #87; falta a decisão da divergência da seção 9 (faixa do modo suporte no celular).
+- [SPEC-018](specs/SPEC-018.md): implementada (17/10/2026) e verificada na homologação (18/10/2026) — "Relatórios" fora do modo suporte, decidido na homologação e corrigido no PR #87; falta a decisão da divergência da seção 9 (faixa do modo suporte no celular).
 - SPEC-019: a gerar depois da SPEC-018 (escopo combinado na seção 2.2).
 - `main`: atualizada até a SPEC-018 (PR #86, 17/10/2026), sem ambiente de produção ainda (a migração na `main` é pulada enquanto não houver o banco de produção).
 - **E-mails e domínio:** domínio próprio `.com.br` (Registro.br) verificado no Resend, que também passa a ser o SMTP do Supabase Auth ([ADR-009](definicoes_arquitetura/adrs-he.md), 18/10/2026); aguarda a compra.
@@ -422,7 +422,7 @@ Lista mantida até cada item ser resolvido; quem retomar o projeto (em qualquer 
 
 | # | Pendência | Situação |
 |---|---|---|
-| 1 | **SPEC-018** (Administrador e acesso de suporte): concluir a homologação (T13) — conta do suporte já criada e papel concedido pelo workflow **Administradores**; refazer as capturas do modo suporte depois do PR #87 (Relatórios) — e decisão da divergência da seção 9 (faixa no celular) | Em andamento |
+| 1 | **SPEC-018** (Administrador e acesso de suporte): homologação (T13) concluída em 18/10/2026; falta a decisão da divergência da seção 9 (faixa do modo suporte no celular) para fechar a Spec | Aguardando a equipe |
 | 2 | **SPEC-019** (suporte com edição, emergência, ações de plataforma e **2º fator do Administrador**): gerar depois da SPEC-018 | Aberta |
 | 3 | **Textos legais** (`docs/legal/`): preencher os campos entre colchetes (responsável, e-mail de contato, cidade/UF, região do Supabase) e revisão do grupo; a nova versão com o acesso de suporte entra na SPEC-018 | Aberta |
 | 4 | **SPEC-015** (cobrança real pelo Stripe): decidir se fica fora do MVP; depende do ADR-007 (proposta) | Aberta |

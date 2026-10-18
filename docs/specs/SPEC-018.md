@@ -1,6 +1,6 @@
 # SPEC-018 — Administrador da plataforma e acesso de suporte (somente leitura)
 
-> **Status:** 🔵 **Aprovada e implementada em 17/10/2026; verificação na homologação pendente (T13)** — questões em aberto decididas pela equipe em entrevista (seção 13), todas pela opção recomendada, com a OPEN-002 (2º fator) adiada para a SPEC-019 a pedido da equipe; baseline ajustada (RF74–RF78, RN30–RN32, RNF02, RNF12 e ADR-008); onde o script roda decidido em 17/10/2026 (workflow manual, 5.1); testes T01–T11 automatizados e telas verificadas em build local (T12) — [evidências](evidencias/SPEC-018/README.md). Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar), a partir de uma necessidade identificada pela equipe em 17/10/2026.
+> **Status:** 🔵 **Implementada (17/10/2026) e verificada na homologação em 18/10/2026 (T13); falta a decisão da faixa no celular (seção 9)** — questões em aberto decididas pela equipe em entrevista (seção 13), todas pela opção recomendada, com a OPEN-002 (2º fator) adiada para a SPEC-019 a pedido da equipe; baseline ajustada (RF74–RF78, RN30–RN32, RNF02, RNF12 e ADR-008); onde o script roda decidido em 17/10/2026 (workflow manual, 5.1); testes T01–T11 automatizados e telas verificadas em build local (T12); fluxo completo na homologação (T13), com "Relatórios" retirado do modo suporte (PR #87) — [evidências](evidencias/SPEC-018/README.md). Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar), a partir de uma necessidade identificada pela equipe em 17/10/2026.
 > **Mapa:** [`MAPA_DE_SPECS.md`](../MAPA_DE_SPECS.md) · **Altera:** [SPEC-002](SPEC-002.md) (sessão e aceite dos termos), [SPEC-005](SPEC-005.md) (contexto e permissões) e [SPEC-014](SPEC-014.md) (exportação e exclusão) · **Usa:** [SPEC-001](SPEC-001.md) (isolamento), [SPEC-004](SPEC-004.md) (negócio), [SPEC-009](SPEC-009.md) (rotina diária), [SPEC-016](SPEC-016.md) (componentes) · **Continua em:** SPEC-019 (edição em modo suporte, emergência, ações de plataforma e 2º fator).
 
 ---
@@ -351,9 +351,9 @@ Todas decididas pela equipe em 17/10/2026, em entrevista, pela opção recomenda
 
 A SPEC-018 estará concluída quando:
 
-- [x] todos os critérios de aceitação (CA-01 a CA-12) estiverem implementados — por testes e no navegador (build local); a homologação (T13) fica para depois do merge;
+- [x] todos os critérios de aceitação (CA-01 a CA-12) estiverem implementados — por testes, no navegador (build local) e na homologação (T13, 18/10/2026); o e-mail ao Dono depende do domínio próprio (ADR-009);
 - [x] todos os invariantes (INV-001 a INV-010) estiverem preservados;
-- [ ] os testes derivados (T01 a T13) estiverem aprovados, com o CI verde no PR — T01 a T11 automatizados, T12 com capturas; falta o T13 (homologação);
+- [x] os testes derivados (T01 a T13) estiverem aprovados, com o CI verde no PR — T01 a T11 automatizados, T12 com capturas, T13 na homologação (18/10/2026);
 - [x] os RNFs aplicáveis (RNF01, RNF02, RNF04, RNF05, RNF12) tiverem sido verificados como descrito na seção 10;
 - [x] as questões OPEN-001 a OPEN-012 tiverem sido decididas e registradas (17/10/2026), com a baseline ajustada (RF74–RF78, RN30–RN32, RN01, RNF02, RNF12, ADR-008);
 - [x] a Política de Privacidade e os Termos de Uso estiverem atualizados na nova versão (2026-10-17; rascunho, com a revisão do grupo pendente);
