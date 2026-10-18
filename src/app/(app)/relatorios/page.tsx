@@ -10,7 +10,7 @@ import { classeDoBotao } from "@/components/ui/estilos";
 import { Segmentos } from "@/components/ui/segmentos";
 import { Selo } from "@/components/ui/selo";
 import { Superficie, TituloDaSuperficie } from "@/components/ui/superficie";
-import { exigirMembro } from "@/lib/auth/servidor";
+import { exigirMembroForaDoSuporte } from "@/lib/auth/servidor";
 import { precificacao } from "@/lib/db";
 import { pode } from "@/lib/dominio/permissoes";
 import { ROTA_SEM_ACESSO } from "@/lib/auth/rotas";
@@ -34,9 +34,9 @@ const texto = (v: string | string[] | undefined) => (typeof v === "string" ? v :
 
 // Relatórios do plano pago (SPEC-013, RF70, RF71): no gratuito, a oferta de upgrade
 // (OPEN-004); cada relatório exige as permissões do OPEN-003, conferidas também na rota
-// de exportação.
+// de exportação. Fora do modo suporte (SPEC-018).
 export default async function Relatorios({ searchParams }: PageProps<"/relatorios">) {
-  const membro = await exigirMembro();
+  const membro = await exigirMembroForaDoSuporte();
   const permitidos = relatoriosPermitidos(membro.permissoes);
   if (permitidos.length === 0) redirect(ROTA_SEM_ACESSO);
   const [plano, busca] = await Promise.all([planoDoMembro(membro), searchParams]);

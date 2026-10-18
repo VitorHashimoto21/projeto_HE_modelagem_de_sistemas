@@ -144,7 +144,7 @@ O Administrador é um ator **da plataforma**, não do negócio. Por padrão, ele
 
 1. "Entrar em modo suporte" confere a liberação no servidor, registra `ENTRADA` e grava o cookie de suporte (id da liberação). Na primeira entrada da liberação, envia o e-mail ao Dono.
 2. A cada requisição, o contexto é montado **a partir da liberação** (nunca só do cookie): conta de Administrador + liberação ativa (não expirada, não revogada) + negócio da liberação. A matriz efetiva tem apenas *ver* nos módulos liberados.
-3. O menu mostra só os módulos liberados; Configurações não aparece.
+3. O menu mostra só os módulos liberados; Configurações e Relatórios não aparecem (Relatórios cruzam módulos; decisão da homologação, 18/10/2026).
 4. Cada página aberta registra `TELA` com o módulo e uma descrição curta (ex.: "Vendas — histórico 01/10 a 17/10", "Vendas — venda nº 15"). Se o registro falhar, a página não é mostrada (INV-005).
 5. Nenhuma Server Action que grava aceita o contexto de suporte (INV-002). Botões de escrita não aparecem, como acontece hoje para quem não tem a permissão.
 6. Dados pessoais mascarados (INV-006):
@@ -261,6 +261,7 @@ O Administrador é um ator **da plataforma**, não do negócio. Por padrão, ele
 - **Faixa do modo suporte no celular:** fixa no topo a partir de 768 px; no celular, o cabeçalho fixo mostra o nome do negócio em âmbar e a faixa fica no início da página (rola com ela), para não sobrepor o cabeçalho. Proposta: (2) aceitar na baseline.
 - **Minha conta do Administrador** continua acessível (é a conta dele, não dados de negócio), dentro ou fora do modo suporte.
 - **Máscara:** os dados de clientes aparecem só nas Vendas (histórico, detalhe e lista de clientes), onde a máscara é aplicada; e-mails de membros não aparecem em nenhuma tela de módulo. Campos de texto livre (motivo de ajuste de preço, descrições) não são mascarados.
+- **Relatórios fora do modo suporte** (homologação, 18/10/2026): na implementação, o item "Relatórios" seguia a regra da SPEC-013 (aparece com Vendas *ou* Financeiro — ver) e surgiu no modo suporte com só Vendas e Estoque liberados. A equipe decidiu (1) corrigir a implementação: o menu do suporte não mostra Relatórios, e a página e a exportação recusam no modo suporte antes de registrar a tela ("Sem acesso"). Os mesmos dados de vendas continuam visíveis em Vendas.
 - **Sessão de 8 h** sem o `amr` no JWT é tratada como vencida (falha fechada); coberta por testes unitários, não exercitada no navegador.
 
 ---
