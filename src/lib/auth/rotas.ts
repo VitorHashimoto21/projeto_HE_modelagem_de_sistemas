@@ -11,12 +11,23 @@ export const ROTA_NOVA_SENHA = "/nova-senha";
 export const ROTA_LINK_INVALIDO = "/link-invalido";
 /** Área sem permissão (SPEC-005, 5.5). */
 export const ROTA_SEM_ACESSO = "/sem-acesso";
+/** Painel do Administrador da plataforma (SPEC-018, 5.3). */
+export const ROTA_ADMIN = "/admin";
+/** Novo aceite da política e dos termos (SPEC-018, RF78). */
+export const ROTA_ACEITE_DOS_TERMOS = "/aceite-dos-termos";
+/** Sessão do Administrador vencida (SPEC-018, RNF12): encerra a sessão e volta ao login. */
+export const ROTA_SESSAO_EXPIRADA = "/auth/sessao-expirada";
+/** Cabeçalho com o caminho da página, gravado pelo proxy (registro das telas do modo suporte — SPEC-018). */
+export const CABECALHO_CAMINHO = "x-he-caminho";
 
 /** Páginas só para quem não está autenticado (quem já entrou vai para a inicial). */
 const SO_SEM_SESSAO = ["/entrar", "/cadastro", "/esqueci-a-senha"];
 
-/** Páginas abertas a todos, com ou sem sessão. O convite (SPEC-005, 5.3) decide sozinho o que mostrar. */
-const PUBLICAS = ["/link-invalido", "/privacidade", "/termos", "/auth", "/api/saude", "/convite"];
+/**
+ * Páginas abertas a todos, com ou sem sessão. O convite (SPEC-005, 5.3) decide sozinho o que
+ * mostrar; a rotina diária (SPEC-009) exige o próprio segredo (CRON_SECRET), não uma sessão.
+ */
+const PUBLICAS = ["/link-invalido", "/privacidade", "/termos", "/auth", "/api/saude", "/convite", "/api/rotinas"];
 
 const corresponde = (caminho: string, base: string) => caminho === base || caminho.startsWith(`${base}/`);
 

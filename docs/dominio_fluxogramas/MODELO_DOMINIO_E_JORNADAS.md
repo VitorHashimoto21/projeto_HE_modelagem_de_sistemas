@@ -204,7 +204,7 @@ classDiagram
 | Classe | Regra |
 |---|---|
 | `ProdutoFisico` | Nasce com `quantidadeEstoque = 0`; a quantidade só é alterada via `MovimentacaoEstoque` (RN03). |
-| `MovimentacaoEstoque` | Alerta de estoque baixo só é calculado após o item completar 1 ciclo de Entrada + Saída (RN07). É o próprio registro de auditoria do estoque: nunca é alterada nem apagada e guarda o saldo antes e depois (RNF05). Baixas e estornos de venda apontam para a `Venda`, e o cancelamento devolve exatamente o que foi baixado (RN25). |
+| `MovimentacaoEstoque` | O mínimo sugerido (e o alerta baseado nele) só é calculado após o item completar 1 ciclo de Entrada + Saída; um mínimo manual alerta desde já (RN07). É o próprio registro de auditoria do estoque: nunca é alterada nem apagada e guarda o saldo antes e depois (RNF05). Baixas e estornos de venda apontam para a `Venda`, e o cancelamento devolve exatamente o que foi baixado (RN25). |
 | `MaterialServico` | Quantidade sugerida automaticamente como 1, editável pelo usuário (RF13). |
 | `HistoricoPreco` | Cada novo registro representa uma confirmação explícita do usuário; o mais recente é o `precoAtual` do `Item` (RN15, RN16). |
 | `Pagamento` | Dinheiro/PIX/Débito geram `LancamentoFinanceiro` imediato; Cartão de Crédito gera `Parcela(s)` → `ContaPagarReceber` (RN09, RN10). |

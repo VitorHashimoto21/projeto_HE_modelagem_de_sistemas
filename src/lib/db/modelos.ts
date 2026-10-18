@@ -29,6 +29,9 @@ export const MODELOS = {
       planoAlteradoPor: { modelo: "Usuario", fk: "planoAlteradoPorId" },
       membros: { modelo: "MembroNegocio" },
       convites: { modelo: "Convite" },
+      historicoPlanos: { modelo: "HistoricoPlano" },
+      acessosSuporte: { modelo: "AcessoSuporte" },
+      registrosSuporte: { modelo: "RegistroSuporte" },
       itens: { modelo: "Item" },
       materiaisServico: { modelo: "MaterialServico" },
       movimentacoes: { modelo: "MovimentacaoEstoque" },
@@ -50,6 +53,13 @@ export const MODELOS = {
     relacoes: {
       usuario: { modelo: "Usuario", fk: "usuarioId" },
       negocio: { modelo: "Negocio", fk: "negocioId" },
+    },
+  },
+  HistoricoPlano: {
+    classe: "operacional",
+    relacoes: {
+      negocio: { modelo: "Negocio", fk: "negocioId" },
+      usuario: { modelo: "Usuario", fk: "usuarioId" },
     },
   },
   Convite: {
@@ -115,6 +125,7 @@ export const MODELOS = {
       negocio: { modelo: "Negocio", fk: "negocioId" },
       cliente: { modelo: "Cliente", fk: "clienteId" },
       canceladaPor: { modelo: "Usuario", fk: "canceladaPorId" },
+      registradaPor: { modelo: "Usuario", fk: "registradaPorId" },
       vendaOrigem: { modelo: "Venda", fk: "vendaOrigemId" },
       vendaTroca: { modelo: "Venda" },
       itens: { modelo: "ItemVenda" },
@@ -153,6 +164,9 @@ export const MODELOS = {
       negocio: { modelo: "Negocio", fk: "negocioId" },
       venda: { modelo: "Venda", fk: "vendaId" },
       conta: { modelo: "ContaPagarReceber", fk: "contaId" },
+      usuario: { modelo: "Usuario", fk: "usuarioId" },
+      estornoDe: { modelo: "LancamentoFinanceiro", fk: "estornoDeId" },
+      estornadoPor: { modelo: "LancamentoFinanceiro" },
     },
   },
   ContaPagarReceber: {
@@ -166,6 +180,26 @@ export const MODELOS = {
   },
 
   // Globais (sem tenant)
+  // SPEC-018: liberação do acesso de suporte e registro de auditoria (negocioId nulo só nos
+  // eventos de papel, que nunca passam pelo cliente do negócio).
+  AcessoSuporte: {
+    classe: "operacional",
+    relacoes: {
+      negocio: { modelo: "Negocio", fk: "negocioId" },
+      liberadoPor: { modelo: "Usuario", fk: "liberadoPorId" },
+      revogadoPor: { modelo: "Usuario", fk: "revogadoPorId" },
+      registros: { modelo: "RegistroSuporte" },
+    },
+  },
+  RegistroSuporte: {
+    classe: "operacional",
+    relacoes: {
+      negocio: { modelo: "Negocio", fk: "negocioId" },
+      acesso: { modelo: "AcessoSuporte", fk: "acessoId" },
+      usuario: { modelo: "Usuario", fk: "usuarioId" },
+    },
+  },
+
   Usuario: {
     classe: "global",
     relacoes: {
@@ -173,8 +207,14 @@ export const MODELOS = {
       movimentacoes: { modelo: "MovimentacaoEstoque" },
       historicoPrecos: { modelo: "HistoricoPreco" },
       vendasCanceladas: { modelo: "Venda" },
+      vendasRegistradas: { modelo: "Venda" },
+      lancamentos: { modelo: "LancamentoFinanceiro" },
       convitesEnviados: { modelo: "Convite" },
       planosAlterados: { modelo: "Negocio" },
+      trocasDePlano: { modelo: "HistoricoPlano" },
+      acessosLiberados: { modelo: "AcessoSuporte" },
+      acessosRevogados: { modelo: "AcessoSuporte" },
+      registrosSuporte: { modelo: "RegistroSuporte" },
     },
   },
   FaixaTributaria: { classe: "global", relacoes: {} },

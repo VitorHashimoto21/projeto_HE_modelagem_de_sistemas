@@ -22,6 +22,14 @@ const esquema = z.object({
   // Aviso "você já tem conta" (SPEC-002, 5.1). Opcionais: sem elas, o aviso não é enviado.
   RESEND_API_KEY: z.string().optional(),
   EMAIL_REMETENTE: z.string().optional(),
+  // Segredo da rotina diária da Vercel Cron (SPEC-009). Opcional: sem ele (ou com menos de 16
+  // caracteres), a rotina recusa toda chamada e as contas são geradas só pela conferência ao
+  // abrir o Financeiro e o Painel.
+  CRON_SECRET: z.string().optional(),
+  // Chave secreta do Supabase (SPEC-014, OPEN-001): só no servidor, para apagar a credencial
+  // de quem exclui a conta. Opcional: sem ela, a conta fica bloqueada e anonimizada, e a
+  // remoção da credencial fica pendente até a chave ser configurada (a rotina diária tenta de novo).
+  SUPABASE_SECRET_KEY: z.string().optional(),
 });
 
 export type Ambiente = z.infer<typeof esquema>;

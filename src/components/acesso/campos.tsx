@@ -2,6 +2,8 @@
 
 import { useState, type ComponentProps } from "react";
 import { useFormStatus } from "react-dom";
+import { AvisoDaPagina } from "@/components/ui/aviso";
+import { classeDoBotao } from "@/components/ui/estilos";
 import { cn } from "@/lib/utils";
 
 // Campos das telas de acesso, conforme o protótipo revisado (docs/design/prototipo_revisado).
@@ -113,32 +115,16 @@ export function CampoSenha({ nome, rotulo, erro, extra, ...props }: PropsDoCampo
   );
 }
 
-export function BotaoEnviar({ children, enviando }: { children: React.ReactNode; enviando: string }) {
+export function BotaoEnviar({ children, enviando, largura = "total" }: { children: React.ReactNode; enviando: string; largura?: "total" | "automatica" }) {
   const { pending } = useFormStatus();
   return (
-    <button
-      type="submit"
-      disabled={pending}
-      className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-3.5 text-sm font-semibold tracking-wide text-primary-foreground transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-70"
-    >
+    <button type="submit" disabled={pending} className={classeDoBotao("principal", "lg", largura === "total" ? "mt-2 w-full" : undefined)}>
       {pending ? enviando : children}
     </button>
   );
 }
 
-/** Mensagem geral do formulário: erro (alerta) ou confirmação. */
+/** Mensagem geral do formulário: erro (alerta) ou confirmação (SPEC-016: mesmo aviso das telas). */
 export function Aviso({ tipo, children }: { tipo: "erro" | "sucesso"; children: React.ReactNode }) {
-  return (
-    <div
-      role={tipo === "erro" ? "alert" : "status"}
-      className={cn(
-        "rounded-xl border px-4 py-3 text-sm",
-        tipo === "erro"
-          ? "border-destructive/30 bg-status-danger-bg text-status-danger"
-          : "border-status-ok/30 bg-status-ok-bg text-status-ok",
-      )}
-    >
-      {children}
-    </div>
-  );
+  return <AvisoDaPagina tom={tipo}>{children}</AvisoDaPagina>;
 }

@@ -1,5 +1,5 @@
 import { Prisma, type PrismaClient } from "@/generated/prisma/client";
-import { ContextoDeNegocioAusente, NegocioDivergente, OperacaoForaDoContexto } from "./erros";
+import { ContextoDeNegocioAusente, NegocioDivergente, OperacaoForaDoContexto, SomenteLeituraNoSuporte } from "./erros";
 import { definicaoDoModelo, ehOperacional } from "./modelos";
 
 /**
@@ -10,12 +10,15 @@ import { definicaoDoModelo, ehOperacional } from "./modelos";
  * - criações (inclusive aninhadas) recebem o negocioId do contexto; um valor diferente é recusado;
  * - o negocioId nunca é alterado;
  * - registros de outro negócio se comportam como inexistentes;
- * - o gatilho do banco (migração de isolamento) recusa ligações entre negócios diferentes (INV-005).
+ * - o gatilho do banco (migração de isolamento) recusa ligações entre negócios diferentes (INV-005);
+ * - no modo suporte (SPEC-018), só leituras: qualquer escrita é recusada (INV-002, segunda barreira).
  */
 
 export type ContextoDeNegocio = {
   negocioId: string;
   usuarioId?: string;
+  /** SPEC-018: contexto do Administrador em modo suporte — somente leitura e dados pessoais mascarados. */
+  modoSuporte?: boolean;
 };
 
 type Dados = Record<string, unknown>;
@@ -56,6 +59,7 @@ function erroDoBanco(erro: unknown): never {
 export function criarExtensaoDoNegocio(contexto: ContextoDeNegocio | null | undefined) {
   const negocioId = contexto?.negocioId;
   if (!negocioId) throw new ContextoDeNegocioAusente();
+  const somenteLeitura = contexto?.modoSuporte === true;
 
   /**
    * Soma a condição do contexto à condição recebida (AND), sem sobrescrever nada:
@@ -209,6 +213,7 @@ export function criarExtensaoDoNegocio(contexto: ContextoDeNegocio | null | unde
         async $allOperations({ model, operation, args, query }) {
           const classe = definicaoDoModelo(model)?.classe;
           if (classe === undefined) throw new OperacaoForaDoContexto(model, operation);
+          if (somenteLeitura && !LEITURAS.has(operation)) throw new SomenteLeituraNoSuporte(model, operation);
           if (classe === "global") return query(args);
 
           const preparado =

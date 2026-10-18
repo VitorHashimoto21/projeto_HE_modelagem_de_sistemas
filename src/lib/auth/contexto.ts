@@ -4,10 +4,13 @@
  * (INV-006). Nenhum valor vindo do navegador é aceito sem essa confirmação.
  */
 
-import { permissoesEfetivas, type Matriz, type Papel } from "@/lib/dominio/permissoes";
+import { permissoesEfetivas, type Matriz, type Modulo, type Papel } from "@/lib/dominio/permissoes";
+import { matrizDoSuporte, modulosValidos, sessaoDoAdministradorValida, situacaoDaLiberacao } from "@/lib/dominio/suporte";
 
 /** Cookie do negócio ativo (definido pela troca de negócio da SPEC-004). */
 export const COOKIE_NEGOCIO_ATIVO = "he_negocio";
+/** Cookie do modo suporte (SPEC-018): só o id da liberação; o contexto é sempre lido do banco. */
+export const COOKIE_SUPORTE = "he_suporte";
 
 export type ContextoDaRequisicao = {
   usuarioId: string;
@@ -36,11 +39,24 @@ export async function resolverContexto(
 /** Filiação do usuário no negócio, lida do banco junto com a confirmação (SPEC-005, INV-004). */
 export type Filiacao = { papel: Papel; permissoesCustom: unknown };
 
+/** Modo suporte ativo (SPEC-018, 5.5): liberação válida do Dono, lida do banco nesta requisição. */
+export type SuporteAtivo = { acessoId: string; negocioId: string; negocio: string; modulos: Modulo[]; expiraEm: Date };
+
 /** Contexto com o papel e as permissões efetivas no negócio ativo (SPEC-005, 5.5). */
 export type ContextoComPapel = ContextoDaRequisicao & {
-  /** null quando não há negócio ativo. */
+  /** null quando não há negócio ativo (e no modo suporte: o Administrador não tem papel no negócio). */
   papel: Papel | null;
   permissoes: Matriz | null;
+  /** SPEC-018 (RF74): conta de Administrador da plataforma. */
+  administrador?: boolean;
+  /** SPEC-018 (RF76): modo suporte; o negócio ativo é o da liberação e a matriz só tem "ver". */
+  suporte?: SuporteAtivo | null;
+  /** SPEC-018: havia um modo suporte que acabou (o Dono revogou ou o prazo venceu). */
+  suporteEncerrado?: "revogado" | "expirou" | null;
+  /** SPEC-018 (RF78): a versão aceita da política e dos termos não é a vigente. */
+  termosPendentes?: boolean;
+  /** SPEC-018 (RNF12): sessão do Administrador com mais de 8 h desde a entrada. */
+  sessaoExpirada?: boolean;
 };
 
 /**
@@ -63,5 +79,71 @@ export async function resolverContextoComPapel(
     ...contexto,
     papel: f?.papel ?? null,
     permissoes: f ? permissoesEfetivas(f.papel, f.permissoesCustom) : null,
+  };
+}
+
+/** Estado da conta lido a cada requisição (SPEC-018): papel de Administrador e versão dos termos aceita. */
+export type EstadoDaConta = { administradorEm: Date | null; versaoTermosAceita: string | null };
+
+/** Liberação de suporte como o contexto precisa dela (SPEC-018). */
+export type LiberacaoDoContexto = {
+  id: string;
+  negocioId: string;
+  negocio: string;
+  negocioEncerrado: boolean;
+  modulos: string[];
+  expiraEm: Date;
+  revogadoEm: Date | null;
+};
+
+export type EntradaDoContexto = {
+  usuarioId: string | null;
+  negocioDoCookie: string | undefined;
+  suporteDoCookie: string | undefined;
+  /** Momento da entrada (login) desta sessão, das claims do JWT. */
+  autenticadoEm: Date | null;
+  agora: Date;
+  versaoDosTermos: string;
+};
+
+export type DependenciasDoContexto = {
+  filiacao: (usuarioId: string, negocioId: string) => Promise<Filiacao | null>;
+  conta: (usuarioId: string) => Promise<EstadoDaConta | null>;
+  liberacao: (acessoId: string) => Promise<LiberacaoDoContexto | null>;
+};
+
+/**
+ * Contexto completo da requisição (SPEC-002, SPEC-005 e SPEC-018). Para usuários comuns, é o
+ * contexto de membro de sempre, mais a pendência dos termos. Para a conta de Administrador:
+ * nunca há filiação (INV-004); o negócio ativo só existe com uma liberação ativa do Dono,
+ * conferida no banco nesta requisição (INV-001), e a matriz tem só "ver" nos módulos
+ * liberados (INV-003). O cookie do suporte é só um ponteiro: nada vem do navegador sem
+ * a confirmação no banco.
+ */
+export async function resolverContextoDaRequisicao(e: EntradaDoContexto, deps: DependenciasDoContexto): Promise<ContextoComPapel | null> {
+  if (!e.usuarioId) return null;
+  const conta = await deps.conta(e.usuarioId);
+  const termosPendentes = conta !== null && conta.versaoTermosAceita !== e.versaoDosTermos;
+
+  if (!conta?.administradorEm) {
+    const base = await resolverContextoComPapel(e.usuarioId, e.negocioDoCookie, deps.filiacao);
+    return base && { ...base, administrador: false, suporte: null, suporteEncerrado: null, termosPendentes, sessaoExpirada: false };
+  }
+
+  const sessaoExpirada = !sessaoDoAdministradorValida(e.autenticadoEm, e.agora);
+  const semNegocio = { usuarioId: e.usuarioId, negocioId: null, negocioRecusado: false, papel: null, permissoes: null, administrador: true, termosPendentes, sessaoExpirada };
+  const lida = e.suporteDoCookie && UUID.test(e.suporteDoCookie) ? await deps.liberacao(e.suporteDoCookie) : null;
+  if (!lida) return { ...semNegocio, suporte: null, suporteEncerrado: null };
+
+  const situacao = lida.negocioEncerrado ? "REVOGADA" : situacaoDaLiberacao(lida, e.agora);
+  if (situacao !== "ATIVA") return { ...semNegocio, suporte: null, suporteEncerrado: situacao === "EXPIRADA" ? "expirou" : "revogado" };
+
+  const modulos = modulosValidos(lida.modulos);
+  return {
+    ...semNegocio,
+    negocioId: lida.negocioId,
+    permissoes: matrizDoSuporte(modulos),
+    suporte: { acessoId: lida.id, negocioId: lida.negocioId, negocio: lida.negocio, modulos, expiraEm: lida.expiraEm },
+    suporteEncerrado: null,
   };
 }

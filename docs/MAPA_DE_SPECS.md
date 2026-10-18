@@ -1,6 +1,6 @@
 # Mapa de Specs — HealthEnterprise (HE)
 
-> **Status:** ✅ **Aprovado pela equipe em 02/10/2026** (revisão 2 — escolhas de ordenação confirmadas, inconsistências corrigidas e questões em aberto decididas, seção 1.7). **Revisão 3 (03/10/2026):** revisão de consistência da baseline antes da implementação, com as decisões OPEN-12 a OPEN-31 (seção 1.8) — **aguardando revisão do grupo**. As Specs individuais serão geradas uma por vez, sob pedido. Gerado conforme `docs/Prompt_SDD_Specs.pdf`.
+> **Status:** ✅ **Aprovado pela equipe em 02/10/2026** (revisão 2 — escolhas de ordenação confirmadas, inconsistências corrigidas e questões em aberto decididas, seção 1.7). **Revisão 3 (03/10/2026):** revisão de consistência da baseline antes da implementação, com as decisões OPEN-12 a OPEN-31 (seção 1.8), adotadas pela equipe em todas as Specs implementadas (SPEC-001 a SPEC-014, SPEC-016 e SPEC-017). As Specs foram geradas uma por vez, sob pedido; o andamento está na seção 4. Gerado conforme `docs/Prompt_SDD_Specs.pdf`.
 >
 > **Baseline utilizada:** `VISAO_DE_NEGOCIO.md`, personas v2, `requisitos.md` (RF01–RF73, RN01–RN29, RNF01–RNF11), `requisitos_ears.md`, modelo de domínio e jornadas, casos de uso, diagramas comportamentais, modelo lógico, `schema.prisma`, drivers arquiteturais, ADR-001 a ADR-006, guia de issues e README.
 >
@@ -132,6 +132,10 @@ Também foram corrigidos, sem decisão nova: a ordem do cronograma da Visão (Ca
 | SPEC-013 | Plano gratuito × pago | 005, 012 |
 | SPEC-014 | LGPD: exportação e exclusão de conta | 002, 004, 008 |
 | SPEC-015 *(opcional)* | Cobrança real do plano pago | 013 |
+| SPEC-016 | Design system e redesign (Direção "Balcão") | 002–014 |
+| SPEC-017 | Ajustes na venda: materiais e preço por venda | 005, 006, 007, 008, 016 |
+| SPEC-018 | Administrador da plataforma e acesso de suporte (somente leitura) | 001, 002, 005, 014, 016 |
+| SPEC-019 *(a gerar)* | Suporte com edição, emergência, ações de plataforma e 2º fator | 018 |
 
 ```mermaid
 flowchart LR
@@ -162,6 +166,12 @@ flowchart LR
     S4 --> S14
     S8 --> S14
     S13 -.-> S15[SPEC-015 Cobrança real - opcional]
+    S14 --> S16[SPEC-016 Design system e redesign]
+    S8 --> S17[SPEC-017 Ajustes na venda]
+    S16 --> S17
+    S14 --> S18[SPEC-018 Administrador e suporte]
+    S16 --> S18
+    S18 -.-> S19[SPEC-019 Suporte com edição e 2º fator - a gerar]
 ```
 
 ### 2.2 Detalhamento
@@ -220,6 +230,7 @@ flowchart LR
 - **Justificativa da ordem:** as guardas de papel e a matriz módulo × ação são pré-condição de todos os módulos operacionais.
 
 #### SPEC-006 — Catálogo de itens e preço oficial
+- **Spec:** [`specs/SPEC-006.md`](./specs/SPEC-006.md) (✅ aprovada e implementada — questões em aberto decididas em 07/10/2026)
 - **Objetivo:** cadastrar produtos físicos e serviços (com materiais vinculados, categoria, unidade e comissão opcional) e definir o preço oficial manualmente, sempre com histórico.
 - **Valor entregue:** catálogo único do negócio, base para estoque, vendas e precificação.
 - **RF:** RF07–RF14, RF41, RF52, RF64 · **RN:** RN03, RN04, RN15, RN16 · **RNF:** RNF05 (auditoria de preço)
@@ -230,6 +241,7 @@ flowchart LR
 - **Justificativa da ordem:** estoque, vendas e calculadora operam sobre itens. O preço manual (RF64) permite vender antes da calculadora existir.
 
 #### SPEC-007 — Estoque: movimentações, alertas e mínimo sugerido
+- **Spec:** [`specs/SPEC-007.md`](./specs/SPEC-007.md) (✅ implementada e verificada na homologação em 09/10/2026)
 - **Objetivo:** registrar entradas e saídas manuais (com motivo), manter auditoria imutável na própria movimentação (saldo anterior e posterior), sugerir o estoque mínimo e alertar quando o estoque estiver baixo.
 - **Valor entregue:** o estoque digital reflete o físico e a reposição é antecipada.
 - **RF:** RF15, RF17, RF19, RF20, RF21 · **RN:** RN07, RN08 · **RNF:** RNF05
@@ -240,6 +252,7 @@ flowchart LR
 - **Justificativa da ordem:** a venda (SPEC-008) só pode validar e baixar estoque que já é controlado.
 
 #### SPEC-008 — Registro de venda integrado
+- **Spec:** [`specs/SPEC-008.md`](./specs/SPEC-008.md) (✅ implementada e verificada na homologação em 09/10/2026)
 - **Objetivo:** registrar vendas multi-itens com cliente opcional e pagamento misto/parcelado, validando estoque (baixa condicional atômica) e preço; dar baixa no estoque (incluindo materiais, com movimentações ligadas à venda) e gerar lançamentos ou contas a receber na mesma transação, gravando o custo unitário.
 - **Valor entregue:** o fluxo central de operação, integrado ao estoque e ao financeiro sem lançamento duplicado.
 - **RF:** RF16, RF18, RF22–RF28, RF33, RF62 (gravação do custo unitário) · **RN:** RN05, RN06, RN09–RN13, RN23, RN29 · **RNF:** RNF01, RNF02
@@ -250,6 +263,7 @@ flowchart LR
 - **Justificativa da ordem:** gera os dados de que o financeiro, a calculadora (RBT12 e CMV%) e o dashboard dependem.
 
 #### SPEC-009 — Financeiro: caixa, contas e despesas fixas
+- **Spec:** [`specs/SPEC-009.md`](./specs/SPEC-009.md) (✅ implementada e verificada na homologação em 11/10/2026)
 - **Objetivo:** manter o fluxo de caixa e as contas a pagar/receber (com quitação parcial que gera lançamento), cadastrar as despesas fixas (incluindo o DAS do MEI) e gerar suas contas mensais.
 - **Valor entregue:** saldo real e compromissos futuros visíveis, sem lançamento duplicado.
 - **RF:** RF06 (permissão de despesa operacional), RF29–RF32, RF48, RF60, RF67 · **RN:** RN14, RN22 · **RNF:** RNF02, RNF05
@@ -260,6 +274,7 @@ flowchart LR
 - **Justificativa da ordem:** recebe as contas geradas pelas vendas e fornece as despesas fixas (com contas mensais geradas por rotina diária + conferência ao acessar) para a calculadora e o dashboard.
 
 #### SPEC-010 — Calculadora de precificação
+- **Spec:** [`specs/SPEC-010.md`](./specs/SPEC-010.md) (✅ implementada e verificada na homologação em 11/10/2026)
 - **Objetivo:** sugerir o preço de venda pelo markup completo (custo + materiais, despesas fixas %, despesas variáveis %, imposto por RBT12 — 12 meses anteriores, proporcional com pouco histórico — e Anexo efetivo — com Fator R —, ou Imposto% informado no regime Autônomo, margem), exibir o ponto de equilíbrio e confirmar o preço oficial com histórico.
 - **Valor entregue:** o diferencial central do produto — precificação correta e auditável.
 - **RF:** RF34–RF40, RF41, RF49, RF50, RF51, RF53, RF54, RF55 (cálculo do PE), RF60 (Imposto% = 0 para MEI), RF61, RF62 (cálculo do CMV%), RF69 · **RN:** RN15, RN16, RN19, RN20, RN21, RN28, RN29 · **RNF:** RNF05, RNF06, RNF08
@@ -270,6 +285,7 @@ flowchart LR
 - **Justificativa da ordem:** precisa de vendas (RBT12 e CMV%), de despesas fixas e lançamentos de salário (Fator R) e de parâmetros fiscais já estabelecidos.
 
 #### SPEC-011 — Cancelamento e troca de venda
+- **Spec:** [`specs/SPEC-011.md`](./specs/SPEC-011.md) (✅ implementada e verificada na homologação em 11/10/2026)
 - **Objetivo:** cancelar uma venda com motivo, revertendo estoque (exatamente as movimentações da venda), contas abertas e valores recebidos em uma transação; opcionalmente, fazer a troca por itens de valor menor ou igual, com crédito de troca.
 - **Valor entregue:** correção de erros e devoluções sem corromper estoque, caixa ou faturamento.
 - **RF:** RF65, RF66 · **RN:** RN25, RN26 · **RNF:** RNF05
@@ -280,6 +296,7 @@ flowchart LR
 - **Justificativa da ordem:** só pode reverter efeitos (contas e lançamentos) já estabelecidos; precisa vir antes do dashboard, que exclui vendas canceladas.
 
 #### SPEC-012 — Dashboard e saúde financeira
+- **Spec:** [`specs/SPEC-012.md`](./specs/SPEC-012.md) (✅ implementada e verificada na homologação em 11/10/2026)
 - **Objetivo:** exibir o resumo do dia, o gráfico de vendas, o semáforo (PE × meta) e a projeção de caixa para Dono e Gerente, e o dashboard restrito para o Colaborador.
 - **Valor entregue:** visão imediata da saúde do negócio — a proposta "visual e sob controle".
 - **RF:** RF42, RF43, RF44, RF56, RF57, RF63, RF68 · **RN:** RN21, RN25 (consumo), RN29 · **RNF:** RNF01, RNF06, RNF10
@@ -290,6 +307,7 @@ flowchart LR
 - **Justificativa da ordem:** agrega dados de todos os módulos anteriores.
 
 #### SPEC-013 — Plano gratuito × pago
+- **Spec:** [`specs/SPEC-013.md`](./specs/SPEC-013.md) (✅ implementada e verificada na homologação em 11/10/2026)
 - **Objetivo:** diferenciar as funcionalidades por plano (sem limite de volume), entregar os relatórios avançados do plano pago (rentabilidade por item, exportação CSV/PDF, histórico acima de 12 meses), bloqueá-los no gratuito e oferecer o upgrade, com troca de plano simulada pelo Dono num único ponto de troca (`alterarPlano`), preparado para a cobrança real (SPEC-015).
 - **Valor entregue:** viabiliza o modelo freemium sem afastar o público sensível a preço.
 - **RF:** RF45, RF46, RF47 (relatórios avançados), RF70, RF71, RF73 · **RN:** RN18 · **RNF:** RNF10
@@ -300,6 +318,7 @@ flowchart LR
 - **Justificativa da ordem:** precisa que as funcionalidades a restringir e os dados dos relatórios já existam.
 
 #### SPEC-014 — LGPD: exportação e exclusão de conta
+- **Spec:** [`specs/SPEC-014.md`](./specs/SPEC-014.md) (✅ implementada e verificada na homologação em 11/10/2026)
 - **Objetivo:** exportar os dados do titular (.zip com JSON e CSV) e excluir a conta por anonimização, encerrando os negócios em que ele é o único Dono e mantendo os registros fiscais por 5 anos sem identificação.
 - **Valor entregue:** conformidade legal e confiança do usuário.
 - **RF:** — · **RN:** RN27 · **RNF:** RNF04
@@ -320,11 +339,43 @@ flowchart LR
 - **Dependências:** SPEC-013
 - **Justificativa da ordem:** fora do caminho crítico do MVP; só substitui o ponto de troca de plano criado na SPEC-013. Feita se sobrar tempo no semestre ou na continuação rumo à produção.
 
+#### SPEC-016 — Design system e redesign (Direção "Balcão")
+- **Spec:** [`specs/SPEC-016.md`](./specs/SPEC-016.md) (✅ implementada em 15/10/2026 num único PR, #72, e verificada na homologação no mesmo dia; ajustes da homologação corrigidos nos PRs #74 e #75 e aprovados pela equipe em 16/10/2026; notas N1–N5 decididas em 16/10/2026 — [evidências](./specs/evidencias/SPEC-016/README.md))
+- **Objetivo:** criar os componentes de interface e de gráfico, os tokens de movimento e a nova estrutura do app, e migrar todas as telas para a Direção B aprovada (estrutura verde-escura, Manrope, faixa do caixa, gráficos interativos), sem mudar comportamento.
+- **Valor entregue:** produto fácil de ler, agradável de manusear e consistente em qualquer tela; visual mantido em componentes, não em cópias.
+- **RF:** RF43, RF44, RF57, RF68, RF70 (apresentação) · **RN:** RN18 (plano nos cartões novos) · **RNF:** RNF01, RNF02, RNF10
+- **Entidades:** nenhuma nova (leituras agregadas de Venda, Pagamento e LancamentoFinanceiro)
+- **Drivers:** AD-QA04 · **Documentos:** `IDENTIDADE_VISUAL.md` (v2)
+- **Dependências:** SPECs 002 a 014 (todas as telas)
+- **Justificativa da ordem:** depois de todas as funcionalidades do MVP, antes da produção: o redesign muda a apresentação de telas que já existem e estão testadas; feito em 6 etapas num único PR (OPEN-006), com homologação ao final.
+
+#### SPEC-017 — Ajustes na venda: materiais e preço por venda
+- **Spec:** [`specs/SPEC-017.md`](./specs/SPEC-017.md) (✅ aprovada e implementada em 16/10/2026, PR #82, e verificada na homologação em 17/10/2026 — [evidências](./specs/evidencias/SPEC-017/README.md))
+- **Objetivo:** ajustar, numa venda específica, a quantidade de materiais que um serviço consumiu e o preço cobrado por uma linha, sem mudar o catálogo, com baixa, custo, total e auditoria refletindo o ajuste.
+- **Origem:** melhoria identificada pela equipe na aula de 15/10/2026 (caso do eletricista: "Troca de lâmpadas" com quantidade variável de lâmpadas e preço combinado).
+- **RF:** RF23, RF24, RF62 · **RN:** RN05 e RN15 (alteradas em 16/10/2026), RN06, RN23 · **RNF:** RNF01, RNF02, RNF05
+- **Entidades:** ItemVenda (campos novos), MovimentacaoEstoque, MaterialServico e Item (só leitura)
+- **Dependências:** SPEC-005, SPEC-006, SPEC-007, SPEC-008, SPEC-016
+- **Justificativa da ordem:** evolução do MVP depois dos testes em aula; revê a decisão "sem desconto no MVP" da SPEC-008 (OPEN-001), por isso é uma Spec própria, com decisão da equipe.
+
+#### SPEC-018 — Administrador da plataforma e acesso de suporte (somente leitura)
+- **Spec:** [`specs/SPEC-018.md`](./specs/SPEC-018.md) (🔵 aprovada e implementada em 17/10/2026; homologação pendente — [evidências](./specs/evidencias/SPEC-018/README.md))
+- **Objetivo:** criar o Administrador da plataforma (conta exclusiva, painel só com metadados) e o acesso de suporte que o Dono libera por módulos e prazo, em somente leitura, com dados pessoais mascarados, registro de auditoria imutável e novo aceite da Política e dos Termos.
+- **Origem:** decisão da equipe em 17/10/2026 (um centralizador para atender pedidos dos usuários, sem quebrar a privacidade).
+- **RF:** RF74–RF78 (novos) · **RN:** RN30–RN32 (novas), RN01 (complementada), RN27 · **RNF:** RNF02 (ajustado), RNF04, RNF05, RNF12 (novo) · **ADR:** ADR-008 (nova)
+- **Entidades:** Usuario (campos novos), AcessoSuporte e RegistroSuporte (novas); Negocio, MembroNegocio e Cliente (leitura)
+- **Dependências:** SPEC-001, SPEC-002, SPEC-005, SPEC-014, SPEC-016
+- **Justificativa da ordem:** depois do MVP completo; a parte de privacidade (liberação, máscara e auditoria) é entregue e homologada antes de qualquer edição pelo suporte.
+
+#### SPEC-019 — Suporte com edição, emergência, ações de plataforma e 2º fator *(a gerar)*
+- **Escopo combinado (17/10/2026):** **camada de segurança da autenticação do Administrador (2º fator TOTP), em destaque e antes da edição**; edição em modo suporte; acesso de emergência sem liberação (justificativa, só leitura, aviso posterior); ações de plataforma (suspender/reativar negócio, trocar plano).
+- **Dependências:** SPEC-018
+
 ---
 
 ## 3. Cobertura da baseline
 
-Todos os 113 requisitos (RF01–RF73, RN01–RN29, RNF01–RNF11) estão associados a pelo menos uma Spec. Requisitos compartilhados aparecem em mais de uma Spec com escopos complementares:
+Todos os 122 requisitos (RF01–RF78, RN01–RN32, RNF01–RNF12) estão associados a pelo menos uma Spec. Requisitos compartilhados aparecem em mais de uma Spec com escopos complementares:
 
 | Requisito | Specs | Divisão |
 |---|---|---|
@@ -338,6 +389,8 @@ Todos os 113 requisitos (RF01–RF73, RN01–RN29, RNF01–RNF11) estão associa
 | RN29 | 001, 008, 010, 012 | Utilitário de datas (001); aplicado nas vendas do dia, RBT12, competência e gráficos |
 | RF73 | 013, 015 | Troca de plano simulada (013); troca pelo gateway de pagamento (015, opcional) |
 | RNF11 | 001, 015 | Ambientes e variáveis por ambiente (001); chaves de teste × produção do gateway (015) |
+| RN01 / RNF02 | 001, 018 | Isolamento por negócio (001); única exceção: acesso de suporte liberado pelo Dono (018) |
+| RNF12 | 018, 019 | Sessão de 8 h do Administrador (018); 2º fator obrigatório (019) |
 
 ---
 
@@ -347,4 +400,30 @@ Todos os 113 requisitos (RF01–RF73, RN01–RN29, RNF01–RNF11) estão associa
 
 A conferência do seed fiscal foi concluída em 03/10/2026 (DAS do MEI atualizado para o salário mínimo de 2026), e a SPEC-003 não tem mais pré-requisito pendente. A SPEC-015 depende da aprovação do ADR-007.
 
-**Andamento:** [SPEC-001](specs/SPEC-001.md) e [SPEC-002](specs/SPEC-002.md) implementadas e verificadas na homologação. [SPEC-003](specs/SPEC-003.md) implementada e verificada na homologação. [SPEC-004](specs/SPEC-004.md) implementada e verificada no preview da Vercel (04/10/2026). [SPEC-005](specs/SPEC-005.md) implementada e verificada no navegador em build local (07/10/2026); falta o e-mail real na homologação (Resend).
+**Andamento (17/10/2026):**
+
+- [SPEC-001](specs/SPEC-001.md) a [SPEC-003](specs/SPEC-003.md): implementadas e verificadas na homologação.
+- [SPEC-004](specs/SPEC-004.md): implementada e verificada no preview da Vercel (04/10/2026).
+- [SPEC-005](specs/SPEC-005.md): implementada e verificada (07/10/2026); e-mail real do convite verificado na homologação com o Resend (16/10/2026).
+- [SPEC-006](specs/SPEC-006.md): implementada e verificada na homologação (08/10/2026).
+- [SPEC-007](specs/SPEC-007.md) e [SPEC-008](specs/SPEC-008.md): implementadas e verificadas na homologação (09/10/2026; PRs #56 e #58).
+- [SPEC-009](specs/SPEC-009.md) a [SPEC-014](specs/SPEC-014.md): implementadas e verificadas na homologação (11/10/2026; PRs #60, #62, #64, #66, #68 e #70).
+- SPEC-015 (opcional): não iniciada; depende da aprovação do ADR-007.
+- [SPEC-016](specs/SPEC-016.md): implementada (PR #72) e verificada na homologação (15/10/2026); ajustes da homologação corrigidos (PRs #74 e #75) e aprovados nos testes da equipe (16/10/2026); notas N1–N5 da seção 15 decididas em 16/10/2026 (diálogo de confirmação e taxa da maquininha nos Relatórios implementados).
+- [SPEC-017](specs/SPEC-017.md): implementada (PR #82, 16/10/2026) e verificada na homologação (17/10/2026).
+- [SPEC-018](specs/SPEC-018.md): aprovada e implementada (17/10/2026); falta a verificação na homologação (T13) e a decisão da divergência da seção 9 (faixa do modo suporte no celular).
+- SPEC-019: a gerar depois da SPEC-018 (escopo combinado na seção 2.2).
+- `main`: atualizada até a SPEC-006 (PR #54); as SPECs 007 a 017 estão só na DEVELOP.
+
+### Pendências abertas
+
+Lista mantida até cada item ser resolvido; quem retomar o projeto (em qualquer PC ou conversa) começa por aqui.
+
+| # | Pendência | Situação |
+|---|---|---|
+| 1 | **SPEC-018** (Administrador e acesso de suporte): homologação (T13) depois do merge — criar a conta exclusiva do suporte e conceder o papel pelo workflow **Administradores** — e decisão da divergência da seção 9 (faixa no celular) | Em andamento |
+| 2 | **SPEC-019** (suporte com edição, emergência, ações de plataforma e **2º fator do Administrador**): gerar depois da SPEC-018 | Aberta |
+| 3 | **Textos legais** (`docs/legal/`): preencher os campos entre colchetes (responsável, e-mail de contato, cidade/UF, região do Supabase) e revisão do grupo; a nova versão com o acesso de suporte entra na SPEC-018 | Aberta |
+| 4 | **SPEC-015** (cobrança real pelo Stripe): decidir se fica fora do MVP; depende do ADR-007 (proposta) | Aberta |
+| 5 | **Domínio no Resend** (opcional): para enviar convites e os avisos do suporte (SPEC-018) a qualquer e-mail; hoje só chega ao e-mail da conta Resend | Aberta (opcional) |
+| 6 | **PR da DEVELOP para a `main`**: só quando a equipe pedir | Aguardando a equipe |

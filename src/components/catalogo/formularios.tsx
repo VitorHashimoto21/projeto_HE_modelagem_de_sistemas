@@ -4,7 +4,10 @@ import Link from "next/link";
 import { useActionState, useState, type FormEvent } from "react";
 import type { TipoItem } from "@/generated/prisma/enums";
 import { Aviso, BotaoEnviar, MensagemDeCampo } from "@/components/acesso/campos";
+import { Package, Plus, Sparkles } from "lucide-react";
 import { classeDoCampo } from "@/components/ui/classes";
+import { classeDoBotao, classeDoLink } from "@/components/ui/estilos";
+import { Superficie } from "@/components/ui/superficie";
 import { acaoCriarItem, acaoDefinirPreco, acaoEditarItem } from "@/lib/catalogo/acoes";
 import { ITEM_INICIAL, PRECO_INICIAL, type EstadoDoItem } from "@/lib/catalogo/servicos";
 import { CATEGORIAS, validarItem, validarPreco } from "@/lib/catalogo/validacao";
@@ -83,7 +86,7 @@ function Materiais({
 
   if (opcoes.length === 0 && linhas.length === 0) {
     return (
-      <p className="rounded-xl border border-status-warn/30 bg-status-warn-bg px-4 py-3 text-sm text-status-warn">
+      <p className="rounded-lg bg-status-warn-bg px-4 py-3 text-sm text-status-warn">
         Para vincular materiais, cadastre-os antes como <strong>Produto físico</strong> no catálogo.
       </p>
     );
@@ -96,7 +99,7 @@ function Materiais({
           {linhas.map((l, i) => {
             const m = porId.get(l.materialId);
             return (
-              <li key={l.materialId} className="flex flex-wrap items-center gap-3 rounded-xl border bg-card px-4 py-3">
+              <li key={l.materialId} className="flex flex-wrap items-center gap-3 rounded-lg bg-muted px-4 py-3">
                 <span className="min-w-0 basis-full truncate text-sm font-medium text-foreground sm:basis-auto sm:flex-1">{m?.nome ?? "Material arquivado"}</span>
                 <label className="flex items-center gap-2 text-sm text-muted-foreground">
                   <span className="sr-only">Quantidade de {m?.nome}</span>
@@ -145,8 +148,9 @@ function Materiais({
               setLinhas([...linhas, { materialId: escolhido, quantidade: "1" }]); // RF13: sugestão de 1
               setEscolhido("");
             }}
-            className="rounded-xl border border-input px-4 py-3 text-sm font-semibold text-foreground hover:bg-muted disabled:opacity-50"
+            className={classeDoBotao("secundario")}
           >
+            <Plus aria-hidden="true" />
             Adicionar
           </button>
         </div>
@@ -199,16 +203,27 @@ export function FormularioItem({ valores, opcoes }: { valores?: ValoresDoItem; o
 
   if (!tipo) {
     const opcao =
-      "w-full rounded-2xl border bg-card p-5 text-left shadow-sm transition-colors hover:border-primary focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring/15";
+      "flex w-full items-start gap-4 rounded-2xl bg-card p-5 text-left ring-1 ring-transparent transition-[box-shadow,transform] duration-(--duracao-estado) hover:ring-primary active:scale-[0.99] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring";
+    const icone = "grid size-11 shrink-0 place-items-center rounded-full bg-muted text-primary";
     return (
       <div className="grid gap-4 sm:grid-cols-2">
         <button type="button" className={opcao} onClick={() => setTipo("PRODUTO_FISICO")}>
-          <span className="block font-display text-lg font-semibold text-card-foreground">Produto físico</span>
-          <span className="mt-1 block text-sm text-muted-foreground">Algo que você vende ou usa e controla no estoque.</span>
+          <span aria-hidden="true" className={icone}>
+            <Package className="size-5" />
+          </span>
+          <span>
+            <span className="block text-lg font-bold text-card-foreground">Produto físico</span>
+            <span className="mt-1 block text-sm text-muted-foreground">Algo que você vende ou usa e controla no estoque.</span>
+          </span>
         </button>
         <button type="button" className={opcao} onClick={() => setTipo("SERVICO")}>
-          <span className="block font-display text-lg font-semibold text-card-foreground">Serviço</span>
-          <span className="mt-1 block text-sm text-muted-foreground">Algo que você executa, com ou sem materiais.</span>
+          <span aria-hidden="true" className={icone}>
+            <Sparkles className="size-5" />
+          </span>
+          <span>
+            <span className="block text-lg font-bold text-card-foreground">Serviço</span>
+            <span className="mt-1 block text-sm text-muted-foreground">Algo que você executa, com ou sem materiais.</span>
+          </span>
         </button>
       </div>
     );
@@ -217,6 +232,7 @@ export function FormularioItem({ valores, opcoes }: { valores?: ValoresDoItem; o
   return (
     <div className="space-y-5">
       {estado.status === "erro" && estado.mensagem && <Aviso tipo="erro">{estado.mensagem}</Aviso>}
+      <Superficie as="div">
       <form action={executar} onSubmit={aoEnviar} noValidate className="space-y-5">
         {editando && <input type="hidden" name="itemId" value={valores!.id} />}
         <input type="hidden" name="tipo" value={tipo} />
@@ -226,9 +242,9 @@ export function FormularioItem({ valores, opcoes }: { valores?: ValoresDoItem; o
           Tipo: <span className="font-medium text-foreground">{ROTULO_TIPO[tipo]}</span>
           {!editando && (
             <>
-              {" · "}
-              <button type="button" onClick={() => setTipo(null)} className="font-medium text-primary underline-offset-2 hover:underline">
-                trocar
+              {". "}
+              <button type="button" onClick={() => setTipo(null)} className={classeDoLink()}>
+                Trocar o tipo
               </button>
             </>
           )}
@@ -305,7 +321,8 @@ export function FormularioItem({ valores, opcoes }: { valores?: ValoresDoItem; o
           />
         </div>
 
-        {tipo === "PRODUTO_FISICO" && (
+        {/* Na edição, o mínimo manual fica no Estoque (SPEC-007, OPEN-001). */}
+        {tipo === "PRODUTO_FISICO" && !editando && (
           <CampoTexto
             nome="estoqueMinimo"
             rotulo="Estoque mínimo"
@@ -351,11 +368,14 @@ export function FormularioItem({ valores, opcoes }: { valores?: ValoresDoItem; o
           />
         )}
 
-        <BotaoEnviar enviando="Salvando…">{editando ? "Salvar alterações" : "Cadastrar item"}</BotaoEnviar>
+        <div className="flex flex-wrap items-center gap-3 border-t pt-5">
+          <BotaoEnviar enviando="Salvando…" largura="automatica">{editando ? "Salvar alterações" : "Cadastrar item"}</BotaoEnviar>
+          <Link href={editando ? `/catalogo/${valores!.id}` : "/catalogo"} className={classeDoBotao("fantasma")}>
+            Cancelar
+          </Link>
+        </div>
       </form>
-      <Link href={editando ? `/catalogo/${valores!.id}` : "/catalogo"} className="text-sm font-medium text-primary underline-offset-2 hover:underline">
-        Cancelar
-      </Link>
+      </Superficie>
     </div>
   );
 }
@@ -375,7 +395,7 @@ export function FormularioPreco({ itemId }: { itemId: string }) {
     <div className="space-y-3">
       {estado.status === "salvo" && <Aviso tipo="sucesso">Preço atualizado.</Aviso>}
       {estado.status === "salvo" && estado.aviso && (
-        <p role="note" className="rounded-xl border border-status-warn/30 bg-status-warn-bg px-4 py-3 text-sm text-status-warn">
+        <p role="note" className="rounded-lg bg-status-warn-bg px-4 py-3 text-sm text-status-warn">
           {estado.aviso}
         </p>
       )}
@@ -408,10 +428,7 @@ export function FormularioPreco({ itemId }: { itemId: string }) {
           />
           <MensagemDeCampo id="preco-erro" erro={erro} />
         </div>
-        <button
-          type="submit"
-          className="rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary-hover"
-        >
+        <button type="submit" className={classeDoBotao("principal")}>
           Definir preço
         </button>
       </form>

@@ -17,13 +17,21 @@
 | RF05 | Ubíquo | O sistema deve disponibilizar três papéis de acesso para atribuição a colaboradores: Dono (acesso total), Gerente (acesso total exceto configurações) e Colaborador (acesso restrito a Vendas, Estoque e Dashboard restrito). |
 | RF06 | Feature opcional | **ONDE** o Dono configurar permissões granulares customizadas para um colaborador (matriz módulo × ação: ver, criar, editar, excluir/cancelar), o sistema deve aplicar essas permissões em vez do papel fixo padrão. |
 | RF72 | Complexo (Evento + Indesejado) | **QUANDO** o Dono convidar um colaborador, o sistema deve enviar por e-mail um link de uso único e com validade, que ao ser aceito torna o convidado membro do negócio com o papel do convite, mesmo que ele ainda não tenha conta; **SE** o link estiver expirado, cancelado ou já usado, **ENTÃO** o sistema deve recusar o aceite. |
-| RN01 | Ubíquo | O sistema deve restringir o acesso de cada colaborador exclusivamente aos negócios aos quais ele foi convidado. |
+| RN01 | Ubíquo | O sistema deve restringir o acesso de cada colaborador exclusivamente aos negócios aos quais ele foi convidado, exceto o acesso de suporte liberado pelo Dono (RN30, RN31). |
 | RN02 | Comportamento indesejado | **SE** um usuário sem o papel de Dono tentar convidar/remover colaboradores ou alterar permissões, **ENTÃO** o sistema deve impedir a ação e manter as permissões inalteradas. |
 | RF58 | Orientado a evento | **QUANDO** o usuário informar o CNPJ no cadastro de um negócio, o sistema deve consultar a base pública de CNPJ da Receita Federal e preencher razão social, CNAE principal e regime tributário (Simples Nacional/MEI). |
 | RF59 | Complexo (Evento + resposta condicional) | **QUANDO** o CNAE principal for obtido, o sistema deve sugerir o Anexo do Simples (ou o tipo de atividade, para MEI) e permitir edição; **SE** a consulta estiver indisponível, **ENTÃO** o sistema deve permitir o preenchimento manual desses dados; **SE** o usuário não possuir CNPJ, **ENTÃO** o sistema deve cadastrar o negócio no regime Autônomo e solicitar o percentual de imposto que ele paga. |
 | RN24 | Ubíquo | O sistema deve aplicar um único Anexo do Simples por negócio sobre todo o faturamento (RBT12) do negócio. |
 | RF69 | Complexo (Estado + Evento) | **ENQUANTO** o CNAE do negócio do Simples for sujeito ao Fator R, **QUANDO** o cálculo de preço for solicitado, o sistema deve calcular Fator R = folha de salários ÷ receita bruta, ambas no mesmo período usado no RBT12, aplicar o Anexo III se Fator R ≥ 28% ou o Anexo V caso contrário (valores parametrizáveis), e avisar quando o anexo efetivo mudar. |
 | RN28 | Comportamento indesejado | **SE** um negócio sujeito ao Fator R ainda não tiver RBT12, **ENTÃO** o sistema deve usar o Anexo V até haver histórico de vendas. |
+| RF74 | Complexo (Estado + Indesejado) | **ENQUANTO** a conta tiver o papel de Administrador da plataforma (concedido apenas por script), o sistema deve mostrar o painel de negócios somente com metadados; **SE** a conta for membro de algum negócio ou tiver convite pendente, **ENTÃO** o sistema deve recusar a concessão do papel. |
+| RF75 | Orientado a evento | **QUANDO** o Dono liberar o acesso do suporte informando motivo, módulos e prazo (1 h, 24 h, 3 dias ou 7 dias), o sistema deve registrar a liberação, que vale até expirar ou até o Dono revogá-la. |
+| RF76 | Complexo (Estado + Indesejado) | **ENQUANTO** houver liberação ativa, o sistema deve permitir que o Administrador veja somente os módulos liberados, em somente leitura e com dados pessoais mascarados; **SE** o Administrador tentar qualquer escrita ou acessar o negócio sem liberação ativa, **ENTÃO** o sistema deve recusar a operação. |
+| RF77 | Orientado a evento | **QUANDO** houver liberação, revogação, entrada, tela aberta ou saída do modo suporte, o sistema deve registrar o evento com data, hora e autor e exibi-lo ao Dono em "Acessos do suporte". |
+| RF78 | Comportamento indesejado | **SE** a versão aceita da Política de Privacidade e dos Termos for diferente da vigente, **ENTÃO** o sistema deve exigir o novo aceite antes de liberar o uso do app, permitindo apenas Minha conta e Sair. |
+| RN30 | Comportamento indesejado | **SE** o Administrador tentar acessar dados operacionais de um negócio sem liberação ativa do Dono, **ENTÃO** o sistema deve recusar o acesso. |
+| RN31 | Comportamento indesejado | **SE** alguém que não seja o Dono tentar liberar ou revogar o acesso do suporte, **ENTÃO** o sistema deve recusar a operação. |
+| RN32 | Comportamento indesejado | **SE** houver tentativa de alterar ou apagar um registro de auditoria do suporte, **ENTÃO** o sistema deve recusar a operação. |
 
 ---
 
@@ -43,7 +51,7 @@
 | RN04 | Orientado a estado | **ENQUANTO** o item for do tipo Serviço, o sistema deve excluí-lo do controle de estoque e permitir vincular materiais; **ENQUANTO** for Produto Físico, deve incluí-lo no controle de estoque. |
 | RF64 | Feature opcional | **ONDE** o usuário informar manualmente o preço de venda de um item, o sistema deve salvá-lo como preço oficial e registrar no histórico a origem Manual. |
 | RN23 | Comportamento indesejado | **SE** o usuário tentar adicionar a uma venda um item sem preço oficial confirmado, **ENTÃO** o sistema deve impedir a inclusão e orientar a definição do preço. |
-| RN05 | Orientado a evento | **QUANDO** um Serviço com materiais vinculados for vendido, o sistema deve dar baixa automática no estoque desses materiais, na quantidade configurada. |
+| RN05 | Orientado a evento | **QUANDO** um Serviço com materiais vinculados for vendido, o sistema deve dar baixa automática no estoque desses materiais, na quantidade configurada; **ONDE** a quantidade usada for ajustada na venda, o sistema deve baixar a quantidade ajustada (SPEC-017). |
 
 ---
 
@@ -59,7 +67,7 @@
 | RF20 | Complexo (Evento + resposta condicional) | **QUANDO** um produto completar seu primeiro ciclo (ao menos uma entrada e uma saída), o sistema deve sugerir o estoque mínimo como ⌈consumo médio diário dos últimos 90 dias × dias de cobertura do negócio (padrão 7)⌉, e deve permitir que o usuário sobrescreva esse valor manualmente a qualquer momento. |
 | RF21 | Ubíquo | O sistema deve exibir o alerta de estoque baixo tanto na notificação do sistema (dashboard/lista) quanto no indicador visual do cadastro do produto. |
 | RN06 | Orientado a evento | **QUANDO** o estoque de um produto for insuficiente para a venda, **O SISTEMA DEVE** impedir a operação e não registrar a venda. |
-| RN07 | Orientado a estado | **ENQUANTO** um produto não tiver completado ao menos 1 ciclo de entrada e saída registrado, **O SISTEMA DEVE** deve manter o alerta de estoque baixo desativado para esse produto. |
+| RN07 | Orientado a estado | **ENQUANTO** um produto sem estoque mínimo manual não tiver completado ao menos 1 ciclo de entrada e saída registrado, **O SISTEMA DEVE** manter o alerta de estoque baixo desativado para esse produto. |
 | RN08 | Complexo (Evento + Opcional) | **QUANDO** um produto completar o primeiro ciclo de entrada e saída, o sistema deve sugerir o estoque mínimo automaticamente; **ONDE** o usuário informar um valor manual, o sistema deve utilizá-lo no lugar do sugerido. |
 
 ---
@@ -127,7 +135,7 @@
 | RN19 | Comportamento indesejado | **SE** a soma de Desp. Fixas% + Desp. Variáveis% + Imposto% + Margem% for maior ou igual a 100%, **ENTÃO** o sistema deve bloquear o cálculo e informar que o preço é inviável com os parâmetros atuais. |
 | RN20 | Ubíquo | O sistema deve utilizar taxa de cartão e comissão somente na formação do preço, sem descontá-las dos lançamentos financeiros nem gerar repasse automático no MVP. |
 | RN21 | Complexo (Evento + Indesejado) | **QUANDO** uma venda for registrada, inclusive com pagamento em cartão de crédito ainda não recebido, o sistema deve considerar seu valor total no faturamento bruto do mês da venda e, a partir do mês seguinte, no RBT12; **SE** houver menos de 12 meses anteriores com vendas, **ENTÃO** o sistema deve usar RBT12 = média mensal desses meses × 12 ou, sem nenhum mês anterior, faturamento mensal estimado × 12. |
-| RN15 | Ubíquo | O sistema deve utilizar sempre o último preço confirmado pelo usuário como preço de venda oficial do produto/serviço nas vendas. |
+| RN15 | Ubíquo | O sistema deve utilizar sempre o último preço confirmado pelo usuário como preço de venda oficial do produto/serviço nas vendas; **ONDE** um membro com permissão ajustar o preço de uma linha da venda, informando o motivo, o sistema deve cobrar o preço ajustado e registrar o preço oficial do momento, quem ajustou e o motivo (SPEC-017). |
 | RN17 | Ubíquo | O sistema deve manter as faixas e percentuais de alíquota de MEI e Simples Nacional como configuração parametrizável, permitindo atualização sem alteração de código. |
 
 ---
@@ -167,7 +175,7 @@
 | ID | Padrão | Requisito EARS |
 |---|---|---|
 | RNF01 | Ubíquo | O sistema deve ser uma aplicação web acessível via navegador, com layout responsivo para desktop e mobile. |
-| RNF02 | Ubíquo | O sistema deve isolar logicamente os dados de cada negócio, impedindo acesso cruzado entre contas (arquitetura multi-tenant), inclusive por acesso direto à API pública do provedor do banco. |
+| RNF02 | Ubíquo | O sistema deve isolar logicamente os dados de cada negócio, impedindo acesso cruzado entre contas (arquitetura multi-tenant), inclusive por acesso direto à API pública do provedor do banco, exceto o acesso de suporte liberado pelo Dono (RN30, RN31). |
 | RNF03 | Ubíquo | O sistema deve armazenar as senhas dos usuários utilizando hash seguro. |
 | RNF04 | Orientado a evento | **QUANDO** o titular solicitar a exportação dos seus dados, o sistema deve gerar um arquivo .zip com os dados em JSON (completo) e CSV (por tabela); o sistema deve ainda manter política de privacidade e consentimento explícito. |
 | RN27 | Orientado a evento | **QUANDO** o usuário solicitar a exclusão da conta, o sistema deve bloquear o acesso, anonimizar seus dados pessoais e os dos clientes dos negócios em que for o único Dono, e manter por 5 anos os registros fiscais e financeiros sem identificação pessoal. |
@@ -179,3 +187,4 @@
 | RNF09 | Ubíquo | O sistema deve manter backup diário do banco: dump automatizado e privado enquanto estiver no plano gratuito do Supabase; backup nativo do plano pago em produção, mantendo o dump como cópia externa. |
 | RNF10 | Ubíquo | O sistema deve manter uma arquitetura extensível nos módulos e no dashboard, suportando novos indicadores e integrações (Nota Fiscal, PIX, gateway de pagamento) sem reestruturação do core. |
 | RNF11 | Ubíquo | O sistema deve manter ambientes separados de desenvolvimento, homologação e produção, com banco e credenciais próprios em cada um. |
+| RNF12 | Comportamento indesejado | **SE** a sessão de uma conta de Administrador tiver mais de 8 h desde a entrada, **ENTÃO** o sistema deve recusá-la e exigir novo login. |

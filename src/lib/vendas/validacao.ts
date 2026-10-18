@@ -1,0 +1,249 @@
+import type { ErrosDeCampo } from "@/lib/auth/validacao";
+import { casasDecimais, lerNumero } from "@/lib/dominio/catalogo";
+import { diasEntre } from "@/lib/dominio/estoque";
+import {
+  DIAS_RETROATIVOS,
+  FORMAS_DE_PAGAMENTO,
+  FORMAS_DE_REEMBOLSO,
+  MAX_MOTIVO_AJUSTE,
+  MAX_PARCELAS,
+  MOTIVOS_CANCELAMENTO,
+  paraCentavos,
+  type FormaDePagamento,
+  type FormaDeReembolso,
+  type MotivoDeCancelamento,
+} from "@/lib/dominio/venda";
+
+/**
+ * Validação da venda (SPEC-008, 5.5). Roda no navegador e no servidor. O carrinho chega
+ * como JSON; o preço oficial nunca vem daqui (INV-002) — só o "preço visto", para avisar se
+ * mudou, e o preço ajustado da SPEC-017, que o servidor só aceita com Vendas — editar.
+ */
+
+export const MAX_LINHAS = 100;
+export const MAX_PAGAMENTOS = 10;
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export const MENSAGENS_VENDA = {
+  carrinhoInvalido: "Não foi possível ler a venda. Recarregue a página e tente de novo.",
+  carrinhoVazio: "Adicione ao menos um item",
+  muitasLinhas: `Use no máximo ${MAX_LINHAS} itens por venda`,
+  quantidadeInvalida: "Use uma quantidade maior que zero, com até 3 casas decimais",
+  semPagamento: "Informe a forma de pagamento",
+  formaInvalida: "Forma de pagamento inválida",
+  valorInvalido: "Use um valor maior que zero, com até 2 casas",
+  parcelasInvalidas: `Use de 1 a ${MAX_PARCELAS} parcelas, só no crédito`,
+  dataInvalida: `Use uma data entre hoje e ${DIAS_RETROATIVOS} dias atrás`,
+  clienteInvalido: "Cliente inválido",
+  nomeObrigatorio: "Informe o nome do cliente",
+  nomeLongo: "Use no máximo 120 caracteres",
+  contatoLongo: "Use no máximo 120 caracteres",
+  motivoObrigatorio: "Escolha o motivo do cancelamento",
+  detalheObrigatorio: 'Descreva o motivo quando escolher "Outro"',
+  detalheLongo: "Use no máximo 200 caracteres",
+  formaReembolsoInvalida: "Forma de reembolso inválida",
+  // SPEC-017
+  materiaisInvalidos: "Não foi possível ler os materiais ajustados. Recarregue a página e tente de novo.",
+  quantidadeMaterialInvalida: "Use uma quantidade de 0 ou mais, com até 3 casas decimais",
+  precoAjusteInvalido: "Use um preço maior que zero, com até 2 casas",
+  motivoAjusteObrigatorio: "Informe o motivo do ajuste de preço",
+  motivoAjusteLongo: `Use no máximo ${MAX_MOTIVO_AJUSTE} caracteres`,
+  ajusteNaTroca: "Na troca, os itens usam o preço e os materiais do catálogo.",
+} as const;
+
+/** Ajustes da linha (SPEC-017): materiais = total usado na linha (OPEN-002); preço com motivo. */
+export type AjusteDePreco = { precoCentavos: number; motivo: string };
+export type LinhaDoCarrinho = {
+  itemId: string;
+  quantidade: number;
+  precoVistoCentavos: number | null;
+  materiais?: { materialId: string; quantidade: number }[] | null;
+  ajustePreco?: AjusteDePreco | null;
+};
+export type PagamentoDoCarrinho = { forma: FormaDePagamento; valorCentavos: number; parcelas: number };
+export type DadosDoCarrinho = {
+  /** Identificador do carrinho = id da venda (proteção contra envio duplicado, INV-009). */
+  id: string;
+  /** Dia local da venda (OPEN-002). */
+  dia: string;
+  clienteId: string | null;
+  linhas: LinhaDoCarrinho[];
+  pagamentos: PagamentoDoCarrinho[];
+};
+
+export type Validacao<T> = { ok: true; dados: T } | { ok: false; erros: ErrosDeCampo };
+
+const lerValor = (v: unknown) => (typeof v === "number" ? v : lerNumero(typeof v === "string" ? v : undefined));
+
+/**
+ * Valida a forma do carrinho (sem consultar o banco). Linhas do mesmo item sem ajustes são
+ * somadas; linhas com ajustes (SPEC-017) ficam separadas. A soma dos pagamentos é conferida
+ * no servidor contra o total calculado com o preço oficial (ou o ajustado).
+ */
+export function validarCarrinho(entrada: unknown, hoje: string, opcoes: { troca?: boolean } = {}): Validacao<DadosDoCarrinho> {
+  const c = entrada as Record<string, unknown> | null;
+  if (!c || typeof c !== "object" || typeof c.id !== "string" || !UUID.test(c.id)) {
+    return { ok: false, erros: { carrinho: MENSAGENS_VENDA.carrinhoInvalido } };
+  }
+  const erros: ErrosDeCampo = {};
+
+  // A troca é registrada hoje (SPEC-011, 5.4).
+  const dia = opcoes.troca ? hoje : typeof c.dia === "string" && c.dia ? c.dia : hoje;
+  const diff = /^\d{4}-\d{2}-\d{2}$/.test(dia) && !Number.isNaN(Date.parse(`${dia}T00:00:00Z`)) ? diasEntre(dia, hoje) : -1;
+  if (diff < 0 || diff > DIAS_RETROATIVOS) erros.dia = MENSAGENS_VENDA.dataInvalida;
+
+  let clienteId: string | null = null;
+  if (c.clienteId !== undefined && c.clienteId !== null && c.clienteId !== "") {
+    if (typeof c.clienteId === "string" && UUID.test(c.clienteId)) clienteId = c.clienteId;
+    else erros.cliente = MENSAGENS_VENDA.clienteInvalido;
+  }
+
+  const resultado: LinhaDoCarrinho[] = [];
+  const somaveis = new Map<string, LinhaDoCarrinho>();
+  const linhas = Array.isArray(c.linhas) ? c.linhas : [];
+  if (linhas.length === 0) erros.itens = MENSAGENS_VENDA.carrinhoVazio;
+  else if (linhas.length > MAX_LINHAS) erros.itens = MENSAGENS_VENDA.muitasLinhas;
+  for (const l of linhas as Record<string, unknown>[]) {
+    const quantidade = lerValor(l?.quantidade);
+    if (typeof l?.itemId !== "string" || !UUID.test(l.itemId)) {
+      erros.itens = MENSAGENS_VENDA.carrinhoInvalido;
+      continue;
+    }
+    if (quantidade === null || !(quantidade > 0) || quantidade > 9_999_999.999 || casasDecimais(quantidade) > 3) {
+      erros[`quantidade_${l.itemId}`] = MENSAGENS_VENDA.quantidadeInvalida;
+      continue;
+    }
+    const precoVisto = typeof l.precoVisto === "number" ? paraCentavos(l.precoVisto) : null;
+    const ajustes = lerAjustes(l, l.itemId, erros);
+    if (ajustes === null) continue;
+    if (opcoes.troca && (ajustes.materiais || ajustes.ajustePreco)) {
+      erros.itens = MENSAGENS_VENDA.ajusteNaTroca; // SPEC-017, OPEN-008
+      continue;
+    }
+    if (ajustes.materiais || ajustes.ajustePreco) {
+      resultado.push({ itemId: l.itemId, quantidade, precoVistoCentavos: precoVisto, ...ajustes });
+      continue;
+    }
+    const anterior = somaveis.get(l.itemId);
+    if (anterior) {
+      anterior.quantidade = Math.round((anterior.quantidade + quantidade) * 1000) / 1000;
+      anterior.precoVistoCentavos = precoVisto;
+    } else {
+      const linha: LinhaDoCarrinho = { itemId: l.itemId, quantidade, precoVistoCentavos: precoVisto };
+      somaveis.set(l.itemId, linha);
+      resultado.push(linha);
+    }
+  }
+
+  const pagamentos: PagamentoDoCarrinho[] = [];
+  const brutos = Array.isArray(c.pagamentos) ? (c.pagamentos as Record<string, unknown>[]) : [];
+  // Na troca, o crédito pode cobrir tudo: os pagamentos são só o restante (SPEC-011, RN26).
+  if (brutos.length === 0 && !opcoes.troca) erros.pagamentos = MENSAGENS_VENDA.semPagamento;
+  else if (brutos.length > MAX_PAGAMENTOS) erros.pagamentos = MENSAGENS_VENDA.formaInvalida;
+  for (const p of brutos) {
+    const forma = p?.forma as FormaDePagamento;
+    if (!Object.hasOwn(FORMAS_DE_PAGAMENTO, forma ?? "")) {
+      erros.pagamentos = MENSAGENS_VENDA.formaInvalida;
+      continue;
+    }
+    const valor = lerValor(p.valor);
+    if (valor === null || !(valor > 0) || valor > 9_999_999.99 || casasDecimais(valor) > 2) {
+      erros.pagamentos = MENSAGENS_VENDA.valorInvalido;
+      continue;
+    }
+    const parcelas = p.parcelas === undefined || p.parcelas === null || p.parcelas === "" ? 1 : Number(p.parcelas);
+    if (!Number.isInteger(parcelas) || parcelas < 1 || parcelas > MAX_PARCELAS || (forma !== "CREDITO" && parcelas !== 1)) {
+      erros.pagamentos = MENSAGENS_VENDA.parcelasInvalidas;
+      continue;
+    }
+    pagamentos.push({ forma, valorCentavos: paraCentavos(valor), parcelas });
+  }
+
+  if (Object.keys(erros).length) return { ok: false, erros };
+  return { ok: true, dados: { id: c.id, dia, clienteId, linhas: resultado, pagamentos } };
+}
+
+/**
+ * Ajustes de uma linha (SPEC-017): materiais (lista com o total usado de cada material, sem
+ * repetição — OPEN-001/OPEN-002) e preço com motivo obrigatório (OPEN-003, OPEN-006).
+ * Devolve null quando há erro (já registrado em `erros`).
+ */
+function lerAjustes(l: Record<string, unknown>, itemId: string, erros: ErrosDeCampo): Pick<LinhaDoCarrinho, "materiais" | "ajustePreco"> | null {
+  let materiais: LinhaDoCarrinho["materiais"] = null;
+  if (l.materiais !== undefined && l.materiais !== null) {
+    if (!Array.isArray(l.materiais) || l.materiais.length === 0 || l.materiais.length > 50) {
+      erros[`materiais_${itemId}`] = MENSAGENS_VENDA.materiaisInvalidos;
+      return null;
+    }
+    const vistos = new Set<string>();
+    materiais = [];
+    for (const m of l.materiais as Record<string, unknown>[]) {
+      const q = lerValor(m?.quantidade);
+      if (typeof m?.materialId !== "string" || !UUID.test(m.materialId) || vistos.has(m.materialId)) {
+        erros[`materiais_${itemId}`] = MENSAGENS_VENDA.materiaisInvalidos;
+        return null;
+      }
+      if (q === null || q < 0 || q > 9_999_999.999 || casasDecimais(q) > 3) {
+        erros[`materiais_${itemId}`] = MENSAGENS_VENDA.quantidadeMaterialInvalida;
+        return null;
+      }
+      vistos.add(m.materialId);
+      materiais.push({ materialId: m.materialId, quantidade: q });
+    }
+  }
+  let ajustePreco: LinhaDoCarrinho["ajustePreco"] = null;
+  if (l.precoAjustado !== undefined && l.precoAjustado !== null && l.precoAjustado !== "") {
+    const preco = lerValor(l.precoAjustado);
+    const motivo = typeof l.motivoAjuste === "string" ? l.motivoAjuste.trim().replace(/\s+/g, " ") : "";
+    if (preco === null || !(preco > 0) || preco > 9_999_999.99 || casasDecimais(preco) > 2) {
+      erros[`preco_${itemId}`] = MENSAGENS_VENDA.precoAjusteInvalido;
+      return null;
+    }
+    if (!motivo) {
+      erros[`motivo_${itemId}`] = MENSAGENS_VENDA.motivoAjusteObrigatorio;
+      return null;
+    }
+    if (motivo.length > MAX_MOTIVO_AJUSTE) {
+      erros[`motivo_${itemId}`] = MENSAGENS_VENDA.motivoAjusteLongo;
+      return null;
+    }
+    ajustePreco = { precoCentavos: paraCentavos(preco), motivo };
+  }
+  return { materiais, ajustePreco };
+}
+
+/** Cadastro rápido de cliente (OPEN-005). */
+export function validarCliente(campos: Record<string, string>): Validacao<{ nome: string; contato: string | null }> {
+  const nome = (campos.nome ?? "").trim().replace(/\s+/g, " ");
+  const contato = (campos.contato ?? "").trim() || null;
+  const erros: ErrosDeCampo = {};
+  if (!nome) erros.nome = MENSAGENS_VENDA.nomeObrigatorio;
+  else if (nome.length > 120) erros.nome = MENSAGENS_VENDA.nomeLongo;
+  if (contato && contato.length > 120) erros.contato = MENSAGENS_VENDA.contatoLongo;
+  return Object.keys(erros).length ? { ok: false, erros } : { ok: true, dados: { nome, contato } };
+}
+
+export type DadosDoCancelamento = {
+  /** Texto gravado em Venda.motivoCancelamento: "<motivo>" ou "<motivo>: <detalhe>". */
+  motivo: string;
+  /** Obrigatória só quando houver reembolso (conferido no servidor com o recebido). */
+  formaReembolso: FormaDeReembolso | null;
+};
+
+/** Cancelamento (SPEC-011, 5.3; OPEN-002, OPEN-003). */
+export function validarCancelamento(campos: Record<string, string>): Validacao<DadosDoCancelamento> {
+  const erros: ErrosDeCampo = {};
+  const codigo = campos.motivo as MotivoDeCancelamento;
+  const valido = Object.hasOwn(MOTIVOS_CANCELAMENTO, codigo ?? "");
+  if (!valido) erros.motivo = MENSAGENS_VENDA.motivoObrigatorio;
+  const detalhe = (campos.detalhe ?? "").trim().replace(/\s+/g, " ");
+  if (detalhe.length > 200) erros.detalhe = MENSAGENS_VENDA.detalheLongo;
+  else if (codigo === "OUTRO" && !detalhe) erros.detalhe = MENSAGENS_VENDA.detalheObrigatorio;
+  let formaReembolso: FormaDeReembolso | null = null;
+  if (campos.formaReembolso) {
+    if (Object.hasOwn(FORMAS_DE_REEMBOLSO, campos.formaReembolso)) formaReembolso = campos.formaReembolso as FormaDeReembolso;
+    else erros.formaReembolso = MENSAGENS_VENDA.formaReembolsoInvalida;
+  }
+  if (Object.keys(erros).length) return { ok: false, erros };
+  return { ok: true, dados: { motivo: detalhe ? `${MOTIVOS_CANCELAMENTO[codigo]}: ${detalhe}` : MOTIVOS_CANCELAMENTO[codigo], formaReembolso } };
+}

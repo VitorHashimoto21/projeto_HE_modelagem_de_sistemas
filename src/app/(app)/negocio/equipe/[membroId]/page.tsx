@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { FormularioPapel, FormularioPermissoes, RemoverMembro } from "@/components/equipe/formularios-do-membro";
+import { CabecalhoDePagina } from "@/components/ui/cabecalho-de-pagina";
+import { Superficie, TituloDaSuperficie } from "@/components/ui/superficie";
 import { exigirDono } from "@/lib/auth/servidor";
 import { equipe } from "@/lib/db";
 import { permissoesEfetivas, ROTULO_PAPEL } from "@/lib/dominio/permissoes";
@@ -19,34 +20,18 @@ export default async function GerenciarMembro({ params }: PageProps<"/negocio/eq
   const papel = membro.papel;
 
   return (
-    <div className="mx-auto max-w-2xl space-y-10">
-      <div>
-        <Link href="/negocio/equipe" className="text-sm font-medium text-primary underline-offset-2 hover:underline">
-          ← Equipe
-        </Link>
-        <h1 className="mt-2 font-display text-3xl font-semibold break-words text-foreground">{membro.nome}</h1>
-        <p className="mt-1 text-sm break-words text-muted-foreground">
-          {membro.email} · {ROTULO_PAPEL[papel]}
-        </p>
-      </div>
+    <div className="mx-auto max-w-2xl space-y-6">
+      <CabecalhoDePagina voltar={{ href: "/negocio/equipe", rotulo: "Equipe" }} titulo={<span className="break-words">{membro.nome}</span>} descricao={`${membro.email}, ${ROTULO_PAPEL[papel].toLowerCase()}`} />
 
-      <section aria-labelledby="titulo-papel" className="space-y-4 rounded-2xl border bg-card p-6 shadow-sm">
-        <h2 id="titulo-papel" className="font-display text-xl font-semibold text-card-foreground">
-          Papel
-        </h2>
+      <Superficie aria-labelledby="titulo-papel">
+        <TituloDaSuperficie id="titulo-papel" titulo="Papel" />
         <FormularioPapel membroId={membro.id} papel={papel} />
-      </section>
+      </Superficie>
 
-      <section aria-labelledby="titulo-permissoes" className="space-y-4 rounded-2xl border bg-card p-6 shadow-sm">
-        <h2 id="titulo-permissoes" className="font-display text-xl font-semibold text-card-foreground">
-          Permissões
-        </h2>
-        <FormularioPermissoes
-          membroId={membro.id}
-          matriz={permissoesEfetivas(papel, membro.permissoesCustom)}
-          customizado={membro.permissoesCustom !== null}
-        />
-      </section>
+      <Superficie aria-labelledby="titulo-permissoes">
+        <TituloDaSuperficie id="titulo-permissoes" titulo="Permissões" />
+        <FormularioPermissoes membroId={membro.id} matriz={permissoesEfetivas(papel, membro.permissoesCustom)} customizado={membro.permissoesCustom !== null} />
+      </Superficie>
 
       <section aria-labelledby="titulo-remover" className="space-y-3">
         <h2 id="titulo-remover" className="sr-only">

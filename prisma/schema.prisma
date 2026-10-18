@@ -135,6 +135,15 @@ enum CategoriaItem {
   OUTROS
 }
 
+// SPEC-009: de onde veio o lançamento (extrato e regras de estorno)
+enum OrigemLancamento {
+  VENDA
+  CONTA
+  AVULSO
+  SALDO_INICIAL
+  ESTORNO
+}
+
 enum TipoLancamento {
   ENTRADA
   SAIDA
@@ -161,6 +170,17 @@ enum StatusConta {
   CANCELADA // RN25: conta a receber de venda cancelada
 }
 
+// SPEC-018 (RF77, OPEN-008): eventos do registro de auditoria do suporte.
+enum EventoSuporte {
+  PAPEL_CONCEDIDO // script da equipe (5.1)
+  PAPEL_RETIRADO
+  LIBERACAO // o Dono liberou o acesso
+  REVOGACAO // o Dono revogou (ou uma nova liberação substituiu a anterior)
+  ENTRADA // o Administrador entrou em modo suporte
+  TELA // cada tela aberta em modo suporte
+  SAIDA // saiu do modo suporte
+}
+
 // ==========================================================
 // Multi-tenancy
 // ==========================================================
@@ -174,18 +194,27 @@ model Usuario {
   email String @unique
 
   // RNF04: consentimento explícito de uso de dados (LGPD)
-  consentimentoLgpdEm DateTime?
-  versaoTermosAceita  String? // SPEC-002, OPEN-005: versão da política e dos termos aceita (ex.: "2026-10-03")
-  excluidoEm          DateTime? // RN27: acesso bloqueado
-  anonimizadoEm       DateTime? // RN27: nome/e-mail/senha substituídos por valores anônimos
+  consentimentoLgpdEm  DateTime?
+  versaoTermosAceita   String? // SPEC-002, OPEN-005: versão da política e dos termos aceita (ex.: "2026-10-03")
+  excluidoEm           DateTime? // RN27: acesso bloqueado
+  anonimizadoEm        DateTime? // RN27: nome/e-mail/senha substituídos por valores anônimos
+  credencialRemovidaEm DateTime? // SPEC-014 (OPEN-001): credencial apagada no Supabase Auth; nula com excluidoEm = pendência da rotina diária
+  termosAceitosEm      DateTime? // SPEC-018 (RF78, OPEN-011): data do último aceite da política e dos termos (versaoTermosAceita)
+  administradorEm      DateTime? // SPEC-018 (RF74, OPEN-001): Administrador da plataforma desde; concedido só pelo script (5.1)
 
-  membroEm         MembroNegocio[]
-  movimentacoes    MovimentacaoEstoque[] // RNF05: auditoria (quem fez a alteração)
-  historicoPrecos  HistoricoPreco[] // RNF05: auditoria (quem confirmou o preço)
-  vendasCanceladas Venda[]               @relation("VendaCanceladaPor") // RF65: auditoria do cancelamento
-  convitesEnviados Convite[]             @relation("ConviteEnviadoPor") // RF72
-  planosAlterados  Negocio[]             @relation("PlanoAlteradoPor") // RF73
-  createdAt        DateTime              @default(now())
+  membroEm          MembroNegocio[]
+  movimentacoes     MovimentacaoEstoque[] // RNF05: auditoria (quem fez a alteração)
+  historicoPrecos   HistoricoPreco[] // RNF05: auditoria (quem confirmou o preço)
+  vendasCanceladas  Venda[]                @relation("VendaCanceladaPor") // RF65: auditoria do cancelamento
+  vendasRegistradas Venda[]                @relation("VendaRegistradaPor") // SPEC-008 (OPEN-006)
+  lancamentos       LancamentoFinanceiro[] @relation("LancamentoRegistradoPor") // SPEC-009 (RNF05)
+  convitesEnviados  Convite[]              @relation("ConviteEnviadoPor") // RF72
+  planosAlterados   Negocio[]              @relation("PlanoAlteradoPor") // RF73
+  trocasDePlano     HistoricoPlano[] // SPEC-013 (OPEN-007): quem trocou o plano
+  acessosLiberados  AcessoSuporte[]        @relation("AcessoLiberadoPor") // SPEC-018 (RF75)
+  acessosRevogados  AcessoSuporte[]        @relation("AcessoRevogadoPor") // SPEC-018 (RF75)
+  registrosSuporte  RegistroSuporte[] // SPEC-018 (RF77): autor do evento
+  createdAt         DateTime               @default(now())
 }
 
 model Negocio {
@@ -213,17 +242,23 @@ model Negocio {
   taxaCartaoMedia           Decimal  @default(0) @db.Decimal(5, 2) // RF51: % médio da maquininha
   margemLucroMeta           Decimal? @db.Decimal(5, 2) // RF56: margem desejada p/ faturamento meta
   capacidadeMensal          Decimal? @db.Decimal(10, 2) // RF50: horas/atendimentos/unidades por mês
+  unidadeCapacidade         String?  @db.VarChar(30) // SPEC-010: unidade da capacidade (ex.: "atendimentos"), só exibição
   ticketMedioEstimado       Decimal? @db.Decimal(10, 2) // RF50
   faturamentoMensalEstimado Decimal? @db.Decimal(12, 2) // RF50: recomendado = capacidade × ticket, editável
   cmvEstimado               Decimal? @db.Decimal(5, 2) // RF62: CMV% usado enquanto não há histórico
+  proximoNumeroVenda        Int      @default(1) // SPEC-008 (OPEN-007): próximo número de venda, incrementado na transação da venda
   diasCoberturaEstoque      Int      @default(7) // RF20: estoque mínimo = ⌈consumo médio diário × dias⌉
 
-  encerradoEm DateTime? // RN27: negócio encerrado após exclusão do único Dono (dados fiscais retidos 5 anos)
+  encerradoEm  DateTime? // RN27: negócio encerrado após exclusão do único Dono (dados fiscais retidos 5 anos)
+  eliminarApos DateTime? @db.Date // SPEC-014 (OPEN-005): data prevista de eliminação (encerramento + 5 anos)
 
   planoAlteradoPor Usuario? @relation("PlanoAlteradoPor", fields: [planoAlteradoPorId], references: [id])
 
   membros          MembroNegocio[]
   convites         Convite[]
+  historicoPlanos  HistoricoPlano[] // SPEC-013 (OPEN-007)
+  acessosSuporte   AcessoSuporte[] // SPEC-018 (RF75)
+  registrosSuporte RegistroSuporte[] // SPEC-018 (RF77)
   itens            Item[]
   materiaisServico MaterialServico[]
   movimentacoes    MovimentacaoEstoque[]
@@ -246,6 +281,7 @@ model MembroNegocio {
   negocioId        String       @db.Uuid
   papel            PapelUsuario @default(COLABORADOR) // RF05
   permissoesCustom Json? // RF06: matriz módulo × ação COMPLETA (6 módulos × ver/criar/editar/excluir — SPEC-005, INV-008); null = predefinição do papel
+  suspensoEm       DateTime? // SPEC-013 (OPEN-001): sem acesso desde a volta ao plano gratuito; o Dono nunca é suspenso
 
   usuario Usuario @relation(fields: [usuarioId], references: [id])
   negocio Negocio @relation(fields: [negocioId], references: [id])
@@ -312,7 +348,7 @@ model Item {
   // participação no Estoque é determinada pelo campo `tipo` (RN04),
   // validar na camada de aplicação.
   quantidadeEstoque Decimal  @default(0) @db.Decimal(10, 3) // RN03: nasce zerado
-  estoqueMinimo     Decimal? @db.Decimal(10, 3) // RF08/RF20: opcional, sugerido após 1º ciclo (RN07/RN08)
+  estoqueMinimo     Decimal? @db.Decimal(10, 3) // SPEC-007 (OPEN-002): mínimo MANUAL; nulo = usar a sugestão calculada na leitura (RF20, RN08)
 
   comissaoPercentual Decimal? @db.Decimal(5, 2) // RF52: opcional (null = 0%), entra como despesa variável
 
@@ -360,7 +396,11 @@ model MovimentacaoEstoque {
   saldoPosterior Decimal            @db.Decimal(10, 3) // RNF05: valor novo
   motivo         MotivoSaidaManual? // RF17: obrigatório apenas quando tipo = SAIDA_MANUAL
   usuarioId      String             @db.Uuid // RNF05: auditoria
-  data           DateTime           @default(now())
+  data           DateTime           @default(now()) // SPEC-007 (OPEN-005): data da ocorrência informada (até 90 dias atrás)
+  // SPEC-007: momento da gravação, com microssegundos, pelo relógio do banco (depois da trava do item) —
+  // define a ordem da cadeia de saldos, mesmo com data retroativa.
+  registradoEm   DateTime           @default(dbgenerated("(clock_timestamp() AT TIME ZONE 'UTC'::text)")) @db.Timestamp(6)
+  observacao     String?            @db.VarChar(200) // SPEC-007 (OPEN-007): obrigatória no motivo OUTRO
 
   negocio Negocio @relation(fields: [negocioId], references: [id])
   item    Item    @relation(fields: [itemId], references: [id])
@@ -369,6 +409,8 @@ model MovimentacaoEstoque {
 
   @@index([negocioId])
   @@index([itemId])
+  @@index([itemId, data]) // SPEC-007: consumo dos últimos 90 dias
+  @@index([itemId, registradoEm]) // SPEC-007: movimentações na ordem de registro
   @@index([vendaId])
 }
 
@@ -389,6 +431,10 @@ model HistoricoPreco {
   despesasVariaveisPercentual Decimal?          @db.Decimal(5, 2) // RN20: taxa cartão + comissão
   regimeTributario            RegimeTributario?
   impostoAplicado             Decimal?          @db.Decimal(5, 2) // alíquota efetiva utilizada
+  // SPEC-010: valor exato calculado (quando o confirmado foi arredondado para cima — OPEN-004)
+  // e a memória completa do cálculo (RNF05; Anexo efetivo para o aviso do OPEN-008)
+  precoSugerido               Decimal?          @db.Decimal(10, 2)
+  memoriaCalculo              Json?
   dataConfirmacao             DateTime          @default(now())
 
   negocio Negocio @relation(fields: [negocioId], references: [id])
@@ -407,11 +453,12 @@ model DespesaFixa {
   id            String              @id @default(uuid()) @db.Uuid
   negocioId     String              @db.Uuid
   descricao     String
-  valorMensal   Decimal             @db.Decimal(10, 2)
+  valorMensal   Decimal?            @db.Decimal(10, 2) // SPEC-009 (OPEN-005): nulo no DAS do MEI — o valor vem do ParametroMei vigente
   diaVencimento Int                 @default(10) // RF67: dia do mês da conta a pagar gerada
   categoria     CategoriaLancamento @default(OUTROS) // RF67: ex. SALARIO, IMPOSTOS (DAS)
   origem        OrigemDespesaFixa   @default(MANUAL)
   ativo         Boolean             @default(true)
+  geraDesde     DateTime            @db.Date // SPEC-009 (OPEN-004): 1º dia da primeira competência a gerar; redefinida ao reativar
   createdAt     DateTime            @default(now())
 
   negocio Negocio             @relation(fields: [negocioId], references: [id])
@@ -499,6 +546,10 @@ model Venda {
   data       DateTime @default(now())
   valorTotal Decimal  @db.Decimal(10, 2)
 
+  // SPEC-008: número sequencial por negócio (OPEN-007) e quem registrou (OPEN-006)
+  numero          Int
+  registradaPorId String @db.Uuid
+
   // RF65/RN25: cancelamento (a venda nunca é apagada)
   status             StatusVenda @default(CONCLUIDA)
   canceladaEm        DateTime?
@@ -509,6 +560,7 @@ model Venda {
   negocio       Negocio                @relation(fields: [negocioId], references: [id])
   cliente       Cliente?               @relation(fields: [clienteId], references: [id])
   canceladaPor  Usuario?               @relation("VendaCanceladaPor", fields: [canceladaPorId], references: [id])
+  registradaPor Usuario                @relation("VendaRegistradaPor", fields: [registradaPorId], references: [id])
   vendaOrigem   Venda?                 @relation("TrocaDeVenda", fields: [vendaOrigemId], references: [id])
   vendaTroca    Venda?                 @relation("TrocaDeVenda")
   itens         ItemVenda[]
@@ -516,6 +568,7 @@ model Venda {
   pagamentos    Pagamento[]
   lancamentos   LancamentoFinanceiro[] // RN12 — 1:N: pagamento misto pode gerar mais de um lançamento imediato
 
+  @@unique([negocioId, numero]) // SPEC-008 (OPEN-007)
   @@index([negocioId])
   @@index([negocioId, data, status]) // AD-QA01/RN21/RN25: RBT12 e faturamento somam só vendas CONCLUIDA
 }
@@ -528,6 +581,13 @@ model ItemVenda {
   quantidade    Decimal @db.Decimal(10, 3)
   precoUnitario Decimal @db.Decimal(10, 2)
   custoUnitario Decimal @db.Decimal(10, 2) // RF62: custo total do item (inclui materiais) no momento da venda
+
+  // SPEC-017: ajustes na venda. precoOficial/motivoAjustePreco só quando o preço da linha foi
+  // ajustado (precoUnitario = preço cobrado); materiaisAjustados quando a baixa dos materiais
+  // seguiu as quantidades informadas na venda (as movimentações SAIDA_VENDA guardam os valores).
+  precoOficial       Decimal? @db.Decimal(10, 2)
+  motivoAjustePreco  String?  @db.VarChar(120)
+  materiaisAjustados Boolean  @default(false)
 
   negocio Negocio @relation(fields: [negocioId], references: [id])
   venda   Venda   @relation(fields: [vendaId], references: [id])
@@ -573,21 +633,31 @@ model Parcela {
 }
 
 model LancamentoFinanceiro {
-  id        String              @id @default(uuid()) @db.Uuid
-  negocioId String              @db.Uuid
-  vendaId   String?             @db.Uuid // RN09: lançamento imediato de venda
-  contaId   String?             @db.Uuid // RN22: pagamento/recebimento de conta
-  tipo      TipoLancamento
-  categoria CategoriaLancamento // RF32
-  valor     Decimal             @db.Decimal(10, 2)
-  estorno   Boolean             @default(false) // RN25: saída que estorna valor recebido de venda cancelada
-  data      DateTime            @default(now())
+  id          String              @id @default(uuid()) @db.Uuid
+  negocioId   String              @db.Uuid
+  vendaId     String?             @db.Uuid // RN09: lançamento imediato de venda
+  contaId     String?             @db.Uuid // RN22: pagamento/recebimento de conta
+  tipo        TipoLancamento
+  categoria   CategoriaLancamento // RF32
+  valor       Decimal             @db.Decimal(10, 2)
+  estorno     Boolean             @default(false) // RN25: saída que estorna valor recebido de venda cancelada
+  // SPEC-009: origem, descrição e quem registrou (RNF05); estorno ligado ao original (OPEN-003)
+  origem      OrigemLancamento
+  descricao   String?             @db.VarChar(120)
+  usuarioId   String?             @db.Uuid // nulo só nos automáticos da rotina diária
+  estornoDeId String?             @unique @db.Uuid
+  data        DateTime            @default(now())
 
   negocio Negocio            @relation(fields: [negocioId], references: [id])
   venda   Venda?             @relation(fields: [vendaId], references: [id])
   conta   ContaPagarReceber? @relation(fields: [contaId], references: [id])
+  usuario Usuario?           @relation("LancamentoRegistradoPor", fields: [usuarioId], references: [id])
+
+  estornoDe    LancamentoFinanceiro? @relation("EstornoDeLancamento", fields: [estornoDeId], references: [id])
+  estornadoPor LancamentoFinanceiro? @relation("EstornoDeLancamento")
 
   @@index([negocioId])
+  @@index([negocioId, data]) // SPEC-008/009: lançamentos por período
   @@index([contaId])
 }
 
@@ -607,6 +677,7 @@ model ContaPagarReceber {
   valorPago     Decimal             @default(0) @db.Decimal(10, 2) // RF31
   vencimento    DateTime
   status        StatusConta         @default(ABERTA)
+  criadaPorId   String?             @db.Uuid // SPEC-009: quem criou a conta manual
 
   negocio     Negocio                @relation(fields: [negocioId], references: [id])
   parcela     Parcela?               @relation(fields: [parcelaId], references: [id])
@@ -615,4 +686,64 @@ model ContaPagarReceber {
 
   @@unique([despesaFixaId, competencia]) // RF67: não duplicar a conta do mesmo mês
   @@index([negocioId])
+  @@index([negocioId, vencimento, status]) // SPEC-009: contas a vencer e atrasadas
+}
+
+// SPEC-013 (RF73, OPEN-007): toda troca de plano, somente inserção (gatilho he_somente_insercao).
+// Escrito só por alterarPlano, junto de Negocio.plano/planoAlteradoEm/planoAlteradoPorId.
+model HistoricoPlano {
+  id        String       @id @default(uuid()) @db.Uuid
+  negocioId String       @db.Uuid
+  de        PlanoNegocio
+  para      PlanoNegocio
+  usuarioId String       @db.Uuid
+  createdAt DateTime     @default(now())
+
+  negocio Negocio @relation(fields: [negocioId], references: [id])
+  usuario Usuario @relation(fields: [usuarioId], references: [id])
+
+  @@index([negocioId, createdAt])
+}
+
+// SPEC-018 (RF75, RN31): liberação do acesso de suporte pelo Dono — motivo, módulos (só "ver")
+// e prazo. No máximo uma ativa por negócio (a nova revoga a anterior, na mesma transação).
+model AcessoSuporte {
+  id                String    @id @default(uuid()) @db.Uuid
+  negocioId         String    @db.Uuid
+  liberadoPorId     String    @db.Uuid
+  motivo            String    @db.VarChar(300)
+  modulos           String[] // módulos da matriz (SPEC-005) liberados para leitura
+  criadoEm          DateTime  @default(now())
+  expiraEm          DateTime
+  revogadoEm        DateTime?
+  revogadoPorId     String?   @db.Uuid
+  primeiraEntradaEm DateTime? // OPEN-009: e-mail ao Dono só na primeira entrada
+
+  negocio     Negocio           @relation(fields: [negocioId], references: [id])
+  liberadoPor Usuario           @relation("AcessoLiberadoPor", fields: [liberadoPorId], references: [id])
+  revogadoPor Usuario?          @relation("AcessoRevogadoPor", fields: [revogadoPorId], references: [id])
+  registros   RegistroSuporte[]
+
+  @@index([negocioId, criadoEm])
+}
+
+// SPEC-018 (RF77, RN32, OPEN-008): registro de auditoria do suporte, somente inserção
+// (gatilho he_somente_insercao), guardado por 5 anos (OPEN-010). negocioId nulo só nos
+// eventos de papel (PAPEL_CONCEDIDO / PAPEL_RETIRADO).
+model RegistroSuporte {
+  id        String        @id @default(uuid()) @db.Uuid
+  negocioId String?       @db.Uuid
+  acessoId  String?       @db.Uuid
+  usuarioId String        @db.Uuid
+  evento    EventoSuporte
+  modulo    String?       @db.VarChar(20)
+  descricao String        @db.VarChar(200)
+  criadoEm  DateTime      @default(now())
+
+  negocio Negocio?       @relation(fields: [negocioId], references: [id])
+  acesso  AcessoSuporte? @relation(fields: [acessoId], references: [id])
+  usuario Usuario        @relation(fields: [usuarioId], references: [id])
+
+  @@index([negocioId, criadoEm])
+  @@index([acessoId, criadoEm])
 }

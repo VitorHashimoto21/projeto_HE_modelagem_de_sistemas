@@ -1,9 +1,11 @@
 # Termos de Uso — Health Enterprise
 
-> **RASCUNHO — versão 2026-10-03 — revisão do grupo pendente (SPEC-002, OPEN-003).**
+> **RASCUNHO — versão 2026-10-17 — revisão do grupo pendente (SPEC-002, OPEN-003; acesso de suporte: SPEC-018).**
 > Itens entre `[colchetes]` precisam ser preenchidos pelo grupo. Antes da produção, recomenda-se revisão jurídica.
 
-**Versão:** 2026-10-03 · **Vigência:** a partir da publicação
+**Versão:** 2026-10-17 · **Vigência:** a partir da publicação
+
+**O que mudou nesta versão:** nova seção 4-A, sobre o acesso de suporte liberado pelo Dono.
 
 Ao criar uma conta no Health Enterprise ("HE"), você concorda com estes Termos e com a [Política de Privacidade](politica-de-privacidade.md).
 
@@ -27,6 +29,13 @@ O HE é um sistema web de gestão para microempreendedores e autônomos, com con
 - Os dados que você registra sobre o seu negócio continuam sendo seus.
 - Se registrar dados pessoais dos seus clientes, você é o controlador desses dados e deve ter base legal para isso (LGPD). O HE trata esses dados apenas para prestar o serviço.
 - Você pode exportar os seus dados e excluir a sua conta a qualquer momento, nos termos da Política de Privacidade.
+
+## 4-A. Acesso de suporte
+
+- Quando precisar de ajuda, o **Dono** pode liberar o suporte do HE para **ver** (sem alterar) os módulos que escolher do negócio, informando o motivo, por um prazo de até 7 dias. Sem essa liberação, o suporte não vê os dados do negócio.
+- O suporte vê os dados em modo **somente leitura**, com nomes e contatos de clientes e e-mails da equipe mascarados, e age em nome próprio, sem usar a sua conta ou a sua senha.
+- Cada acesso fica registrado e visível ao Dono, que pode revogá-lo a qualquer momento. Detalhes na seção 5 da Política de Privacidade.
+- O HE **nunca pede a sua senha**, nem para o suporte.
 
 ## 5. Calculadora de precificação e informações fiscais
 

@@ -20,3 +20,11 @@ export class OperacaoForaDoContexto extends Error {
     this.name = "OperacaoForaDoContexto";
   }
 }
+
+/** SPEC-018 (INV-002): no modo suporte, o cliente do negócio só lê. */
+export class SomenteLeituraNoSuporte extends Error {
+  constructor(modelo: string, operacao: string) {
+    super(`Modo suporte: ${modelo}.${operacao} recusado (somente leitura).`);
+    this.name = "SomenteLeituraNoSuporte";
+  }
+}

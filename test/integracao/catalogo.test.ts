@@ -204,6 +204,12 @@ describe("edição, arquivamento e isolamento", () => {
     expect((await c.opcoesDeMaterial()).map((o) => o.nome)).toEqual(["Esmalte"]);
   });
 
+  it("SPEC-007 (OPEN-001) — editar no Catálogo não apaga o mínimo manual definido no cadastro", async () => {
+    const id = await criar(produto("Esmalte", { estoqueMinimo: "5" }));
+    expect(await servicos.editarItem(id, produto("Esmalte Gel"), deps())).toMatchObject({ status: "salvo" });
+    expect(Number((await base.item.findUniqueOrThrow({ where: { id } })).estoqueMinimo)).toBe(5);
+  });
+
   it("T12 — o tipo não muda (CA-11, INV-002); a edição não mexe em estoque nem preço", async () => {
     const id = await criar(produto("Esmalte", { preco: "50" }));
     expect(await servicos.editarItem(id, servico("Esmalte"), deps())).toMatchObject({ status: "erro", erros: { tipo: expect.any(String) } });

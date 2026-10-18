@@ -7,6 +7,7 @@ import { acaoAlterarPapel, acaoAlterarPermissoes, acaoRemoverMembro } from "@/li
 import { ACAO_INICIAL } from "@/lib/equipe/servicos";
 import { classeDoCampo } from "@/components/ui/classes";
 import { MatrizDePermissoes } from "./matriz-de-permissoes";
+import { classeDoBotao } from "@/components/ui/estilos";
 
 /** Trocar o papel (5.4): a matriz customizada é limpa e vale a predefinição do novo papel. */
 export function FormularioPapel({ membroId, papel }: { membroId: string; papel: "GERENTE" | "COLABORADOR" }) {
@@ -66,16 +67,16 @@ export function RemoverMembro({ membroId, nome }: { membroId: string; nome: stri
     );
   }
   return (
-    <form action={acaoRemoverMembro} className="space-y-3 rounded-xl border border-destructive/30 bg-status-danger-bg p-4">
+    <form action={acaoRemoverMembro} className="space-y-3 rounded-lg bg-status-danger-bg p-4">
       <input type="hidden" name="membroId" value={membroId} />
       <p className="text-sm text-status-danger">
         {nome} perde o acesso a este negócio. O que essa pessoa registrou (vendas, movimentações) continua no sistema.
       </p>
       <div className="flex flex-wrap gap-3">
-        <button type="submit" className="rounded-xl bg-destructive px-4 py-2 text-sm font-semibold text-destructive-foreground">
+        <button type="submit" className={classeDoBotao("perigo", "sm")}>
           Remover
         </button>
-        <button type="button" onClick={() => setConfirmando(false)} className="rounded-xl border px-4 py-2 text-sm font-medium text-foreground">
+        <button type="button" onClick={() => setConfirmando(false)} className={classeDoBotao("secundario", "sm")}>
           Cancelar
         </button>
       </div>

@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { MODELOS, relacoesEntreOperacionais } from "@/lib/db/modelos";
 
@@ -50,13 +50,15 @@ describe("classificação dos modelos", () => {
     }
   });
 
-  it("a migração de isolamento cobre todas as ligações entre modelos operacionais (INV-005)", () => {
-    const migracao = readFileSync("prisma/migrations/20261003120100_isolamento/migration.sql", "utf8");
+  it("as migrações cobrem todas as ligações entre modelos operacionais (INV-005)", () => {
+    // Vale a última definição do gatilho de cada tabela: migrações posteriores à de isolamento
+    // recriam o gatilho quando a tabela ganha uma ligação nova (ex.: estorno, SPEC-009).
+    const pastas = readdirSync("prisma/migrations").filter((p) => /^\d+_/.test(p)).sort();
+    const migracoes = pastas.map((p) => readFileSync(`prisma/migrations/${p}/migration.sql`, "utf8")).join("\n");
     for (const { modelo, fk, destino } of relacoesEntreOperacionais()) {
-      const gatilho = new RegExp(
-        `ON "${modelo}"\\s+FOR EACH ROW EXECUTE FUNCTION he_verificar_mesmo_negocio\\([^)]*'${destino}', '${fk}'`,
-      );
-      expect(migracao, `${modelo}.${fk} sem gatilho he_mesmo_negocio`).toMatch(gatilho);
+      const definicoes = [...migracoes.matchAll(new RegExp(`ON "${modelo}"\\s+FOR EACH ROW EXECUTE FUNCTION he_verificar_mesmo_negocio\\(([^)]*)\\)`, "g"))];
+      const ultima = definicoes.at(-1)?.[1] ?? "";
+      expect(ultima, `${modelo}.${fk} sem gatilho he_mesmo_negocio`).toContain(`'${destino}', '${fk}'`);
     }
   });
 });

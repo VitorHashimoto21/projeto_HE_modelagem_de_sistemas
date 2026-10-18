@@ -1,6 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
-import { decidirRota } from "@/lib/auth/rotas";
+import { CABECALHO_CAMINHO, decidirRota } from "@/lib/auth/rotas";
 
 /**
  * Proxy do Next.js 16 (antigo middleware — SPEC-002, 5.5): renova os cookies de sessão
@@ -15,6 +15,10 @@ export async function proxy(request: NextRequest) {
     const destino = searchParams.get("type") === "recovery" ? "/auth/recuperar" : "/auth/confirmar";
     return NextResponse.redirect(new URL(`${destino}${search}`, request.url));
   }
+
+  // SPEC-018 (5.5): o caminho da página vai para o servidor, que o usa no registro das telas do
+  // modo suporte. Sempre sobrescrito aqui: um valor enviado pelo navegador nunca chega à página.
+  request.headers.set(CABECALHO_CAMINHO, (pathname + search).slice(0, 500));
 
   let resposta = NextResponse.next({ request });
 

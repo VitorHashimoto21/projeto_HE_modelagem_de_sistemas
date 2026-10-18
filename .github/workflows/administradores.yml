@@ -1,0 +1,59 @@
+# Papel de Administrador da plataforma (SPEC-018, 5.1): workflow manual que roda o script
+# scripts/admin.ts no banco do ambiente escolhido, com o segredo DIRECT_URL do ambiente (o mesmo
+# das migrações). A credencial do banco não sai do GitHub, e o responsável registrado no banco é
+# o usuário do GitHub que disparou a execução. Em desenvolvimento, rode o script localmente.
+name: Administradores
+
+on:
+  workflow_dispatch:
+    inputs:
+      acao:
+        description: "Ação"
+        type: choice
+        options: [conceder, retirar]
+        required: true
+      email:
+        description: "E-mail da conta (exclusiva para o suporte, já cadastrada)"
+        type: string
+        required: true
+      ambiente:
+        description: "Ambiente"
+        type: choice
+        options: [homologacao, producao]
+        default: homologacao
+        required: true
+
+concurrency:
+  group: administradores-${{ inputs.ambiente }}
+  cancel-in-progress: false
+
+jobs:
+  administrar:
+    name: ${{ inputs.acao }} — ${{ inputs.ambiente }}
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.ambiente }}
+    env:
+      DIRECT_URL: ${{ secrets.DIRECT_URL }}
+      ADMIN_RESPONSAVEL: ${{ github.actor }} (GitHub Actions)
+      ACAO: ${{ inputs.acao }}
+      EMAIL: ${{ inputs.email }}
+    steps:
+      - name: Verificar se o ambiente está configurado
+        run: |
+          if [ -z "$DIRECT_URL" ]; then
+            echo "::error title=Administradores::Segredo DIRECT_URL não definido para o ambiente ${{ inputs.ambiente }}."
+            exit 1
+          fi
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Rodar o script
+        run: npx tsx scripts/admin.ts "$ACAO" "$EMAIL"

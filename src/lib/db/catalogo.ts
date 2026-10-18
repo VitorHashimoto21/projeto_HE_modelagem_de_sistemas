@@ -97,6 +97,12 @@ export function criarConsultasDoCatalogo(cliente: ClienteDoNegocio, negocioId: s
     if (validos !== ids.length) throw new MaterialInvalido();
   }
 
+  const semMinimo = <T extends { estoqueMinimo: unknown }>(campos: T): Omit<T, "estoqueMinimo"> => {
+    const copia: Partial<T> = { ...campos };
+    delete copia.estoqueMinimo;
+    return copia as Omit<T, "estoqueMinimo">;
+  };
+
   const camposDoItem = (d: DadosDoItem) => ({
     nome: d.nome,
     nomeChave: d.nomeChave,
@@ -254,7 +260,8 @@ export function criarConsultasDoCatalogo(cliente: ClienteDoNegocio, negocioId: s
           await tx.item.update({
             where: { id },
             // Arquivado não ocupa o nome (OPEN-003): a chave só volta ao reativar.
-            data: { ...camposDoItem(dados), nomeChave: atual.arquivadoEm ? null : dados.nomeChave },
+            // O mínimo manual não muda pela edição do Catálogo: depois do cadastro, só pelo Estoque (SPEC-007, OPEN-001).
+            data: { ...semMinimo(camposDoItem(dados)), nomeChave: atual.arquivadoEm ? null : dados.nomeChave },
           });
           if (atual.tipo === "SERVICO") {
             await tx.materialServico.deleteMany({ where: { servicoId: id } });
@@ -293,7 +300,9 @@ export function criarConsultasDoCatalogo(cliente: ClienteDoNegocio, negocioId: s
           select: { precoAtual: true, custoBase: true, materiais: { select: { quantidade: true, material: { select: { custoBase: true } } } } },
         });
         if (!i) throw new ItemNaoEncontrado();
-        if (i.precoAtual !== null && num(i.precoAtual) === preco) throw new PrecoIgualAoAtual();
+        // A confirmação pela Calculadora registra também o mesmo preço: documenta a revisão com os
+        // parâmetros do dia (SPEC-010, 5.3). O preço manual igual ao atual continua recusado.
+        if (origem === "MANUAL" && i.precoAtual !== null && num(i.precoAtual) === preco) throw new PrecoIgualAoAtual();
         await gravarPreco(tx as ClienteDoNegocio, id, preco, usuarioId, origem, calculo);
         return {
           custoTotal: custoTotal(

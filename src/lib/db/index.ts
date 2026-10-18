@@ -2,20 +2,38 @@ import "server-only";
 import { comNegocio, type ContextoDeNegocio } from "./cliente-do-negocio";
 import { criarConsultasDeAcesso } from "./acesso";
 import { criarConsultasDoCatalogo } from "./catalogo";
+import { criarConsultasDoDashboard } from "./dashboard";
+import { criarConsultasDoEstoque } from "./estoque";
+import { criarConsultasFinanceiras } from "./financeiro";
+import { criarConsultasDePrecificacao } from "./precificacao";
+import { criarConsultasDeVendas } from "./vendas";
 import { criarConsultasDeEquipe } from "./equipe";
 import { criarConsultasDeNegocios } from "./negocios";
+import { criarConsultasDaLgpd } from "./lgpd";
+import { criarConsultasDePlanos } from "./planos";
+import { criarConsultasDeRelatorios } from "./relatorios";
 import { criarConsultasFiscais } from "./parametros-fiscais";
+import { criarConsultasDeSuporte } from "./suporte";
 import { prismaBase } from "./prisma";
 
 export type { ConsultasDeAcesso } from "./acesso";
+export type { ConsultasDoDashboard, VendasDoDia } from "./dashboard";
+export type { ConsultasDeVendas, DetalheDaVenda, ItemVendavel, VendaResumida } from "./vendas";
+export type { ConsultasDePrecificacao, ItemCalculavel, ParametrosDePrecificacao } from "./precificacao";
+export type { ConsultasFinanceiras, ContaExibida, DespesaExibida, DetalheDaConta, FluxoDeCaixa, LancamentoExibido } from "./financeiro";
+export type { ConsultasDoEstoque, DetalheDoEstoque, ProdutoEmEstoque } from "./estoque";
 export type { ConsultasDoCatalogo, DetalheDoItem, ItemResumido, OpcaoDeMaterial } from "./catalogo";
 export { LIMITE_DO_PLANO_GRATUITO } from "./equipe";
 export type { ConsultasDeEquipe, ConvitePendente, EquipeDoNegocio, MembroDaEquipe } from "./equipe";
 export { CnpjJaCadastrado } from "./negocios";
 export type { ConsultasDeNegocios, ResumoDoNegocio } from "./negocios";
+export type { ConsultasDaLgpd, ResumoDaExclusao } from "./lgpd";
+export type { ConsultasDePlanos, SituacaoDoPlano } from "./planos";
+export type { ConsultasDeRelatorios } from "./relatorios";
+export type { ConsultasDeSuporte, EventoDoRegistro, LiberacaoDoNegocio, NegocioNoPainel } from "./suporte";
 export { AcimaDoLimiteDoSimples, ParametroAusente } from "./parametros-fiscais";
 export type { ConsultasFiscais, Origem } from "./parametros-fiscais";
-export { ContextoDeNegocioAusente, NegocioDivergente, OperacaoForaDoContexto } from "./erros";
+export { ContextoDeNegocioAusente, NegocioDivergente, OperacaoForaDoContexto, SomenteLeituraNoSuporte } from "./erros";
 export type { ClienteDoNegocio, ContextoDeNegocio } from "./cliente-do-negocio";
 
 /**
@@ -32,6 +50,56 @@ export function catalogo(contexto: ContextoDeNegocio) {
   return criarConsultasDoCatalogo(clienteDoNegocio(contexto), contexto.negocioId);
 }
 
+/** Estoque do negócio ativo (SPEC-007): sempre pelo cliente do negócio. */
+export function estoque(contexto: ContextoDeNegocio) {
+  return criarConsultasDoEstoque(clienteDoNegocio(contexto), contexto.negocioId);
+}
+
+/** Vendas do negócio ativo (SPEC-008): sempre pelo cliente do negócio; no modo suporte, clientes mascarados (SPEC-018). */
+export function vendas(contexto: ContextoDeNegocio) {
+  return criarConsultasDeVendas(clienteDoNegocio(contexto), contexto.negocioId, { mascararClientes: contexto.modoSuporte === true });
+}
+
+/** Financeiro do negócio ativo (SPEC-009): sempre pelo cliente do negócio. */
+export function financeiro(contexto: ContextoDeNegocio) {
+  return criarConsultasFinanceiras(clienteDoNegocio(contexto), contexto.negocioId);
+}
+
+/** Dados da Calculadora de precificação (SPEC-010): sempre pelo cliente do negócio. */
+export function precificacao(contexto: ContextoDeNegocio) {
+  return criarConsultasDePrecificacao(clienteDoNegocio(contexto), contexto.negocioId);
+}
+
+/** LGPD (SPEC-014): exportação e exclusão de conta, atravessando os negócios do titular. */
+export function lgpd() {
+  return criarConsultasDaLgpd(prismaBase());
+}
+
+/** Relatórios do plano pago (SPEC-013): sempre pelo cliente do negócio. */
+export function relatorios(contexto: ContextoDeNegocio) {
+  return criarConsultasDeRelatorios(clienteDoNegocio(contexto), contexto.negocioId);
+}
+
+/** Plano do negócio e a troca (SPEC-013): o cliente do negócio é criado por operação. */
+export function planos() {
+  return criarConsultasDePlanos(prismaBase());
+}
+
+/** Leituras do Dashboard (SPEC-012): sempre pelo cliente do negócio. */
+export function dashboard(contexto: ContextoDeNegocio) {
+  return criarConsultasDoDashboard(clienteDoNegocio(contexto), contexto.negocioId);
+}
+
+/**
+ * Rotina diária (SPEC-009, 5.5): a única parte que roda fora de um negócio. Percorre os
+ * negócios ativos e, para cada um, faz a mesma conferência do negócio ativo, com o cliente
+ * do negócio daquele negócio.
+ */
+export async function negociosAtivos(): Promise<string[]> {
+  const lista = await prismaBase().negocio.findMany({ where: { encerradoEm: null }, select: { id: true }, orderBy: { createdAt: "asc" } });
+  return lista.map((n) => n.id);
+}
+
 /** Consultas do controle de acesso (SPEC-002): conta bloqueada, filiação e perfil. */
 export function consultasDeAcesso() {
   return criarConsultasDeAcesso(prismaBase());
@@ -45,6 +113,11 @@ export function negocios() {
 /** Equipe e convites (SPEC-005): operações do Dono restritas ao negócio e aceitação de convites. */
 export function equipe() {
   return criarConsultasDeEquipe(prismaBase());
+}
+
+/** Acesso de suporte (SPEC-018): liberações do Dono, painel do Administrador e registro de auditoria. */
+export function suporte() {
+  return criarConsultasDeSuporte(prismaBase());
 }
 
 /** Parâmetros fiscais oficiais (SPEC-003): somente leitura, com a versão vigente na data. */

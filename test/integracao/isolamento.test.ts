@@ -130,12 +130,15 @@ describe("criação", () => {
 
 // T05 — CA-07, INV-005
 describe("registros filhos", () => {
+  let proximoNumero = 1; // SPEC-008: número único por negócio e quem registrou
   async function criarVendaEm(negocioId: string) {
     const ctx = comNegocio(base, { negocioId });
     const item = await itemDe(negocioId);
     return ctx.venda.create({
       data: {
         valorTotal: 20,
+        numero: proximoNumero++,
+        registradaPorId: usuario,
         itens: { create: [{ itemId: item, quantidade: 2, precoUnitario: 10, custoUnitario: 6 }] },
         pagamentos: { create: [{ forma: "PIX", valor: 20 }] },
       } as never,

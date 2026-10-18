@@ -1,9 +1,12 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { acaoComSessao, acaoDoDono } from "@/lib/auth/acao";
 import { ROTA_INICIAL, ROTA_MEUS_NEGOCIOS } from "@/lib/auth/rotas";
 import { camposDoFormulario } from "@/lib/auth/validacao";
+import { negocios } from "@/lib/db";
+import { validarDiasCobertura } from "@/lib/estoque/validacao";
 import { dependenciasDoNegocio } from "./servidor";
 import * as servicos from "./servicos";
 import type { EstadoDaConsulta, EstadoDoFormularioDeNegocio } from "./servicos";
@@ -33,4 +36,15 @@ export const acaoEditarNegocio = acaoDoDono(async ({ negocioId }, _: EstadoDoFor
   const estado = await servicos.editarNegocio(negocioId, camposDoFormulario(form), await dependenciasDoNegocio());
   if (estado.status === "salvo") redirect(`${ROTA_INICIAL}?salvo=1`);
   return estado;
+});
+
+export type EstadoDosDiasDeCobertura = { status: "ocioso" | "salvo" } | { status: "erro"; mensagem: string };
+
+/** Dias de cobertura do estoque (SPEC-007, OPEN-010): só o Dono, de 1 a 90. */
+export const acaoDefinirDiasCobertura = acaoDoDono(async ({ negocioId }, _: EstadoDosDiasDeCobertura, form: FormData): Promise<EstadoDosDiasDeCobertura> => {
+  const v = validarDiasCobertura(camposDoFormulario(form));
+  if (!v.ok) return { status: "erro", mensagem: v.erros.diasCoberturaEstoque! };
+  await negocios().definirDiasCobertura(negocioId, v.dados);
+  revalidatePath("/estoque", "layout");
+  return { status: "salvo" };
 });

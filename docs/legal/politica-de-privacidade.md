@@ -1,9 +1,11 @@
 # Política de Privacidade — Health Enterprise
 
-> **RASCUNHO — versão 2026-10-03 — revisão do grupo pendente (SPEC-002, OPEN-003).**
+> **RASCUNHO — versão 2026-10-17 — revisão do grupo pendente (SPEC-002, OPEN-003; acesso de suporte: SPEC-018).**
 > Escrito a partir do que o sistema faz segundo a baseline (RF, RN, RNF04, RN27). Itens entre `[colchetes]` precisam ser preenchidos pelo grupo. Antes da produção, recomenda-se revisão jurídica.
 
-**Versão:** 2026-10-03 · **Vigência:** a partir da publicação
+**Versão:** 2026-10-17 · **Vigência:** a partir da publicação
+
+**O que mudou nesta versão:** passa a existir o **acesso de suporte** — o Dono pode liberar o suporte do HE para ver (sem alterar) os módulos escolhidos do negócio, por um prazo, com registro de cada tela aberta (seções 2, 3, 5 e 8).
 
 Esta política explica quais dados pessoais o Health Enterprise ("HE", "nós") trata, para quê, com quem compartilha e quais são os seus direitos, conforme a Lei Geral de Proteção de Dados (Lei 13.709/2018 — LGPD).
 
@@ -17,6 +19,7 @@ O HE é um sistema de gestão (ERP simplificado e calculadora de precificação)
 
 - **Dados da sua conta** (nome, e-mail, senha, consentimento): o HE é **controlador**.
 - **Dados que você registra sobre o seu negócio e os seus clientes** (produtos, vendas, finanças, nome e contato de clientes): **você é o controlador** desses dados, e o HE é **operador** — tratamos esses dados apenas para prestar o serviço, conforme as suas instruções. Cabe a você ter base legal para registrar os dados dos seus clientes.
+- **Acesso de suporte:** a equipe de suporte do HE só vê os dados de um negócio quando o **Dono libera** esse acesso (seção 5). A liberação é a sua instrução, como controlador, para que o HE trate esses dados com a finalidade informada no pedido.
 
 ## 3. Quais dados tratamos e para quê
 
@@ -29,6 +32,7 @@ O HE é um sistema de gestão (ERP simplificado e calculadora de precificação)
 | Dados operacionais: produtos, estoque, vendas, pagamentos, contas, despesas | Registrados por você e pela sua equipe | Prestar as funções do sistema (estoque, vendas, financeiro, calculadora, dashboard) | Execução de contrato (art. 7º, V) — como operador |
 | Nome e contato de clientes do seu negócio (opcionais) | Registrados por você nas vendas | Identificar a venda | Definida por você, como controlador |
 | Registro de quem fez cada alteração de estoque, preço e cancelamento de venda | Gerado pelo sistema | Auditoria e segurança (RNF05) | Legítimo interesse (art. 7º, IX) e execução de contrato |
+| Liberações do acesso de suporte e registro de cada tela aberta pelo suporte | Gerados pelo sistema quando o Dono libera o acesso | Transparência e auditoria do suporte; o Dono acompanha tudo | Legítimo interesse (art. 7º, IX) e execução de contrato |
 | Cookies de sessão | Gerados no login | Manter você conectado com segurança | Estritamente necessários; não usamos cookies de publicidade nem de rastreamento |
 
 Não vendemos dados pessoais e não os usamos para publicidade.
@@ -52,6 +56,16 @@ Dados também podem ser compartilhados por ordem judicial ou exigência legal.
 
 Os dados de cada negócio são isolados: só os membros convidados para aquele negócio têm acesso, e cada um vê apenas o que o papel e as permissões dele permitem (Dono, Gerente, Colaborador).
 
+**Única exceção — o acesso de suporte, liberado pelo Dono:**
+
+- O Dono pode liberar, em *Configurações → Acesso do suporte*, o suporte do HE para **ver** (nunca alterar) os **módulos que escolher**, informando o motivo, por **1 hora, 24 horas, 3 dias ou 7 dias**. Gerente e Colaborador pedem ao Dono.
+- Sem essa liberação, o suporte vê apenas dados de cadastro do negócio (nome, regime, plano, data de criação, número de membros e nome e e-mail do Dono) — nunca vendas, valores, clientes ou estoque.
+- Durante o acesso, **nomes e contatos dos clientes e e-mails da equipe aparecem mascarados** para o suporte, e nenhum arquivo é baixado.
+- O suporte age **em nome próprio**: nunca entra "como" você e nunca tem acesso à sua senha.
+- **Cada entrada, tela aberta e saída fica registrada** com data, hora e nome de quem acessou. O Dono vê esse registro, a equipe vê um aviso enquanto o acesso estiver liberado, e o Dono recebe e-mail ao liberar e quando o suporte entra.
+- O Dono pode **revogar** o acesso a qualquer momento; ele também termina sozinho no fim do prazo.
+- O registro do suporte é guardado por **5 anos** e não pode ser alterado nem apagado.
+
 ## 6. Por quanto tempo guardamos
 
 - **Enquanto a conta existir**, mantemos os dados para prestar o serviço.
@@ -74,7 +88,7 @@ Para pedidos que não estejam disponíveis no próprio sistema, escreva para `[e
 
 ## 8. Segurança
 
-Usamos conexão criptografada (HTTPS), senha com hash seguro no provedor de autenticação, isolamento dos dados por negócio no código e no banco de dados, controle de acesso por papel validado no servidor, registro de auditoria das alterações sensíveis e backup diário.
+Usamos conexão criptografada (HTTPS), senha com hash seguro no provedor de autenticação, isolamento dos dados por negócio no código e no banco de dados, controle de acesso por papel validado no servidor, registro de auditoria das alterações sensíveis e backup diário. As contas da equipe de suporte são poucas, exclusivas para essa função, com sessão limitada a 8 horas, e só acessam um negócio com a liberação do Dono, em modo somente leitura.
 
 ## 9. Mudanças nesta política
 
