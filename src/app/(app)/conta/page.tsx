@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Download, TriangleAlert } from "lucide-react";
 import { FormularioExclusao } from "@/components/conta/exclusao";
+import { AvisoDaPagina } from "@/components/ui/aviso";
 import { CabecalhoDePagina } from "@/components/ui/cabecalho-de-pagina";
 import { classeDaSuperficie, classeDoBotao } from "@/components/ui/estilos";
 import { exigirSessao } from "@/lib/auth/servidor";
@@ -26,7 +28,7 @@ function Linha({ rotulo, valor }: { rotulo: string; valor: React.ReactNode }) {
 // Minha conta (SPEC-014, 5.1): dados do titular, exportação (RNF04) e exclusão (RN27). Só o
 // usuário da sessão; aberta mesmo sem negócio ativo.
 export default async function MinhaConta() {
-  const { usuarioId } = await exigirSessao();
+  const { usuarioId, termosPendentes } = await exigirSessao();
   const consultas = lgpd();
   const [perfil, resumo] = await Promise.all([consultas.perfil(usuarioId), consultas.resumoDaExclusao(usuarioId)]);
   if (!perfil || !resumo) redirect(ROTA_ENTRAR);
@@ -34,6 +36,13 @@ export default async function MinhaConta() {
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       <CabecalhoDePagina titulo="Minha conta" descricao="Seus dados pessoais, a exportação e a exclusão da conta." />
+
+      {termosPendentes && (
+        // SPEC-018 (RF78): até aceitar a versão vigente, só esta página e Sair ficam abertas.
+        <AvisoDaPagina tom="atencao">
+          Atualizamos a Política de Privacidade e os Termos de Uso. <Link href="/aceite-dos-termos">Ler e aceitar a nova versão</Link> para voltar a usar o app.
+        </AvisoDaPagina>
+      )}
 
       <section aria-labelledby="titulo-dados" className={cartao}>
         <h2 id="titulo-dados" className="mb-1 text-[17px] font-bold text-card-foreground">
@@ -43,11 +52,13 @@ export default async function MinhaConta() {
           <Linha rotulo="Nome" valor={perfil.nome} />
           <Linha rotulo="E-mail" valor={perfil.email} />
           <Linha rotulo="Conta criada em" valor={dataBrasileira(perfil.createdAt)} />
+          <Linha rotulo="Consentimento (cadastro)" valor={perfil.consentimentoLgpdEm ? dataBrasileira(perfil.consentimentoLgpdEm) : "—"} />
+          {/* SPEC-018 (RF78): a versão aceita por último e quando. */}
           <Linha
-            rotulo="Consentimento (política e termos)"
+            rotulo="Política e termos aceitos"
             valor={
-              perfil.consentimentoLgpdEm
-                ? `${dataBrasileira(perfil.consentimentoLgpdEm)}${perfil.versaoTermosAceita ? `, versão ${perfil.versaoTermosAceita}` : ""}`
+              perfil.versaoTermosAceita
+                ? `Versão ${perfil.versaoTermosAceita}${(perfil.termosAceitosEm ?? perfil.consentimentoLgpdEm) ? `, em ${dataBrasileira((perfil.termosAceitosEm ?? perfil.consentimentoLgpdEm)!)}` : ""}`
                 : "—"
             }
           />

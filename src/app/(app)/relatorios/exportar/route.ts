@@ -11,6 +11,8 @@ import { dependenciasDosRelatorios } from "@/lib/relatorios/servidor";
 // "sem acesso".
 export async function GET(req: NextRequest) {
   const membro = await exigirMembro();
+  // SPEC-018 (5.5): no modo suporte, nenhum arquivo é baixado.
+  if (membro.modoSuporte) redirect(ROTA_SEM_ACESSO);
   const busca = Object.fromEntries(req.nextUrl.searchParams);
   const r = await exportar(busca, { plano: await planoDoMembro(membro), permissoes: membro.permissoes }, await dependenciasDosRelatorios(membro));
   if (!r.ok) {

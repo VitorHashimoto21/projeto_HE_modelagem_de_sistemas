@@ -65,6 +65,9 @@ export function criarAutenticacaoFalsa(banco: PrismaClient) {
     async usuarioDaSessao() {
       return registro.sessao;
     },
+    async sessaoAtual() {
+      return registro.sessao ? { usuarioId: registro.sessao, autenticadoEm: new Date() } : null;
+    },
   };
 
   return {

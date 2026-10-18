@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 // SPEC-005 — T17 (INV-005, OPEN-008): toda Server Action é criada pela fábrica, que
 // declara o nível de acesso e executa a guarda no servidor antes do corpo da ação.
 
-const FABRICAS = ["acaoPublica", "acaoComSessao", "acaoDoDono", "acaoComPermissao"];
+const FABRICAS = ["acaoPublica", "acaoComSessao", "acaoDoDono", "acaoComPermissao", "acaoDaConta", "acaoDoAdministrador"];
 
 function arquivos(dir: string): string[] {
   return readdirSync(dir).flatMap((nome) => {

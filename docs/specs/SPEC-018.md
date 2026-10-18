@@ -1,6 +1,6 @@
 # SPEC-018 — Administrador da plataforma e acesso de suporte (somente leitura)
 
-> **Status:** 🟢 **Aprovada em 17/10/2026** — questões em aberto decididas pela equipe em entrevista (seção 13), todas pela opção recomendada, com a OPEN-002 (2º fator) adiada para a SPEC-019 a pedido da equipe; baseline ajustada (RF74–RF78, RN30–RN32, RNF02, RNF12 e ADR-008). Implementação ainda não iniciada. Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar), a partir de uma necessidade identificada pela equipe em 17/10/2026.
+> **Status:** 🔵 **Aprovada e implementada em 17/10/2026; verificação na homologação pendente (T13)** — questões em aberto decididas pela equipe em entrevista (seção 13), todas pela opção recomendada, com a OPEN-002 (2º fator) adiada para a SPEC-019 a pedido da equipe; baseline ajustada (RF74–RF78, RN30–RN32, RNF02, RNF12 e ADR-008); onde o script roda decidido em 17/10/2026 (workflow manual, 5.1); testes T01–T11 automatizados e telas verificadas em build local (T12) — [evidências](evidencias/SPEC-018/README.md). Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar), a partir de uma necessidade identificada pela equipe em 17/10/2026.
 > **Mapa:** [`MAPA_DE_SPECS.md`](../MAPA_DE_SPECS.md) · **Altera:** [SPEC-002](SPEC-002.md) (sessão e aceite dos termos), [SPEC-005](SPEC-005.md) (contexto e permissões) e [SPEC-014](SPEC-014.md) (exportação e exclusão) · **Usa:** [SPEC-001](SPEC-001.md) (isolamento), [SPEC-004](SPEC-004.md) (negócio), [SPEC-009](SPEC-009.md) (rotina diária), [SPEC-016](SPEC-016.md) (componentes) · **Continua em:** SPEC-019 (edição em modo suporte, emergência, ações de plataforma e 2º fator).
 
 ---
@@ -60,7 +60,7 @@ O Administrador é um ator **da plataforma**, não do negócio. Por padrão, ele
 ### Incluído
 
 1. **Conta de Administrador** (OPEN-001):
-   - concedida e retirada por **script** da equipe (`npm run admin:conceder <e-mail>` / `admin:retirar`), nunca por tela;
+   - concedida e retirada por **script** da equipe (`npm run admin:conceder <e-mail>` / `admin:retirar`), nunca por tela; em homologação e produção, o script roda pelo workflow manual "Administradores" do GitHub Actions (5.1);
    - **exclusiva**: não pode ser membro de nenhum negócio; o script recusa uma conta com vínculos, e a conta de Administrador não cria negócio nem aceita convite;
    - sessão limitada a **8 h** desde a entrada (OPEN-002, RNF12); o 2º fator fica para a SPEC-019.
 2. **Painel do Administrador** (`/admin`, OPEN-003), lista de negócios com **somente metadados**: nome, regime, plano, data de criação, número de membros, situação (ativo/encerrado), nome e e-mail do Dono e situação do acesso de suporte (sem liberação / liberado até …). Busca por nome do negócio ou e-mail do Dono. Nada de vendas, valores, clientes ou estoque.
@@ -109,6 +109,9 @@ O Administrador é um ator **da plataforma**, não do negócio. Por padrão, ele
 2. `npm run admin:retirar <e-mail>` desmarca a conta e revoga a entrada em modo suporte em andamento.
 3. O script registra quem rodou (`ADMIN_RESPONSAVEL`, obrigatório) e quando, no registro de auditoria (evento `PAPEL_CONCEDIDO` / `PAPEL_RETIRADO`).
 4. Não existe tela para conceder o papel.
+5. **Onde o script roda (decisão da equipe em 17/10/2026):**
+   - **Desenvolvimento:** localmente, com o banco do `.env` (`ADMIN_RESPONSAVEL="Nome" npm run admin:conceder <e-mail>`).
+   - **Homologação e produção:** pelo workflow manual **"Administradores"** do GitHub Actions (*Actions → Administradores → Run workflow*), com os campos **ação** (conceder ou retirar), **e-mail** e **ambiente** (homologação ou produção). O workflow usa o segredo `DIRECT_URL` do ambiente escolhido (o mesmo das migrações), então a credencial do banco não circula pelos computadores da equipe. O responsável registrado é o usuário do GitHub que disparou a execução, e o histórico de execuções do Actions complementa o registro de auditoria.
 
 ### 5.2 Entrar como Administrador
 
@@ -213,7 +216,7 @@ O Administrador é um ator **da plataforma**, não do negócio. Por padrão, ele
 - **`src/app/(app)/configuracoes/acesso-do-suporte`** (ou dentro de Dados do negócio): liberação, revogação e registro.
 - **`src/app/(app)/layout.tsx`:** faixas (modo suporte e liberação ativa) e redirecionamento para o novo aceite.
 - **Tela de aceite** em `(publico)` ou `(app)`, com a nova `VERSAO_TERMOS`; textos em `docs/legal/` e nas páginas legais.
-- **`scripts/admin.ts`:** conceder e retirar o papel.
+- **`scripts/admin.ts`:** conceder e retirar o papel; **`.github/workflows/administradores.yml`:** workflow manual que roda o script em homologação ou produção com o segredo do ambiente (5.1).
 - **`src/lib/db/lgpd.ts`:** exportação com as liberações e o registro; exclusão revogando as liberações.
 
 ---
@@ -238,6 +241,27 @@ O Administrador é um ator **da plataforma**, não do negócio. Por padrão, ele
 
 - **Sem 2º fator nesta Spec (OPEN-002):** a conta de Administrador fica protegida só por senha e pela sessão de 8 h. Mitigação até a SPEC-019: poucas contas, concedidas por script; acesso só com liberação do Dono; somente leitura; tudo registrado e visível ao Dono. A SPEC-019 deve tratar a camada de segurança da autenticação como prioridade, antes de liberar a edição.
 - **E-mail ao Dono:** enquanto o domínio do Resend não for verificado, só chega ao e-mail da conta Resend; o aviso no sistema é o canal garantido.
+
+**Implementação (17/10/2026):**
+
+- **Banco:** migração `20261017200000_suporte` — `Usuario.administradorEm` e `termosAceitosEm` (quem já tinha aceitado fica com a data do consentimento), tabelas `AcessoSuporte` e `RegistroSuporte`, enum `EventoSuporte`; CHECKs de motivo, módulos (1 a 6, só os da matriz), prazo (até 7 dias), revogação completa, negócio do evento e "conta excluída não é administradora"; gatilhos `he_negocio_imutavel`, `he_mesmo_negocio` (registro × liberação) e `he_somente_insercao` no registro; RLS ligado. O gatilho do cadastro grava também `termosAceitosEm`.
+- **Domínio:** `src/lib/dominio/suporte.ts` (prazos, situação, matriz só de leitura, máscara, sessão de 8 h pelo `amr` do JWT, descrição das telas).
+- **Contexto e autorização:** `resolverContextoDaRequisicao` (`src/lib/auth/contexto.ts`) lê a conta (papel de Administrador e versão dos termos) e, para o Administrador, a liberação apontada pelo cookie `he_suporte`, sempre conferida no banco; `autorizar` ganhou os níveis `conta` e `administrador` e os motivos `SomenteLeitura`, `ContaDeAdministrador`, `SomenteAdministrador`, `TermosPendentes` e `SessaoExpirada`; fábricas novas `acaoDaConta` e `acaoDoAdministrador`. O cliente do negócio recusa escritas no modo suporte (`SomenteLeituraNoSuporte`, segunda barreira).
+- **Registro das telas:** na guarda da página (`exigirNivel`), uma vez por requisição, com o caminho gravado pelo proxy no cabeçalho `x-he-caminho` (sempre sobrescrito pelo proxy); detalhes de venda, item e conta trazem o número ou o nome.
+- **Telas:** `/admin` e `/admin/negocios/[id]` (estrutura própria), `/negocio/suporte` (Dono), faixas em `src/components/suporte/faixas.tsx`, menu do suporte (`menuDoSuporte`), `/aceite-dos-termos`, rota `/auth/sessao-expirada`; aviso na página de convite para a conta de Administrador; Minha conta mostra a versão aceita e o aviso de pendência.
+- **Script e workflow:** `scripts/admin.ts` (`npm run admin:conceder` / `admin:retirar`, e-mail mascarado na saída) e `.github/workflows/administradores.yml` (manual; entradas por variáveis de ambiente, nunca interpoladas no comando).
+- **LGPD:** exportação com `acessos-suporte.csv` e `registros-suporte.csv`; a exclusão de conta revoga as liberações ativas dos negócios encerrados e retira o papel de Administrador.
+- **Textos legais:** Política de Privacidade e Termos de Uso na versão 2026-10-17 (acesso de suporte), ainda como rascunho para a revisão do grupo; `VERSAO_TERMOS = "2026-10-17"`.
+
+**Decisões de implementação e divergências registradas:**
+
+- **Nenhuma Server Action no modo suporte**, nem as de leitura (a Spec pedia recusar as escritas): mais simples e mais seguro; as telas de leitura não usam Server Actions. A saída do modo suporte é uma ação do Administrador, permitida.
+- **Conferência financeira ao abrir o Financeiro e o Painel** (SPEC-009) não roda no modo suporte, porque grava contas; a rotina diária completa. Exportação de relatórios recusada no modo suporte (5.5, item 6).
+- **Primeira tela do modo suporte:** o primeiro módulo liberado (Painel, se o Dashboard estiver liberado; senão Vendas, Estoque, Catálogo, Financeiro, Calculadora).
+- **Faixa do modo suporte no celular:** fixa no topo a partir de 768 px; no celular, o cabeçalho fixo mostra o nome do negócio em âmbar e a faixa fica no início da página (rola com ela), para não sobrepor o cabeçalho. Proposta: (2) aceitar na baseline.
+- **Minha conta do Administrador** continua acessível (é a conta dele, não dados de negócio), dentro ou fora do modo suporte.
+- **Máscara:** os dados de clientes aparecem só nas Vendas (histórico, detalhe e lista de clientes), onde a máscara é aplicada; e-mails de membros não aparecem em nenhuma tela de módulo. Campos de texto livre (motivo de ajuste de preço, descrições) não são mascarados.
+- **Sessão de 8 h** sem o `amr` no JWT é tratada como vencida (falha fechada); coberta por testes unitários, não exercitada no navegador.
 
 ---
 
@@ -326,13 +350,13 @@ Todas decididas pela equipe em 17/10/2026, em entrevista, pela opção recomenda
 
 A SPEC-018 estará concluída quando:
 
-- [ ] todos os critérios de aceitação (CA-01 a CA-12) estiverem implementados;
-- [ ] todos os invariantes (INV-001 a INV-010) estiverem preservados;
-- [ ] os testes derivados (T01 a T13) estiverem aprovados, com o CI verde no PR;
-- [ ] os RNFs aplicáveis (RNF01, RNF02, RNF04, RNF05, RNF12) tiverem sido verificados como descrito na seção 10;
+- [x] todos os critérios de aceitação (CA-01 a CA-12) estiverem implementados — por testes e no navegador (build local); a homologação (T13) fica para depois do merge;
+- [x] todos os invariantes (INV-001 a INV-010) estiverem preservados;
+- [ ] os testes derivados (T01 a T13) estiverem aprovados, com o CI verde no PR — T01 a T11 automatizados, T12 com capturas; falta o T13 (homologação);
+- [x] os RNFs aplicáveis (RNF01, RNF02, RNF04, RNF05, RNF12) tiverem sido verificados como descrito na seção 10;
 - [x] as questões OPEN-001 a OPEN-012 tiverem sido decididas e registradas (17/10/2026), com a baseline ajustada (RF74–RF78, RN30–RN32, RN01, RNF02, RNF12, ADR-008);
-- [ ] a Política de Privacidade e os Termos de Uso estiverem atualizados na nova versão;
-- [ ] não existir divergência conhecida entre a implementação e esta Spec;
-- [ ] toda divergência em relação à baseline tiver sido explicitamente analisada e registrada nos documentos (seção 9).
+- [x] a Política de Privacidade e os Termos de Uso estiverem atualizados na nova versão (2026-10-17; rascunho, com a revisão do grupo pendente);
+- [ ] não existir divergência conhecida entre a implementação e esta Spec — a da faixa do modo suporte no celular (seção 9) aguarda a equipe;
+- [x] toda divergência em relação à baseline tiver sido explicitamente analisada e registrada nos documentos (seção 9).
 
 **Regra fundamental:** a implementação obedece a esta Spec aprovada. Se surgir conflito entre código, Spec e documentos de modelagem, o comportamento não é alterado em silêncio: a divergência é registrada com a proposta de (1) corrigir a implementação ou (2) alterar a baseline, e a decisão é da equipe.

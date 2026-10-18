@@ -31,6 +31,8 @@ const ITENS: (ItemDoMenu & { exige: Exigencia })[] = [
   { rotulo: "Equipe", href: "/negocio/equipe", exige: "dono" },
   { rotulo: "Dados do negócio", href: "/negocio/dados", exige: "dono" },
   { rotulo: "Plano", href: "/negocio/plano", exige: "dono" },
+  // SPEC-018 (5.4): liberar, revogar e acompanhar o acesso do suporte.
+  { rotulo: "Acesso do suporte", href: "/negocio/suporte", exige: "dono" },
 ];
 
 export function menuDoMembro(papel: Papel | null, permissoes: Matriz | null, plano: Plano = "PAGO"): ItemDoMenu[] {
@@ -46,4 +48,17 @@ export function menuDoMembro(papel: Papel | null, permissoes: Matriz | null, pla
   return ITENS.filter(({ exige }) => atende(exige)).map(({ rotulo, href }) =>
     href === "/relatorios" && !podeNoPlano(plano, "relatorios") ? { rotulo, href, selo: "Plano pago" } : { rotulo, href },
   );
+}
+
+/**
+ * Menu do modo suporte (SPEC-018, 5.5): só os módulos liberados, só o que se lê — sem
+ * "Nova venda", "Lançar despesa" nem Configurações. O Painel entra só com o Dashboard liberado.
+ */
+export function menuDoSuporte(permissoes: Matriz, plano: Plano = "PAGO"): ItemDoMenu[] {
+  return ITENS.filter(({ exige }) => {
+    if (exige === "dono") return false;
+    if (exige === "membro") return pode(permissoes, "dashboard", "ver");
+    if ("algum" in exige) return exige.algum.some((e) => pode(permissoes, e.modulo, e.acao));
+    return exige.acao === "ver" && pode(permissoes, exige.modulo, exige.acao) && !exige.semAcao;
+  }).map(({ rotulo, href }) => (href === "/relatorios" && !podeNoPlano(plano, "relatorios") ? { rotulo, href, selo: "Plano pago" } : { rotulo, href }));
 }

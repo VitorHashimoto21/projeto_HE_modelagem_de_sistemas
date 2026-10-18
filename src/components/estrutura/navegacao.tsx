@@ -10,6 +10,7 @@ import {
   Building2,
   Calculator,
   LayoutDashboard,
+  LifeBuoy,
   LogOut,
   Menu,
   Moon,
@@ -50,15 +51,21 @@ const ICONES: Record<string, LucideIcon> = {
   "/negocio/equipe": Users,
   "/negocio/dados": Building2,
   "/negocio/plano": Star,
+  "/negocio/suporte": LifeBuoy,
 };
 
-const CONFIGURACOES = new Set(["/negocio/equipe", "/negocio/dados", "/negocio/plano"]);
+const CONFIGURACOES = new Set(["/negocio/equipe", "/negocio/dados", "/negocio/plano", "/negocio/suporte"]);
 
 type Props = {
   itens: ItemDoMenu[];
   negocios: { id: string; nome: string }[];
   ativo: string | null;
   perfil: { nome: string; email: string } | null;
+  /**
+   * SPEC-018: conta de Administrador. Em modo suporte, `negocio` é o negócio da liberação: não há
+   * seletor de negócios, e "Meus negócios" vira o painel do administrador.
+   */
+  administrador?: { negocio: string | null };
 };
 
 /** O item ativo é o de href mais longo que casa com o caminho (/vendas/nova ganha de /vendas). */
@@ -168,7 +175,17 @@ function ItemLateral({ item, ativo }: { item: ItemDoMenu; ativo: boolean }) {
   );
 }
 
-export function Navegacao({ itens, negocios, ativo, perfil }: Props) {
+/** Nome do negócio no modo suporte, no lugar do seletor (o Administrador não troca de negócio). */
+function NegocioDoSuporte({ nome, compacto }: { nome: string; compacto?: boolean }) {
+  return (
+    <p className={cn("truncate rounded-full bg-ambar px-4 py-2 text-sm font-bold text-ambar-foreground", compacto && "max-w-[11rem]")} title={`Modo suporte: ${nome}`}>
+      <span className="sr-only">Negócio em modo suporte: </span>
+      {nome}
+    </p>
+  );
+}
+
+export function Navegacao({ itens, negocios, ativo, perfil, administrador }: Props) {
   const caminho = usePathname();
   const atual = hrefAtivo(caminho, itens);
   const [maisAberto, setMaisAberto] = useState(false);
@@ -181,6 +198,9 @@ export function Navegacao({ itens, negocios, ativo, perfil }: Props) {
   const barra = [tem("/painel"), tem("/vendas")].filter(Boolean) as ItemDoMenu[];
   const vender = tem("/vendas/nova");
   const quarto = tem("/financeiro") ?? tem("/estoque") ?? tem("/catalogo");
+  const inicio = administrador ? (ativo ? (itens[0]?.href ?? "/admin") : "/admin") : ativo ? "/painel" : "/negocios";
+  const negociosHref = administrador ? "/admin" : "/negocios";
+  const negociosRotulo = administrador ? "Painel do administrador" : "Meus negócios";
 
   return (
     <>
@@ -190,7 +210,7 @@ export function Navegacao({ itens, negocios, ativo, perfil }: Props) {
         className="sticky top-0 hidden h-dvh shrink-0 flex-col gap-6 overflow-y-auto bg-estrutura px-3 py-5 text-estrutura-foreground md:flex md:w-20 lg:w-64 lg:px-4"
       >
         <Link
-          href={ativo ? "/painel" : "/negocios"}
+          href={inicio}
           aria-label="Health Enterprise — página inicial"
           className="flex items-center gap-2.5 rounded-full px-2 focus-visible:outline-2 focus-visible:outline-ambar md:justify-center lg:justify-start"
         >
@@ -198,7 +218,7 @@ export function Navegacao({ itens, negocios, ativo, perfil }: Props) {
           <span className="text-base font-bold md:hidden lg:inline">Health Enterprise</span>
         </Link>
         <div className="md:hidden lg:block">
-          <SeletorNaEstrutura negocios={negocios} ativo={ativo} />
+          {administrador?.negocio ? <NegocioDoSuporte nome={administrador.negocio} /> : <SeletorNaEstrutura negocios={negocios} ativo={ativo} />}
         </div>
         {modulos.length > 0 && (
           <nav aria-label="Módulos" className="flex flex-col gap-1">
@@ -219,12 +239,12 @@ export function Navegacao({ itens, negocios, ativo, perfil }: Props) {
         )}
         <div className="mt-auto flex flex-col gap-1 border-t border-estrutura-linha pt-4">
           <Link
-            href="/negocios"
+            href={negociosHref}
             className="flex items-center gap-3 rounded-full px-3 py-2.5 text-sm font-medium text-estrutura-suave hover:bg-estrutura-foreground/10 hover:text-estrutura-foreground focus-visible:outline-2 focus-visible:outline-ambar md:justify-center lg:justify-start lg:px-4"
-            title="Meus negócios"
+            title={negociosRotulo}
           >
             <Building2 className="size-5 shrink-0" aria-hidden="true" />
-            <span className="md:sr-only lg:not-sr-only">Meus negócios</span>
+            <span className="md:sr-only lg:not-sr-only">{negociosRotulo}</span>
           </Link>
           {perfil && (
             <Link
@@ -259,11 +279,11 @@ export function Navegacao({ itens, negocios, ativo, perfil }: Props) {
 
       {/* Celular: topo com o negócio e barra inferior */}
       <header className="sticky top-0 z-30 flex items-center justify-between gap-3 bg-estrutura px-4 py-3 text-estrutura-foreground md:hidden">
-        <Link href={ativo ? "/painel" : "/negocios"} aria-label="Health Enterprise — página inicial" className="rounded-full focus-visible:outline-2 focus-visible:outline-ambar">
+        <Link href={inicio} aria-label="Health Enterprise — página inicial" className="rounded-full focus-visible:outline-2 focus-visible:outline-ambar">
           <Simbolo className="size-8" />
         </Link>
         <div className="min-w-0 flex-1">
-          <SeletorNaEstrutura negocios={negocios} ativo={ativo} compacto />
+          {administrador?.negocio ? <NegocioDoSuporte nome={administrador.negocio} compacto /> : <SeletorNaEstrutura negocios={negocios} ativo={ativo} compacto />}
         </div>
         <BotaoTema />
         {perfil && (
@@ -330,9 +350,9 @@ export function Navegacao({ itens, negocios, ativo, perfil }: Props) {
                   </Link>
                 );
               })}
-              <Link href="/negocios" className="flex items-center gap-3 rounded-2xl px-4 py-3 text-[15px] font-semibold hover:bg-accent">
+              <Link href={negociosHref} className="flex items-center gap-3 rounded-2xl px-4 py-3 text-[15px] font-semibold hover:bg-accent">
                 <Building2 className="size-5" aria-hidden="true" />
-                Meus negócios
+                {negociosRotulo}
               </Link>
               <form action={acaoSair}>
                 <button type="submit" className="flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-[15px] font-semibold text-destructive hover:bg-accent">

@@ -68,6 +68,9 @@ export default async function Convite({ params }: PageProps<"/convite/[token]">)
               Depois de confirmar a conta nova, o convite aparece em “Meus negócios”, em “Convites para você”.
             </p>
           </div>
+        ) : contexto?.administrador ? (
+          // SPEC-018 (INV-004): a conta de Administrador não participa de equipes.
+          <AvisoDaPagina tom="atencao">Esta é uma conta de Administrador da plataforma, que não participa de equipes. Entre com outra conta para aceitar o convite.</AvisoDaPagina>
         ) : conta.email.toLowerCase() === convite.email ? (
           <AceitarConvite token={token} />
         ) : (

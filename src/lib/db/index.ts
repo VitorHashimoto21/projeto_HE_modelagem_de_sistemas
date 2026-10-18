@@ -13,6 +13,7 @@ import { criarConsultasDaLgpd } from "./lgpd";
 import { criarConsultasDePlanos } from "./planos";
 import { criarConsultasDeRelatorios } from "./relatorios";
 import { criarConsultasFiscais } from "./parametros-fiscais";
+import { criarConsultasDeSuporte } from "./suporte";
 import { prismaBase } from "./prisma";
 
 export type { ConsultasDeAcesso } from "./acesso";
@@ -29,9 +30,10 @@ export type { ConsultasDeNegocios, ResumoDoNegocio } from "./negocios";
 export type { ConsultasDaLgpd, ResumoDaExclusao } from "./lgpd";
 export type { ConsultasDePlanos, SituacaoDoPlano } from "./planos";
 export type { ConsultasDeRelatorios } from "./relatorios";
+export type { ConsultasDeSuporte, EventoDoRegistro, LiberacaoDoNegocio, NegocioNoPainel } from "./suporte";
 export { AcimaDoLimiteDoSimples, ParametroAusente } from "./parametros-fiscais";
 export type { ConsultasFiscais, Origem } from "./parametros-fiscais";
-export { ContextoDeNegocioAusente, NegocioDivergente, OperacaoForaDoContexto } from "./erros";
+export { ContextoDeNegocioAusente, NegocioDivergente, OperacaoForaDoContexto, SomenteLeituraNoSuporte } from "./erros";
 export type { ClienteDoNegocio, ContextoDeNegocio } from "./cliente-do-negocio";
 
 /**
@@ -53,9 +55,9 @@ export function estoque(contexto: ContextoDeNegocio) {
   return criarConsultasDoEstoque(clienteDoNegocio(contexto), contexto.negocioId);
 }
 
-/** Vendas do negócio ativo (SPEC-008): sempre pelo cliente do negócio. */
+/** Vendas do negócio ativo (SPEC-008): sempre pelo cliente do negócio; no modo suporte, clientes mascarados (SPEC-018). */
 export function vendas(contexto: ContextoDeNegocio) {
-  return criarConsultasDeVendas(clienteDoNegocio(contexto), contexto.negocioId);
+  return criarConsultasDeVendas(clienteDoNegocio(contexto), contexto.negocioId, { mascararClientes: contexto.modoSuporte === true });
 }
 
 /** Financeiro do negócio ativo (SPEC-009): sempre pelo cliente do negócio. */
@@ -111,6 +113,11 @@ export function negocios() {
 /** Equipe e convites (SPEC-005): operações do Dono restritas ao negócio e aceitação de convites. */
 export function equipe() {
   return criarConsultasDeEquipe(prismaBase());
+}
+
+/** Acesso de suporte (SPEC-018): liberações do Dono, painel do Administrador e registro de auditoria. */
+export function suporte() {
+  return criarConsultasDeSuporte(prismaBase());
 }
 
 /** Parâmetros fiscais oficiais (SPEC-003): somente leitura, com a versão vigente na data. */
