@@ -4,15 +4,25 @@ import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { after } from "next/server";
 import { cache } from "react";
-import { consultasDeAcesso, type ContextoDeNegocio } from "@/lib/db";
+import { consultasDeAcesso, suporte, type ContextoDeNegocio } from "@/lib/db";
 import { ambiente } from "@/lib/env";
 import { criarAdaptadorSupabase } from "./adaptador-supabase";
 import type { Acao, Modulo } from "@/lib/dominio/permissoes";
+import { descreverTela } from "@/lib/dominio/suporte";
 import { autorizar, type ContextoDoMembro, type MotivoDaRecusa, type NivelDeAcesso } from "./autorizacao";
-import { COOKIE_NEGOCIO_ATIVO, resolverContextoComPapel, type ContextoComPapel } from "./contexto";
+import { COOKIE_NEGOCIO_ATIVO, COOKIE_SUPORTE, resolverContextoDaRequisicao, type ContextoComPapel } from "./contexto";
 import { enviarAvisoDeContaExistente } from "./emails";
-import { ROTA_ENTRAR, ROTA_MEUS_NEGOCIOS, ROTA_SEM_ACESSO } from "./rotas";
+import {
+  CABECALHO_CAMINHO,
+  ROTA_ACEITE_DOS_TERMOS,
+  ROTA_ADMIN,
+  ROTA_ENTRAR,
+  ROTA_MEUS_NEGOCIOS,
+  ROTA_SEM_ACESSO,
+  ROTA_SESSAO_EXPIRADA,
+} from "./rotas";
 import type { DependenciasDeAcesso } from "./servicos";
+import { VERSAO_TERMOS } from "./validacao";
 
 /**
  * Ponto de entrada da autenticação no servidor (Server Components, Server Actions e
@@ -68,34 +78,101 @@ export async function dependenciasDeAcesso(): Promise<DependenciasDeAcesso> {
 /**
  * Contexto da requisição (5.5), calculado uma vez por requisição, com o papel e as
  * permissões efetivas no negócio ativo lidos do banco na mesma consulta (SPEC-005, INV-004).
+ * SPEC-018: também o papel de Administrador, a liberação do modo suporte (sempre conferida
+ * no banco — INV-001), a pendência dos termos (RF78) e a sessão de 8 h do Administrador (RNF12).
  */
 export const obterContexto = cache(async (): Promise<ContextoComPapel | null> => {
   const auth = await adaptadorDoServidor();
-  const usuarioId = await auth.usuarioDaSessao();
-  const negocio = (await cookies()).get(COOKIE_NEGOCIO_ATIVO)?.value;
-  return resolverContextoComPapel(usuarioId, negocio, (u, n) => consultasDeAcesso().filiacao(u, n));
+  const sessao = await auth.sessaoAtual();
+  const loja = await cookies();
+  const acesso = consultasDeAcesso();
+  return resolverContextoDaRequisicao(
+    {
+      usuarioId: sessao?.usuarioId ?? null,
+      negocioDoCookie: loja.get(COOKIE_NEGOCIO_ATIVO)?.value,
+      suporteDoCookie: loja.get(COOKIE_SUPORTE)?.value,
+      autenticadoEm: sessao?.autenticadoEm ?? null,
+      agora: new Date(),
+      versaoDosTermos: VERSAO_TERMOS,
+    },
+    {
+      filiacao: (u, n) => acesso.filiacao(u, n),
+      conta: (u) => acesso.estadoDaConta(u),
+      liberacao: (id) => suporte().liberacaoDoContexto(id),
+    },
+  );
 });
 
-/** Para onde vai quem foi recusado (SPEC-005, 5.5). */
-const DESTINO_DA_RECUSA: Record<MotivoDaRecusa, string> = {
-  SemSessao: ROTA_ENTRAR,
-  SemNegocio: ROTA_MEUS_NEGOCIOS,
-  SomenteDono: ROTA_SEM_ACESSO,
-  SemPermissao: ROTA_SEM_ACESSO,
-};
+/** Para onde vai quem foi recusado (SPEC-005, 5.5; SPEC-018). */
+function destinoDaRecusa(motivo: MotivoDaRecusa, contexto: ContextoComPapel | null): string {
+  switch (motivo) {
+    case "SemSessao":
+      return ROTA_ENTRAR;
+    case "SemNegocio":
+      if (!contexto?.administrador) return ROTA_MEUS_NEGOCIOS;
+      return contexto.suporteEncerrado ? `${ROTA_ADMIN}?suporte=${contexto.suporteEncerrado}` : ROTA_ADMIN;
+    case "ContaDeAdministrador":
+      return ROTA_ADMIN;
+    case "TermosPendentes":
+      return ROTA_ACEITE_DOS_TERMOS;
+    case "SessaoExpirada":
+      return ROTA_SESSAO_EXPIRADA;
+    case "SomenteDono":
+    case "SemPermissao":
+    case "SomenteLeitura":
+    case "SomenteAdministrador":
+      return ROTA_SEM_ACESSO;
+  }
+}
+
+/**
+ * Registro de cada tela aberta em modo suporte (SPEC-018, INV-005): uma vez por requisição,
+ * na guarda da página, antes de qualquer dado do negócio ser lido. Se o registro falhar, o
+ * erro sobe e a página não é mostrada.
+ */
+const registrarTelaDoSuporte = cache(async (acessoId: string, negocioId: string, administradorId: string): Promise<void> => {
+  const caminho = (await headers()).get(CABECALHO_CAMINHO) ?? "/";
+  await suporte().registrarTela(negocioId, acessoId, administradorId, descreverTela(caminho));
+});
 
 /** Guarda comum de páginas e Server Actions: recusa redirecionando (nada é executado). */
 export async function exigirNivel(nivel: NivelDeAcesso) {
-  const r = autorizar(await obterContexto(), nivel);
-  if (!r.ok) redirect(DESTINO_DA_RECUSA[r.motivo]);
+  const contexto = await obterContexto();
+  const r = autorizar(contexto, nivel);
+  if (!r.ok) redirect(destinoDaRecusa(r.motivo, contexto));
+  const leituraDoNegocio = nivel.tipo === "sessao" || nivel.tipo === "dono" || nivel.tipo === "permissao";
+  if (contexto?.suporte && leituraDoNegocio && nivel.origem !== "acao") {
+    await registrarTelaDoSuporte(contexto.suporte.acessoId, contexto.suporte.negocioId, contexto.usuarioId);
+  }
   return r;
 }
 
-/** Para páginas e ações autenticadas: sem sessão válida, vai para o login (INV-005). */
+/**
+ * Para o layout e páginas autenticadas: sem sessão válida, vai para o login (INV-005); com a
+ * sessão do Administrador vencida, encerra a sessão (SPEC-018, RNF12).
+ */
 export async function exigirSessao(): Promise<ContextoComPapel> {
   const contexto = await obterContexto();
   if (!contexto) redirect(ROTA_ENTRAR);
+  if (contexto.sessaoExpirada) redirect(ROTA_SESSAO_EXPIRADA);
   return contexto;
+}
+
+/** Minha conta e o novo aceite (SPEC-014, SPEC-018): basta a sessão, mesmo com os termos pendentes. */
+export async function exigirConta(): Promise<ContextoComPapel> {
+  return (await exigirNivel({ tipo: "conta" })).contexto!;
+}
+
+/** "Meus negócios" e cadastro de negócio: só usuários comuns; o Administrador vai ao painel (INV-004). */
+export async function exigirUsuarioComum(): Promise<ContextoComPapel> {
+  const { contexto } = await exigirNivel({ tipo: "sessao" });
+  if (contexto!.administrador) redirect(ROTA_ADMIN);
+  return contexto!;
+}
+
+/** Painel do Administrador da plataforma (SPEC-018, 5.3). */
+export async function exigirAdministrador(): Promise<ContextoComPapel> {
+  return (await exigirNivel({ tipo: "administrador" })).contexto!;
 }
 
 /**
@@ -103,8 +180,8 @@ export async function exigirSessao(): Promise<ContextoComPapel> {
  * autorizado; caso contrário, leva a "Meus negócios" (CA-11).
  */
 export async function exigirNegocio(): Promise<ContextoDeNegocio> {
-  const { negocioId, usuarioId } = await exigirMembro();
-  return { negocioId, usuarioId };
+  const { negocioId, usuarioId, modoSuporte } = await exigirMembro();
+  return { negocioId, usuarioId, modoSuporte };
 }
 
 /** Membro do negócio ativo, com papel e permissões efetivas (SPEC-005). */

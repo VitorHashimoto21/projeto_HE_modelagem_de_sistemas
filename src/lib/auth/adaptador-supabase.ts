@@ -5,7 +5,9 @@ import type {
   ResultadoEntrar,
   ResultadoEnvio,
   ResultadoNovaSenha,
+  SessaoAtual,
 } from "./adaptador";
+import { autenticadoEmDasClaims } from "@/lib/dominio/suporte";
 
 /**
  * Adaptador do Supabase Auth (ADR-003). Traduz os erros do Supabase para os erros
@@ -25,6 +27,14 @@ function erroDeEnvio(e: AuthError | null): ResultadoEnvio {
 }
 
 export function criarAdaptadorSupabase(supabase: SupabaseClient): AdaptadorDeAutenticacao {
+  async function sessaoAtual(): Promise<SessaoAtual | null> {
+    // getClaims valida o JWT (assinatura e validade) no servidor — nunca confiar só no cookie.
+    const { data, error } = await supabase.auth.getClaims();
+    if (error || !data?.claims?.sub) return null;
+    // SPEC-018 (RNF12): o "amr" guarda o momento da entrada e não muda na renovação da sessão.
+    return { usuarioId: data.claims.sub, autenticadoEm: autenticadoEmDasClaims(data.claims as Record<string, unknown>) };
+  }
+
   return {
     async cadastrar({ nome, email, senha, versaoTermos, urlDeConfirmacao }): Promise<ResultadoCadastro> {
       const { data, error } = await supabase.auth.signUp({
@@ -100,10 +110,9 @@ export function criarAdaptadorSupabase(supabase: SupabaseClient): AdaptadorDeAut
     },
 
     async usuarioDaSessao() {
-      // getClaims valida o JWT (assinatura e validade) no servidor — nunca confiar só no cookie.
-      const { data, error } = await supabase.auth.getClaims();
-      if (error || !data?.claims?.sub) return null;
-      return data.claims.sub;
+      return (await sessaoAtual())?.usuarioId ?? null;
     },
+
+    sessaoAtual,
   };
 }

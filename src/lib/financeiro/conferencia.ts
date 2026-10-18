@@ -9,6 +9,8 @@ import { hoje } from "@/lib/dominio/datas";
  * nunca impede a página de abrir — a rotina ou a próxima conferência completam.
  */
 export async function conferirFinanceiro(contexto: ContextoDeNegocio): Promise<void> {
+  // SPEC-018 (INV-002): no modo suporte nada é gravado; a rotina diária completa a conferência.
+  if (contexto.modoSuporte) return;
   try {
     await financeiro({ negocioId: contexto.negocioId, usuarioId: contexto.usuarioId }).conferir(hoje());
   } catch (e) {

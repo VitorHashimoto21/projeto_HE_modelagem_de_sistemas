@@ -93,6 +93,8 @@ Arquivos .csv (abrem no Excel ou no LibreOffice; ponto e vírgula, vírgula deci
   <tabela>.csv                 dados dos negócios em que você é o Dono
                                (coluna "negocio" indica de qual negócio é cada linha)
   outros-negocios-<tabela>.csv registros feitos por você em negócios de outros Donos
+  acessos-suporte.csv          acessos do suporte do HE que você liberou (motivo, módulos, prazo)
+  registros-suporte.csv        registro de cada entrada, tela aberta e saída do suporte
 
 Datas em ISO 8601 (UTC). Valores em reais com ponto decimal no JSON e vírgula no CSV.
 Identificadores (id, negocioId, usuarioId...) ligam as linhas entre as tabelas.

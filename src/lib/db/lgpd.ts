@@ -54,7 +54,7 @@ export function criarConsultasDaLgpd(cliente: PrismaClient) {
     async perfil(usuarioId: string) {
       return cliente.usuario.findFirst({
         where: { id: usuarioId, excluidoEm: null },
-        select: { nome: true, email: true, consentimentoLgpdEm: true, versaoTermosAceita: true, createdAt: true },
+        select: { nome: true, email: true, consentimentoLgpdEm: true, versaoTermosAceita: true, termosAceitosEm: true, createdAt: true },
       });
     },
 
@@ -75,7 +75,7 @@ export function criarConsultasDaLgpd(cliente: PrismaClient) {
     async dadosDoTitular(usuarioId: string, agora: Date): Promise<DadosDoTitular | null> {
       const u = await cliente.usuario.findUnique({
         where: { id: usuarioId },
-        select: { id: true, nome: true, email: true, consentimentoLgpdEm: true, versaoTermosAceita: true, createdAt: true, excluidoEm: true },
+        select: { id: true, nome: true, email: true, consentimentoLgpdEm: true, versaoTermosAceita: true, termosAceitosEm: true, createdAt: true, excluidoEm: true },
       });
       if (!u || u.excluidoEm) return null;
       const [vinculos, convitesRecebidos] = await Promise.all([
@@ -95,7 +95,7 @@ export function criarConsultasDaLgpd(cliente: PrismaClient) {
       const negociosComoDono = await Promise.all(
         donos.map(async (negocioId) => {
           const f = { where: { negocioId } };
-          const [negocio, membros, convites, itens, materiais, movimentacoes, historicoPrecos, vendas, itensVenda, pagamentos, parcelas, clientes, lancamentos, contas, despesasFixas, historicoPlano] =
+          const [negocio, membros, convites, itens, materiais, movimentacoes, historicoPrecos, vendas, itensVenda, pagamentos, parcelas, clientes, lancamentos, contas, despesasFixas, historicoPlano, acessosSuporte, registrosSuporte] =
             await Promise.all([
               cliente.negocio.findUniqueOrThrow({ where: { id: negocioId } }),
               cliente.membroNegocio.findMany({ ...f, select: { id: true, papel: true, permissoesCustom: true, suspensoEm: true, usuarioId: true, usuario: { select: { nome: true, email: true } } } }),
@@ -113,6 +113,9 @@ export function criarConsultasDaLgpd(cliente: PrismaClient) {
               cliente.contaPagarReceber.findMany(f),
               cliente.despesaFixa.findMany(f),
               cliente.historicoPlano.findMany(f),
+              // SPEC-018 (RNF04): acessos do suporte liberados e o registro de auditoria de cada um.
+              cliente.acessoSuporte.findMany(f),
+              cliente.registroSuporte.findMany({ ...f, select: { id: true, acessoId: true, evento: true, modulo: true, descricao: true, criadoEm: true, usuario: { select: { nome: true } } } }),
             ]);
           const tabelas: Tabelas = {
             membros: membros.map(({ usuario, ...m }) => linha({ ...m, nome: usuario.nome, email: usuario.email })),
@@ -130,6 +133,8 @@ export function criarConsultasDaLgpd(cliente: PrismaClient) {
             contasPagarReceber: linhas(contas),
             despesasFixas: linhas(despesasFixas),
             historicoPlano: linhas(historicoPlano),
+            acessosSuporte: linhas(acessosSuporte),
+            registrosSuporte: registrosSuporte.map(({ usuario, ...r }) => linha({ ...r, autor: usuario.nome })),
           };
           return { negocio: linha(negocio), tabelas };
         }),
@@ -163,13 +168,17 @@ export function criarConsultasDaLgpd(cliente: PrismaClient) {
      */
     async excluirConta(usuarioId: string, agora: Date): Promise<ResultadoDaExclusao> {
       return cliente.$transaction(async (tx) => {
-        const atual = await tx.usuario.findUnique({ where: { id: usuarioId }, select: { email: true } });
+        const atual = await tx.usuario.findUnique({ where: { id: usuarioId }, select: { email: true, administradorEm: true } });
         if (!atual) return { ok: false, erro: "UsuarioNaoEncontrado" };
         const marcado = await tx.usuario.updateMany({
           where: { id: usuarioId, excluidoEm: null },
-          data: { excluidoEm: agora, anonimizadoEm: agora, nome: NOME_ANONIMO, email: emailAnonimo(usuarioId) },
+          // SPEC-018: conta excluída nunca é administradora (CHECK Usuario_administrador_nao_excluido).
+          data: { excluidoEm: agora, anonimizadoEm: agora, nome: NOME_ANONIMO, email: emailAnonimo(usuarioId), administradorEm: null },
         });
         if (marcado.count === 0) return { ok: false, erro: "JaExcluida" };
+        if (atual.administradorEm) {
+          await tx.registroSuporte.create({ data: { negocioId: null, acessoId: null, usuarioId, evento: "PAPEL_RETIRADO", descricao: "Papel de Administrador retirado pela exclusão da conta", criadoEm: agora } });
+        }
 
         const donos = (
           await tx.membroNegocio.findMany({ where: { usuarioId, papel: "DONO", negocio: { encerradoEm: null } }, select: { negocioId: true } })
@@ -181,6 +190,14 @@ export function criarConsultasDaLgpd(cliente: PrismaClient) {
             data: { encerradoEm: agora, eliminarApos: new Date(`${dataDeEliminacao(diaLocal(agora))}T00:00:00Z`) },
           });
           await tx.cliente.updateMany({ where: { negocioId: { in: donos } }, data: { nome: CLIENTE_ANONIMO, contato: null, anonimizadoEm: agora } });
+          // SPEC-018 (5.4.6): negócio encerrado não fica com acesso de suporte liberado; o registro fica (RN32).
+          const liberacoes = await tx.acessoSuporte.findMany({ where: { negocioId: { in: donos }, revogadoEm: null, expiraEm: { gt: agora } }, select: { id: true, negocioId: true } });
+          if (liberacoes.length) {
+            await tx.acessoSuporte.updateMany({ where: { id: { in: liberacoes.map((l) => l.id) } }, data: { revogadoEm: agora, revogadoPorId: usuarioId } });
+            await tx.registroSuporte.createMany({
+              data: liberacoes.map((l) => ({ negocioId: l.negocioId, acessoId: l.id, usuarioId, evento: "REVOGACAO" as const, descricao: "Revogada pela exclusão da conta do Dono (negócio encerrado)", criadoEm: agora })),
+            });
+          }
           await tx.convite.updateMany({ where: { negocioId: { in: donos }, status: "PENDENTE" }, data: { status: "CANCELADO", respondidoEm: agora } });
           // Os convidados destes negócios também deixam de ser identificáveis (5.3).
           await tx.$executeRaw`

@@ -45,4 +45,9 @@ export interface AdaptadorDeAutenticacao {
   definirSenha(senha: string): Promise<ResultadoNovaSenha>;
   /** Id do usuário da sessão validada no servidor, ou null. */
   usuarioDaSessao(): Promise<string | null>;
+  /** Sessão validada no servidor, com o momento da entrada (SPEC-018, RNF12), ou null. */
+  sessaoAtual(): Promise<SessaoAtual | null>;
 }
+
+/** `autenticadoEm`: quando a pessoa entrou (login) nesta sessão; null se o provedor não informar. */
+export type SessaoAtual = { usuarioId: string; autenticadoEm: Date | null };

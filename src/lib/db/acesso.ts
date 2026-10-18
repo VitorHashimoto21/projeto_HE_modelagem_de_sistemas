@@ -35,6 +35,16 @@ export function criarConsultasDeAcesso(cliente: PrismaClient) {
       return (await filiacao(usuarioId, negocioId)) !== null;
     },
 
+    /** SPEC-018: papel de Administrador e versão dos termos aceita, lidos a cada requisição. */
+    async estadoDaConta(usuarioId: string): Promise<{ administradorEm: Date | null; versaoTermosAceita: string | null } | null> {
+      return cliente.usuario.findUnique({ where: { id: usuarioId }, select: { administradorEm: true, versaoTermosAceita: true } });
+    },
+
+    /** SPEC-018 (RF78): registra o novo aceite da versão vigente da política e dos termos. */
+    async aceitarTermos(usuarioId: string, versao: string, agora: Date): Promise<void> {
+      await cliente.usuario.update({ where: { id: usuarioId }, data: { versaoTermosAceita: versao, termosAceitosEm: agora } });
+    },
+
     /** Dados exibidos no cabeçalho da área autenticada. */
     async perfil(usuarioId: string): Promise<{ nome: string; email: string } | null> {
       return cliente.usuario.findUnique({ where: { id: usuarioId }, select: { nome: true, email: true } });

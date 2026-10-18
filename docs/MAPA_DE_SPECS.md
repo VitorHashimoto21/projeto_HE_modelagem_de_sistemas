@@ -359,7 +359,7 @@ flowchart LR
 - **Justificativa da ordem:** evolução do MVP depois dos testes em aula; revê a decisão "sem desconto no MVP" da SPEC-008 (OPEN-001), por isso é uma Spec própria, com decisão da equipe.
 
 #### SPEC-018 — Administrador da plataforma e acesso de suporte (somente leitura)
-- **Spec:** [`specs/SPEC-018.md`](./specs/SPEC-018.md) (🟢 aprovada em 17/10/2026 — OPEN-001 a OPEN-012 decididas em entrevista; implementação não iniciada)
+- **Spec:** [`specs/SPEC-018.md`](./specs/SPEC-018.md) (🔵 aprovada e implementada em 17/10/2026; homologação pendente — [evidências](./specs/evidencias/SPEC-018/README.md))
 - **Objetivo:** criar o Administrador da plataforma (conta exclusiva, painel só com metadados) e o acesso de suporte que o Dono libera por módulos e prazo, em somente leitura, com dados pessoais mascarados, registro de auditoria imutável e novo aceite da Política e dos Termos.
 - **Origem:** decisão da equipe em 17/10/2026 (um centralizador para atender pedidos dos usuários, sem quebrar a privacidade).
 - **RF:** RF74–RF78 (novos) · **RN:** RN30–RN32 (novas), RN01 (complementada), RN27 · **RNF:** RNF02 (ajustado), RNF04, RNF05, RNF12 (novo) · **ADR:** ADR-008 (nova)
@@ -411,7 +411,7 @@ A conferência do seed fiscal foi concluída em 03/10/2026 (DAS do MEI atualizad
 - SPEC-015 (opcional): não iniciada; depende da aprovação do ADR-007.
 - [SPEC-016](specs/SPEC-016.md): implementada (PR #72) e verificada na homologação (15/10/2026); ajustes da homologação corrigidos (PRs #74 e #75) e aprovados nos testes da equipe (16/10/2026); notas N1–N5 da seção 15 decididas em 16/10/2026 (diálogo de confirmação e taxa da maquininha nos Relatórios implementados).
 - [SPEC-017](specs/SPEC-017.md): implementada (PR #82, 16/10/2026) e verificada na homologação (17/10/2026).
-- [SPEC-018](specs/SPEC-018.md): gerada e aprovada (17/10/2026), com as OPEN-001 a OPEN-012 decididas; implementação não iniciada.
+- [SPEC-018](specs/SPEC-018.md): aprovada e implementada (17/10/2026); falta a verificação na homologação (T13) e a decisão da divergência da seção 9 (faixa do modo suporte no celular).
 - SPEC-019: a gerar depois da SPEC-018 (escopo combinado na seção 2.2).
 - `main`: atualizada até a SPEC-006 (PR #54); as SPECs 007 a 017 estão só na DEVELOP.
 
@@ -421,7 +421,7 @@ Lista mantida até cada item ser resolvido; quem retomar o projeto (em qualquer 
 
 | # | Pendência | Situação |
 |---|---|---|
-| 1 | **SPEC-018** (Administrador e acesso de suporte): implementar e homologar | Aberta |
+| 1 | **SPEC-018** (Administrador e acesso de suporte): homologação (T13) depois do merge — criar a conta exclusiva do suporte e conceder o papel pelo workflow **Administradores** — e decisão da divergência da seção 9 (faixa no celular) | Em andamento |
 | 2 | **SPEC-019** (suporte com edição, emergência, ações de plataforma e **2º fator do Administrador**): gerar depois da SPEC-018 | Aberta |
 | 3 | **Textos legais** (`docs/legal/`): preencher os campos entre colchetes (responsável, e-mail de contato, cidade/UF, região do Supabase) e revisão do grupo; a nova versão com o acesso de suporte entra na SPEC-018 | Aberta |
 | 4 | **SPEC-015** (cobrança real pelo Stripe): decidir se fica fora do MVP; depende do ADR-007 (proposta) | Aberta |

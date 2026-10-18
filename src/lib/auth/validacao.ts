@@ -5,8 +5,8 @@ import { z } from "zod";
  * navegador (resposta imediata) e no servidor (fonte da verdade).
  */
 
-/** Versão vigente da política de privacidade e dos termos de uso (OPEN-005). */
-export const VERSAO_TERMOS = "2026-10-03";
+/** Versão vigente da política de privacidade e dos termos de uso (OPEN-005; nova versão com o acesso de suporte — SPEC-018, RF78). */
+export const VERSAO_TERMOS = "2026-10-17";
 
 /** OPEN-004: mínimo de 8 caracteres, sem exigir símbolos. 72 é o limite do bcrypt do Supabase Auth. */
 export const SENHA_MINIMA = 8;

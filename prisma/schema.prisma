@@ -170,6 +170,17 @@ enum StatusConta {
   CANCELADA // RN25: conta a receber de venda cancelada
 }
 
+// SPEC-018 (RF77, OPEN-008): eventos do registro de auditoria do suporte.
+enum EventoSuporte {
+  PAPEL_CONCEDIDO // script da equipe (5.1)
+  PAPEL_RETIRADO
+  LIBERACAO // o Dono liberou o acesso
+  REVOGACAO // o Dono revogou (ou uma nova liberação substituiu a anterior)
+  ENTRADA // o Administrador entrou em modo suporte
+  TELA // cada tela aberta em modo suporte
+  SAIDA // saiu do modo suporte
+}
+
 // ==========================================================
 // Multi-tenancy
 // ==========================================================
@@ -188,6 +199,8 @@ model Usuario {
   excluidoEm           DateTime? // RN27: acesso bloqueado
   anonimizadoEm        DateTime? // RN27: nome/e-mail/senha substituídos por valores anônimos
   credencialRemovidaEm DateTime? // SPEC-014 (OPEN-001): credencial apagada no Supabase Auth; nula com excluidoEm = pendência da rotina diária
+  termosAceitosEm      DateTime? // SPEC-018 (RF78, OPEN-011): data do último aceite da política e dos termos (versaoTermosAceita)
+  administradorEm      DateTime? // SPEC-018 (RF74, OPEN-001): Administrador da plataforma desde; concedido só pelo script (5.1)
 
   membroEm          MembroNegocio[]
   movimentacoes     MovimentacaoEstoque[] // RNF05: auditoria (quem fez a alteração)
@@ -198,6 +211,9 @@ model Usuario {
   convitesEnviados  Convite[]              @relation("ConviteEnviadoPor") // RF72
   planosAlterados   Negocio[]              @relation("PlanoAlteradoPor") // RF73
   trocasDePlano     HistoricoPlano[] // SPEC-013 (OPEN-007): quem trocou o plano
+  acessosLiberados  AcessoSuporte[]        @relation("AcessoLiberadoPor") // SPEC-018 (RF75)
+  acessosRevogados  AcessoSuporte[]        @relation("AcessoRevogadoPor") // SPEC-018 (RF75)
+  registrosSuporte  RegistroSuporte[] // SPEC-018 (RF77): autor do evento
   createdAt         DateTime               @default(now())
 }
 
@@ -241,6 +257,8 @@ model Negocio {
   membros          MembroNegocio[]
   convites         Convite[]
   historicoPlanos  HistoricoPlano[] // SPEC-013 (OPEN-007)
+  acessosSuporte   AcessoSuporte[] // SPEC-018 (RF75)
+  registrosSuporte RegistroSuporte[] // SPEC-018 (RF77)
   itens            Item[]
   materiaisServico MaterialServico[]
   movimentacoes    MovimentacaoEstoque[]
@@ -685,4 +703,47 @@ model HistoricoPlano {
   usuario Usuario @relation(fields: [usuarioId], references: [id])
 
   @@index([negocioId, createdAt])
+}
+
+// SPEC-018 (RF75, RN31): liberação do acesso de suporte pelo Dono — motivo, módulos (só "ver")
+// e prazo. No máximo uma ativa por negócio (a nova revoga a anterior, na mesma transação).
+model AcessoSuporte {
+  id                String    @id @default(uuid()) @db.Uuid
+  negocioId         String    @db.Uuid
+  liberadoPorId     String    @db.Uuid
+  motivo            String    @db.VarChar(300)
+  modulos           String[] // módulos da matriz (SPEC-005) liberados para leitura
+  criadoEm          DateTime  @default(now())
+  expiraEm          DateTime
+  revogadoEm        DateTime?
+  revogadoPorId     String?   @db.Uuid
+  primeiraEntradaEm DateTime? // OPEN-009: e-mail ao Dono só na primeira entrada
+
+  negocio     Negocio           @relation(fields: [negocioId], references: [id])
+  liberadoPor Usuario           @relation("AcessoLiberadoPor", fields: [liberadoPorId], references: [id])
+  revogadoPor Usuario?          @relation("AcessoRevogadoPor", fields: [revogadoPorId], references: [id])
+  registros   RegistroSuporte[]
+
+  @@index([negocioId, criadoEm])
+}
+
+// SPEC-018 (RF77, RN32, OPEN-008): registro de auditoria do suporte, somente inserção
+// (gatilho he_somente_insercao), guardado por 5 anos (OPEN-010). negocioId nulo só nos
+// eventos de papel (PAPEL_CONCEDIDO / PAPEL_RETIRADO).
+model RegistroSuporte {
+  id        String        @id @default(uuid()) @db.Uuid
+  negocioId String?       @db.Uuid
+  acessoId  String?       @db.Uuid
+  usuarioId String        @db.Uuid
+  evento    EventoSuporte
+  modulo    String?       @db.VarChar(20)
+  descricao String        @db.VarChar(200)
+  criadoEm  DateTime      @default(now())
+
+  negocio Negocio?       @relation(fields: [negocioId], references: [id])
+  acesso  AcessoSuporte? @relation(fields: [acessoId], references: [id])
+  usuario Usuario        @relation(fields: [usuarioId], references: [id])
+
+  @@index([negocioId, criadoEm])
+  @@index([acessoId, criadoEm])
 }

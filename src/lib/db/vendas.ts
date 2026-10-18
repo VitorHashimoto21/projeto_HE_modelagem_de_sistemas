@@ -1,6 +1,7 @@
 import type { FormaPagamento, StatusConta, StatusVenda, TipoItem, TipoMovimentacao } from "@/generated/prisma/enums";
 import { custoTotal } from "@/lib/dominio/catalogo";
 import { intervaloDoDia } from "@/lib/dominio/datas";
+import { mascararContato, mascararNome } from "@/lib/dominio/suporte";
 import {
   acertoDoCancelamento,
   custoUnitarioComMateriais,
@@ -205,7 +206,9 @@ export type PreviaDoCancelamento = {
   recebidoCentavos: number;
 };
 
-export function criarConsultasDeVendas(cliente: ClienteDoNegocio, negocioId: string) {
+export function criarConsultasDeVendas(cliente: ClienteDoNegocio, negocioId: string, opcoes: { mascararClientes?: boolean } = {}) {
+  /** SPEC-018 (INV-006): no modo suporte, nome e contato do cliente saem do servidor mascarados. */
+  const nomeDoCliente = (nome: string | null | undefined) => (nome ? (opcoes.mascararClientes ? mascararNome(nome) : nome) : null);
   /**
    * Linhas com preço e custo do banco (INV-002, INV-007) e o total — antes da transação. Com
    * os ajustes da SPEC-017: preço cobrado (exige `podeAjustarPreco`) e materiais usados.
@@ -439,12 +442,13 @@ export function criarConsultasDeVendas(cliente: ClienteDoNegocio, negocioId: str
     },
 
     async clientes(): Promise<{ id: string; nome: string; contato: string | null }[]> {
-      return cliente.cliente.findMany({
+      const lista = await cliente.cliente.findMany({
         where: { anonimizadoEm: null },
         select: { id: true, nome: true, contato: true },
         orderBy: { nome: "asc" },
         take: 1000,
       });
+      return opcoes.mascararClientes ? lista.map((c) => ({ ...c, nome: mascararNome(c.nome), contato: c.contato && mascararContato(c.contato) })) : lista;
     },
 
     async criarCliente(nome: string, contato: string | null) {
@@ -645,7 +649,7 @@ export function criarConsultasDeVendas(cliente: ClienteDoNegocio, negocioId: str
         data: v.data,
         valorTotal: num(v.valorTotal)!,
         status: v.status,
-        cliente: v.cliente?.nome ?? null,
+        cliente: nomeDoCliente(v.cliente?.nome),
         registradaPor: v.registradaPor.nome,
         itens: v._count.itens,
         formas: [...new Set(v.pagamentos.map((p) => p.forma))],
@@ -679,7 +683,7 @@ export function criarConsultasDeVendas(cliente: ClienteDoNegocio, negocioId: str
         data: v.data,
         valorTotal: num(v.valorTotal)!,
         status: v.status,
-        cliente: v.cliente?.nome ?? null,
+        cliente: nomeDoCliente(v.cliente?.nome),
         registradaPor: v.registradaPor.nome,
         itens: v.itens.length,
         formas: [...new Set(v.pagamentos.map((p) => p.forma))],

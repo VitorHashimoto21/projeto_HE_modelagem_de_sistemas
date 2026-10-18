@@ -30,6 +30,8 @@ export const MODELOS = {
       membros: { modelo: "MembroNegocio" },
       convites: { modelo: "Convite" },
       historicoPlanos: { modelo: "HistoricoPlano" },
+      acessosSuporte: { modelo: "AcessoSuporte" },
+      registrosSuporte: { modelo: "RegistroSuporte" },
       itens: { modelo: "Item" },
       materiaisServico: { modelo: "MaterialServico" },
       movimentacoes: { modelo: "MovimentacaoEstoque" },
@@ -178,6 +180,26 @@ export const MODELOS = {
   },
 
   // Globais (sem tenant)
+  // SPEC-018: liberação do acesso de suporte e registro de auditoria (negocioId nulo só nos
+  // eventos de papel, que nunca passam pelo cliente do negócio).
+  AcessoSuporte: {
+    classe: "operacional",
+    relacoes: {
+      negocio: { modelo: "Negocio", fk: "negocioId" },
+      liberadoPor: { modelo: "Usuario", fk: "liberadoPorId" },
+      revogadoPor: { modelo: "Usuario", fk: "revogadoPorId" },
+      registros: { modelo: "RegistroSuporte" },
+    },
+  },
+  RegistroSuporte: {
+    classe: "operacional",
+    relacoes: {
+      negocio: { modelo: "Negocio", fk: "negocioId" },
+      acesso: { modelo: "AcessoSuporte", fk: "acessoId" },
+      usuario: { modelo: "Usuario", fk: "usuarioId" },
+    },
+  },
+
   Usuario: {
     classe: "global",
     relacoes: {
@@ -190,6 +212,9 @@ export const MODELOS = {
       convitesEnviados: { modelo: "Convite" },
       planosAlterados: { modelo: "Negocio" },
       trocasDePlano: { modelo: "HistoricoPlano" },
+      acessosLiberados: { modelo: "AcessoSuporte" },
+      acessosRevogados: { modelo: "AcessoSuporte" },
+      registrosSuporte: { modelo: "RegistroSuporte" },
     },
   },
   FaixaTributaria: { classe: "global", relacoes: {} },

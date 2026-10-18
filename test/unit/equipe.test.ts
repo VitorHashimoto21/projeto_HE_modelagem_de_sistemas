@@ -127,7 +127,7 @@ describe("guardas no servidor (5.5, INV-001, INV-005)", () => {
   });
 
   it("menu: Configurações só para o Dono; sem negócio, nenhum item", () => {
-    expect(menuDoMembro("DONO", MATRIZ_COMPLETA).map((i) => i.href)).toEqual(["/painel", "/catalogo", "/estoque", "/vendas/nova", "/vendas", "/calculadora", "/financeiro", "/relatorios", "/negocio/equipe", "/negocio/dados", "/negocio/plano"]);
+    expect(menuDoMembro("DONO", MATRIZ_COMPLETA).map((i) => i.href)).toEqual(["/painel", "/catalogo", "/estoque", "/vendas/nova", "/vendas", "/calculadora", "/financeiro", "/relatorios", "/negocio/equipe", "/negocio/dados", "/negocio/plano", "/negocio/suporte"]);
     expect(menuDoMembro("GERENTE", MATRIZ_COMPLETA).map((i) => i.href)).toEqual(["/painel", "/catalogo", "/estoque", "/vendas/nova", "/vendas", "/calculadora", "/financeiro", "/relatorios"]); // módulos entram conforme as specs (SPEC-006 a SPEC-013)
     expect(menuDoMembro(null, null)).toEqual([]);
   });

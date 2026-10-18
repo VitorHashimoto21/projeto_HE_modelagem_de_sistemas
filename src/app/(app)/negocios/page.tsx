@@ -10,7 +10,7 @@ import { EstadoVazio } from "@/components/ui/estado-vazio";
 import { classeDoBotao } from "@/components/ui/estilos";
 import { Selo } from "@/components/ui/selo";
 import { Superficie } from "@/components/ui/superficie";
-import { exigirSessao } from "@/lib/auth/servidor";
+import { exigirUsuarioComum } from "@/lib/auth/servidor";
 import { negocios } from "@/lib/db";
 import { dataBrasileira } from "@/lib/dominio/datas";
 import { convitesParaVoce } from "@/lib/equipe/servicos";
@@ -24,7 +24,7 @@ export const metadata: Metadata = { title: "Meus negócios" };
 // o torna o negócio ativo (UC2). SPEC-005: "Convites para você" (OPEN-006) e "Sair deste
 // negócio" para quem não é Dono (OPEN-007).
 export default async function MeusNegocios({ searchParams }: PageProps<"/negocios">) {
-  const contexto = await exigirSessao();
+  const contexto = await exigirUsuarioComum();
   const [lista, convites, { saiu }] = await Promise.all([
     negocios().listarDoUsuario(contexto.usuarioId),
     dependenciasDaEquipe().then(convitesParaVoce),
