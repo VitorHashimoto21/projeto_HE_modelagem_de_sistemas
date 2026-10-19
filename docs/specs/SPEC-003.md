@@ -2,6 +2,7 @@
 
 > **Status:** ✅ **Implementada e verificada na homologação em 04/10/2026** (PR #44) — questões em aberto decididas pela equipe (seção 13), todas pela opção recomendada; testes T01–T13 no CI e carga na homologação (T14) conferida ([evidências](evidencias/SPEC-003/README.md)). Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar).
 > **Mapa:** [`MAPA_DE_SPECS.md`](../MAPA_DE_SPECS.md) · **Anterior:** [SPEC-002](SPEC-002.md) · **Próximas que dependem desta:** SPEC-004 (CNAE → Anexo) e SPEC-010 (faixas, DAS, Fator R e margens).
+> **Evolução prevista pela [SPEC-020](SPEC-020.md) (aprovada em 19/10/2026):** o arquivo fiscal ganha a margem padrão da categoria nova **Acessórios** (8%, comércio, Lei 9.249/1995, art. 15, mesma vigência das demais); a regra de exigir uma margem para cada categoria continua valendo.
 
 ---
 

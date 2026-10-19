@@ -43,7 +43,8 @@
 | RF08 | Complexo (Estado + Evento) | **ENQUANTO** o tipo do item selecionado for Produto Físico, **QUANDO** o usuário submeter o formulário de cadastro, o sistema deve exigir o preenchimento de nome, custo, unidade de medida e categoria, aceitando estoque mínimo como campo opcional e sem solicitar quantidade em estoque. |
 | RF09 | Complexo (Estado + Evento) | **ENQUANTO** o tipo do item selecionado for Serviço, **QUANDO** o usuário submeter o formulário de cadastro, o sistema deve exigir o preenchimento de nome, custo e categoria, e deve perguntar se há materiais/insumos associados. |
 | RF10 | Ubíquo | O sistema deve exigir que todo produto/serviço tenha uma unidade de medida definida (ex.: unidade, kg, litro, hora, caixa). |
-| RF11 | Ubíquo | O sistema deve exigir que todo produto/serviço seja associado a uma categoria da lista fixa: Serviços, Produtos, Alimentação, Vestuário, Beleza, Saúde, Casa, Tecnologia, Outros. |
+| RF11 | Ubíquo | O sistema deve exigir que todo produto/serviço seja associado a uma categoria da lista fixa: Serviços, Produtos, Alimentação, Vestuário, Acessórios, Beleza, Saúde, Casa, Tecnologia, Outros. |
+| RF79 | Complexo (Evento + Indesejado) | **QUANDO** o usuário criar uma subcategoria numa categoria fixa ou associá-la a um item, o sistema deve gravá-la para o negócio e permitir filtrar e buscar por ela no Catálogo e no Estoque; **SE** o nome já existir na categoria ou a subcategoria for de outra categoria ou de outro negócio, **ENTÃO** o sistema deve recusar a operação. |
 | RF12 | Orientado a evento | **QUANDO** o usuário indicar que um Serviço possui materiais, o sistema deve permitir vincular múltiplos Produtos Físicos já cadastrados no Estoque como materiais desse serviço. |
 | RF13 | Orientado a evento | **QUANDO** um material for vinculado a um Serviço, o sistema deve preencher automaticamente a quantidade padrão de 1 unidade por execução, permitindo que o usuário edite esse valor. |
 | RF14 | Ubíquo | O sistema deve tratar o registro da quantidade em estoque de um Produto Físico como uma operação separada, disponível somente após a conclusão do cadastro do produto. |
@@ -51,6 +52,7 @@
 | RN04 | Orientado a estado | **ENQUANTO** o item for do tipo Serviço, o sistema deve excluí-lo do controle de estoque e permitir vincular materiais; **ENQUANTO** for Produto Físico, deve incluí-lo no controle de estoque. |
 | RF64 | Feature opcional | **ONDE** o usuário informar manualmente o preço de venda de um item, o sistema deve salvá-lo como preço oficial e registrar no histórico a origem Manual. |
 | RN23 | Comportamento indesejado | **SE** o usuário tentar adicionar a uma venda um item sem preço oficial confirmado, **ENTÃO** o sistema deve impedir a inclusão e orientar a definição do preço. |
+| RN33 | Ubíquo | O sistema deve sugerir a margem padrão pela categoria do item, sem considerar a subcategoria, e não deve alterar preço, custo, estoque nem regras fiscais por causa da subcategoria. |
 | RN05 | Orientado a evento | **QUANDO** um Serviço com materiais vinculados for vendido, o sistema deve dar baixa automática no estoque desses materiais, na quantidade configurada; **ONDE** a quantidade usada for ajustada na venda, o sistema deve baixar a quantidade ajustada (SPEC-017). |
 
 ---
