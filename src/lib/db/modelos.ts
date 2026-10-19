@@ -33,6 +33,7 @@ export const MODELOS = {
       acessosSuporte: { modelo: "AcessoSuporte" },
       registrosSuporte: { modelo: "RegistroSuporte" },
       itens: { modelo: "Item" },
+      subcategorias: { modelo: "Subcategoria" },
       materiaisServico: { modelo: "MaterialServico" },
       movimentacoes: { modelo: "MovimentacaoEstoque" },
       historicoPrecos: { modelo: "HistoricoPreco" },
@@ -80,11 +81,20 @@ export const MODELOS = {
     classe: "operacional",
     relacoes: {
       negocio: { modelo: "Negocio", fk: "negocioId" },
+      subcategoria: { modelo: "Subcategoria", fk: "subcategoriaId" },
       movimentacoes: { modelo: "MovimentacaoEstoque" },
       historicoPrecos: { modelo: "HistoricoPreco" },
       materiais: { modelo: "MaterialServico" },
       usadoEm: { modelo: "MaterialServico" },
       itensVenda: { modelo: "ItemVenda" },
+    },
+  },
+  // SPEC-020 (RF79): subcategoria livre do negócio dentro de uma categoria fixa.
+  Subcategoria: {
+    classe: "operacional",
+    relacoes: {
+      negocio: { modelo: "Negocio", fk: "negocioId" },
+      itens: { modelo: "Item" },
     },
   },
   MaterialServico: {

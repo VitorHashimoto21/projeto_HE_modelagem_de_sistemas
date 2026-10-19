@@ -17,7 +17,7 @@ export default async function EditarItem({ params }: PageProps<"/catalogo/[id]/e
     if (e instanceof ItemNaoEncontrado) notFound();
     throw e;
   });
-  const disponiveis = await c.opcoesDeMaterial(id);
+  const [disponiveis, subcategorias] = await Promise.all([c.opcoesDeMaterial(id), c.subcategorias()]);
   // Materiais arquivados que já estão no serviço continuam na lista (OPEN-006).
   const jaVinculados = item.materiaisDoServico
     .filter((m) => !disponiveis.some((d) => d.id === m.materialId))
@@ -28,11 +28,13 @@ export default async function EditarItem({ params }: PageProps<"/catalogo/[id]/e
       <CabecalhoDePagina voltar={{ href: `/catalogo/${item.id}`, rotulo: item.nome }} titulo={`Editar ${item.nome}`} />
       <FormularioItem
         opcoes={[...disponiveis, ...jaVinculados]}
+        subcategorias={subcategorias}
         valores={{
           id: item.id,
           tipo: item.tipo,
           nome: item.nome,
           categoria: item.categoria,
+          subcategoriaId: item.subcategoria?.id ?? null,
           unidadeMedida: item.unidadeMedida,
           custoBase: item.custoBase,
           comissaoPercentual: item.comissaoPercentual,

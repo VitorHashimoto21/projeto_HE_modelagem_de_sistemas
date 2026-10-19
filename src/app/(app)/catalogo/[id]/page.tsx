@@ -60,7 +60,7 @@ export default async function DetalheDoItem({ params, searchParams }: PageProps<
             {item.arquivado && <Selo tom="neutro">Arquivado</Selo>}
           </span>
         }
-        descricao={`${ROTULO_TIPO[item.tipo]}, ${ROTULO_CATEGORIA[item.categoria].toLowerCase()}`}
+        descricao={`${ROTULO_TIPO[item.tipo]}, ${ROTULO_CATEGORIA[item.categoria].toLowerCase()}${item.subcategoria ? ` › ${item.subcategoria.nome.toLowerCase()}` : ""}`}
         acoes={
           podeEditar &&
           !item.arquivado && (
@@ -130,6 +130,7 @@ export default async function DetalheDoItem({ params, searchParams }: PageProps<
             <TituloDaSuperficie id="titulo-dados" titulo="Dados do item" />
             <dl>
               <Linha rotulo="Categoria" valor={ROTULO_CATEGORIA[item.categoria]} />
+              <Linha rotulo="Subcategoria" valor={item.subcategoria?.nome ?? "—"} />
               <Linha rotulo="Unidade de medida" valor={rotuloUnidade(item.unidadeMedida)} />
               <Linha rotulo={item.tipo === "SERVICO" ? "Custo próprio" : "Custo"} valor={reais(item.custoBase)} />
               {item.tipo === "SERVICO" && item.materiaisDoServico.length > 0 && <Linha rotulo="Custo total (com materiais)" valor={reais(item.custoTotal)} />}

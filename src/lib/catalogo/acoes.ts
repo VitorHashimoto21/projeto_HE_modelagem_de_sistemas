@@ -7,7 +7,8 @@ import type { ContextoDoMembro } from "@/lib/auth/autorizacao";
 import { camposDoFormulario } from "@/lib/auth/validacao";
 import { catalogo } from "@/lib/db";
 import * as servicos from "./servicos";
-import type { EstadoDoItem, EstadoDoPreco } from "./servicos";
+import type { EstadoDaExclusao, EstadoDaSubcategoria, EstadoDoItem, EstadoDoPreco } from "./servicos";
+import { podeCriarSubcategoria } from "./validacao";
 
 // Server Actions do catálogo (SPEC-006). A fábrica exige a permissão do módulo Catálogo
 // (SPEC-005) antes do corpo; o negócio vem do contexto validado, nunca do formulário.
@@ -58,4 +59,37 @@ export const acaoArquivarItem = acaoComPermissao("catalogo", "excluir", async (m
   // Só códigos na URL (nunca texto livre); a página lê do banco os serviços que usam o item.
   const resultado = r.ok ? (arquivar ? "arquivado" : "reativado") : r.codigo;
   redirect(`/catalogo/${encodeURIComponent(id)}?resultado=${resultado}`);
+});
+
+// Subcategorias (SPEC-020, OPEN-005). Nenhuma é aceita no modo suporte (a fábrica recusa).
+
+/**
+ * Criar: quem cadastra ou edita itens (Catálogo — criar ou editar). A fábrica exige o mínimo
+ * comum ("ver") e o corpo confere a combinação antes de qualquer gravação.
+ */
+export const acaoCriarSubcategoria = acaoComPermissao("catalogo", "ver", async (membro, _: EstadoDaSubcategoria, form: FormData) => {
+  if (!podeCriarSubcategoria(membro.permissoes)) {
+    return { status: "erro", mensagem: servicos.MENSAGENS_FLUXO_CATALOGO.semPermissaoSubcategoria } satisfies EstadoDaSubcategoria;
+  }
+  const estado = await servicos.criarSubcategoria(camposDoFormulario(form), deps(membro));
+  if (estado.status === "salvo") revalidatePath("/catalogo", "layout");
+  return estado;
+});
+
+export const acaoRenomearSubcategoria = acaoComPermissao("catalogo", "editar", async (membro, _: EstadoDaSubcategoria, form: FormData) => {
+  const estado = await servicos.renomearSubcategoria(texto(form, "subcategoriaId"), camposDoFormulario(form), deps(membro));
+  if (estado.status === "salvo") {
+    revalidatePath("/catalogo", "layout");
+    revalidatePath("/estoque", "layout");
+  }
+  return estado;
+});
+
+export const acaoExcluirSubcategoria = acaoComPermissao("catalogo", "excluir", async (membro, _: EstadoDaExclusao, form: FormData) => {
+  const estado = await servicos.excluirSubcategoria(texto(form, "subcategoriaId"), deps(membro));
+  if (estado.status === "excluida") {
+    revalidatePath("/catalogo", "layout");
+    revalidatePath("/estoque", "layout");
+  }
+  return estado;
 });

@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useState, type FormEvent } from "react";
-import type { TipoItem } from "@/generated/prisma/enums";
+import { useActionState, useRef, useState, type FormEvent } from "react";
+import type { CategoriaItem, TipoItem } from "@/generated/prisma/enums";
 import { Aviso, BotaoEnviar, MensagemDeCampo } from "@/components/acesso/campos";
+import { avisar } from "@/components/ui/avisar";
 import { Package, Plus, Sparkles } from "lucide-react";
 import { classeDoCampo } from "@/components/ui/classes";
 import { classeDoBotao, classeDoLink } from "@/components/ui/estilos";
@@ -14,6 +15,7 @@ import { CATEGORIAS, validarItem, validarPreco } from "@/lib/catalogo/validacao"
 import { camposDoFormulario, type ErrosDeCampo } from "@/lib/auth/validacao";
 import { custoTotal, lerNumero, UNIDADES } from "@/lib/dominio/catalogo";
 import { numero, reais, ROTULO_CATEGORIA, ROTULO_TIPO, rotuloUnidade } from "./rotulos";
+import { GavetaNovaSubcategoria, type OpcaoDeSubcategoria } from "./subcategorias";
 
 export type OpcaoDeMaterial = { id: string; nome: string; unidadeMedida: string; custo: number };
 
@@ -22,6 +24,7 @@ export type ValoresDoItem = {
   tipo?: TipoItem;
   nome?: string;
   categoria?: string;
+  subcategoriaId?: string | null;
   unidadeMedida?: string;
   custoBase?: number;
   comissaoPercentual?: number | null;
@@ -160,9 +163,29 @@ function Materiais({
   );
 }
 
-/** Cadastro e edição do item (SPEC-006, 5.1–5.3). Na edição o tipo é fixo (INV-002). */
-export function FormularioItem({ valores, opcoes }: { valores?: ValoresDoItem; opcoes: OpcaoDeMaterial[] }) {
+/**
+ * Cadastro e edição do item (SPEC-006, 5.1–5.3). Na edição o tipo é fixo (INV-002). A subcategoria
+ * (SPEC-020, 5.2) lista só as da categoria escolhida e volta a "Sem subcategoria" quando ela muda.
+ */
+export function FormularioItem({
+  valores,
+  opcoes,
+  subcategorias,
+}: {
+  valores?: ValoresDoItem;
+  opcoes: OpcaoDeMaterial[];
+  subcategorias: OpcaoDeSubcategoria[];
+}) {
   const editando = !!valores?.id;
+  const [categoria, setCategoria] = useState(valores?.categoria ?? "");
+  const [subcategoriaId, setSubcategoriaId] = useState(valores?.subcategoriaId ?? "");
+  // Criadas aqui pela gaveta: aparecem na hora, antes (ou além) da lista que vem do servidor.
+  const [criadas, setCriadas] = useState<OpcaoDeSubcategoria[]>([]);
+  const [criandoSubcategoria, setCriandoSubcategoria] = useState(false);
+  const campoDaSubcategoria = useRef<HTMLSelectElement>(null);
+  const daCategoria = [...subcategorias, ...criadas.filter((c) => !subcategorias.some((s) => s.id === c.id))]
+    .filter((s) => s.categoria === categoria)
+    .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
   const [estado, executar] = useActionState<EstadoDoItem, FormData>(editando ? acaoEditarItem : acaoCriarItem, ITEM_INICIAL);
   const [tipo, setTipo] = useState<TipoItem | null>(valores?.tipo ?? null);
   const [usaMateriais, setUsaMateriais] = useState((valores?.materiais?.length ?? 0) > 0);
@@ -260,10 +283,14 @@ export function FormularioItem({ valores, opcoes }: { valores?: ValoresDoItem; o
             <select
               id="categoria"
               name="categoria"
-              defaultValue={valores?.categoria ?? ""}
+              value={categoria}
               aria-invalid={erros.categoria ? true : undefined}
               aria-describedby={erros.categoria ? "categoria-erro" : undefined}
-              onChange={() => limpar("categoria")}
+              onChange={(e) => {
+                setCategoria(e.target.value);
+                setSubcategoriaId("");
+                if (erros.categoria || erros.subcategoriaId) setLocais({ ...erros, categoria: undefined, subcategoriaId: undefined });
+              }}
               className={classeDoCampo(erros.categoria)}
             >
               <option value="">Selecione…</option>
@@ -295,6 +322,40 @@ export function FormularioItem({ valores, opcoes }: { valores?: ValoresDoItem; o
             </select>
             <MensagemDeCampo id="unidadeMedida-erro" erro={erros.unidadeMedida} />
           </div>
+        </div>
+
+        <div>
+          <Rotulo htmlFor="subcategoriaId" ajuda="Opcional. Organiza o catálogo; a margem sugerida continua a da categoria.">
+            Subcategoria
+          </Rotulo>
+          <div className="flex flex-wrap gap-2">
+            <select
+              ref={campoDaSubcategoria}
+              id="subcategoriaId"
+              name="subcategoriaId"
+              value={subcategoriaId}
+              disabled={!categoria}
+              aria-invalid={erros.subcategoriaId ? true : undefined}
+              aria-describedby={erros.subcategoriaId ? "subcategoriaId-erro" : undefined}
+              onChange={(e) => {
+                setSubcategoriaId(e.target.value);
+                limpar("subcategoriaId");
+              }}
+              className={`${classeDoCampo(erros.subcategoriaId)} min-w-0 flex-1 basis-56`}
+            >
+              <option value="">{categoria ? "Sem subcategoria" : "Escolha a categoria antes"}</option>
+              {daCategoria.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.nome}
+                </option>
+              ))}
+            </select>
+            <button type="button" disabled={!categoria} onClick={() => setCriandoSubcategoria(true)} className={classeDoBotao("secundario")}>
+              <Plus aria-hidden="true" />
+              Nova subcategoria
+            </button>
+          </div>
+          <MensagemDeCampo id="subcategoriaId-erro" erro={erros.subcategoriaId} />
         </div>
 
         <div className="grid gap-5 sm:grid-cols-2">
@@ -376,6 +437,22 @@ export function FormularioItem({ valores, opcoes }: { valores?: ValoresDoItem; o
         </div>
       </form>
       </Superficie>
+      {categoria && (
+        <GavetaNovaSubcategoria
+          aberta={criandoSubcategoria}
+          aoMudar={setCriandoSubcategoria}
+          categoria={categoria as CategoriaItem}
+          categoriaFixa
+          focoAoFechar={campoDaSubcategoria}
+          aoSalvar={(s) => {
+            setCriadas((lista) => [...lista, s]);
+            setSubcategoriaId(s.id);
+            limpar("subcategoriaId");
+            setCriandoSubcategoria(false);
+            avisar(`Subcategoria “${s.nome}” criada e escolhida.`);
+          }}
+        />
+      )}
     </div>
   );
 }

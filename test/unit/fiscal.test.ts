@@ -31,7 +31,7 @@ describe("T01 — o arquivo conferido é válido (INV-002, INV-003, INV-007, INV
     expect(p.cnaeAnexo).toHaveLength(12);
     expect(p.parametroMei).toHaveLength(3);
     expect(p.parametroFatorR).toHaveLength(1);
-    expect(p.margemPadraoCategoria).toHaveLength(9);
+    expect(p.margemPadraoCategoria).toHaveLength(10); // SPEC-020: + Acessórios
   });
 
   it("ignora as chaves de comentário (começam com _)", () => {

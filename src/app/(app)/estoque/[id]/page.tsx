@@ -62,7 +62,7 @@ export default async function EstoqueDoProduto({ params, searchParams }: PagePro
       <CabecalhoDePagina
         voltar={{ href: "/estoque", rotulo: "Estoque" }}
         titulo={d.nome}
-        descricao={ROTULO_CATEGORIA[d.categoria]}
+        descricao={`${ROTULO_CATEGORIA[d.categoria]}${d.subcategoria ? ` › ${d.subcategoria.nome}` : ""}`}
         acoes={
           <Link href={`/catalogo/${d.id}`} className={classeDoBotao("secundario", "sm")}>
             Ver no Catálogo
