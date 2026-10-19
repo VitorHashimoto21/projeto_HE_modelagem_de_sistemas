@@ -9,6 +9,26 @@
    ========================================================================== */
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* Menu lateral (SPEC-016, 5.2 e N8): "trilho" = só ícones (tablet, ou computador com o menu
+   recolhido); "largo" = computador com os rótulos. A classe vem do layout raiz, antes da pintura. */
+@custom-variant trilho {
+  @media (width >= 48rem) and (width < 64rem) {
+    @slot;
+  }
+  @media (width >= 64rem) {
+    &:where(.menu-recolhido *) {
+      @slot;
+    }
+  }
+}
+@custom-variant largo {
+  @media (width >= 64rem) {
+    &:not(:where(.menu-recolhido *)) {
+      @slot;
+    }
+  }
+}
+
 /* ---------- Tema claro (padrão) ---------- */
 :root {
   --radius: 1.25rem;
@@ -222,6 +242,7 @@
 
 /* Entradas da gaveta e do fundo (SPEC-016, 5.6) */
 @keyframes gaveta-fundo { from { opacity: 0; } to { opacity: 1; } }
+@keyframes dica-entrar { from { opacity: 0; transform: translateX(-4px); } to { opacity: 1; transform: none; } }
 @keyframes gaveta-baixo { from { transform: translateY(24px); opacity: 0; } to { transform: none; opacity: 1; } }
 @keyframes gaveta-lado { from { transform: translateX(32px); opacity: 0; } to { transform: none; opacity: 1; } }
 @keyframes medidor-encher { from { transform: scaleX(0); } to { transform: scaleX(1); } }

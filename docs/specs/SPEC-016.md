@@ -1,6 +1,6 @@
 # SPEC-016 — Design system e redesign (Direção "Balcão")
 
-> **Status:** ✅ **Implementada (PR #72) e verificada na homologação em 15/10/2026 (T10)**; **N8 — menu lateral recolhível e rótulo na dica (seção 15): divergência encontrada e decidida em 19/10/2026, implementação pendente**; os quatro ajustes encontrados na homologação foram corrigidos nos PRs #74 e #75 e aprovados nos testes da equipe em 16/10/2026, e as notas N1–N5 da seção 15 foram decididas pela equipe em 16/10/2026 (todas pela proposta; N3 e N5 implementadas) — aprovada em 14/10/2026 (OPEN-001 a OPEN-005 e OPEN-007 pela opção recomendada; OPEN-006 por **um PR único**); as 6 etapas num único PR, testes T01–T06 no CI, roteiros, acessibilidade e desempenho em build de produção (T07–T09) — [evidências](evidencias/SPEC-016/README.md); notas da implementação na seção 15. Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar).
+> **Status:** ✅ **Implementada (PR #72) e verificada na homologação em 15/10/2026 (T10)**; **N8 — menu lateral recolhível e rótulo na dica (seção 15): divergência encontrada e decidida em 19/10/2026 e implementada no mesmo dia (verificada em build local; homologação N8-T6 depois do merge)**; os quatro ajustes encontrados na homologação foram corrigidos nos PRs #74 e #75 e aprovados nos testes da equipe em 16/10/2026, e as notas N1–N5 da seção 15 foram decididas pela equipe em 16/10/2026 (todas pela proposta; N3 e N5 implementadas) — aprovada em 14/10/2026 (OPEN-001 a OPEN-005 e OPEN-007 pela opção recomendada; OPEN-006 por **um PR único**); as 6 etapas num único PR, testes T01–T06 no CI, roteiros, acessibilidade e desempenho em build de produção (T07–T09) — [evidências](evidencias/SPEC-016/README.md); notas da implementação na seção 15. Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar).
 > **Mapa:** [`MAPA_DE_SPECS.md`](../MAPA_DE_SPECS.md) · **Anteriores:** todas as telas das SPECs 002 a 014; [SPEC-012](SPEC-012.md) (gráficos em SVG próprio, OPEN-002) · **Base visual:** [`IDENTIDADE_VISUAL.md`](../design/IDENTIDADE_VISUAL.md) e o protótipo aprovado da Direção B (quadro "HE — Direções visuais", linha B, 14/10/2026).
 
 ---
@@ -303,7 +303,7 @@ A SPEC-016 estará concluída quando:
 - [x] os RNFs aplicáveis (RNF01, RNF02, RNF10 e desempenho) tiverem sido verificados como descrito na seção 10;
 - [x] as questões OPEN-001 a OPEN-007 tiverem sido decididas e registradas;
 - [x] `IDENTIDADE_VISUAL.md` estiver na versão 2;
-- [ ] não existir divergência conhecida entre a implementação e esta Spec — as notas N1–N5 da seção 15 foram decididas em 16/10/2026 e incorporadas (N3 e N5 implementadas); **a N8 (menu recolhível e rótulo na dica), decidida em 19/10/2026, aguarda a implementação**;
+- [x] não existir divergência conhecida entre a implementação e esta Spec — as notas N1–N5 da seção 15 foram decididas em 16/10/2026 e incorporadas (N3 e N5 implementadas); a N8 (menu recolhível e rótulo na dica), decidida em 19/10/2026, foi implementada no mesmo dia ([evidências](evidencias/SPEC-016/README.md#n8--menu-lateral-recolhível-e-dica-19102026)), com a homologação (N8-T6) depois do merge;
 - [x] toda divergência em relação à baseline tiver sido explicitamente analisada e registrada nos documentos (seção 15).
 
 **Regra fundamental:** a implementação obedece a esta Spec aprovada. Se surgir conflito entre código, Spec e documentos de modelagem, o comportamento não é alterado em silêncio: a divergência é registrada com a proposta de (1) corrigir a implementação ou (2) alterar a baseline, e a decisão é da equipe.
@@ -336,7 +336,7 @@ Notas originais:
 | N5 | **"Como os clientes pagam" nos Relatórios** sem a taxa da maquininha (a seção 5.5 pede a taxa média dos parâmetros, que o Painel mostra); os Relatórios não carregam os parâmetros da Calculadora. | Diferença pequena | (1) incluir a taxa num ajuste futuro, ou (2) manter só no Painel |
 | N6 | **Desempenho:** a primeira medição passou do limite (+39,3 KB); a gaveta do "Mais" e a biblioteca de avisos passaram a ser baixadas só quando usadas. Resultado: +17 KB no pior caso. | Resolvido | — |
 | N7 | **Acessibilidade:** dois achados do axe corrigidos (contraste de um rótulo no estoque; `<p>` dentro de `<dl>` na Calculadora, vindo da SPEC-010). | Resolvido | — |
-| N8 | **Menu lateral recolhível e rótulo na dica** (escopo, item 3, e seção 5.2): não implementados — no computador o menu fica sempre com rótulos, e no trilho do tablet o nome aparece só na dica nativa do navegador (`title`), que não aparece no foco pelo teclado. A falta não foi registrada na época; foi encontrada em 19/10/2026, a partir da revisão de uma profissional da área financeira e contábil (pedido: recolher a barra no computador). | Divergência (19/10/2026) | (1) corrigir a implementação |
+| N8 | **Menu lateral recolhível e rótulo na dica** (escopo, item 3, e seção 5.2) — **implementada em 19/10/2026** (subseção N8): não implementados — no computador o menu fica sempre com rótulos, e no trilho do tablet o nome aparece só na dica nativa do navegador (`title`), que não aparece no foco pelo teclado. A falta não foi registrada na época; foi encontrada em 19/10/2026, a partir da revisão de uma profissional da área financeira e contábil (pedido: recolher a barra no computador). | Divergência (19/10/2026) | (1) corrigir a implementação |
 
 ### N8 — Menu lateral recolhível e rótulo na dica (19/10/2026)
 
@@ -393,4 +393,18 @@ Notas originais:
 | N8-T6 | Recolher na homologação, recarregar e conferir as dicas | Manual (uma vez) | N8-CA1 a N8-CA3 |
 
 **Impacto na implementação:** `src/components/estrutura/navegacao.tsx` (estado, botão, classes do recolhido reaproveitando as do trilho), `src/app/layout.tsx` (script antes da pintura, junto do tema), um componente de dica em `src/components/ui/` (Radix Tooltip) e uma variante de CSS para o estado recolhido. Sem mudança em banco, servidor ou permissões. Entrega num PR de correção (`fix/`), que marca a N8 como implementada e devolve o item da DoD.
+
+**Implementação (19/10/2026):**
+
+- `src/lib/estrutura/menu-lateral.ts`: chave `he-menu`, classe `menu-recolhido` no `<html>`, `estadoDoMenu` e o trecho do script do layout raiz (junto do tema, antes da pintura).
+- `src/app/globals.css`: variantes **`trilho:`** (tablet, ou computador com o menu recolhido) e **`largo:`** (computador com rótulos), que substituem os pares `md:`/`lg:` do menu lateral; animação `dica-entrar`.
+- `src/components/ui/dica.tsx`: **Dica** (Radix Tooltip, com os tokens), no foco e no mouse, Esc fecha; `desativada` mantém a mesma árvore quando a dica deixa de valer (o item não é recriado e não perde o foco).
+- `src/components/estrutura/navegacao.tsx`: botão "Recolher menu"/"Expandir menu" no topo (só a partir de 1024 px), com `aria-expanded` e `aria-controls`; dica em todos os itens, em "Meus negócios", "Minha conta", tema e sair, só no modo trilho; texto da dica com o selo (`textoDaDica`, em `src/lib/equipe/menu.ts`).
+- Testes: `test/unit/menu-lateral.test.ts` (N8-T1 e N8-T2).
+
+**Decisões de implementação e divergências registradas:**
+
+- **Dica baixada sob demanda.** O Radix Tooltip pesa cerca de 22 KB comprimidos; importado direto, o `/painel` passaria de 160,8 KB para 184,6 KB, acima do orçamento de +30 KB da seção 10. A dica só é baixada quando o menu está no modo trilho **e** a pessoa passa o mouse ou chega pelo teclado no menu; ao carregar, o foco volta ao mesmo item. Resultado: **+1,7 KB** em todas as telas medidas (expandido, recolhido e tablet). Quem usa o menu expandido nunca baixa a dica.
+- **Com o menu expandido**, tema e sair continuam só com ícone e sem dica, como antes (a N8 cobre o modo só com ícones); "Minha conta" mantém a dica nativa com o e-mail.
+- **Primeira dica pelo mouse** numa página recém-aberta: aparece no movimento seguinte ao carregamento (alguns milissegundos), dentro do atraso normal da dica.
 
