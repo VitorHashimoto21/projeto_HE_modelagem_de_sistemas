@@ -91,7 +91,7 @@ export default async function Catalogo({ searchParams }: PageProps<"/catalogo">)
           </label>
           <div className="relative min-w-0 flex-1 basis-52">
             <Search aria-hidden="true" className="pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2 text-muted-foreground" />
-            <input id="busca" name="busca" type="search" defaultValue={busca} placeholder="Buscar por nome ou subcategoria" className={cn(classeDoCampo(), "h-11 rounded-full py-0 pl-10")} />
+            <input id="busca" name="busca" type="search" defaultValue={busca} placeholder="Buscar item" className={cn(classeDoCampo(), "h-11 rounded-full py-0 pl-10")} />
           </div>
           <FiltroDeCategoria key={`${categoria ?? ""}:${subcategoria ?? ""}`} categoria={categoria} subcategoria={subcategoria} subcategorias={subcategorias} />
           <button type="submit" className={classeDoBotao("secundario")}>

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { GestaoDeSubcategorias } from "@/components/catalogo/subcategorias";
+import { GestaoDeSubcategorias } from "@/components/catalogo/gestao-de-subcategorias";
 import { exigirPermissao } from "@/lib/auth/servidor";
 import { podeCriarSubcategoria } from "@/lib/catalogo/validacao";
 import { catalogo } from "@/lib/db";

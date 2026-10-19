@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useActionState, useRef, useState, type FormEvent } from "react";
 import type { CategoriaItem, TipoItem } from "@/generated/prisma/enums";
@@ -15,7 +16,11 @@ import { CATEGORIAS, validarItem, validarPreco } from "@/lib/catalogo/validacao"
 import { camposDoFormulario, type ErrosDeCampo } from "@/lib/auth/validacao";
 import { custoTotal, lerNumero, UNIDADES } from "@/lib/dominio/catalogo";
 import { numero, reais, ROTULO_CATEGORIA, ROTULO_TIPO, rotuloUnidade } from "./rotulos";
-import { GavetaNovaSubcategoria, type OpcaoDeSubcategoria } from "./subcategorias";
+import type { OpcaoDeSubcategoria } from "./subcategorias";
+
+// A gaveta "Nova subcategoria" (Radix Dialog) só é baixada no primeiro toque no botão: o cadastro
+// do item não paga por ela à toa (SPEC-016, seção 10; mesmo padrão da dica da N8).
+const GavetaNovaSubcategoria = dynamic(() => import("./subcategorias").then((m) => m.GavetaNovaSubcategoria), { ssr: false });
 
 export type OpcaoDeMaterial = { id: string; nome: string; unidadeMedida: string; custo: number };
 
@@ -182,6 +187,7 @@ export function FormularioItem({
   // Criadas aqui pela gaveta: aparecem na hora, antes (ou além) da lista que vem do servidor.
   const [criadas, setCriadas] = useState<OpcaoDeSubcategoria[]>([]);
   const [criandoSubcategoria, setCriandoSubcategoria] = useState(false);
+  const [gavetaPedida, setGavetaPedida] = useState(false);
   const campoDaSubcategoria = useRef<HTMLSelectElement>(null);
   const daCategoria = [...subcategorias, ...criadas.filter((c) => !subcategorias.some((s) => s.id === c.id))]
     .filter((s) => s.categoria === categoria)
@@ -350,7 +356,15 @@ export function FormularioItem({
                 </option>
               ))}
             </select>
-            <button type="button" disabled={!categoria} onClick={() => setCriandoSubcategoria(true)} className={classeDoBotao("secundario")}>
+            <button
+              type="button"
+              disabled={!categoria}
+              onClick={() => {
+                setGavetaPedida(true);
+                setCriandoSubcategoria(true);
+              }}
+              className={classeDoBotao("secundario")}
+            >
               <Plus aria-hidden="true" />
               Nova subcategoria
             </button>
@@ -437,7 +451,7 @@ export function FormularioItem({
         </div>
       </form>
       </Superficie>
-      {categoria && (
+      {gavetaPedida && categoria && (
         <GavetaNovaSubcategoria
           aberta={criandoSubcategoria}
           aoMudar={setCriandoSubcategoria}
