@@ -98,3 +98,35 @@ Feita em 15/10/2026 em https://he-homol.vercel.app, com o negócio de teste "HE 
 | Gráfico de vendas sem vendas repetia "R$ 0" no eixo | PR #75: escala mínima de R$ 3 |
 
 **Não eram problemas:** nas capturas de página inteira (Chrome, "Capture full size screenshot") a barra inferior aparece no meio da página e a gaveta aparece semitransparente quando a foto é tirada durante a animação de abertura; na tela, ambas estão corretas (fotos 01–03). A diferença de saldo entre duas fotos antigas (R$ 90) era uma venda registrada entre elas; nas fotos finais, Painel e Financeiro mostram o mesmo saldo (R$ 1.812,21).
+
+## N8 — Menu lateral recolhível e dica (19/10/2026)
+
+Build de produção local (dados de exemplo), Chromium, roteiro automatizado com 34 verificações — todas aprovadas. Capturas em [`n8/`](n8/).
+
+| Verificação | Resultado | Captura |
+|---|---|---|
+| 1440 px, sem escolha guardada: menu **expandido** (256 px), botão "Recolher menu" (`aria-expanded=true`) ao lado do logo | ✅ | `n8_expandido_1440_claro.png` |
+| Recolher: 80 px, "Expandir menu" (`aria-expanded=false`), foco continua no botão, escolha guardada (`he-menu=recolhido`), conteúdo se alarga (1184 → 1280 px), rótulos só para leitor de tela | ✅ | `n8_recolhido_1440_escuro.png` |
+| Recarregar: o menu já está com 80 px no `DOMContentLoaded` (sem piscar); navegar mantém recolhido | ✅ | — |
+| Mouse em "Estoque": dica "Estoque"; some ao sair | ✅ | `n8_recolhido_dica_1440_claro.png` |
+| Teclado numa página nova (dica ainda não baixada): Tab no menu → dica com o nome do item focado, foco preservado ao carregar a dica; Esc fecha | ✅ | — |
+| 1024 px recolhido e expandido, claro e escuro; expandido sem dica | ✅ | `n8_recolhido_1024_claro.png`, `n8_expandido_1024_escuro.png` |
+| 768 px: trilho sem botão (N8.3), dica no mouse | ✅ | `n8_trilho_dica_768_escuro.png` |
+| 390 px: sem menu lateral, cabeçalho do celular (nada muda) | ✅ | `n8_celular_390_claro.png` |
+| "Reduzir movimento": largura final logo após o clique; sem a preferência, transição suave | ✅ | — |
+| Modo suporte (SPEC-018): recolhe igual e a faixa do modo suporte continua | ✅ | `n8_modo_suporte_recolhido_1440_claro.png` |
+| axe-core 4.10.2 (WCAG 2.1 A/AA), recolhido 1440 claro e expandido 1024 escuro | ✅ sem violação grave ou crítica | — |
+| Sem rolagem horizontal em todas as capturas | ✅ | — |
+
+**Desempenho (seção 10):** JavaScript comprimido baixado ao abrir cada tela, cache desligado.
+
+| Tela | Antes da N8 | Com a N8 (1440 e 800 px) |
+|---|---|---|
+| /painel | 160,8 KB | 162,5 KB (+1,7) |
+| /vendas | 160,0 KB | 161,6 KB (+1,6) |
+| /estoque | 158,0 KB | 159,6 KB (+1,6) |
+
+A dica (Radix Tooltip, cerca de 22 KB) só é baixada quando o menu mostra só ícones e a pessoa chega nele; importada direto, somaria +23,8 KB a cada tela.
+
+Pendente: **N8-T6** — recolher na homologação, recarregar e conferir as dicas (depois do merge).
+

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import dynamic from "next/dynamic";
-import { useRef, useState } from "react";
+import { createContext, useContext, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import {
   ArrowDownCircle,
   BarChart3,
@@ -15,6 +15,8 @@ import {
   Menu,
   Moon,
   Package,
+  PanelLeftClose,
+  PanelLeftOpen,
   Plus,
   Receipt,
   Star,
@@ -26,7 +28,8 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { acaoSair } from "@/lib/auth/acoes";
-import type { ItemDoMenu } from "@/lib/equipe/menu";
+import { textoDaDica, type ItemDoMenu } from "@/lib/equipe/menu";
+import { CHAVE_DO_MENU, CLASSE_MENU_RECOLHIDO } from "@/lib/estrutura/menu-lateral";
 import { acaoTrocarNegocio } from "@/lib/negocio/acoes";
 import { useTema } from "@/components/tema/alternar-tema";
 import { cn } from "@/lib/utils";
@@ -37,6 +40,8 @@ const Gaveta = dynamic(() => import("@/components/ui/gaveta").then((m) => m.Gave
 // Estrutura do app (SPEC-016, 5.2): menu lateral verde-escuro no computador, trilho de
 // ícones no tablet e barra inferior com "Vender" no celular. Os itens vêm de menuDoMembro
 // (SPEC-005): esconder é conveniência, a barreira continua no servidor.
+// N8: no computador o menu recolhe para o trilho; as variantes `trilho:` e `largo:` (globals.css)
+// seguem a classe do <html>, e o nome de cada item vai para uma dica sempre que só o ícone aparece.
 
 const ICONES: Record<string, LucideIcon> = {
   "/painel": LayoutDashboard,
@@ -67,6 +72,86 @@ type Props = {
    */
   administrador?: { negocio: string | null };
 };
+
+/** Menu recolhido? Lido da classe do <html> (aplicada antes da pintura); no servidor, expandido. */
+function useMenuRecolhido(): boolean {
+  return useSyncExternalStore(
+    (aviso) => {
+      const observador = new MutationObserver(aviso);
+      observador.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
+      return () => observador.disconnect();
+    },
+    () => document.documentElement.classList.contains(CLASSE_MENU_RECOLHIDO),
+    () => false,
+  );
+}
+
+function useMidia(consulta: string): boolean {
+  return useSyncExternalStore(
+    (aviso) => {
+      const midia = window.matchMedia(consulta);
+      midia.addEventListener("change", aviso);
+      return () => midia.removeEventListener("change", aviso);
+    },
+    () => window.matchMedia(consulta).matches,
+    () => false,
+  );
+}
+
+/** Recolhe ou expande e guarda a escolha neste navegador (N8.1). */
+function alternarMenu() {
+  const recolher = !document.documentElement.classList.contains(CLASSE_MENU_RECOLHIDO);
+  document.documentElement.classList.toggle(CLASSE_MENU_RECOLHIDO, recolher);
+  try {
+    localStorage.setItem(CHAVE_DO_MENU, recolher ? "recolhido" : "expandido");
+  } catch {}
+}
+
+type ComponenteDica = (typeof import("@/components/ui/dica"))["Dica"];
+const ContextoDaDica = createContext<{ Dica: ComponenteDica | null; ativa: boolean }>({ Dica: null, ativa: false });
+
+const focaveisDoMenu = () => [...(document.getElementById("menu-lateral")?.querySelectorAll<HTMLElement>("a, button") ?? [])];
+
+/**
+ * A dica (Radix Tooltip, ~22 KB comprimidos) só é baixada quando o menu mostra só os ícones e a
+ * pessoa chega nele (mouse ou teclado): nenhuma tela carrega esse peso ao abrir (orçamento de
+ * JavaScript da seção 10). Ao trocar os itens pelos com dica, o foco volta ao mesmo item.
+ */
+function useDicaSobDemanda(ativa: boolean): { Dica: ComponenteDica | null; pedir: () => void } {
+  const [Dica, setDica] = useState<ComponenteDica | null>(null);
+  const [pedida, setPedida] = useState(false);
+  const focoPendente = useRef(-1);
+  useEffect(() => {
+    if (!ativa || !pedida || Dica) return;
+    let cancelado = false;
+    void import("@/components/ui/dica").then((m) => {
+      if (cancelado) return;
+      focoPendente.current = focaveisDoMenu().indexOf(document.activeElement as HTMLElement);
+      setDica(() => m.Dica);
+    });
+    return () => {
+      cancelado = true;
+    };
+  }, [ativa, pedida, Dica]);
+  useEffect(() => {
+    if (!Dica || focoPendente.current < 0) return;
+    focaveisDoMenu()[focoPendente.current]?.focus();
+    focoPendente.current = -1;
+  }, [Dica]);
+  return { Dica, pedir: () => setPedida(true) };
+}
+
+/** O nome numa dica, só quando o menu mostra só os ícones (trilho do tablet ou menu recolhido — N8.5). */
+function ComDica({ texto, children }: { texto: string; children: React.ReactNode }) {
+  const { Dica, ativa } = useContext(ContextoDaDica);
+  return Dica ? (
+    <Dica texto={texto} desativada={!ativa}>
+      {children}
+    </Dica>
+  ) : (
+    <>{children}</>
+  );
+}
 
 /** O item ativo é o de href mais longo que casa com o caminho (/vendas/nova ganha de /vendas). */
 function hrefAtivo(caminho: string, itens: ItemDoMenu[]): string | null {
@@ -136,42 +221,45 @@ function BotaoTema({ comRotulo }: { comRotulo?: boolean }) {
   const rotulo = escuro ? "Tema claro" : "Tema escuro";
   const Icone = escuro ? Sun : Moon;
   return (
-    <button
-      type="button"
-      onClick={alternar}
-      aria-pressed={escuro}
-      className={cn(
-        "flex items-center gap-3 rounded-full text-sm font-medium text-estrutura-suave hover:bg-estrutura-foreground/10 hover:text-estrutura-foreground focus-visible:outline-2 focus-visible:outline-ambar",
-        comRotulo ? "w-full px-4 py-2.5" : "size-10 justify-center",
-      )}
-    >
-      <Icone className="size-5 shrink-0" aria-hidden="true" />
-      <span className={comRotulo ? "" : "sr-only"}>{rotulo}</span>
-    </button>
+    <ComDica texto={rotulo}>
+      <button
+        type="button"
+        onClick={alternar}
+        aria-pressed={escuro}
+        className={cn(
+          "flex items-center gap-3 rounded-full text-sm font-medium text-estrutura-suave hover:bg-estrutura-foreground/10 hover:text-estrutura-foreground focus-visible:outline-2 focus-visible:outline-ambar",
+          comRotulo ? "w-full px-4 py-2.5" : "size-10 justify-center",
+        )}
+      >
+        <Icone className="size-5 shrink-0" aria-hidden="true" />
+        <span className={comRotulo ? "" : "sr-only"}>{rotulo}</span>
+      </button>
+    </ComDica>
   );
 }
 
 function ItemLateral({ item, ativo }: { item: ItemDoMenu; ativo: boolean }) {
   const Icone = ICONES[item.href] ?? LayoutDashboard;
   return (
-    <Link
-      href={item.href}
-      aria-current={ativo ? "page" : undefined}
-      title={item.rotulo}
-      className={cn(
-        "group flex items-center gap-3 rounded-full px-3 py-2.5 text-[15px] font-medium transition-colors duration-(--duracao-estado) ease-(--ease-saida)",
-        "focus-visible:outline-2 focus-visible:outline-ambar md:justify-center lg:justify-start lg:px-4",
-        ativo ? "bg-ambar font-bold text-ambar-foreground" : "text-estrutura-suave hover:bg-estrutura-foreground/10 hover:text-estrutura-foreground",
-      )}
-    >
-      <Icone className="size-5 shrink-0" aria-hidden="true" />
-      <span className="md:sr-only lg:not-sr-only">{item.rotulo}</span>
-      {item.selo && (
-        <span className={cn("ml-auto rounded-full px-2 py-0.5 text-[10px] font-bold md:hidden lg:inline", ativo ? "bg-ambar-foreground/15" : "bg-ambar text-ambar-foreground")}>
-          {item.selo}
-        </span>
-      )}
-    </Link>
+    <ComDica texto={textoDaDica(item)}>
+      <Link
+        href={item.href}
+        aria-current={ativo ? "page" : undefined}
+        className={cn(
+          "group flex items-center gap-3 rounded-full px-3 py-2.5 text-[15px] font-medium transition-colors duration-(--duracao-estado) ease-(--ease-saida)",
+          "focus-visible:outline-2 focus-visible:outline-ambar trilho:justify-center largo:px-4",
+          ativo ? "bg-ambar font-bold text-ambar-foreground" : "text-estrutura-suave hover:bg-estrutura-foreground/10 hover:text-estrutura-foreground",
+        )}
+      >
+        <Icone className="size-5 shrink-0" aria-hidden="true" />
+        <span className="whitespace-nowrap trilho:sr-only">{item.rotulo}</span>
+        {item.selo && (
+          <span className={cn("ml-auto rounded-full px-2 py-0.5 text-[10px] font-bold whitespace-nowrap trilho:hidden", ativo ? "bg-ambar-foreground/15" : "bg-ambar text-ambar-foreground")}>
+            {item.selo}
+          </span>
+        )}
+      </Link>
+    </ComDica>
   );
 }
 
@@ -188,6 +276,11 @@ function NegocioDoSuporte({ nome, compacto }: { nome: string; compacto?: boolean
 export function Navegacao({ itens, negocios, ativo, perfil, administrador }: Props) {
   const caminho = usePathname();
   const atual = hrefAtivo(caminho, itens);
+  const recolhido = useMenuRecolhido();
+  const tabletOuMaior = useMidia("(min-width: 48rem)");
+  const computador = useMidia("(min-width: 64rem)");
+  const trilho = tabletOuMaior && (!computador || recolhido);
+  const { Dica, pedir: pedirDica } = useDicaSobDemanda(trilho);
   const [maisAberto, setMaisAberto] = useState(false);
   const botaoMais = useRef<HTMLButtonElement>(null);
   const modulos = itens.filter((i) => !CONFIGURACOES.has(i.href));
@@ -204,78 +297,104 @@ export function Navegacao({ itens, negocios, ativo, perfil, administrador }: Pro
 
   return (
     <>
-      {/* Computador (rótulos) e tablet (só ícones) */}
-      <aside
-        aria-label="Menu do negócio"
-        className="sticky top-0 hidden h-dvh shrink-0 flex-col gap-6 overflow-y-auto bg-estrutura px-3 py-5 text-estrutura-foreground md:flex md:w-20 lg:w-64 lg:px-4"
-      >
-        <Link
-          href={inicio}
-          aria-label="Health Enterprise — página inicial"
-          className="flex items-center gap-2.5 rounded-full px-2 focus-visible:outline-2 focus-visible:outline-ambar md:justify-center lg:justify-start"
+      {/* Computador (rótulos, ou só ícones com o menu recolhido) e tablet (só ícones) */}
+      <ContextoDaDica.Provider value={{ Dica, ativa: trilho }}>
+        <aside
+          id="menu-lateral"
+          aria-label="Menu do negócio"
+          onPointerMove={trilho && !Dica ? pedirDica : undefined}
+          onFocus={trilho && !Dica ? pedirDica : undefined}
+          className="sticky top-0 hidden h-dvh shrink-0 flex-col gap-6 overflow-x-hidden overflow-y-auto bg-estrutura px-3 py-5 text-estrutura-foreground transition-[width] duration-(--duracao-layout) ease-(--ease-saida) md:flex trilho:w-20 largo:w-64 largo:px-4"
         >
-          <Simbolo className="size-9 shrink-0" />
-          <span className="text-base font-bold md:hidden lg:inline">Health Enterprise</span>
-        </Link>
-        <div className="md:hidden lg:block">
-          {administrador?.negocio ? <NegocioDoSuporte nome={administrador.negocio} /> : <SeletorNaEstrutura negocios={negocios} ativo={ativo} />}
-        </div>
-        {modulos.length > 0 && (
-          <nav aria-label="Módulos" className="flex flex-col gap-1">
-            {modulos.map((i) => (
-              <ItemLateral key={i.href} item={i} ativo={atual === i.href} />
-            ))}
-          </nav>
-        )}
-        {configuracoes.length > 0 && (
-          <nav aria-labelledby="titulo-config" className="flex flex-col gap-1 border-t border-estrutura-linha pt-4">
-            <h2 id="titulo-config" className="px-4 pb-1 text-xs font-medium text-estrutura-suave md:sr-only lg:not-sr-only">
-              Configurações
-            </h2>
-            {configuracoes.map((i) => (
-              <ItemLateral key={i.href} item={i} ativo={atual === i.href} />
-            ))}
-          </nav>
-        )}
-        <div className="mt-auto flex flex-col gap-1 border-t border-estrutura-linha pt-4">
-          <Link
-            href={negociosHref}
-            className="flex items-center gap-3 rounded-full px-3 py-2.5 text-sm font-medium text-estrutura-suave hover:bg-estrutura-foreground/10 hover:text-estrutura-foreground focus-visible:outline-2 focus-visible:outline-ambar md:justify-center lg:justify-start lg:px-4"
-            title={negociosRotulo}
-          >
-            <Building2 className="size-5 shrink-0" aria-hidden="true" />
-            <span className="md:sr-only lg:not-sr-only">{negociosRotulo}</span>
-          </Link>
-          {perfil && (
+          <div className="flex items-center gap-2 trilho:flex-col largo:justify-between">
             <Link
-              href="/conta"
-              title={`${perfil.email} — Minha conta`}
-              aria-current={caminho === "/conta" ? "page" : undefined}
-              className="flex items-center gap-3 rounded-full px-2 py-2 text-sm text-estrutura-foreground hover:bg-estrutura-foreground/10 focus-visible:outline-2 focus-visible:outline-ambar md:justify-center lg:justify-start"
+              href={inicio}
+              aria-label="Health Enterprise — página inicial"
+              className="flex min-w-0 items-center gap-2.5 rounded-full px-2 focus-visible:outline-2 focus-visible:outline-ambar"
             >
-              <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-estrutura-linha text-xs font-bold" aria-hidden="true">
-                {iniciais(perfil.nome) || <UserRound className="size-4" />}
-              </span>
-              <span className="min-w-0 truncate md:sr-only lg:not-sr-only">
-                {perfil.nome}
-                <span className="sr-only"> — Minha conta</span>
-              </span>
+              <Simbolo className="size-9 shrink-0" />
+              <span className="text-base font-bold whitespace-nowrap trilho:hidden">Health Enterprise</span>
             </Link>
-          )}
-          <div className="flex items-center gap-1 md:flex-col lg:flex-row">
-            <BotaoTema />
-            <form action={acaoSair}>
+            {/* N8.2: só no computador; no tablet o trilho é fixo (N8.3). */}
+            <ComDica texto={recolhido ? "Expandir menu" : "Recolher menu"}>
               <button
-                type="submit"
-                className="flex size-10 items-center justify-center rounded-full text-estrutura-suave hover:bg-estrutura-foreground/10 hover:text-estrutura-foreground focus-visible:outline-2 focus-visible:outline-ambar"
+                type="button"
+                onClick={alternarMenu}
+                aria-controls="menu-lateral"
+                aria-expanded={!recolhido}
+                className="hidden size-9 shrink-0 items-center justify-center rounded-full text-estrutura-suave hover:bg-estrutura-foreground/10 hover:text-estrutura-foreground focus-visible:outline-2 focus-visible:outline-ambar lg:flex"
               >
-                <LogOut className="size-5" aria-hidden="true" />
-                <span className="sr-only">Sair</span>
+                <PanelLeftClose className="size-5 trilho:hidden" aria-hidden="true" />
+                <PanelLeftOpen className="size-5 largo:hidden" aria-hidden="true" />
+                <span className="sr-only">{recolhido ? "Expandir menu" : "Recolher menu"}</span>
               </button>
-            </form>
+            </ComDica>
           </div>
-        </div>
-      </aside>
+          <div className="trilho:hidden">
+            {administrador?.negocio ? <NegocioDoSuporte nome={administrador.negocio} /> : <SeletorNaEstrutura negocios={negocios} ativo={ativo} />}
+          </div>
+          {modulos.length > 0 && (
+            <nav aria-label="Módulos" className="flex flex-col gap-1">
+              {modulos.map((i) => (
+                <ItemLateral key={i.href} item={i} ativo={atual === i.href} />
+              ))}
+            </nav>
+          )}
+          {configuracoes.length > 0 && (
+            <nav aria-labelledby="titulo-config" className="flex flex-col gap-1 border-t border-estrutura-linha pt-4">
+              <h2 id="titulo-config" className="px-4 pb-1 text-xs font-medium text-estrutura-suave trilho:sr-only">
+                Configurações
+              </h2>
+              {configuracoes.map((i) => (
+                <ItemLateral key={i.href} item={i} ativo={atual === i.href} />
+              ))}
+            </nav>
+          )}
+          <div className="mt-auto flex flex-col gap-1 border-t border-estrutura-linha pt-4">
+            <ComDica texto={negociosRotulo}>
+              <Link
+                href={negociosHref}
+                className="flex items-center gap-3 rounded-full px-3 py-2.5 text-sm font-medium text-estrutura-suave hover:bg-estrutura-foreground/10 hover:text-estrutura-foreground focus-visible:outline-2 focus-visible:outline-ambar trilho:justify-center largo:px-4"
+              >
+                <Building2 className="size-5 shrink-0" aria-hidden="true" />
+                <span className="whitespace-nowrap trilho:sr-only">{negociosRotulo}</span>
+              </Link>
+            </ComDica>
+            {perfil && (
+              <ComDica texto={`Minha conta — ${perfil.nome}`}>
+                <Link
+                  href="/conta"
+                  title={trilho ? undefined : `${perfil.email} — Minha conta`}
+                  aria-current={caminho === "/conta" ? "page" : undefined}
+                  className="flex items-center gap-3 rounded-full px-2 py-2 text-sm text-estrutura-foreground hover:bg-estrutura-foreground/10 focus-visible:outline-2 focus-visible:outline-ambar trilho:justify-center"
+                >
+                  <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-estrutura-linha text-xs font-bold" aria-hidden="true">
+                    {iniciais(perfil.nome) || <UserRound className="size-4" />}
+                  </span>
+                  <span className="min-w-0 truncate trilho:sr-only">
+                    {perfil.nome}
+                    <span className="sr-only"> — Minha conta</span>
+                  </span>
+                </Link>
+              </ComDica>
+            )}
+            <div className="flex items-center gap-1 trilho:flex-col">
+              <BotaoTema />
+              <form action={acaoSair}>
+                <ComDica texto="Sair">
+                  <button
+                    type="submit"
+                    className="flex size-10 items-center justify-center rounded-full text-estrutura-suave hover:bg-estrutura-foreground/10 hover:text-estrutura-foreground focus-visible:outline-2 focus-visible:outline-ambar"
+                  >
+                    <LogOut className="size-5" aria-hidden="true" />
+                    <span className="sr-only">Sair</span>
+                  </button>
+                </ComDica>
+              </form>
+            </div>
+          </div>
+        </aside>
+      </ContextoDaDica.Provider>
 
       {/* Celular: topo com o negócio e barra inferior */}
       <header className="sticky top-0 z-30 flex items-center justify-between gap-3 bg-estrutura px-4 py-3 text-estrutura-foreground md:hidden">

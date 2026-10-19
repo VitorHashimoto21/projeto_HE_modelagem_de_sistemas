@@ -13,6 +13,9 @@ type Exigencia = "membro" | "dono" | { modulo: Modulo; acao: Acao; semAcao?: Aca
 /** `selo`: aviso ao lado do item (ex.: "Plano pago" nos Relatórios do plano gratuito — SPEC-013, OPEN-004). */
 export type ItemDoMenu = { rotulo: string; href: string; selo?: string };
 
+/** Texto da dica do item no menu só com ícones (SPEC-016, N8.5): o nome e, se houver, o selo. */
+export const textoDaDica = (item: ItemDoMenu) => (item.selo ? `${item.rotulo} — ${item.selo}` : item.rotulo);
+
 const ITENS: (ItemDoMenu & { exige: Exigencia })[] = [
   // Página inicial (Dashboard — SPEC-012): aberta a todo membro; sem "Dashboard: ver", só atalhos (OPEN-005).
   { rotulo: "Painel", href: "/painel", exige: "membro" },
