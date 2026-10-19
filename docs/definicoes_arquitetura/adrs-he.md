@@ -22,6 +22,7 @@ Este documento reúne o conjunto inicial de **ADRs (Architecture Decision Record
 |**ADR-006**|Consulta de CNPJ em Base Pública da Receita via Adaptador com Fallback Manual|Trocar o provedor afeta o cadastro de negócios e a origem dos dados fiscais (CNAE, regime, anexo).|**Aceita**|
 |**ADR-007**|Cobrança do Plano Pago via Adaptador de Gateway de Pagamento (Stripe)|Trocar o gateway afeta assinaturas ativas, webhooks e dados de cobrança dos clientes.|**Proposta**|
 |**ADR-008**|Administrador da Plataforma com Acesso de Suporte Liberado pelo Dono|Mudar o modelo de acesso altera a Política de Privacidade (novo aceite de todos os usuários), o contexto de autorização e o registro de auditoria.|**Aceita**|
+|**ADR-009**|Domínio Próprio `.com.br` e Envio de E-mails pelo Resend (API e SMTP do Supabase Auth)|O domínio vira a identidade do produto (remetente, links dos e-mails, endereço do app e reputação de envio); trocá-lo depois de lançado afeta usuários, configurações de autenticação e entregabilidade.|**Aceita**|
 
 ---
 
@@ -290,3 +291,44 @@ A equipe precisa atender pedidos dos usuários (entender um problema, conferir e
 * **Negativas:** nova versão da Política e dos Termos, com novo aceite de todos os usuários; um segundo tipo de contexto de autorização a manter em todas as ações; até a SPEC-019, a conta de Administrador fica sem 2º fator (risco mitigado por somente leitura, liberação do Dono, sessão de 8 h e registro).
 
 **Drivers Relacionados:** RF74–RF78, RN01, RN30–RN32, RNF02, RNF03, RNF04, RNF05, RNF12.
+
+---
+
+#### ADR-009 — Domínio Próprio `.com.br` e Envio de E-mails pelo Resend
+
+> **Status: Aceita em 18/10/2026** (decisão da equipe durante a homologação da SPEC-018). Só configuração: o código de envio já existe. Aguarda a compra do domínio.
+
+##### Decisão
+
+O HE terá um **domínio próprio `.com.br`, registrado no Registro.br** (titular com CPF ou CNPJ de um responsável da equipe). O domínio será **verificado no Resend** (registros SPF e DKIM no DNS, e DMARC), que continua sendo o serviço de envio:
+
+1. **E-mails do app pela API do Resend** (`enviarEmail`, já integrado): aviso de "você já tem conta" (SPEC-002), convites da equipe (SPEC-005) e avisos do acesso de suporte ao Dono (SPEC-018). Basta trocar `EMAIL_REMETENTE` na Vercel para um endereço do domínio (ex.: `Health Enterprise <nao-responda@dominio.com.br>`).
+2. **E-mails da autenticação pelo Resend como SMTP do Supabase Auth** (confirmação de conta e recuperação de senha), com os modelos de e-mail editados para o link com `token_hash`, que funciona em qualquer navegador ou aparelho.
+
+Começa no **plano gratuito do Resend** (3.000 e-mails por mês, 100 por dia, 1 domínio); o plano pago entra quando o volume passar disso. Cada ambiente (RNF11) usa a própria chave do Resend. O mesmo domínio poderá depois ser o endereço do app (produção no domínio principal; homologação num subdomínio).
+
+##### Contexto e Problema
+
+Sem domínio próprio, o remetente é o de teste do Resend (`onboarding@resend.dev`), que **só entrega ao e-mail da conta Resend**: convites e avisos do suporte a qualquer outra pessoa falham (o sistema mostra o link copiável, OPEN-004 da SPEC-005). Os e-mails da autenticação saem pelo serviço padrão do Supabase, que não permite editar os modelos: o link de confirmação só funciona no mesmo navegador em que a conta foi criada, e abrir em outro (ou um leitor de links do provedor de e-mail) mostra "Este link expirou" (visto na homologação da SPEC-018). O Resend não oferece domínio compartilhado para enviar a qualquer destinatário: o domínio verificado é pré-requisito.
+
+##### Por que foi tomada
+
+1. **Destrava o que já existe:** o Resend já está integrado; com o domínio, convites, avisos e confirmação de conta chegam a qualquer e-mail, sem mudar código.
+2. **Corrige a confirmação de conta:** o SMTP próprio libera a edição dos modelos (`token_hash`).
+3. **Custo baixo:** cerca de R$ 40 por ano pelo `.com.br` e plano gratuito do Resend no início.
+4. **Identidade:** remetente e links com o nome do produto aumentam a confiança e a entregabilidade (menos e-mails no spam).
+
+##### Alternativas Consideradas
+
+* **Seguir sem domínio:** rejeitado — convites e avisos não chegam a terceiros e o link de confirmação continua falhando em outro navegador; inviável para produção.
+* **Domínio próprio com outro provedor de envio (Brevo, Amazon SES):** rejeitado — exige refazer a integração e a configuração sem ganho no volume do MVP; o envio fica numa única função (`enviarEmail`), então a troca futura continua possível (o SES fica mais barato em grande volume).
+* **Domínio `.com` em registrador internacional:** rejeitado como primeira opção — preço em dólar; o `.com.br` combina com o público (MEI e autônomos no Brasil). Fica como alternativa se o nome desejado não estiver livre em `.com.br`.
+
+##### Consequências
+
+* **Positivas:** e-mails a qualquer endereço; confirmação de conta funcionando em qualquer navegador; remetente com a marca do HE; nenhuma mudança de código.
+* **Negativas:** custo anual e **responsabilidade pela renovação** (domínio vencido derruba e-mails e, depois, o endereço do app); cuidar do DNS (SPF, DKIM, DMARC) e da reputação de envio; limite de 100 e-mails por dia no plano gratuito, a acompanhar. O Resend só **envia**: um e-mail de contato que **receba** mensagens (ex.: o contato dos textos legais) precisa de caixa ou redirecionamento, a decidir na configuração.
+
+**Passos de configuração (quando o domínio for comprado):** registrar o domínio no Registro.br → adicionar e verificar o domínio no Resend (registros DNS) → trocar `EMAIL_REMETENTE` na Vercel (homologação e, depois, produção) → no Supabase Auth, ativar o SMTP próprio com o Resend e editar os modelos de confirmação e recuperação para o link com `token_hash` → refazer o teste de convite (SPEC-005, T19) e de confirmação de conta (SPEC-002) com um e-mail de fora da equipe.
+
+**Drivers Relacionados:** RF01, RF72, RF75, RF76, RNF11.
