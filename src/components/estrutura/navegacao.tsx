@@ -304,16 +304,18 @@ export function Navegacao({ itens, negocios, ativo, perfil, administrador }: Pro
           aria-label="Menu do negócio"
           onPointerMove={trilho && !Dica ? pedirDica : undefined}
           onFocus={trilho && !Dica ? pedirDica : undefined}
-          className="sticky top-0 hidden h-dvh shrink-0 flex-col gap-6 overflow-x-hidden overflow-y-auto bg-estrutura px-3 py-5 text-estrutura-foreground transition-[width] duration-(--duracao-layout) ease-(--ease-saida) md:flex trilho:w-20 largo:w-64 largo:px-4"
+          className="sticky top-0 hidden h-dvh shrink-0 flex-col gap-6 overflow-hidden bg-estrutura px-3 py-5 text-estrutura-foreground transition-[width] duration-(--duracao-layout) ease-(--ease-saida) md:flex trilho:w-20 largo:w-64 largo:px-4"
         >
-          <div className="flex items-center gap-2 trilho:flex-col largo:justify-between">
+          {/* Topo fixo: a barra de rolagem fica só na lista do meio e nunca empurra o botão para cima
+              do nome (homologação de 19/10/2026); o nome encurta com reticências como proteção. */}
+          <div className="flex shrink-0 items-center gap-1 trilho:flex-col trilho:gap-2 largo:-mr-2 largo:justify-between">
             <Link
               href={inicio}
               aria-label="Health Enterprise — página inicial"
-              className="flex min-w-0 items-center gap-2.5 rounded-full px-2 focus-visible:outline-2 focus-visible:outline-ambar"
+              className="flex min-w-0 items-center gap-2 rounded-full px-1 focus-visible:outline-2 focus-visible:outline-ambar"
             >
               <Simbolo className="size-9 shrink-0" />
-              <span className="text-base font-bold whitespace-nowrap trilho:hidden">Health Enterprise</span>
+              <span className="truncate text-base font-bold trilho:hidden">Health Enterprise</span>
             </Link>
             {/* N8.2: só no computador; no tablet o trilho é fixo (N8.3). */}
             <ComDica texto={recolhido ? "Expandir menu" : "Recolher menu"}>
@@ -322,7 +324,7 @@ export function Navegacao({ itens, negocios, ativo, perfil, administrador }: Pro
                 onClick={alternarMenu}
                 aria-controls="menu-lateral"
                 aria-expanded={!recolhido}
-                className="hidden size-9 shrink-0 items-center justify-center rounded-full text-estrutura-suave hover:bg-estrutura-foreground/10 hover:text-estrutura-foreground focus-visible:outline-2 focus-visible:outline-ambar lg:flex"
+                className="hidden size-8 shrink-0 items-center justify-center rounded-full text-estrutura-suave hover:bg-estrutura-foreground/10 hover:text-estrutura-foreground focus-visible:outline-2 focus-visible:outline-ambar lg:flex"
               >
                 <PanelLeftClose className="size-5 trilho:hidden" aria-hidden="true" />
                 <PanelLeftOpen className="size-5 largo:hidden" aria-hidden="true" />
@@ -330,27 +332,30 @@ export function Navegacao({ itens, negocios, ativo, perfil, administrador }: Pro
               </button>
             </ComDica>
           </div>
-          <div className="trilho:hidden">
+          <div className="shrink-0 trilho:hidden">
             {administrador?.negocio ? <NegocioDoSuporte nome={administrador.negocio} /> : <SeletorNaEstrutura negocios={negocios} ativo={ativo} />}
           </div>
-          {modulos.length > 0 && (
-            <nav aria-label="Módulos" className="flex flex-col gap-1">
-              {modulos.map((i) => (
-                <ItemLateral key={i.href} item={i} ativo={atual === i.href} />
-              ))}
-            </nav>
-          )}
-          {configuracoes.length > 0 && (
-            <nav aria-labelledby="titulo-config" className="flex flex-col gap-1 border-t border-estrutura-linha pt-4">
-              <h2 id="titulo-config" className="px-4 pb-1 text-xs font-medium text-estrutura-suave trilho:sr-only">
-                Configurações
-              </h2>
-              {configuracoes.map((i) => (
-                <ItemLateral key={i.href} item={i} ativo={atual === i.href} />
-              ))}
-            </nav>
-          )}
-          <div className="mt-auto flex flex-col gap-1 border-t border-estrutura-linha pt-4">
+          {/* Só a lista do meio rola; a margem negativa deixa o contorno de foco dos itens inteiro. */}
+          <div className="-m-1 flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto p-1 [scrollbar-color:var(--estrutura-linha)_transparent] [scrollbar-width:thin]">
+            {modulos.length > 0 && (
+              <nav aria-label="Módulos" className="flex flex-col gap-1">
+                {modulos.map((i) => (
+                  <ItemLateral key={i.href} item={i} ativo={atual === i.href} />
+                ))}
+              </nav>
+            )}
+            {configuracoes.length > 0 && (
+              <nav aria-labelledby="titulo-config" className="flex flex-col gap-1 border-t border-estrutura-linha pt-4">
+                <h2 id="titulo-config" className="px-4 pb-1 text-xs font-medium text-estrutura-suave trilho:sr-only">
+                  Configurações
+                </h2>
+                {configuracoes.map((i) => (
+                  <ItemLateral key={i.href} item={i} ativo={atual === i.href} />
+                ))}
+              </nav>
+            )}
+          </div>
+          <div className="flex shrink-0 flex-col gap-1 border-t border-estrutura-linha pt-4">
             <ComDica texto={negociosRotulo}>
               <Link
                 href={negociosHref}
