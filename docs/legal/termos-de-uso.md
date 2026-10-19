@@ -33,7 +33,7 @@ O HE é um sistema web de gestão para microempreendedores e autônomos, com con
 ## 4-A. Acesso de suporte
 
 - Quando precisar de ajuda, o **Dono** pode liberar o suporte do HE para **ver** (sem alterar) os módulos que escolher do negócio, informando o motivo, por um prazo de até 7 dias. Sem essa liberação, o suporte não vê os dados do negócio.
-- O suporte vê os dados em modo **somente leitura**, com nomes e contatos de clientes e e-mails da equipe mascarados, e age em nome próprio, sem usar a sua conta ou a sua senha.
+- O suporte vê os dados em modo **somente leitura**, com nomes e contatos de clientes e e-mails da equipe mascarados (os valores dos módulos liberados, como vendas e saldo, aparecem normalmente), e age em nome próprio, sem usar a sua conta ou a sua senha.
 - Cada acesso fica registrado e visível ao Dono, que pode revogá-lo a qualquer momento. Detalhes na seção 5 da Política de Privacidade.
 - O HE **nunca pede a sua senha**, nem para o suporte.
 

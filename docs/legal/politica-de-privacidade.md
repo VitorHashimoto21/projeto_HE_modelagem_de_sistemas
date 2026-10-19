@@ -60,7 +60,7 @@ Os dados de cada negócio são isolados: só os membros convidados para aquele n
 
 - O Dono pode liberar, em *Configurações → Acesso do suporte*, o suporte do HE para **ver** (nunca alterar) os **módulos que escolher**, informando o motivo, por **1 hora, 24 horas, 3 dias ou 7 dias**. Gerente e Colaborador pedem ao Dono.
 - Sem essa liberação, o suporte vê apenas dados de cadastro do negócio (nome, regime, plano, data de criação, número de membros e nome e e-mail do Dono) — nunca vendas, valores, clientes ou estoque.
-- Durante o acesso, **nomes e contatos dos clientes e e-mails da equipe aparecem mascarados** para o suporte, e nenhum arquivo é baixado.
+- Durante o acesso, **nomes e contatos dos clientes e e-mails da equipe aparecem mascarados** para o suporte, e nenhum arquivo é baixado. Os **valores** dos módulos liberados (de cada venda e, com Dashboard e Financeiro, o saldo, as entradas, as saídas e as contas) aparecem normalmente, porque são necessários para entender o problema; o Dono vê esse aviso ao escolher os módulos.
 - O suporte age **em nome próprio**: nunca entra "como" você e nunca tem acesso à sua senha.
 - **Cada entrada, tela aberta e saída fica registrada** com data, hora e nome de quem acessou. O Dono vê esse registro, a equipe vê um aviso enquanto o acesso estiver liberado, e o Dono recebe e-mail ao liberar e quando o suporte entra.
 - O Dono pode **revogar** o acesso a qualquer momento; ele também termina sozinho no fim do prazo.

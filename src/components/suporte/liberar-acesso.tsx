@@ -82,7 +82,7 @@ export function LiberarAcesso({ substitui }: { substitui: boolean }) {
           <MensagemDeCampo id="motivo-suporte-erro" erro={erros.motivo} />
         </div>
 
-        <fieldset aria-describedby={erros.modulos ? "modulos-suporte-erro" : undefined}>
+        <fieldset aria-describedby={erros.modulos ? "modulos-suporte-dica modulos-suporte-erro" : "modulos-suporte-dica"}>
           <legend className={rotulo}>Módulos que o suporte pode ver</legend>
           <div className="grid gap-2 sm:grid-cols-2">
             {MODULOS.map((m) => (
@@ -92,6 +92,10 @@ export function LiberarAcesso({ substitui }: { substitui: boolean }) {
               </label>
             ))}
           </div>
+          {/* Valores não são mascarados (decisão de 18/10/2026): o Dono decide sabendo disso. */}
+          <p id="modulos-suporte-dica" className="mt-2 text-xs text-muted-foreground">
+            Os valores dos módulos marcados aparecem para o suporte: Vendas mostra o valor de cada venda e, com Dashboard e Financeiro, o suporte vê também o saldo, as entradas e as saídas.
+          </p>
           <MensagemDeCampo id="modulos-suporte-erro" erro={erros.modulos} />
         </fieldset>
 
