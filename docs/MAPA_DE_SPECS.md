@@ -136,6 +136,10 @@ Também foram corrigidos, sem decisão nova: a ordem do cronograma da Visão (Ca
 | SPEC-017 | Ajustes na venda: materiais e preço por venda | 005, 006, 007, 008, 016 |
 | SPEC-018 | Administrador da plataforma e acesso de suporte (somente leitura) | 001, 002, 005, 014, 016 |
 | SPEC-019 *(a gerar)* | Suporte com edição, emergência, ações de plataforma e 2º fator | 018 |
+| SPEC-020 *(a gerar)* | Subcategorias do negócio e novas categorias | 003, 006, 007, 016 |
+| SPEC-021 *(a gerar)* | Barra lateral recolhível no computador | 016 |
+| SPEC-022 *(a gerar)* | NCM nos produtos | 006 |
+| SPEC-023 *(a gerar)* | Cliente com dados completos (CPF/CNPJ, endereço, e-mail e telefone) | 008, 014, 018 |
 
 ```mermaid
 flowchart LR
@@ -172,7 +176,14 @@ flowchart LR
     S14 --> S18[SPEC-018 Administrador e suporte]
     S16 --> S18
     S18 -.-> S19[SPEC-019 Suporte com edição e 2º fator - a gerar]
+    S6 -.-> S20[SPEC-020 Subcategorias - a gerar]
+    S16 -.-> S21[SPEC-021 Barra lateral recolhível - a gerar]
+    S6 -.-> S22[SPEC-022 NCM - a gerar]
+    S14 -.-> S23[SPEC-023 Cliente completo - a gerar]
+    S18 -.-> S23
 ```
+
+**Ordem de execução combinada em 19/10/2026:** SPEC-020 → SPEC-021 → SPEC-022 → SPEC-023 → SPEC-019 (antes de abrir a produção). As SPECs 020 a 023 vêm da revisão de uma profissional da área financeira e contábil que está montando uma loja de semijoias; a SPEC-019 continua obrigatória antes da produção (2º fator do Administrador).
 
 ### 2.2 Detalhamento
 
@@ -370,6 +381,25 @@ flowchart LR
 #### SPEC-019 — Suporte com edição, emergência, ações de plataforma e 2º fator *(a gerar)*
 - **Escopo combinado (17/10/2026):** **camada de segurança da autenticação do Administrador (2º fator TOTP), em destaque e antes da edição**; edição em modo suporte; acesso de emergência sem liberação (justificativa, só leitura, aviso posterior); ações de plataforma (suspender/reativar negócio, trocar plano).
 - **Dependências:** SPEC-018
+- **Ordem:** depois das SPECs 020 a 023 e **antes de abrir a produção** (decisão de 19/10/2026).
+
+#### SPEC-020 — Subcategorias do negócio e novas categorias *(a gerar)*
+- **Escopo combinado (19/10/2026):** **subcategorias livres criadas pelo próprio negócio** dentro de cada categoria fixa (ex.: Brincos, Colares, Anéis), para organizar o catálogo **sem mexer na margem padrão** da categoria (RF36); avaliar novas categorias fixas relevantes para MEI e autônomos (ex.: **Acessórios**), cada uma com a sua margem padrão no arquivo de parâmetros fiscais; filtros no Catálogo e no Estoque.
+- **Origem:** revisão de uma profissional da área financeira e contábil (loja de semijoias): faltava a categoria Acessórios.
+- **Dependências:** SPEC-003 (margem por categoria), SPEC-006, SPEC-007, SPEC-016
+
+#### SPEC-021 — Barra lateral recolhível no computador *(a gerar)*
+- **Escopo combinado (19/10/2026):** botão para recolher e expandir a barra lateral a partir de 1024 px (só ícones, com o nome no foco e ao passar o mouse), com a preferência lembrada no navegador; sem mudança no celular.
+- **Dependências:** SPEC-016
+
+#### SPEC-022 — NCM nos produtos *(a gerar)*
+- **Escopo combinado (19/10/2026):** campo **NCM** (Nomenclatura Comum do Mercosul, 8 dígitos) **opcional** em produtos e materiais, com validação do formato; avaliar a busca na tabela oficial. Serviços não têm NCM. Prepara a emissão de nota fiscal, que continua pós-MVP (Visão de Negócio, 8.2).
+- **Dependências:** SPEC-006
+
+#### SPEC-023 — Cliente com dados completos *(a gerar)*
+- **Escopo combinado (19/10/2026):** CPF ou CNPJ (validado), endereço (CEP, logradouro, número, bairro, município, UF), e-mail e telefone, **todos opcionais**, com a indicação de cadastro "completo para nota fiscal"; tela de Clientes; LGPD: base legal (execução de contrato e obrigação fiscal), máscara no modo suporte, exportação e anonimização na exclusão, e nova versão da Política de Privacidade (novo aceite).
+- **Contexto fiscal:** NF-e exige o destinatário completo; na NFC-e (varejo) a identificação do consumidor é opcional (CPF a pedido); o MEI é dispensado de emitir nota para pessoa física. Por isso os campos são opcionais.
+- **Dependências:** SPEC-008, SPEC-014, SPEC-018
 
 ---
 
@@ -400,7 +430,7 @@ Todos os 122 requisitos (RF01–RF78, RN01–RN32, RNF01–RNF12) estão associa
 
 A conferência do seed fiscal foi concluída em 03/10/2026 (DAS do MEI atualizado para o salário mínimo de 2026), e a SPEC-003 não tem mais pré-requisito pendente. A SPEC-015 depende da aprovação do ADR-007.
 
-**Andamento (18/10/2026):**
+**Andamento (19/10/2026):**
 
 - [SPEC-001](specs/SPEC-001.md) a [SPEC-003](specs/SPEC-003.md): implementadas e verificadas na homologação.
 - [SPEC-004](specs/SPEC-004.md): implementada e verificada no preview da Vercel (04/10/2026).
@@ -412,7 +442,8 @@ A conferência do seed fiscal foi concluída em 03/10/2026 (DAS do MEI atualizad
 - [SPEC-016](specs/SPEC-016.md): implementada (PR #72) e verificada na homologação (15/10/2026); ajustes da homologação corrigidos (PRs #74 e #75) e aprovados nos testes da equipe (16/10/2026); notas N1–N5 da seção 15 decididas em 16/10/2026 (diálogo de confirmação e taxa da maquininha nos Relatórios implementados).
 - [SPEC-017](specs/SPEC-017.md): implementada (PR #82, 16/10/2026) e verificada na homologação (17/10/2026).
 - [SPEC-018](specs/SPEC-018.md): implementada (17/10/2026) e verificada na homologação (18/10/2026) — "Relatórios" fora do modo suporte, decidido na homologação e corrigido no PR #87; faixa do modo suporte no celular aceita na baseline (18/10/2026). Concluída.
-- SPEC-019: a gerar — próxima Spec (escopo combinado na seção 2.2).
+- SPECs 020 a 023 (melhorias da revisão financeira e contábil): a gerar, nesta ordem, antes da SPEC-019 (decisão de 19/10/2026); escopo na seção 2.2.
+- SPEC-019: a gerar depois da SPEC-023, antes de abrir a produção.
 - `main`: atualizada até a SPEC-018 (PR #86, 17/10/2026), sem ambiente de produção ainda (a migração na `main` é pulada enquanto não houver o banco de produção).
 - **E-mails e domínio:** domínio próprio `.com.br` (Registro.br) verificado no Resend, que também passa a ser o SMTP do Supabase Auth ([ADR-009](definicoes_arquitetura/adrs-he.md), 18/10/2026); aguarda a compra.
 
@@ -422,7 +453,8 @@ Lista mantida até cada item ser resolvido; quem retomar o projeto (em qualquer 
 
 | # | Pendência | Situação |
 |---|---|---|
-| 1 | **SPEC-019** (suporte com edição, emergência, ações de plataforma e **2º fator do Administrador**): gerar — próxima Spec | Aberta |
-| 2 | **Textos legais** (`docs/legal/`): preencher os campos entre colchetes (responsável, e-mail de contato, cidade/UF, região do Supabase) e revisão do grupo; a nova versão com o acesso de suporte entra na SPEC-018 | Aberta |
-| 3 | **SPEC-015** (cobrança real pelo Stripe): decidir se fica fora do MVP; depende do ADR-007 (proposta) | Aberta |
-| 4 | **Domínio próprio** ([ADR-009](definicoes_arquitetura/adrs-he.md)): comprar o `.com.br` no Registro.br, verificar no Resend (DNS), trocar `EMAIL_REMETENTE` na Vercel e pôr o Resend como SMTP do Supabase Auth com o modelo de link `token_hash`. Resolve convites e avisos do suporte a qualquer e-mail e o "Este link expirou" da confirmação de conta em outro navegador | Decidida; aguarda a compra |
+| 1 | **SPECs 020 a 023**, nesta ordem: subcategorias do negócio e novas categorias (020, próxima), barra lateral recolhível (021), NCM nos produtos (022) e cliente com dados completos (023) | Aberta |
+| 2 | **SPEC-019** (suporte com edição, emergência, ações de plataforma e **2º fator do Administrador**): gerar depois da SPEC-023, **antes de abrir a produção** | Aberta |
+| 3 | **Textos legais** (`docs/legal/`): preencher os campos entre colchetes (responsável, e-mail de contato, cidade/UF, região do Supabase) e revisão do grupo; a nova versão com o acesso de suporte entra na SPEC-018 | Aberta |
+| 4 | **SPEC-015** (cobrança real pelo Stripe): decidir se fica fora do MVP; depende do ADR-007 (proposta) | Aberta |
+| 5 | **Domínio próprio** ([ADR-009](definicoes_arquitetura/adrs-he.md)): comprar o `.com.br` no Registro.br, verificar no Resend (DNS), trocar `EMAIL_REMETENTE` na Vercel e pôr o Resend como SMTP do Supabase Auth com o modelo de link `token_hash`. Resolve convites e avisos do suporte a qualquer e-mail e o "Este link expirou" da confirmação de conta em outro navegador | Decidida; aguarda a compra |
