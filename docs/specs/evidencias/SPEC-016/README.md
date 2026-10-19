@@ -117,6 +117,7 @@ Build de produção local (dados de exemplo), Chromium, roteiro automatizado com
 | Modo suporte (SPEC-018): recolhe igual e a faixa do modo suporte continua | ✅ | `n8_modo_suporte_recolhido_1440_claro.png` |
 | axe-core 4.10.2 (WCAG 2.1 A/AA), recolhido 1440 claro e expandido 1024 escuro | ✅ sem violação grave ou crítica | — |
 | Sem rolagem horizontal em todas as capturas | ✅ | — |
+| **Correção da homologação:** com a barra de rolagem visível (Windows), o botão ficava sobre o nome. Agora só a lista do meio rola; topo e rodapé fixos. Com a barra visível em 1900×898, 1440×760, 1280×700 e 1024×700: nome e botão sem sobreposição (16 px entre eles), nome inteiro, "Sair" sempre visível | ✅ | `n8_barra_de_rolagem_1900x898_escuro.png` |
 
 **Desempenho (seção 10):** JavaScript comprimido baixado ao abrir cada tela, cache desligado.
 
