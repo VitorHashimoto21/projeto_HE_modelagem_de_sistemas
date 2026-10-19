@@ -129,5 +129,13 @@ Build de produção local (dados de exemplo), Chromium, roteiro automatizado com
 
 A dica (Radix Tooltip, cerca de 22 KB) só é baixada quando o menu mostra só ícones e a pessoa chega nele; importada direto, somaria +23,8 KB a cada tela.
 
-Pendente: **N8-T6** — recolher na homologação, recarregar e conferir as dicas (depois do merge).
+### Homologação (N8-T6) — 19/10/2026
+
+Conferida pela equipe na homologação depois do merge dos PRs #93 e #94, no Chrome do Windows (barra de rolagem visível), tema claro, com o negócio de teste. Aprovada.
+
+| Verificação | Resultado | Captura |
+|---|---|---|
+| Tela cheia (~2000 px), menu **expandido**: botão "Recolher menu" ao lado de "Health Enterprise", sem sobreposição; só a lista do meio rola (barra fina), seletor de negócio e rodapé (Meus negócios, conta, tema e sair) fixos | ✅ | `n8_homol_01_expandido_claro.png` |
+| Menu **recolhido** (80 px) depois de recarregar: só ícones, Painel destacado em âmbar; item "Vendas" em foco com a dica "Vendas" | ✅ | `n8_homol_02_recolhido_dica_claro.png` |
+| A dica acompanha o item com a página rolada e no topo | ✅ | `n8_homol_03_recolhido_dica_claro.png` |
 

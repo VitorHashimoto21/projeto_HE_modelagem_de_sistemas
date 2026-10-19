@@ -1,6 +1,6 @@
 # SPEC-016 — Design system e redesign (Direção "Balcão")
 
-> **Status:** ✅ **Implementada (PR #72) e verificada na homologação em 15/10/2026 (T10)**; **N8 — menu lateral recolhível e rótulo na dica (seção 15): divergência encontrada e decidida em 19/10/2026 e implementada no mesmo dia (verificada em build local; homologação N8-T6 depois do merge)**; os quatro ajustes encontrados na homologação foram corrigidos nos PRs #74 e #75 e aprovados nos testes da equipe em 16/10/2026, e as notas N1–N5 da seção 15 foram decididas pela equipe em 16/10/2026 (todas pela proposta; N3 e N5 implementadas) — aprovada em 14/10/2026 (OPEN-001 a OPEN-005 e OPEN-007 pela opção recomendada; OPEN-006 por **um PR único**); as 6 etapas num único PR, testes T01–T06 no CI, roteiros, acessibilidade e desempenho em build de produção (T07–T09) — [evidências](evidencias/SPEC-016/README.md); notas da implementação na seção 15. Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar).
+> **Status:** ✅ **Implementada (PR #72) e verificada na homologação em 15/10/2026 (T10)**; **N8 — menu lateral recolhível e rótulo na dica (seção 15): divergência encontrada e decidida em 19/10/2026, implementada no mesmo dia (PRs #93 e #94) e verificada na homologação (N8-T6, 19/10/2026)**; os quatro ajustes encontrados na homologação foram corrigidos nos PRs #74 e #75 e aprovados nos testes da equipe em 16/10/2026, e as notas N1–N5 da seção 15 foram decididas pela equipe em 16/10/2026 (todas pela proposta; N3 e N5 implementadas) — aprovada em 14/10/2026 (OPEN-001 a OPEN-005 e OPEN-007 pela opção recomendada; OPEN-006 por **um PR único**); as 6 etapas num único PR, testes T01–T06 no CI, roteiros, acessibilidade e desempenho em build de produção (T07–T09) — [evidências](evidencias/SPEC-016/README.md); notas da implementação na seção 15. Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar).
 > **Mapa:** [`MAPA_DE_SPECS.md`](../MAPA_DE_SPECS.md) · **Anteriores:** todas as telas das SPECs 002 a 014; [SPEC-012](SPEC-012.md) (gráficos em SVG próprio, OPEN-002) · **Base visual:** [`IDENTIDADE_VISUAL.md`](../design/IDENTIDADE_VISUAL.md) e o protótipo aprovado da Direção B (quadro "HE — Direções visuais", linha B, 14/10/2026).
 
 ---
@@ -303,7 +303,7 @@ A SPEC-016 estará concluída quando:
 - [x] os RNFs aplicáveis (RNF01, RNF02, RNF10 e desempenho) tiverem sido verificados como descrito na seção 10;
 - [x] as questões OPEN-001 a OPEN-007 tiverem sido decididas e registradas;
 - [x] `IDENTIDADE_VISUAL.md` estiver na versão 2;
-- [x] não existir divergência conhecida entre a implementação e esta Spec — as notas N1–N5 da seção 15 foram decididas em 16/10/2026 e incorporadas (N3 e N5 implementadas); a N8 (menu recolhível e rótulo na dica), decidida em 19/10/2026, foi implementada no mesmo dia ([evidências](evidencias/SPEC-016/README.md#n8--menu-lateral-recolhível-e-dica-19102026)), com a homologação (N8-T6) depois do merge;
+- [x] não existir divergência conhecida entre a implementação e esta Spec — as notas N1–N5 da seção 15 foram decididas em 16/10/2026 e incorporadas (N3 e N5 implementadas); a N8 (menu recolhível e rótulo na dica), decidida em 19/10/2026, foi implementada no mesmo dia e verificada na homologação (N8-T6) ([evidências](evidencias/SPEC-016/README.md#n8--menu-lateral-recolhível-e-dica-19102026));
 - [x] toda divergência em relação à baseline tiver sido explicitamente analisada e registrada nos documentos (seção 15).
 
 **Regra fundamental:** a implementação obedece a esta Spec aprovada. Se surgir conflito entre código, Spec e documentos de modelagem, o comportamento não é alterado em silêncio: a divergência é registrada com a proposta de (1) corrigir a implementação ou (2) alterar a baseline, e a decisão é da equipe.
@@ -390,7 +390,7 @@ Notas originais:
 | N8-T3 | Recolher, expandir, recarregar e navegar; largura estável no carregamento; `aria-expanded` | Navegador (build local) | N8-CA1, N8-CA2, N8-INV3 |
 | N8-T4 | Dica no Tab e no mouse, recolhido em 1440 e no trilho em 768; axe sem achados novos | Navegador (build local) | N8-CA3, N8-CA4, N8-INV2 |
 | N8-T5 | Capturas: 1024 e 1440 recolhido/expandido, claro e escuro; 768 e 390; modo suporte | Manual com captura | N8-CA5, N8-CA7, N8-INV4 |
-| N8-T6 | Recolher na homologação, recarregar e conferir as dicas | Manual (uma vez) | N8-CA1 a N8-CA3 |
+| N8-T6 | Recolher na homologação, recarregar e conferir as dicas — ✅ 19/10/2026 | Manual (uma vez) | N8-CA1 a N8-CA3 |
 
 **Impacto na implementação:** `src/components/estrutura/navegacao.tsx` (estado, botão, classes do recolhido reaproveitando as do trilho), `src/app/layout.tsx` (script antes da pintura, junto do tema), um componente de dica em `src/components/ui/` (Radix Tooltip) e uma variante de CSS para o estado recolhido. Sem mudança em banco, servidor ou permissões. Entrega num PR de correção (`fix/`), que marca a N8 como implementada e devolve o item da DoD.
 
@@ -408,4 +408,5 @@ Notas originais:
 - **Com o menu expandido**, tema e sair continuam só com ícone e sem dica, como antes (a N8 cobre o modo só com ícones); "Minha conta" mantém a dica nativa com o e-mail.
 - **Primeira dica pelo mouse** numa página recém-aberta: aparece no movimento seguinte ao carregamento (alguns milissegundos), dentro do atraso normal da dica.
 - **Homologação (19/10/2026) — botão sobre o nome:** em navegador com barra de rolagem visível (Windows), o menu inteiro rolava quando os itens não cabiam na altura da tela, e a barra (15 px) empurrava o botão "Recolher menu" para cima de "Health Enterprise" (a linha do logo já estava no limite e o teste automatizado escondia as barras). Corrigido: **só a lista do meio rola** (módulos e configurações, com barra fina); o topo (logo, botão e seletor) e o rodapé (Meus negócios, conta, tema e sair) ficam fixos — o rodapé passa a estar sempre visível; a linha do logo ficou mais compacta e o nome encurta com reticências em vez de passar por baixo do botão. Verificado com a barra visível em 1900×898, 1440×760, 1280×700 e 1024×700.
+- **Homologação (N8-T6, 19/10/2026):** depois do merge dos PRs #93 e #94, a equipe conferiu na homologação o menu expandido em tela cheia (botão ao lado do nome, sem sobreposição) e o menu recolhido depois de recarregar, com a dica no item em foco. Aprovada; a N8 está concluída.
 
