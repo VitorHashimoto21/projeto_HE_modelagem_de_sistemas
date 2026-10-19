@@ -136,7 +136,7 @@ Também foram corrigidos, sem decisão nova: a ordem do cronograma da Visão (Ca
 | SPEC-017 | Ajustes na venda: materiais e preço por venda | 005, 006, 007, 008, 016 |
 | SPEC-018 | Administrador da plataforma e acesso de suporte (somente leitura) | 001, 002, 005, 014, 016 |
 | SPEC-019 *(a gerar)* | Suporte com edição, emergência, ações de plataforma e 2º fator | 018 |
-| SPEC-020 *(a gerar)* | Subcategorias do negócio e novas categorias | 003, 006, 007, 016 |
+| SPEC-020 | Subcategorias do negócio e nova categoria Acessórios | 003, 006, 007, 014, 016, 018 |
 | SPEC-021 *(a gerar)* | NCM nos produtos | 006 |
 | SPEC-022 *(a gerar)* | Cliente com dados completos (CPF/CNPJ, endereço, e-mail e telefone) | 008, 014, 018 |
 
@@ -175,7 +175,8 @@ flowchart LR
     S14 --> S18[SPEC-018 Administrador e suporte]
     S16 --> S18
     S18 -.-> S19[SPEC-019 Suporte com edição e 2º fator - a gerar]
-    S6 -.-> S20[SPEC-020 Subcategorias - a gerar]
+    S7 --> S20[SPEC-020 Subcategorias e Acessórios]
+    S16 --> S20
     S6 -.-> S21[SPEC-021 NCM - a gerar]
     S14 -.-> S22[SPEC-022 Cliente completo - a gerar]
     S18 -.-> S22
@@ -381,10 +382,15 @@ flowchart LR
 - **Dependências:** SPEC-018
 - **Ordem:** depois das SPECs 020 a 022 e **antes de abrir a produção** (decisão de 19/10/2026).
 
-#### SPEC-020 — Subcategorias do negócio e novas categorias *(a gerar)*
-- **Escopo combinado (19/10/2026):** **subcategorias livres criadas pelo próprio negócio** dentro de cada categoria fixa (ex.: Brincos, Colares, Anéis), para organizar o catálogo **sem mexer na margem padrão** da categoria (RF36); avaliar novas categorias fixas relevantes para MEI e autônomos (ex.: **Acessórios**), cada uma com a sua margem padrão no arquivo de parâmetros fiscais; filtros no Catálogo e no Estoque.
-- **Origem:** revisão de uma profissional da área financeira e contábil (loja de semijoias): faltava a categoria Acessórios.
-- **Dependências:** SPEC-003 (margem por categoria), SPEC-006, SPEC-007, SPEC-016
+#### SPEC-020 — Subcategorias do negócio e nova categoria Acessórios
+- **Spec:** [`specs/SPEC-020.md`](./specs/SPEC-020.md) (🟢 aprovada em 19/10/2026, com as OPEN-001 a OPEN-006 decididas em entrevista; a implementar)
+- **Objetivo:** permitir que cada negócio crie **subcategorias livres** dentro das categorias fixas (ex.: Brincos, Colares e Anéis em Acessórios), no cadastro do item ou numa tela "Subcategorias" do Catálogo, para organizar o catálogo e o estoque **sem mexer na margem padrão** da categoria; e acrescentar a categoria fixa **Acessórios** (logo depois de Vestuário), com margem padrão de 8% no arquivo fiscal.
+- **Valor entregue:** cada negócio encontra os itens pela própria organização (filtros e busca no Catálogo e no Estoque), e semijoias, bijuterias e bolsas deixam de ficar em "Vestuário" ou "Outros".
+- **Origem:** revisão de uma profissional da área financeira e contábil (loja de semijoias): faltava a categoria Acessórios e um jeito de separar os tipos de peça.
+- **RF:** RF11 (alterado), RF79 (novo), RF08, RF09, RF36 · **RN:** RN33 (nova), RN17 · **RNF:** RNF01, RNF02, RNF04
+- **Entidades:** Subcategoria (nova), Item (campo novo), MargemPadraoCategoria (registro novo), enum CategoriaItem (valor novo)
+- **Dependências:** SPEC-001, SPEC-003, SPEC-005, SPEC-006, SPEC-007, SPEC-010, SPEC-014, SPEC-016, SPEC-018
+- **Justificativa da ordem:** primeira das melhorias da revisão financeira e contábil (ordem combinada em 19/10/2026); não depende da SPEC-021 nem da SPEC-022.
 
 #### SPEC-021 — NCM nos produtos *(a gerar)*
 - **Escopo combinado (19/10/2026):** campo **NCM** (Nomenclatura Comum do Mercosul, 8 dígitos) **opcional** em produtos e materiais, com validação do formato; avaliar a busca na tabela oficial. Serviços não têm NCM. Prepara a emissão de nota fiscal, que continua pós-MVP (Visão de Negócio, 8.2).
@@ -399,12 +405,13 @@ flowchart LR
 
 ## 3. Cobertura da baseline
 
-Todos os 122 requisitos (RF01–RF78, RN01–RN32, RNF01–RNF12) estão associados a pelo menos uma Spec. Requisitos compartilhados aparecem em mais de uma Spec com escopos complementares:
+Todos os 124 requisitos (RF01–RF79, RN01–RN33, RNF01–RNF12) estão associados a pelo menos uma Spec. Requisitos compartilhados aparecem em mais de uma Spec com escopos complementares:
 
 | Requisito | Specs | Divisão |
 |---|---|---|
 | RF06 | 005, 009 | Mecanismo de permissões (005); permissão de despesa operacional (009) |
-| RF36 | 003, 010 | Dados das margens padrão (003); sugestão na calculadora (010) |
+| RF11 | 006, 020 | Lista fixa e categoria obrigatória (006); categoria Acessórios (020) |
+| RF36 | 003, 010, 020 | Dados das margens padrão (003); sugestão na calculadora (010); margem de Acessórios, sem efeito da subcategoria (020) |
 | RF41 / RN15 / RN16 | 006, 010 | Histórico por preço manual (006); por confirmação da calculadora (010) |
 | RF47 | 005, 013 | Limite de convites (005); relatórios avançados (013) |
 | RF60 | 009, 010 | DAS como despesa fixa e conta mensal (009); Imposto% = 0 no markup (010) |
@@ -437,7 +444,8 @@ A conferência do seed fiscal foi concluída em 03/10/2026 (DAS do MEI atualizad
 - [SPEC-017](specs/SPEC-017.md): implementada (PR #82, 16/10/2026) e verificada na homologação (17/10/2026).
 - [SPEC-018](specs/SPEC-018.md): implementada (17/10/2026) e verificada na homologação (18/10/2026) — "Relatórios" fora do modo suporte, decidido na homologação e corrigido no PR #87; faixa do modo suporte no celular aceita na baseline (18/10/2026). Concluída.
 - [SPEC-016](specs/SPEC-016.md), **N8** (menu lateral recolhível e rótulo na dica): decidida e implementada em 19/10/2026 (PRs #93 e #94) e verificada na homologação no mesmo dia (N8-T6). Concluída.
-- SPECs 020 a 022 (melhorias da revisão financeira e contábil): a gerar, nesta ordem, depois da N8 e antes da SPEC-019 (decisão de 19/10/2026); escopo na seção 2.2.
+- [SPEC-020](specs/SPEC-020.md) (subcategorias e categoria Acessórios): aprovada em 19/10/2026, com as decisões da entrevista; a implementar.
+- SPECs 021 e 022 (melhorias da revisão financeira e contábil): a gerar, nesta ordem, depois da SPEC-020 e antes da SPEC-019 (decisão de 19/10/2026); escopo na seção 2.2.
 - SPEC-019: a gerar depois da SPEC-022, antes de abrir a produção.
 - `main`: atualizada até a SPEC-018 (PR #86, 17/10/2026), sem ambiente de produção ainda (a migração na `main` é pulada enquanto não houver o banco de produção).
 - **E-mails e domínio:** domínio próprio `.com.br` (Registro.br) verificado no Resend, que também passa a ser o SMTP do Supabase Auth ([ADR-009](definicoes_arquitetura/adrs-he.md), 18/10/2026); aguarda a compra.
@@ -448,7 +456,7 @@ Lista mantida até cada item ser resolvido; quem retomar o projeto (em qualquer 
 
 | # | Pendência | Situação |
 |---|---|---|
-| 1 | **SPECs 020 a 022**, nesta ordem: subcategorias do negócio e novas categorias (020), NCM nos produtos (021) e cliente com dados completos (022) | Aberta |
+| 1 | **SPECs 020 a 022**, nesta ordem: subcategorias e categoria Acessórios (020 — aprovada em 19/10/2026, a implementar), NCM nos produtos (021) e cliente com dados completos (022) | Em andamento |
 | 2 | **SPEC-019** (suporte com edição, emergência, ações de plataforma e **2º fator do Administrador**): gerar depois da SPEC-022, **antes de abrir a produção** | Aberta |
 | 3 | **Textos legais** (`docs/legal/`): preencher os campos entre colchetes (responsável, e-mail de contato, cidade/UF, região do Supabase) e revisão do grupo; a versão 2026-10-17 já inclui o acesso de suporte (SPEC-018), e a SPEC-022 trará outra (dados completos do cliente) | Aberta |
 | 4 | **SPEC-015** (cobrança real pelo Stripe): decidir se fica fora do MVP; depende do ADR-007 (proposta) | Aberta |
