@@ -60,6 +60,18 @@ Roteiro no navegador com **47 verificações**, todas aprovadas.
 | **Estoque:** o produto aberto pela lista filtrada volta para ela. Entre o Estoque e o Catálogo ("Ver no Catálogo", "Ver estoque"), e do serviço para o material, o link vira "Voltar" e leva à tela anterior | Idas e voltas nos dois sentidos | — |
 | **Segurança:** só vale endereço interno do Catálogo ou do Estoque. Endereço externo (`https://…`, `//…`), outra área do app ou `javascript:` é ignorado e o link volta ao início da lista | 4 endereços maliciosos no Catálogo e 1 no Estoque; 24 testes unitários (`test/unit/retorno.test.ts`) | — |
 
+### Conferência das correções na homologação — 20/10/2026
+
+Feita pela equipe em <https://he-homol.vercel.app> depois do merge do PR #98: **as duas correções foram aprovadas**. Capturas em [`homologacao/`](homologacao/).
+
+| Passo | Resultado | Captura |
+|---|---|---|
+| "Novo item" na subcategoria Rings, pela tela Subcategorias: "Anel de Plástico" cadastrado ("Produto físico, acessórios › rings") e o link do topo é "Subcategorias", que leva de volta a essa tela | ✅ | `homol_12_voltar_para_subcategorias_1440_claro.webp` |
+| Catálogo: busca e filtros na linha abaixo de "Todos / Produtos físicos / Serviços"; "Todas as categorias" inteiro | ✅ | `homol_13_filtros_catalogo_1440_claro.webp` |
+| Catálogo com Acessórios escolhido (antes de tocar em "Filtrar"): o filtro de subcategoria aparece com "Todas as subcategorias" inteiro | ✅ | `homol_14_filtros_catalogo_acessorios_1440_claro.webp` |
+| Estoque: o mesmo layout, com "Todas as categorias" inteiro | ✅ | `homol_15_filtros_estoque_1440_claro.webp` |
+| Estoque com Acessórios escolhido: "Todas as subcategorias" inteiro | ✅ | `homol_16_filtros_estoque_acessorios_1440_claro.webp` |
+
 ## Desempenho (SPEC-016, seção 10)
 
 JavaScript comprimido baixado ao abrir cada tela, com o cache desligado (iguais em 1440 e 800 px).
@@ -95,4 +107,4 @@ A gaveta "Nova subcategoria" do cadastro só é baixada no primeiro toque no bot
 
 ## Pendente
 
-Conferir as duas correções na homologação, depois do merge do PR #98.
+Nada. A SPEC-020 foi concluída em 20/10/2026.

@@ -182,7 +182,7 @@ flowchart LR
     S18 -.-> S22
 ```
 
-**Ordem de execução combinada em 19/10/2026:** **N8 da SPEC-016** (menu lateral recolhível — concluída e homologada em 19/10/2026) → SPEC-020 → SPEC-021 → SPEC-022 → SPEC-019 (antes de abrir a produção). A barra lateral recolhível, planejada como SPEC-021, já estava prevista na SPEC-016 e não tinha sido entregue: virou a nota N8 dela (divergência corrigida), e as Specs seguintes foram renumeradas (NCM → 021, Cliente completo → 022). Esses itens vêm da revisão de uma profissional da área financeira e contábil que está montando uma loja de semijoias; a SPEC-019 continua obrigatória antes da produção (2º fator do Administrador).
+**Ordem de execução combinada em 19/10/2026:** **N8 da SPEC-016** (menu lateral recolhível — concluída e homologada em 19/10/2026) → SPEC-020 (concluída em 20/10/2026) → SPEC-021 → SPEC-022 → SPEC-019 (antes de abrir a produção). A barra lateral recolhível, planejada como SPEC-021, já estava prevista na SPEC-016 e não tinha sido entregue: virou a nota N8 dela (divergência corrigida), e as Specs seguintes foram renumeradas (NCM → 021, Cliente completo → 022). Esses itens vêm da revisão de uma profissional da área financeira e contábil que está montando uma loja de semijoias; a SPEC-019 continua obrigatória antes da produção (2º fator do Administrador).
 
 ### 2.2 Detalhamento
 
@@ -383,7 +383,7 @@ flowchart LR
 - **Ordem:** depois das SPECs 020 a 022 e **antes de abrir a produção** (decisão de 19/10/2026).
 
 #### SPEC-020 — Subcategorias do negócio e nova categoria Acessórios
-- **Spec:** [`specs/SPEC-020.md`](./specs/SPEC-020.md) (✅ aprovada em 19/10/2026, com as OPEN-001 a OPEN-006 decididas em entrevista; implementada no mesmo dia (PR #97) e verificada em build local; homologada em 20/10/2026 (T12), com as duas correções de tela do PR #98 a conferir — [evidências](./specs/evidencias/SPEC-020/README.md))
+- **Spec:** [`specs/SPEC-020.md`](./specs/SPEC-020.md) (✅ aprovada em 19/10/2026, com as OPEN-001 a OPEN-006 decididas em entrevista; implementada no mesmo dia (PR #97) e verificada em build local; homologada em 20/10/2026 (T12), com as duas correções de tela do PR #98 conferidas no mesmo dia; **concluída em 20/10/2026** — [evidências](./specs/evidencias/SPEC-020/README.md))
 - **Objetivo:** permitir que cada negócio crie **subcategorias livres** dentro das categorias fixas (ex.: Brincos, Colares e Anéis em Acessórios), no cadastro do item ou numa tela "Subcategorias" do Catálogo, para organizar o catálogo e o estoque **sem mexer na margem padrão** da categoria; e acrescentar a categoria fixa **Acessórios** (logo depois de Vestuário), com margem padrão de 8% no arquivo fiscal.
 - **Valor entregue:** cada negócio encontra os itens pela própria organização (filtros e busca no Catálogo e no Estoque), e semijoias, bijuterias e bolsas deixam de ficar em "Vestuário" ou "Outros".
 - **Origem:** revisão de uma profissional da área financeira e contábil (loja de semijoias): faltava a categoria Acessórios e um jeito de separar os tipos de peça.
@@ -444,8 +444,8 @@ A conferência do seed fiscal foi concluída em 03/10/2026 (DAS do MEI atualizad
 - [SPEC-017](specs/SPEC-017.md): implementada (PR #82, 16/10/2026) e verificada na homologação (17/10/2026).
 - [SPEC-018](specs/SPEC-018.md): implementada (17/10/2026) e verificada na homologação (18/10/2026) — "Relatórios" fora do modo suporte, decidido na homologação e corrigido no PR #87; faixa do modo suporte no celular aceita na baseline (18/10/2026). Concluída.
 - [SPEC-016](specs/SPEC-016.md), **N8** (menu lateral recolhível e rótulo na dica): decidida e implementada em 19/10/2026 (PRs #93 e #94) e verificada na homologação no mesmo dia (N8-T6). Concluída.
-- [SPEC-020](specs/SPEC-020.md) (subcategorias e categoria Acessórios): aprovada e implementada em 19/10/2026 (PR #97), verificada em build local (testes T01–T10 e roteiro no navegador com 70 verificações); as três divergências da implementação foram aceitas pela equipe em 20/10/2026 (baseline ajustada); homologada em 20/10/2026 (T12). Dois problemas de tela da homologação — texto cortado nos filtros e o "voltar" do detalhe, que levava ao início do Catálogo — corrigidos no PR #98; falta conferir na homologação.
-- SPECs 021 e 022 (melhorias da revisão financeira e contábil): a gerar, nesta ordem, depois da SPEC-020 e antes da SPEC-019 (decisão de 19/10/2026); escopo na seção 2.2.
+- [SPEC-020](specs/SPEC-020.md) (subcategorias e categoria Acessórios): aprovada e implementada em 19/10/2026 (PR #97), verificada em build local (testes T01–T10 e roteiro no navegador com 70 verificações); as três divergências da implementação foram aceitas pela equipe em 20/10/2026 (baseline ajustada); homologada em 20/10/2026 (T12). Dois problemas de tela da homologação — texto cortado nos filtros e o "voltar" do detalhe, que levava ao início do Catálogo — corrigidos no PR #98 e conferidos na homologação no mesmo dia. Concluída.
+- SPECs 021 e 022 (melhorias da revisão financeira e contábil): a gerar, nesta ordem (a próxima é a SPEC-021), antes da SPEC-019 (decisão de 19/10/2026); escopo na seção 2.2.
 - SPEC-019: a gerar depois da SPEC-022, antes de abrir a produção.
 - `main`: atualizada até a SPEC-018 (PR #86, 17/10/2026), sem ambiente de produção ainda (a migração na `main` é pulada enquanto não houver o banco de produção).
 - **E-mails e domínio:** domínio próprio `.com.br` (Registro.br) verificado no Resend, que também passa a ser o SMTP do Supabase Auth ([ADR-009](definicoes_arquitetura/adrs-he.md), 18/10/2026); aguarda a compra.
@@ -456,7 +456,7 @@ Lista mantida até cada item ser resolvido; quem retomar o projeto (em qualquer 
 
 | # | Pendência | Situação |
 |---|---|---|
-| 1 | **SPECs 020 a 022**, nesta ordem: subcategorias e categoria Acessórios (020 — implementada e homologada; falta o merge do PR #98, com as correções da homologação, e conferir na homologação), NCM nos produtos (021) e cliente com dados completos (022) | Em andamento |
+| 1 | **SPECs 021 e 022**, nesta ordem: NCM nos produtos (021) e cliente com dados completos (022). A SPEC-020 (subcategorias e categoria Acessórios) foi concluída em 20/10/2026 | Aberta; a próxima é a SPEC-021 |
 | 2 | **SPEC-019** (suporte com edição, emergência, ações de plataforma e **2º fator do Administrador**): gerar depois da SPEC-022, **antes de abrir a produção** | Aberta |
 | 3 | **Textos legais** (`docs/legal/`): preencher os campos entre colchetes (responsável, e-mail de contato, cidade/UF, região do Supabase) e revisão do grupo; a versão 2026-10-17 já inclui o acesso de suporte (SPEC-018), e a SPEC-022 trará outra (dados completos do cliente) | Aberta |
 | 4 | **SPEC-015** (cobrança real pelo Stripe): decidir se fica fora do MVP; depende do ADR-007 (proposta) | Aberta |
