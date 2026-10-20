@@ -11,7 +11,9 @@ import type { OpcaoDeSubcategoria } from "./subcategorias";
 // quando a categoria escolhida tem subcategorias e volta para "Todas" ao trocar a categoria. Fica num
 // formulário GET; quem usa monta com uma `key` da URL, para recomeçar quando os filtros mudam.
 
-const classe = cn(classeDoCampo(), "h-11 w-auto min-w-0 flex-1 basis-40 rounded-full py-0");
+// Largura fixa que cabe "Todas as subcategorias" com a seta (no celular, a linha inteira): o texto
+// não corta (correção da homologação T12).
+const classe = cn(classeDoCampo(), "h-11 w-full rounded-full py-0 sm:w-60 sm:flex-none");
 
 export function FiltroDeCategoria({
   categoria,

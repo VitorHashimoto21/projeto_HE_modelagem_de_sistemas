@@ -13,6 +13,7 @@ import { Superficie, TituloDaSuperficie } from "@/components/ui/superficie";
 import { acaoExcluirSubcategoria } from "@/lib/catalogo/acoes";
 import { EXCLUSAO_INICIAL } from "@/lib/catalogo/servicos";
 import { CATEGORIAS, ROTULO_CATEGORIA } from "@/lib/catalogo/validacao";
+import { comRetorno } from "@/lib/estrutura/retorno";
 import { FormularioDaSubcategoria, GavetaNovaSubcategoria, type OpcaoDeSubcategoria } from "./subcategorias";
 
 // Tela Subcategorias (SPEC-020, 5.3): lista por categoria com ver itens, novo item, renomear e excluir.
@@ -122,7 +123,7 @@ export function GestaoDeSubcategorias({
                     </Link>
                     {podeCriarItem && (
                       <Link
-                        href={`/catalogo/novo?categoria=${s.categoria}&subcategoria=${s.id}`}
+                        href={comRetorno(`/catalogo/novo?categoria=${s.categoria}&subcategoria=${s.id}`, "/catalogo/subcategorias")}
                         className={classeDoBotao("secundario", "sm")}
                         aria-label={`Novo item em ${s.nome}`}
                       >

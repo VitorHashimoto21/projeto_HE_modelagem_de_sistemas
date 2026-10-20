@@ -15,6 +15,7 @@ import { ITEM_INICIAL, PRECO_INICIAL, type EstadoDoItem } from "@/lib/catalogo/s
 import { CATEGORIAS, validarItem, validarPreco } from "@/lib/catalogo/validacao";
 import { camposDoFormulario, type ErrosDeCampo } from "@/lib/auth/validacao";
 import { custoTotal, lerNumero, UNIDADES } from "@/lib/dominio/catalogo";
+import { comRetorno } from "@/lib/estrutura/retorno";
 import { numero, reais, ROTULO_CATEGORIA, ROTULO_TIPO, rotuloUnidade } from "./rotulos";
 import type { OpcaoDeSubcategoria } from "./subcategorias";
 
@@ -176,10 +177,13 @@ export function FormularioItem({
   valores,
   opcoes,
   subcategorias,
+  voltar = null,
 }: {
   valores?: ValoresDoItem;
   opcoes: OpcaoDeMaterial[];
   subcategorias: OpcaoDeSubcategoria[];
+  /** Para onde voltar depois (a lista filtrada de origem); segue para o detalhe ao salvar. */
+  voltar?: string | null;
 }) {
   const editando = !!valores?.id;
   const [categoria, setCategoria] = useState(valores?.categoria ?? "");
@@ -266,6 +270,7 @@ export function FormularioItem({
         {editando && <input type="hidden" name="itemId" value={valores!.id} />}
         <input type="hidden" name="tipo" value={tipo} />
         <input type="hidden" name="materiais" value={materiaisJson} />
+        {voltar && <input type="hidden" name="voltar" value={voltar} />}
 
         <p className="text-sm text-muted-foreground">
           Tipo: <span className="font-medium text-foreground">{ROTULO_TIPO[tipo]}</span>
@@ -445,7 +450,7 @@ export function FormularioItem({
 
         <div className="flex flex-wrap items-center gap-3 border-t pt-5">
           <BotaoEnviar enviando="Salvando…" largura="automatica">{editando ? "Salvar alterações" : "Cadastrar item"}</BotaoEnviar>
-          <Link href={editando ? `/catalogo/${valores!.id}` : "/catalogo"} className={classeDoBotao("fantasma")}>
+          <Link href={editando ? comRetorno(`/catalogo/${valores!.id}`, voltar) : (voltar ?? "/catalogo")} className={classeDoBotao("fantasma")}>
             Cancelar
           </Link>
         </div>

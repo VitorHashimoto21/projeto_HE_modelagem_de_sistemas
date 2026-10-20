@@ -17,6 +17,7 @@ import { dataBrasileira, hoje } from "@/lib/dominio/datas";
 import { diasEntre, JANELA_DIAS } from "@/lib/dominio/estoque";
 import { pode } from "@/lib/dominio/permissoes";
 import { inicioDoHistorico } from "@/lib/dominio/planos";
+import { comRetorno, retornoSeguro, rotuloDoRetorno } from "@/lib/estrutura/retorno";
 import { planoDoMembro } from "@/lib/planos/servidor";
 import { cn } from "@/lib/utils";
 
@@ -38,6 +39,9 @@ export default async function EstoqueDoProduto({ params, searchParams }: PagePro
   const [{ id }, busca] = await Promise.all([params, searchParams]);
   const dia = hoje();
   const pagina = Number(typeof busca.pagina === "string" ? busca.pagina : "1") || 1;
+  // "Voltar" para a lista filtrada ou o item do Catálogo de onde a pessoa veio (correção da homologação T12).
+  const voltar = retornoSeguro(busca.voltar, "/estoque");
+  const retorno = voltar === "/estoque" ? null : voltar;
   // Plano gratuito: movimentações dos últimos 12 meses (SPEC-013, OPEN-005).
   const desde = inicioDoHistorico(await planoDoMembro(membro), dia);
   const d = await estoque(membro)
@@ -60,11 +64,11 @@ export default async function EstoqueDoProduto({ params, searchParams }: PagePro
   return (
     <div className="space-y-6">
       <CabecalhoDePagina
-        voltar={{ href: "/estoque", rotulo: "Estoque" }}
+        voltar={{ href: voltar, rotulo: rotuloDoRetorno(voltar) }}
         titulo={d.nome}
         descricao={`${ROTULO_CATEGORIA[d.categoria]}${d.subcategoria ? ` › ${d.subcategoria.nome}` : ""}`}
         acoes={
-          <Link href={`/catalogo/${d.id}`} className={classeDoBotao("secundario", "sm")}>
+          <Link href={comRetorno(`/catalogo/${d.id}`, `/estoque/${d.id}`)} className={classeDoBotao("secundario", "sm")}>
             Ver no Catálogo
           </Link>
         }
@@ -188,7 +192,7 @@ export default async function EstoqueDoProduto({ params, searchParams }: PagePro
         {d.paginas > 1 && (
           <nav aria-label="Páginas das movimentações" className="mt-4 flex items-center justify-between gap-2 border-t pt-4 text-sm">
             {d.pagina > 1 ? (
-              <Link href={`/estoque/${d.id}?pagina=${d.pagina - 1}`} className={classeDoBotao("fantasma", "sm")}>
+              <Link href={comRetorno(`/estoque/${d.id}?pagina=${d.pagina - 1}`, retorno)} className={classeDoBotao("fantasma", "sm")}>
                 <ChevronLeft aria-hidden="true" />
                 Mais novas
               </Link>
@@ -199,7 +203,7 @@ export default async function EstoqueDoProduto({ params, searchParams }: PagePro
               Página {d.pagina} de {d.paginas}
             </span>
             {d.pagina < d.paginas ? (
-              <Link href={`/estoque/${d.id}?pagina=${d.pagina + 1}`} className={classeDoBotao("fantasma", "sm")}>
+              <Link href={comRetorno(`/estoque/${d.id}?pagina=${d.pagina + 1}`, retorno)} className={classeDoBotao("fantasma", "sm")}>
                 Mais antigas
                 <ChevronRight aria-hidden="true" />
               </Link>
