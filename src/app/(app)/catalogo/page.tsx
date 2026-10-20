@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Archive, ChevronRight, Package, Plus, Search, Sparkles, Tag } from "lucide-react";
+import { Archive, ChevronRight, Package, Plus, Search, Sparkles, Tag, Tags } from "lucide-react";
+import { FiltroDeCategoria } from "@/components/catalogo/filtro-de-categoria";
 import { reais, ROTULO_CATEGORIA, ROTULO_TIPO, rotuloUnidade } from "@/components/catalogo/rotulos";
 import { CabecalhoDePagina } from "@/components/ui/cabecalho-de-pagina";
 import { classeDoCampo } from "@/components/ui/classes";
@@ -20,15 +21,21 @@ export const metadata: Metadata = { title: "Catálogo" };
 
 const texto = (v: string | string[] | undefined) => (typeof v === "string" ? v : "");
 
-// Lista do catálogo (SPEC-006, escopo 1): Catálogo — ver.
+/** "Produto físico, acessórios › brincos, unidade" (SPEC-020, 5.4). */
+const categoriaDoItem = (i: { categoria: CategoriaItem; subcategoria: { nome: string } | null }) =>
+  ROTULO_CATEGORIA[i.categoria].toLowerCase() + (i.subcategoria ? ` › ${i.subcategoria.nome.toLowerCase()}` : "");
+
+// Lista do catálogo (SPEC-006, escopo 1): Catálogo — ver. Filtro e busca por subcategoria (SPEC-020, 5.4).
 export default async function Catalogo({ searchParams }: PageProps<"/catalogo">) {
   const membro = await exigirPermissao("catalogo", "ver");
   const p = await searchParams;
   const busca = texto(p.busca);
   const tipo = (["PRODUTO_FISICO", "SERVICO"] as TipoItem[]).find((t) => t === p.tipo);
   const categoria = CATEGORIAS.find((c) => c === p.categoria) as CategoriaItem | undefined;
+  const subcategoria = categoria ? texto(p.subcategoria) || undefined : undefined;
   const arquivados = p.arquivados === "1";
-  const itens = await catalogo(membro).listar({ busca, tipo, categoria, arquivados });
+  const c = catalogo(membro);
+  const [itens, subcategorias] = await Promise.all([c.listar({ busca, tipo, categoria, subcategoria, arquivados }), c.subcategorias()]);
   const filtrando = !!(busca || tipo || categoria);
 
   const link = (mudanca: { tipo?: TipoItem | null }) => {
@@ -37,6 +44,7 @@ export default async function Catalogo({ searchParams }: PageProps<"/catalogo">)
     const t = mudanca.tipo === undefined ? tipo : mudanca.tipo;
     if (t) q.set("tipo", t);
     if (categoria) q.set("categoria", categoria);
+    if (subcategoria) q.set("subcategoria", subcategoria);
     if (arquivados) q.set("arquivados", "1");
     const texto = q.toString();
     return texto ? `/catalogo?${texto}` : "/catalogo";
@@ -49,12 +57,19 @@ export default async function Catalogo({ searchParams }: PageProps<"/catalogo">)
         titulo={arquivados ? "Itens arquivados" : "Catálogo"}
         descricao={arquivados ? "Itens fora da lista e das escolhas. O histórico continua guardado." : "Os produtos que você vende ou usa e os serviços que executa."}
         acoes={
-          pode(membro.permissoes, "catalogo", "criar") &&
           !arquivados && (
-            <Link href="/catalogo/novo" className={classeDoBotao("principal")}>
-              <Plus aria-hidden="true" />
-              Novo item
-            </Link>
+            <>
+              <Link href="/catalogo/subcategorias" className={classeDoBotao("secundario")}>
+                <Tags aria-hidden="true" />
+                Subcategorias
+              </Link>
+              {pode(membro.permissoes, "catalogo", "criar") && (
+                <Link href="/catalogo/novo" className={classeDoBotao("principal")}>
+                  <Plus aria-hidden="true" />
+                  Novo item
+                </Link>
+              )}
+            </>
           )
         }
       />
@@ -72,23 +87,13 @@ export default async function Catalogo({ searchParams }: PageProps<"/catalogo">)
           {arquivados && <input type="hidden" name="arquivados" value="1" />}
           {tipo && <input type="hidden" name="tipo" value={tipo} />}
           <label className="sr-only" htmlFor="busca">
-            Buscar por nome
+            Buscar por nome ou subcategoria
           </label>
           <div className="relative min-w-0 flex-1 basis-52">
             <Search aria-hidden="true" className="pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2 text-muted-foreground" />
-            <input id="busca" name="busca" type="search" defaultValue={busca} placeholder="Buscar por nome" className={cn(classeDoCampo(), "h-11 rounded-full py-0 pl-10")} />
+            <input id="busca" name="busca" type="search" defaultValue={busca} placeholder="Buscar item" className={cn(classeDoCampo(), "h-11 rounded-full py-0 pl-10")} />
           </div>
-          <label className="sr-only" htmlFor="categoria">
-            Categoria
-          </label>
-          <select id="categoria" name="categoria" defaultValue={categoria ?? ""} className={cn(classeDoCampo(), "h-11 w-auto min-w-0 flex-1 basis-40 rounded-full py-0")}>
-            <option value="">Todas as categorias</option>
-            {CATEGORIAS.map((c) => (
-              <option key={c} value={c}>
-                {ROTULO_CATEGORIA[c]}
-              </option>
-            ))}
-          </select>
+          <FiltroDeCategoria key={`${categoria ?? ""}:${subcategoria ?? ""}`} categoria={categoria} subcategoria={subcategoria} subcategorias={subcategorias} />
           <button type="submit" className={classeDoBotao("secundario")}>
             Filtrar
           </button>
@@ -140,7 +145,7 @@ export default async function Catalogo({ searchParams }: PageProps<"/catalogo">)
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-[15px] font-bold text-foreground">{i.nome}</p>
                       <p className="truncate text-xs text-muted-foreground">
-                        {ROTULO_TIPO[i.tipo]}, {ROTULO_CATEGORIA[i.categoria].toLowerCase()}, {rotuloUnidade(i.unidadeMedida).toLowerCase()}
+                        {ROTULO_TIPO[i.tipo]}, {categoriaDoItem(i)}, {rotuloUnidade(i.unidadeMedida).toLowerCase()}
                         {i.tipo === "SERVICO" && i.materiais > 0 && `, ${i.materiais} ${i.materiais === 1 ? "material" : "materiais"}`}
                       </p>
                     </div>

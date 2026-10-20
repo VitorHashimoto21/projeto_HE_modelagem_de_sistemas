@@ -473,6 +473,12 @@
       "vigenteDesde": "2018-01-01"
     },
     {
+      "categoria": "ACESSORIOS",
+      "margemPadrao": 8,
+      "fonteLegal": "Lei 9.249/1995, art. 15 (percentual de presunção: 8% comércio e indústria)",
+      "vigenteDesde": "2018-01-01"
+    },
+    {
       "categoria": "CASA",
       "margemPadrao": 8,
       "fonteLegal": "Lei 9.249/1995, art. 15 (percentual de presunção: 8% comércio e indústria)",

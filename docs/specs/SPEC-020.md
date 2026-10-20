@@ -4,7 +4,7 @@
 > - "Acessórios" entra logo depois de Vestuário, e não no fim da lista;
 > - a tela de Subcategorias também tem o botão "Nova subcategoria" e permite cadastrar itens direto numa subcategoria.
 >
-> A baseline foi ajustada: RF11 alterado, RF79 e RN33 novos. A implementação ainda não começou. Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar), a partir da revisão de uma profissional da área financeira e contábil que está montando uma loja de semijoias (19/10/2026).
+> A baseline foi ajustada: RF11 alterado, RF79 e RN33 novos. **Implementada em 19/10/2026** e verificada em build local: testes T01–T10 automatizados e o roteiro T11 no navegador, com 70 verificações ([evidências](evidencias/SPEC-020/README.md)). A homologação (T12) fica para depois do merge. As notas da implementação estão depois da seção 9. Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar), a partir da revisão de uma profissional da área financeira e contábil que está montando uma loja de semijoias (19/10/2026).
 >
 > **Mapa:** [`MAPA_DE_SPECS.md`](../MAPA_DE_SPECS.md)
 > - **Altera:** [SPEC-006](SPEC-006.md) (cadastro e lista do catálogo), [SPEC-007](SPEC-007.md) (lista do estoque), [SPEC-003](SPEC-003.md) (arquivo fiscal: margem da categoria nova) e [SPEC-014](SPEC-014.md) (exportação).
@@ -157,8 +157,13 @@ Uma loja de semijoias quer separar os produtos em Brincos, Colares e Anéis.
 ### 5.4 Catálogo e Estoque: exibição, filtros e busca
 
 1. **Linha do item:** mostra a categoria e, quando houver, a subcategoria (ex.: "Produto físico, acessórios › brincos, unidade"). No Estoque, o mesmo formato vale para a categoria.
-2. **Detalhe do item** (Catálogo e Estoque): linha "Subcategoria", ou "—" quando não houver.
-3. **Filtro:** com uma categoria escolhida, aparece o filtro "Subcategoria", com "Todas as subcategorias", as subcategorias daquela categoria e "Sem subcategoria". Ao trocar a categoria, o filtro volta para "Todas". O filtro entra na URL, como os demais, e no "Limpar filtros".
+2. **Detalhe do item:**
+   - no Catálogo, linha "Subcategoria", ou "—" quando não houver;
+   - no Estoque, a subcategoria aparece no subtítulo, depois da categoria (ex.: "Acessórios › Brincos"), porque essa tela não tem lista de dados (decisão da equipe em 20/10/2026, seção 9).
+3. **Filtro:** com uma categoria escolhida que tenha subcategorias, aparece o filtro "Subcategoria", com "Todas as subcategorias", as subcategorias daquela categoria e "Sem subcategoria". O filtro não aparece quando a categoria não tem subcategorias, porque não haveria o que escolher. Ao trocar a categoria, o filtro volta para "Todas". O filtro entra na URL, como os demais, e no "Limpar filtros".
+   - No Catálogo, a lista traz todas as subcategorias da categoria.
+   - No Estoque, a lista traz só as que têm pelo menos um produto físico ativo. Uma subcategoria vazia ou só com serviços sempre daria "Nenhum produto encontrado". Ela passa a aparecer no Estoque quando recebe o primeiro produto.
+   - As regras de quando o filtro aparece e do Estoque são decisões da equipe de 20/10/2026 (seção 9).
 4. **Busca por texto:** encontra itens cujo nome **ou** cuja subcategoria contém o texto, sem diferenciar maiúsculas e minúsculas. Por exemplo, "brinc" encontra os itens da subcategoria Brincos.
 5. **Arquivados** (SPEC-006): mantêm a subcategoria e aparecem com ela no filtro de arquivados.
 
@@ -242,7 +247,7 @@ Uma loja de semijoias quer separar os produtos em Brincos, Colares e Anéis.
 
 | Contrato | Entrada | Saída | Erros |
 |---|---|---|---|
-| **Listar subcategorias** | categoria? | [{id, categoria, nome, itensAtivos}] | — |
+| **Listar subcategorias** | categoria? | [{id, categoria, nome, itensAtivos, itensArquivados}] | — |
 | **Criar subcategoria** | categoria, nome | {id, categoria, nome} | `CampoInvalido`, `NomeRepetido`, `SemPermissao` |
 | **Renomear subcategoria** | id, nome | {id, categoria, nome} | `CampoInvalido`, `NomeRepetido`, `NaoEncontrada`, `SemPermissao` |
 | **Uso da subcategoria** | id | {itensAtivos, itensArquivados} | `NaoEncontrada` |
@@ -250,6 +255,50 @@ Uma loja de semijoias quer separar os produtos em Brincos, Colares e Anéis.
 | **Salvar item** (estendido, SPEC-006) | + `subcategoriaId?` | item | os da SPEC-006 + `SubcategoriaInvalida` |
 | **Listar catálogo / estoque** (estendido) | + `subcategoria?` (id ou "sem"); a busca inclui o nome da subcategoria | itens, com a subcategoria | — |
 | **Margem padrão** (SPEC-003, sem mudança) | categoria (inclusive `ACESSORIOS`), dia | margem, fonte, vigência | `ParametroAusente` |
+
+**Implementação (19/10/2026):**
+
+- **Banco:** migração `20261019180000_subcategorias`.
+  - `ACESSORIOS` entra no enum com `ADD VALUE … AFTER 'VESTUARIO'`.
+  - Tabela `Subcategoria` com RLS, restrição única `(negocioId, categoria, nomeChave)` e `CHECK` do nome.
+  - `Item.subcategoriaId` com `ON DELETE SET NULL`.
+  - Gatilhos: `he_subcategoria_categoria_fixa` (a categoria não muda), `he_item_subcategoria_da_categoria` (INV-002), `he_negocio_imutavel` e `he_mesmo_negocio` (isolamento).
+  - Classificação em `src/lib/db/modelos.ts`.
+- **Arquivo fiscal:** margem de `ACESSORIOS` de 8%, com a fonte e a vigência das demais categorias de comércio.
+- **Domínio e validação:** `src/lib/catalogo/validacao.ts` reúne:
+  - a lista `CATEGORIAS` na ordem nova e `ROTULO_CATEGORIA` (antes em `components/catalogo/rotulos.ts`, que agora o reexporta, porque as mensagens do servidor também o usam);
+  - `validarNomeDaSubcategoria`, `validarSubcategoria` e `subcategoriaId` em `validarItem`;
+  - `podeCriarSubcategoria` (OPEN-005).
+- **Dados:** em `src/lib/db/catalogo.ts`:
+  - `subcategorias`, `criarSubcategoria`, `renomearSubcategoria`, `usoDaSubcategoria` e `excluirSubcategoria`;
+  - a subcategoria do item, conferida no servidor;
+  - `condicaoDaSubcategoria` e `condicaoDaBusca`, também usadas em `src/lib/db/estoque.ts`, que ganha `subcategoriasDosProdutos`;
+  - em `src/lib/db/lgpd.ts`, a tabela `subcategorias` na exportação.
+- **Ações:** em `src/lib/catalogo/acoes.ts`, `acaoCriarSubcategoria`, `acaoRenomearSubcategoria` e `acaoExcluirSubcategoria`.
+- **Telas:**
+  - `src/components/catalogo/subcategorias.tsx`: formulário e gaveta;
+  - `src/components/catalogo/gestao-de-subcategorias.tsx`: a tela;
+  - `src/components/catalogo/filtro-de-categoria.tsx`: o filtro do Catálogo e do Estoque;
+  - o campo de subcategoria em `formularios.tsx`;
+  - a página nova `src/app/(app)/catalogo/subcategorias`;
+  - linhas, detalhes e filtros em `catalogo/` e `estoque/`.
+- **Testes:** `test/unit/subcategorias.test.ts` e `test/integracao/subcategorias.test.ts`.
+
+**Decisões de implementação (dentro do que a Spec pede):**
+
+- **"Diálogo" = gaveta do design system.** Os formulários curtos (nova subcategoria, renomear) abrem na gaveta da SPEC-016 (OPEN-003), que é um diálogo acessível do Radix. A exclusão usa o diálogo de confirmação (N3 da SPEC-016).
+- **Permissão de criar:** a fábrica de Server Actions declara uma ação por vez, então a ação de criar exige *Catálogo: ver* na guarda e confere *criar ou editar* no corpo, antes de gravar. O teste T04 cobre os dois passos.
+- **Coerência no banco (seção 7):** gatilho em vez de chave estrangeira composta. O Prisma não representa o `ON DELETE SET NULL` só da coluna da subcategoria numa chave composta, e o CI compara o banco com o `schema.prisma`.
+- **A gaveta do cadastro do item é baixada no primeiro toque** em "+ Nova subcategoria", como a dica da N8. As telas do item sobem 1,7 KB em vez de cerca de 19 KB.
+- **A lista da tela Subcategorias mostra também os itens arquivados** ("1 item, mais 1 arquivado"), os mesmos que a confirmação da exclusão conta.
+- **Mensagem de nome repetido** com aspas tipográficas: "Já existe “Brincos” em Acessórios."
+- **Busca:** o texto de exemplo ficou curto ("Buscar item", "Buscar produto") para não cortar quando aparecem os dois filtros. O rótulo para leitor de tela diz "Buscar por nome ou subcategoria".
+
+**Divergências registradas na implementação:** as três foram **aceitas pela equipe em 20/10/2026** pela opção (2), ajustar a baseline. A seção 5.4 (itens 2 e 3) já traz o texto novo.
+
+1. **Filtro sem subcategorias (5.4, item 3):** quando a categoria escolhida não tem nenhuma subcategoria, o filtro "Subcategoria" não aparece, porque não haveria o que escolher.
+2. **Filtro do Estoque (5.4, item 3):** lista só as subcategorias com algum produto físico ativo, porque as que só têm serviços dariam lista vazia no Estoque. No Catálogo, o filtro lista todas.
+3. **Detalhe do Estoque (5.4, item 2):** a tela não tem lista de dados. A subcategoria aparece no subtítulo ("Acessórios › Brincos"), e não numa linha "Subcategoria". No detalhe do Catálogo, a linha existe.
 
 ---
 
@@ -346,13 +395,13 @@ Todas decididas pela equipe em 19/10/2026, em entrevista, pela opção recomenda
 
 A SPEC-020 estará concluída quando:
 
-- [ ] todos os critérios de aceitação (CA-01 a CA-15) estiverem implementados, por testes, no navegador (build local) e na homologação (T12);
-- [ ] todos os invariantes (INV-001 a INV-008) estiverem preservados;
-- [ ] os testes derivados (T01 a T12) estiverem aprovados, com o CI verde no PR;
-- [ ] os RNFs aplicáveis (RNF01, RNF02, RNF04) tiverem sido verificados como descrito na seção 10;
+- [ ] todos os critérios de aceitação (CA-01 a CA-15) estiverem implementados, por testes, no navegador (build local) e na homologação (T12) — implementados e verificados por testes e no navegador em 19/10/2026; falta a homologação;
+- [x] todos os invariantes (INV-001 a INV-008) estiverem preservados — testes T01–T10;
+- [ ] os testes derivados (T01 a T12) estiverem aprovados, com o CI verde no PR — T01 a T11 aprovados (T11 com 70 verificações); falta o T12 na homologação;
+- [x] os RNFs aplicáveis (RNF01, RNF02, RNF04) tiverem sido verificados como descrito na seção 10 — capturas em 390/768/1440 px nos dois temas, axe-core sem violação, JavaScript dentro do orçamento, RLS e isolamento testados, exportação testada;
 - [x] as questões OPEN-001 a OPEN-006 tiverem sido decididas e registradas (19/10/2026), com o RF11 alterado e o RF79 e a RN33 incluídos na baseline;
-- [ ] os documentos de modelo (seção 7) e o arquivo fiscal estiverem atualizados;
-- [ ] não existir divergência conhecida entre a implementação e esta Spec;
-- [ ] toda divergência em relação à baseline tiver sido explicitamente analisada e registrada.
+- [x] os documentos de modelo (seção 7) e o arquivo fiscal estiverem atualizados;
+- [x] não existir divergência conhecida entre a implementação e esta Spec — as três divergências registradas depois da seção 9 foram aceitas pela equipe em 20/10/2026 (opção 2, baseline ajustada na seção 5.4);
+- [x] toda divergência em relação à baseline tiver sido explicitamente analisada e registrada (depois da seção 9).
 
 **Regra fundamental:** a implementação obedece a esta Spec aprovada. Se surgir conflito entre código, Spec e documentos de modelagem, o comportamento não é alterado em silêncio: a divergência é registrada com a proposta de (1) corrigir a implementação ou (2) alterar a baseline, e a decisão é da equipe.

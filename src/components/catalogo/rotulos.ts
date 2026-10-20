@@ -1,21 +1,12 @@
-import type { CategoriaItem, OrigemPreco, TipoItem } from "@/generated/prisma/enums";
+import type { OrigemPreco, TipoItem } from "@/generated/prisma/enums";
 import { UNIDADES } from "@/lib/dominio/catalogo";
 
 // Textos de exibição do catálogo (SPEC-006).
 
 export const ROTULO_TIPO: Record<TipoItem, string> = { PRODUTO_FISICO: "Produto físico", SERVICO: "Serviço" };
 
-export const ROTULO_CATEGORIA: Record<CategoriaItem, string> = {
-  SERVICOS: "Serviços",
-  PRODUTOS: "Produtos",
-  ALIMENTACAO: "Alimentação",
-  VESTUARIO: "Vestuário",
-  BELEZA: "Beleza",
-  SAUDE: "Saúde",
-  CASA: "Casa",
-  TECNOLOGIA: "Tecnologia",
-  OUTROS: "Outros",
-};
+// Rótulos das categorias: ficam no domínio do catálogo, porque as mensagens do servidor também os usam (SPEC-020).
+export { ROTULO_CATEGORIA } from "@/lib/catalogo/validacao";
 
 export const ROTULO_ORIGEM: Record<OrigemPreco, string> = { MANUAL: "Manual", CALCULADORA: "Calculadora" };
 

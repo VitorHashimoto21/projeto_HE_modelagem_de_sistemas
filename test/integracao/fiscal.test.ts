@@ -36,7 +36,7 @@ describe("carga", () => {
   it("T05 — carga inicial preenche as cinco tabelas (CA-01)", async () => {
     const r = await carregarParametros(base, arquivo());
     expect(r.gravado).toBe(true);
-    expect(await contar()).toEqual({ faixas: 30, cnaes: 12, mei: 3, fatorR: 1, margens: 9 });
+    expect(await contar()).toEqual({ faixas: 30, cnaes: 12, mei: 3, fatorR: 1, margens: 10 }); // SPEC-020: + Acessórios
   });
 
   it("T06 — segunda carga sem mudanças (CA-02, INV-005)", async () => {
