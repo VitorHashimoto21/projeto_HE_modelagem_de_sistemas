@@ -157,8 +157,13 @@ Uma loja de semijoias quer separar os produtos em Brincos, Colares e Anéis.
 ### 5.4 Catálogo e Estoque: exibição, filtros e busca
 
 1. **Linha do item:** mostra a categoria e, quando houver, a subcategoria (ex.: "Produto físico, acessórios › brincos, unidade"). No Estoque, o mesmo formato vale para a categoria.
-2. **Detalhe do item** (Catálogo e Estoque): linha "Subcategoria", ou "—" quando não houver.
-3. **Filtro:** com uma categoria escolhida, aparece o filtro "Subcategoria", com "Todas as subcategorias", as subcategorias daquela categoria e "Sem subcategoria". Ao trocar a categoria, o filtro volta para "Todas". O filtro entra na URL, como os demais, e no "Limpar filtros".
+2. **Detalhe do item:**
+   - no Catálogo, linha "Subcategoria", ou "—" quando não houver;
+   - no Estoque, a subcategoria aparece no subtítulo, depois da categoria (ex.: "Acessórios › Brincos"), porque essa tela não tem lista de dados (decisão da equipe em 20/10/2026, seção 9).
+3. **Filtro:** com uma categoria escolhida que tenha subcategorias, aparece o filtro "Subcategoria", com "Todas as subcategorias", as subcategorias daquela categoria e "Sem subcategoria". O filtro não aparece quando a categoria não tem subcategorias, porque não haveria o que escolher. Ao trocar a categoria, o filtro volta para "Todas". O filtro entra na URL, como os demais, e no "Limpar filtros".
+   - No Catálogo, a lista traz todas as subcategorias da categoria.
+   - No Estoque, a lista traz só as que têm pelo menos um produto físico ativo. Uma subcategoria vazia ou só com serviços sempre daria "Nenhum produto encontrado". Ela passa a aparecer no Estoque quando recebe o primeiro produto.
+   - As regras de quando o filtro aparece e do Estoque são decisões da equipe de 20/10/2026 (seção 9).
 4. **Busca por texto:** encontra itens cujo nome **ou** cuja subcategoria contém o texto, sem diferenciar maiúsculas e minúsculas. Por exemplo, "brinc" encontra os itens da subcategoria Brincos.
 5. **Arquivados** (SPEC-006): mantêm a subcategoria e aparecem com ela no filtro de arquivados.
 
@@ -289,7 +294,7 @@ Uma loja de semijoias quer separar os produtos em Brincos, Colares e Anéis.
 - **Mensagem de nome repetido** com aspas tipográficas: "Já existe “Brincos” em Acessórios."
 - **Busca:** o texto de exemplo ficou curto ("Buscar item", "Buscar produto") para não cortar quando aparecem os dois filtros. O rótulo para leitor de tela diz "Buscar por nome ou subcategoria".
 
-**Divergências registradas na implementação (proposta: (2) ajustar a baseline; aguardam a decisão da equipe):**
+**Divergências registradas na implementação:** as três foram **aceitas pela equipe em 20/10/2026** pela opção (2), ajustar a baseline. A seção 5.4 (itens 2 e 3) já traz o texto novo.
 
 1. **Filtro sem subcategorias (5.4, item 3):** quando a categoria escolhida não tem nenhuma subcategoria, o filtro "Subcategoria" não aparece, porque não haveria o que escolher.
 2. **Filtro do Estoque (5.4, item 3):** lista só as subcategorias com algum produto físico ativo, porque as que só têm serviços dariam lista vazia no Estoque. No Catálogo, o filtro lista todas.
@@ -396,7 +401,7 @@ A SPEC-020 estará concluída quando:
 - [x] os RNFs aplicáveis (RNF01, RNF02, RNF04) tiverem sido verificados como descrito na seção 10 — capturas em 390/768/1440 px nos dois temas, axe-core sem violação, JavaScript dentro do orçamento, RLS e isolamento testados, exportação testada;
 - [x] as questões OPEN-001 a OPEN-006 tiverem sido decididas e registradas (19/10/2026), com o RF11 alterado e o RF79 e a RN33 incluídos na baseline;
 - [x] os documentos de modelo (seção 7) e o arquivo fiscal estiverem atualizados;
-- [ ] não existir divergência conhecida entre a implementação e esta Spec — as três divergências registradas depois da seção 9 aguardam a decisão da equipe;
+- [x] não existir divergência conhecida entre a implementação e esta Spec — as três divergências registradas depois da seção 9 foram aceitas pela equipe em 20/10/2026 (opção 2, baseline ajustada na seção 5.4);
 - [x] toda divergência em relação à baseline tiver sido explicitamente analisada e registrada (depois da seção 9).
 
 **Regra fundamental:** a implementação obedece a esta Spec aprovada. Se surgir conflito entre código, Spec e documentos de modelagem, o comportamento não é alterado em silêncio: a divergência é registrada com a proposta de (1) corrigir a implementação ou (2) alterar a baseline, e a decisão é da equipe.
