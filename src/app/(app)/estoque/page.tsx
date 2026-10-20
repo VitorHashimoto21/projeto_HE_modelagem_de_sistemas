@@ -17,6 +17,7 @@ import { CATEGORIAS } from "@/lib/catalogo/validacao";
 import { estoque } from "@/lib/db";
 import { hoje } from "@/lib/dominio/datas";
 import { emAlerta } from "@/lib/dominio/estoque";
+import { comRetorno } from "@/lib/estrutura/retorno";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Estoque" };
@@ -51,6 +52,9 @@ export default async function Estoque({ searchParams }: PageProps<"/estoque">) {
     const t = q.toString();
     return t ? `/estoque?${t}` : "/estoque";
   };
+  // O detalhe volta para esta lista, com os filtros (SPEC-020, correção da homologação T12).
+  const aqui = link(situacao);
+  const retorno = aqui === "/estoque" ? null : aqui;
 
   return (
     <div className="space-y-6">
@@ -62,7 +66,8 @@ export default async function Estoque({ searchParams }: PageProps<"/estoque">) {
         </AvisoDaPagina>
       )}
 
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+      {/* Busca e filtros numa linha própria: com a subcategoria, não cabem ao lado dos segmentos (T12). */}
+      <div className="flex flex-col gap-3">
         <Segmentos
           rotulo="Situação"
           itens={[
@@ -114,7 +119,7 @@ export default async function Estoque({ searchParams }: PageProps<"/estoque">) {
             {produtos.map((pr) => (
               <li key={pr.id}>
                 <Link
-                  href={`/estoque/${pr.id}`}
+                  href={comRetorno(`/estoque/${pr.id}`, retorno)}
                   className={cn(
                     "flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3.5 transition-colors duration-(--duracao-estado) hover:bg-accent focus-visible:bg-accent focus-visible:outline-none sm:px-5",
                     emAlerta(pr.situacao) && "shadow-[inset_3px_0_0_var(--status-warn)]",

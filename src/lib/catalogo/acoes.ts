@@ -6,6 +6,7 @@ import { acaoComPermissao } from "@/lib/auth/acao";
 import type { ContextoDoMembro } from "@/lib/auth/autorizacao";
 import { camposDoFormulario } from "@/lib/auth/validacao";
 import { catalogo } from "@/lib/db";
+import { comRetorno, retornoSeguro } from "@/lib/estrutura/retorno";
 import * as servicos from "./servicos";
 import type { EstadoDaExclusao, EstadoDaSubcategoria, EstadoDoItem, EstadoDoPreco } from "./servicos";
 import { podeCriarSubcategoria } from "./validacao";
@@ -23,11 +24,14 @@ const texto = (form: FormData, campo: string) => {
   return typeof v === "string" ? v : "";
 };
 
+/** O "voltar" da lista de origem segue para o detalhe (SPEC-020, correção da homologação T12). */
+const retornoDo = (form: FormData) => retornoSeguro(texto(form, "voltar"), "") || null;
+
 export const acaoCriarItem = acaoComPermissao("catalogo", "criar", async (membro, _: EstadoDoItem, form: FormData) => {
   const estado = await servicos.criarItem(camposDoFormulario(form), deps(membro));
   if (estado.status === "salvo") {
     revalidatePath("/catalogo");
-    redirect(`/catalogo/${estado.itemId}?criado=1`);
+    redirect(comRetorno(`/catalogo/${estado.itemId}?criado=1`, retornoDo(form)));
   }
   return estado;
 });
@@ -37,7 +41,7 @@ export const acaoEditarItem = acaoComPermissao("catalogo", "editar", async (memb
   const estado = await servicos.editarItem(id, camposDoFormulario(form), deps(membro));
   if (estado.status === "salvo") {
     revalidatePath("/catalogo", "layout");
-    redirect(`/catalogo/${id}?salvo=1`);
+    redirect(comRetorno(`/catalogo/${id}?salvo=1`, retornoDo(form)));
   }
   return estado;
 });
@@ -58,7 +62,7 @@ export const acaoArquivarItem = acaoComPermissao("catalogo", "excluir", async (m
   revalidatePath("/catalogo", "layout");
   // Só códigos na URL (nunca texto livre); a página lê do banco os serviços que usam o item.
   const resultado = r.ok ? (arquivar ? "arquivado" : "reativado") : r.codigo;
-  redirect(`/catalogo/${encodeURIComponent(id)}?resultado=${resultado}`);
+  redirect(comRetorno(`/catalogo/${encodeURIComponent(id)}?resultado=${resultado}`, retornoDo(form)));
 });
 
 // Subcategorias (SPEC-020, OPEN-005). Nenhuma é aceita no modo suporte (a fábrica recusa).

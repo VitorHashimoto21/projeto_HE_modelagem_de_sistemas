@@ -15,6 +15,7 @@ import { exigirPermissao } from "@/lib/auth/servidor";
 import { CATEGORIAS } from "@/lib/catalogo/validacao";
 import { catalogo } from "@/lib/db";
 import { pode } from "@/lib/dominio/permissoes";
+import { comRetorno } from "@/lib/estrutura/retorno";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Catálogo" };
@@ -49,6 +50,9 @@ export default async function Catalogo({ searchParams }: PageProps<"/catalogo">)
     const texto = q.toString();
     return texto ? `/catalogo?${texto}` : "/catalogo";
   };
+  // O detalhe e o cadastro voltam para esta lista, com os filtros (SPEC-020, correção da homologação T12).
+  const aqui = link({});
+  const retorno = aqui === "/catalogo" ? null : aqui;
 
   return (
     <div className="space-y-6">
@@ -64,7 +68,7 @@ export default async function Catalogo({ searchParams }: PageProps<"/catalogo">)
                 Subcategorias
               </Link>
               {pode(membro.permissoes, "catalogo", "criar") && (
-                <Link href="/catalogo/novo" className={classeDoBotao("principal")}>
+                <Link href={comRetorno("/catalogo/novo", retorno)} className={classeDoBotao("principal")}>
                   <Plus aria-hidden="true" />
                   Novo item
                 </Link>
@@ -74,7 +78,8 @@ export default async function Catalogo({ searchParams }: PageProps<"/catalogo">)
         }
       />
 
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+      {/* Busca e filtros numa linha própria: com a subcategoria, não cabem ao lado dos segmentos (T12). */}
+      <div className="flex flex-col gap-3">
         <Segmentos
           rotulo="Tipo"
           itens={[
@@ -136,7 +141,7 @@ export default async function Catalogo({ searchParams }: PageProps<"/catalogo">)
               return (
                 <li key={i.id}>
                   <Link
-                    href={`/catalogo/${i.id}`}
+                    href={comRetorno(`/catalogo/${i.id}`, retorno)}
                     className="flex items-center gap-3 px-4 py-3.5 transition-colors duration-(--duracao-estado) hover:bg-accent focus-visible:bg-accent focus-visible:outline-none sm:gap-4 sm:px-5"
                   >
                     <span aria-hidden="true" className="grid size-10 shrink-0 place-items-center rounded-full bg-muted text-primary">
