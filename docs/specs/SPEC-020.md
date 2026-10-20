@@ -1,10 +1,10 @@
 # SPEC-020 — Subcategorias do negócio e nova categoria Acessórios
 
-> **Status:** 🟢 **Aprovada em 19/10/2026.** As questões em aberto foram decididas pela equipe em entrevista (seção 13), todas pela opção recomendada, com dois complementos:
+> **Status:** ✅ **Concluída em 20/10/2026** — implementada (PR #97), homologada (T12) e com as duas correções da homologação conferidas (PR #98). **Aprovada em 19/10/2026.** As questões em aberto foram decididas pela equipe em entrevista (seção 13), todas pela opção recomendada, com dois complementos:
 > - "Acessórios" entra logo depois de Vestuário, e não no fim da lista;
 > - a tela de Subcategorias também tem o botão "Nova subcategoria" e permite cadastrar itens direto numa subcategoria.
 >
-> A baseline foi ajustada: RF11 alterado, RF79 e RN33 novos. **Implementada em 19/10/2026** e verificada em build local: testes T01–T10 automatizados e o roteiro T11 no navegador, com 70 verificações ([evidências](evidencias/SPEC-020/README.md)). **Homologação (T12) em 20/10/2026:** o fluxo foi aprovado, com dois problemas de tela — o texto cortado nos filtros e o "voltar" do detalhe, que levava ao início do Catálogo. Os dois foram corrigidos no PR #98; falta conferir na homologação. As notas da implementação e da homologação estão depois da seção 9. Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar), a partir da revisão de uma profissional da área financeira e contábil que está montando uma loja de semijoias (19/10/2026).
+> A baseline foi ajustada: RF11 alterado, RF79 e RN33 novos. **Implementada em 19/10/2026** e verificada em build local: testes T01–T10 automatizados e o roteiro T11 no navegador, com 70 verificações ([evidências](evidencias/SPEC-020/README.md)). **Homologação (T12) em 20/10/2026:** o fluxo foi aprovado, com dois problemas de tela — o texto cortado nos filtros e o "voltar" do detalhe, que levava ao início do Catálogo. Os dois foram corrigidos no PR #98 e conferidos pela equipe na homologação no mesmo dia. As notas da implementação e da homologação estão depois da seção 9. Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar), a partir da revisão de uma profissional da área financeira e contábil que está montando uma loja de semijoias (19/10/2026).
 >
 > **Mapa:** [`MAPA_DE_SPECS.md`](../MAPA_DE_SPECS.md)
 > - **Altera:** [SPEC-006](SPEC-006.md) (cadastro e lista do catálogo), [SPEC-007](SPEC-007.md) (lista do estoque), [SPEC-003](SPEC-003.md) (arquivo fiscal: margem da categoria nova) e [SPEC-014](SPEC-014.md) (exportação).
@@ -302,7 +302,7 @@ Uma loja de semijoias quer separar os produtos em Brincos, Colares e Anéis.
 2. **Filtro do Estoque (5.4, item 3):** lista só as subcategorias com algum produto físico ativo, porque as que só têm serviços dariam lista vazia no Estoque. No Catálogo, o filtro lista todas.
 3. **Detalhe do Estoque (5.4, item 2):** a tela não tem lista de dados. A subcategoria aparece no subtítulo ("Acessórios › Brincos"), e não numa linha "Subcategoria". No detalhe do Catálogo, a linha existe.
 
-**Homologação (T12, 20/10/2026) — correções:** a equipe aprovou o fluxo em <https://he-homol.vercel.app> e encontrou dois problemas de tela. Os dois foram corrigidos no PR #98, sem mudar regra de negócio, e a seção 5.4 (itens 3 e 4) já traz o comportamento novo ([evidências](evidencias/SPEC-020/README.md#homologação-t12--20102026)).
+**Homologação (T12, 20/10/2026) — correções:** a equipe aprovou o fluxo em <https://he-homol.vercel.app> e encontrou dois problemas de tela. Os dois foram corrigidos no PR #98, sem mudar regra de negócio, e a seção 5.4 (itens 3 e 4) já traz o comportamento novo. Depois do merge, a equipe conferiu as duas correções na homologação e aprovou (20/10/2026) ([evidências](evidencias/SPEC-020/README.md#homologação-t12--20102026)).
 
 1. **Texto cortado nos filtros:** "Todas as categorias" e "Todas as subcategorias" não cabiam nos campos, espremidos na mesma linha dos segmentos de tipo. Agora busca e filtros ficam numa linha própria, e os dois campos têm 240 px (o texto pede cerca de 209 px); no celular, ocupam a linha inteira.
 2. **"Voltar" para o início do Catálogo:** o detalhe sempre voltava para `/catalogo`, perdendo os filtros. Agora as listas do Catálogo e do Estoque mandam o próprio endereço no parâmetro `voltar` ao abrir um item, e o detalhe, a edição, o arquivamento e o cadastro o repassam. O link mostra o nome do destino ("Catálogo", "Itens arquivados", "Subcategorias", "Estoque") ou "Voltar", quando o destino é outro item. Por segurança, só vale endereço interno do Catálogo ou do Estoque; qualquer outro valor cai no início da lista (`src/lib/estrutura/retorno.ts`, com 24 testes em `test/unit/retorno.test.ts`).
@@ -402,9 +402,9 @@ Todas decididas pela equipe em 19/10/2026, em entrevista, pela opção recomenda
 
 A SPEC-020 estará concluída quando:
 
-- [ ] todos os critérios de aceitação (CA-01 a CA-15) estiverem implementados, por testes, no navegador (build local) e na homologação (T12) — implementados e verificados por testes e no navegador em 19/10/2026; homologados em 20/10/2026 (CA-01 a CA-08), com as duas correções do PR #98 a conferir;
+- [x] todos os critérios de aceitação (CA-01 a CA-15) estiverem implementados, por testes, no navegador (build local) e na homologação (T12) — implementados e verificados por testes e no navegador em 19/10/2026; homologados em 20/10/2026 (CA-01 a CA-08), com as duas correções do PR #98 conferidas no mesmo dia;
 - [x] todos os invariantes (INV-001 a INV-008) estiverem preservados — testes T01–T10;
-- [ ] os testes derivados (T01 a T12) estiverem aprovados, com o CI verde no PR — T01 a T11 aprovados (T11 com 70 verificações); T12 feito em 20/10/2026, falta conferir as correções do PR #98 (verificadas em build local com 47 verificações);
+- [x] os testes derivados (T01 a T12) estiverem aprovados, com o CI verde no PR — T01 a T11 aprovados (T11 com 70 verificações); T12 aprovado em 20/10/2026, com as correções do PR #98 verificadas em build local (47 verificações) e conferidas na homologação;
 - [x] os RNFs aplicáveis (RNF01, RNF02, RNF04) tiverem sido verificados como descrito na seção 10 — capturas em 390/768/1440 px nos dois temas, axe-core sem violação, JavaScript dentro do orçamento, RLS e isolamento testados, exportação testada;
 - [x] as questões OPEN-001 a OPEN-006 tiverem sido decididas e registradas (19/10/2026), com o RF11 alterado e o RF79 e a RN33 incluídos na baseline;
 - [x] os documentos de modelo (seção 7) e o arquivo fiscal estiverem atualizados;
