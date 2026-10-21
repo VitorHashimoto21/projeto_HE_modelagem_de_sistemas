@@ -16,6 +16,7 @@ import { CATEGORIAS, validarItem, validarPreco } from "@/lib/catalogo/validacao"
 import { camposDoFormulario, type ErrosDeCampo } from "@/lib/auth/validacao";
 import { custoTotal, lerNumero, UNIDADES } from "@/lib/dominio/catalogo";
 import { comRetorno } from "@/lib/estrutura/retorno";
+import { CampoNcm, type NcmConhecido } from "./campo-ncm";
 import { numero, reais, ROTULO_CATEGORIA, ROTULO_TIPO, rotuloUnidade } from "./rotulos";
 import type { OpcaoDeSubcategoria } from "./subcategorias";
 
@@ -31,6 +32,8 @@ export type ValoresDoItem = {
   nome?: string;
   categoria?: string;
   subcategoriaId?: string | null;
+  /** SPEC-021: o NCM gravado, com a descrição e se ainda está na tabela vigente. */
+  ncm?: NcmConhecido | null;
   unidadeMedida?: string;
   custoBase?: number;
   comissaoPercentual?: number | null;
@@ -169,21 +172,30 @@ function Materiais({
   );
 }
 
+export type SugestoesDeNcm = Record<string, { ncm: string; descricao: string; itens: number }>;
+
 /**
  * Cadastro e edição do item (SPEC-006, 5.1–5.3). Na edição o tipo é fixo (INV-002). A subcategoria
  * (SPEC-020, 5.2) lista só as da categoria escolhida e volta a "Sem subcategoria" quando ela muda.
+ * O produto físico tem o NCM (SPEC-021), obrigatório quando o negócio emite nota fiscal de produtos.
  */
 export function FormularioItem({
   valores,
   opcoes,
   subcategorias,
   voltar = null,
+  exigeNcm = false,
+  sugestoesNcm = {},
 }: {
   valores?: ValoresDoItem;
   opcoes: OpcaoDeMaterial[];
   subcategorias: OpcaoDeSubcategoria[];
   /** Para onde voltar depois (a lista filtrada de origem); segue para o detalhe ao salvar. */
   voltar?: string | null;
+  /** SPEC-021 (RN35): o negócio emite nota fiscal de produtos. */
+  exigeNcm?: boolean;
+  /** SPEC-021 (OPEN-004): por subcategoria, o NCM mais usado pelos outros itens dela. */
+  sugestoesNcm?: SugestoesDeNcm;
 }) {
   const editando = !!valores?.id;
   const [categoria, setCategoria] = useState(valores?.categoria ?? "");
@@ -227,6 +239,7 @@ export function FormularioItem({
     const v = validarItem(
       camposDoFormulario(new FormData(e.currentTarget)),
       editando ? { tipo: "editar", tipoDoItem: valores!.tipo! } : { tipo: "criar" },
+      { exigeNcm },
     );
     if (!v.ok) {
       e.preventDefault();
@@ -376,6 +389,20 @@ export function FormularioItem({
           </div>
           <MensagemDeCampo id="subcategoriaId-erro" erro={erros.subcategoriaId} />
         </div>
+
+        {tipo === "PRODUTO_FISICO" && (
+          <CampoNcm
+            gravado={valores?.ncm ?? null}
+            obrigatorio={exigeNcm}
+            sugestao={
+              subcategoriaId && sugestoesNcm[subcategoriaId]
+                ? { ...sugestoesNcm[subcategoriaId], subcategoria: daCategoria.find((s) => s.id === subcategoriaId)?.nome ?? "esta subcategoria" }
+                : null
+            }
+            erro={erros.ncm}
+            limpar={() => limpar("ncm")}
+          />
+        )}
 
         <div className="grid gap-5 sm:grid-cols-2">
           <CampoTexto

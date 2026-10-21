@@ -31,9 +31,11 @@ export const MENSAGENS_FLUXO_VENDA = {
   naoVendavel: (nome: string, motivo: ItemNaoVendavel["motivo"]) =>
     motivo === "sem-preco"
       ? `${nome} não pode ser vendido: ainda não tem preço oficial.`
-      : motivo === "arquivado"
-        ? `${nome} não pode ser vendido: está arquivado.`
-        : "Um dos itens não foi encontrado. Recarregue a página.",
+      : motivo === "sem-ncm"
+        ? `${nome} está sem NCM. Cadastre o NCM para vender.`
+        : motivo === "arquivado"
+          ? `${nome} não pode ser vendido: está arquivado.`
+          : "Um dos itens não foi encontrado. Recarregue a página.",
   precoMudou: (itens: { nome: string; precoCentavos: number }[]) =>
     `O preço mudou: ${itens.map((i) => `${i.nome} agora custa ${reaisDeCentavos(i.precoCentavos)}`).join("; ")}. Revise os pagamentos.`,
   somaDivergente: (total: number) => `A soma dos pagamentos precisa ser igual ao total da venda (${reaisDeCentavos(total)}).`,

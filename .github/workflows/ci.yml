@@ -73,6 +73,13 @@ jobs:
           npm run fiscal:carregar | tee carga.log
           grep -q "Nada a mudar" carga.log
 
+      - name: Validar e carregar a tabela NCM (SPEC-021, INV-006)
+        run: |
+          npm run ncm:carregar
+          # Segunda carga: tem que ser "Nada a mudar" (idempotência — INV-006).
+          npm run ncm:carregar | tee carga-ncm.log
+          grep -q "Nada a mudar" carga-ncm.log
+
       - name: Testes unitários
         run: npm test
 

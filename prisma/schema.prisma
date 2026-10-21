@@ -250,6 +250,9 @@ model Negocio {
   proximoNumeroVenda        Int      @default(1) // SPEC-008 (OPEN-007): próximo número de venda, incrementado na transação da venda
   diasCoberturaEstoque      Int      @default(7) // RF20: estoque mínimo = ⌈consumo médio diário × dias⌉
 
+  // SPEC-021 (OPEN-005, RN35): "Emito nota fiscal de produtos" — NCM obrigatório e produto sem NCM fora da venda
+  emiteNotaDeProduto Boolean @default(false)
+
   encerradoEm  DateTime? // RN27: negócio encerrado após exclusão do único Dono (dados fiscais retidos 5 anos)
   eliminarApos DateTime? @db.Date // SPEC-014 (OPEN-005): data prevista de eliminação (encerramento + 5 anos)
 
@@ -343,6 +346,7 @@ model Item {
   nome           String
   categoria      CategoriaItem // RF11
   subcategoriaId String?       @db.Uuid // SPEC-020 (RF79): opcional, da mesma categoria; excluir a subcategoria deixa nulo (OPEN-004)
+  ncm            String?       @db.VarChar(8) // SPEC-021 (RF80): 8 dígitos, só produto físico; não é FK, o código fica mesmo fora da tabela (OPEN-002)
   unidadeMedida  String // RF10
   custoBase      Decimal       @db.Decimal(10, 2)
   precoAtual     Decimal?      @db.Decimal(10, 2) // RF64/RN15: último preço confirmado; null = não vendável (RN23)
@@ -548,6 +552,30 @@ model ParametroFatorR {
 }
 
 // RF36: margem padrão por categoria, inicializada com percentuais de presunção (Lei 9.249/1995, art. 15)
+/// Tabela NCM oficial (SPEC-021, OPEN-001): global, carregada do JSON do Classif (ADR-004). Só os códigos de
+/// 8 dígitos; um código que sai da tabela recebe vigenteAte e nunca é apagado.
+model Ncm {
+  id           String    @id @default(uuid()) @db.Uuid
+  codigo       String    @db.VarChar(8) // 8 dígitos, sem pontos
+  descricao    String // do próprio nível, sem os traços (ex.: "Outras")
+  caminho      String[] // descrições dos níveis acima, do capítulo à subposição
+  textoBusca   String // código, descrição e caminho, sem acentos e em minúsculas
+  vigenteDesde DateTime  @db.Date
+  vigenteAte   DateTime? @db.Date // nulo = sem fim
+  ato          String // ato de origem (ex.: "Res Gecex 272/2021")
+
+  @@unique([codigo, vigenteDesde])
+  @@index([codigo])
+}
+
+/// Versão da tabela NCM carregada (SPEC-021): uma linha só, gravada pela carga, para o rodapé da busca.
+model TabelaNcm {
+  id           Int      @id @default(1)
+  atualizadaEm DateTime @db.Date // "Vigente em" do arquivo do Classif
+  ato          String // ato mais recente da tabela (ex.: "Resolução Gecex nº 926/2026")
+  carregadaEm  DateTime @default(now())
+}
+
 model MargemPadraoCategoria {
   id           String        @id @default(uuid()) @db.Uuid
   categoria    CategoriaItem

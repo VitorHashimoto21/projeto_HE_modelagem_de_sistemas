@@ -20,7 +20,12 @@ export default async function EditarItem({ params, searchParams }: PageProps<"/c
     if (e instanceof ItemNaoEncontrado) notFound();
     throw e;
   });
-  const [disponiveis, subcategorias] = await Promise.all([c.opcoesDeMaterial(id), c.subcategorias()]);
+  const [disponiveis, subcategorias, sugestoesNcm, exigeNcm] = await Promise.all([
+    c.opcoesDeMaterial(id),
+    c.subcategorias(),
+    c.sugestoesDeNcm(id),
+    c.emiteNotaDeProduto(),
+  ]);
   // Materiais arquivados que já estão no serviço continuam na lista (OPEN-006).
   const jaVinculados = item.materiaisDoServico
     .filter((m) => !disponiveis.some((d) => d.id === m.materialId))
@@ -33,12 +38,15 @@ export default async function EditarItem({ params, searchParams }: PageProps<"/c
         opcoes={[...disponiveis, ...jaVinculados]}
         subcategorias={subcategorias}
         voltar={retorno}
+        exigeNcm={exigeNcm}
+        sugestoesNcm={sugestoesNcm}
         valores={{
           id: item.id,
           tipo: item.tipo,
           nome: item.nome,
           categoria: item.categoria,
           subcategoriaId: item.subcategoria?.id ?? null,
+          ncm: item.ncm,
           unidadeMedida: item.unidadeMedida,
           custoBase: item.custoBase,
           comissaoPercentual: item.comissaoPercentual,

@@ -48,7 +48,7 @@ Toda a especificação do produto está documentada na pasta [`docs/`](./docs):
 | [`dominio_fluxogramas/`](./docs/dominio_fluxogramas) | [`FLUXOGRAMAS.md`](./docs/dominio_fluxogramas/FLUXOGRAMAS.md) | Todos os fluxogramas em texto puro (Mermaid), para leitura por ferramentas/IA sem depender de imagem |
 | [`dominio_fluxogramas/`](./docs/dominio_fluxogramas) | [`DIAGRAMAS_COMPORTAMENTAIS.md`](./docs/dominio_fluxogramas/DIAGRAMAS_COMPORTAMENTAIS.md) | Diagramas de sequência (calculadora, venda, cancelamento/troca) e de estados das contas |
 | [`dominio_fluxogramas/`](./docs/dominio_fluxogramas) | [`MODELO_LOGICO_BANCO.md`](./docs/dominio_fluxogramas/MODELO_LOGICO_BANCO.md) | Modelo lógico do banco (diagrama ER) |
-| [`prisma_base/`](./docs/prisma_base) | [`parametros_fiscais_seed.json`](./docs/prisma_base/parametros_fiscais_seed.json) | Parâmetros fiscais iniciais (o schema do banco está em [`prisma/schema.prisma`](./prisma/schema.prisma)) |
+| [`prisma_base/`](./docs/prisma_base) | [`parametros_fiscais_seed.json`](./docs/prisma_base/parametros_fiscais_seed.json), [`tabela_ncm.json`](./docs/prisma_base/tabela_ncm.json) | Parâmetros fiscais iniciais e a tabela NCM oficial (o schema do banco está em [`prisma/schema.prisma`](./prisma/schema.prisma)) |
 | [`definicoes_arquitetura/`](./docs/definicoes_arquitetura) | `drivers-arquiteturais-he.md`, `adrs-he.md` | Drivers arquiteturais e ADRs (ADR-001 a ADR-006) |
 | [`design/`](./docs/design) | [`IDENTIDADE_VISUAL.md`](./docs/design/IDENTIDADE_VISUAL.md) | Identidade visual: logo, favicon, cores (tokens claro/escuro com contraste verificado), tipografia, semáforo, componentes base e login revisado |
 | [`docs/`](./docs) | [`MAPA_DE_SPECS.md`](./docs/MAPA_DE_SPECS.md), [`Prompt_SDD_Specs.pdf`](./docs/Prompt_SDD_Specs.pdf) | Mapa ordenado das Specs (com as decisões da baseline) e prompt de apoio do SDD |
@@ -167,6 +167,15 @@ As faixas do Simples Nacional, a tabela CNAE → Anexo, o DAS e o limite do MEI,
 3. Abra um PR: o CI valida o arquivo e roda a carga num banco descartável. No merge, a carga chega à homologação (`DEVELOP`) e depois à produção (`main`).
 
 **Todo janeiro:** atualizar `parametroMei` com o DAS calculado sobre o novo salário mínimo (5% do salário mínimo + R$ 1,00 de ICMS e/ou R$ 5,00 de ISS). Enquanto isso não acontece, o CI e a carga mostram um aviso.
+
+### Tabela NCM
+
+A tabela NCM oficial em vigor fica em [`docs/prisma_base/tabela_ncm.json`](docs/prisma_base/tabela_ncm.json), no JSON do Classif (Portal Único Siscomex), sem edição manual (SPEC-021, ADR-004). O cadastro dos produtos busca e confere o NCM nela.
+
+- `npm run ncm:validar` — confere o arquivo, sem banco (só códigos de 8 dígitos, caminho, vigência e ato).
+- `npm run ncm:carregar` — grava no banco só o que mudou, numa única transação (rodar de novo diz "Nada a mudar"). Roda sozinha no workflow **Migrações**, depois da carga fiscal.
+
+**Como atualizar:** baixe o JSON novo no Classif (por exemplo, numa resolução nova ou na edição SH 2028), troque o arquivo e abra um PR. A carga não apaga códigos: o que saiu do arquivo recebe como fim o dia anterior à atualização, e os produtos que o usam passam a mostrar o aviso de revisão. Nenhum item muda sozinho.
 
 ## Estrutura
 ```text

@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { rotuloUnidade } from "@/components/catalogo/rotulos";
 import { CabecalhoDePagina } from "@/components/ui/cabecalho-de-pagina";
 import { FrenteDeCaixa } from "@/components/vendas/frente-de-caixa";
+import { AvisoForaPorNcm } from "@/components/vendas/fora-por-ncm";
 import { ROTA_SEM_ACESSO } from "@/lib/auth/rotas";
 import { exigirPermissao } from "@/lib/auth/servidor";
 import { vendas } from "@/lib/db";
@@ -24,7 +25,7 @@ export default async function TrocarVenda({ params }: PageProps<"/vendas/[id]/tr
     throw e;
   });
   if (p.status === "CANCELADA") redirect(`/vendas/${p.id}`);
-  const [itens, clientes] = await Promise.all([c.itensVendaveis(), c.clientes()]);
+  const [itens, clientes, foraPorNcm] = await Promise.all([c.itensVendaveis(), c.clientes(), c.foraDaVendaPorFaltaDeNcm()]);
   // O estoque da venda original volta antes da baixa da troca: o aviso da tela já considera isso.
   const devolve = new Map(p.devolucoes.map((d) => [d.itemId, d.quantidade]));
   const comDevolucao = (itemId: string, saldo: number) => saldo + (devolve.get(itemId) ?? 0);
@@ -36,6 +37,7 @@ export default async function TrocarVenda({ params }: PageProps<"/vendas/[id]/tr
         titulo={`Troca da venda nº ${p.numero}`}
         descricao={`Monte a venda com os itens novos. Ao confirmar, a venda nº ${p.numero} é cancelada e a troca é registrada como uma nova venda, tudo de uma vez.`}
       />
+      <AvisoForaPorNcm quantidade={foraPorNcm} podeCompletar={pode(membro.permissoes, "catalogo", "editar")} />
       <FrenteDeCaixa
         hoje={hoje()}
         clientes={clientes}

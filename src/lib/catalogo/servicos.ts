@@ -3,14 +3,19 @@ import type { ErrosDeCampo } from "@/lib/auth/validacao";
 import {
   ItemNaoEncontrado,
   MaterialInvalido,
+  NcmForaDaTabela,
+  NcmObrigatorio,
   NomeDuplicado,
   PrecoIgualAoAtual,
   SubcategoriaInvalida,
   SubcategoriaNaoEncontrada,
   SubcategoriaRepetida,
   type ConsultasDoCatalogo,
+  type NcmDoItem,
+  type ResultadoDaBuscaNcm,
 } from "@/lib/db/catalogo";
 import { formatarReais, precoAbaixoDoCusto } from "@/lib/dominio/catalogo";
+import { lerNcm } from "@/lib/dominio/ncm";
 import {
   MENSAGENS_CATALOGO,
   ROTULO_CATEGORIA,
@@ -36,6 +41,7 @@ export const MENSAGENS_FLUXO_CATALOGO = {
   subcategoriaRepetida: (nome: string, categoria: CategoriaItem) => `Já existe “${nome}” em ${ROTULO_CATEGORIA[categoria]}.`,
   subcategoriaNaoEncontrada: "Subcategoria não encontrada. Ela pode ter sido excluída.",
   semPermissaoSubcategoria: "Você não tem permissão para criar subcategorias.",
+  semPermissaoNcm: "Você não tem permissão para cadastrar ou editar itens.",
 } as const;
 
 export type EstadoDoItem =
@@ -61,6 +67,8 @@ function traduzir(e: unknown): { mensagem?: string; erros?: ErrosDeCampo } {
   if (e instanceof SubcategoriaInvalida) return { erros: { subcategoriaId: subcategoriaDeOutraCategoria(e.categoria) } };
   if (e instanceof SubcategoriaRepetida) return { erros: { nome: MENSAGENS_FLUXO_CATALOGO.subcategoriaRepetida(e.nome, e.categoria) } };
   if (e instanceof SubcategoriaNaoEncontrada) return { mensagem: MENSAGENS_FLUXO_CATALOGO.subcategoriaNaoEncontrada };
+  if (e instanceof NcmForaDaTabela) return { erros: { ncm: MENSAGENS_CATALOGO.ncmForaDaTabela } };
+  if (e instanceof NcmObrigatorio) return { erros: { ncm: MENSAGENS_CATALOGO.ncmObrigatorio } };
   console.error("[catalogo] falha:", e instanceof Error ? e.name : "erro");
   return { mensagem: MENSAGENS_FLUXO_CATALOGO.falhaInterna };
 }
@@ -179,5 +187,35 @@ export async function excluirSubcategoria(id: string, deps: DependenciasDoCatalo
   } catch (e) {
     const t = traduzir(e);
     return { status: "erro", mensagem: t.mensagem ?? MENSAGENS_FLUXO_CATALOGO.falhaInterna };
+  }
+}
+
+// NCM (SPEC-021, 5.2): busca na tabela vigente e conferência de um código digitado.
+
+export type EstadoDaBuscaNcm = ResultadoDaBuscaNcm | { status: "erro"; mensagem: string };
+
+export async function buscarNcm(texto: string, deps: DependenciasDoCatalogo): Promise<EstadoDaBuscaNcm> {
+  try {
+    return await deps.catalogo.buscarNcm(typeof texto === "string" ? texto.slice(0, 120) : "");
+  } catch (e) {
+    return { status: "erro", mensagem: traduzir(e).mensagem ?? MENSAGENS_FLUXO_CATALOGO.falhaInterna };
+  }
+}
+
+export type EstadoDaConferenciaNcm =
+  | { status: "ok"; ncm: NcmDoItem }
+  | { status: "invalido"; mensagem: string }
+  | { status: "nao-encontrado"; mensagem: string }
+  | { status: "erro"; mensagem: string };
+
+/** O código digitado (8 dígitos) existe na tabela? Devolve a descrição e se está vigente. */
+export async function conferirNcm(texto: string, deps: DependenciasDoCatalogo): Promise<EstadoDaConferenciaNcm> {
+  const codigo = lerNcm(typeof texto === "string" ? texto : "");
+  if (!codigo) return { status: "invalido", mensagem: MENSAGENS_CATALOGO.ncmInvalido };
+  try {
+    const ncm = await deps.catalogo.conferirCodigoNcm(codigo);
+    return ncm ? { status: "ok", ncm } : { status: "nao-encontrado", mensagem: MENSAGENS_CATALOGO.ncmForaDaTabela };
+  } catch (e) {
+    return { status: "erro", mensagem: traduzir(e).mensagem ?? MENSAGENS_FLUXO_CATALOGO.falhaInterna };
   }
 }

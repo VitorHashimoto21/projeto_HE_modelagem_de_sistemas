@@ -2,6 +2,7 @@ import type { CategoriaItem, TipoItem } from "@/generated/prisma/enums";
 import type { ErrosDeCampo } from "@/lib/auth/validacao";
 import { pode, type Matriz } from "@/lib/dominio/permissoes";
 import { casasDecimais, ehUnidade, lerNumero, normalizarNome, type Unidade } from "@/lib/dominio/catalogo";
+import { lerNcm } from "@/lib/dominio/ncm";
 
 /**
  * Validação do catálogo (SPEC-006, 5.6). Roda no navegador e no servidor. Os materiais
@@ -60,6 +61,10 @@ export const MENSAGENS_CATALOGO = {
   subcategoriaNomeObrigatorio: "Informe o nome da subcategoria",
   subcategoriaNomeLongo: `Use no máximo ${MAX_NOME_SUBCATEGORIA} caracteres`,
   subcategoriaInvalida: "Escolha uma subcategoria da lista",
+  ncmInvalido: "Informe os 8 dígitos do NCM.",
+  ncmSoProduto: "NCM vale só para produto físico.",
+  ncmObrigatorio: "Informe o NCM: o negócio emite nota fiscal de produtos.",
+  ncmForaDaTabela: "Código não encontrado na tabela NCM vigente.",
 } as const;
 
 /** Subcategoria da categoria do item (SPEC-020, 5.5). */
@@ -75,6 +80,8 @@ export type DadosDoItem = {
   categoria: CategoriaItem;
   /** SPEC-020: opcional; o servidor confere que é da mesma categoria e do mesmo negócio. */
   subcategoriaId: string | null;
+  /** SPEC-021: 8 dígitos, só produto físico; o servidor confere na tabela vigente e a obrigatoriedade (RN35). */
+  ncm: string | null;
   unidadeMedida: Unidade;
   custoBase: number;
   comissaoPercentual: number | null;
@@ -136,11 +143,13 @@ function lerMateriais(texto: string | undefined, erros: ErrosDeCampo): MaterialI
 
 /**
  * Valida os campos do item. No modo "editar" o tipo vem do item gravado (INV-002) e o
- * preço não é aceito (tem fluxo próprio).
+ * preço não é aceito (tem fluxo próprio). `exigeNcm`: o negócio emite nota fiscal de produtos
+ * (SPEC-021, RN35); o servidor confere de novo, com o valor gravado no negócio.
  */
 export function validarItem(
   campos: Record<string, string>,
   modo: { tipo: "criar" } | { tipo: "editar"; tipoDoItem: TipoItem },
+  { exigeNcm = false }: { exigeNcm?: boolean } = {},
 ): Validacao<DadosDoItem> {
   const erros: ErrosDeCampo = {};
   const tipo = modo.tipo === "editar" ? modo.tipoDoItem : (campos.tipo as TipoItem);
@@ -158,6 +167,15 @@ export function validarItem(
 
   const unidade = campos.unidadeMedida;
   if (!ehUnidade(unidade)) erros.unidadeMedida = MENSAGENS_CATALOGO.unidadeObrigatoria;
+
+  // SPEC-021 (5.7): 8 dígitos, com ou sem pontos; só produto físico; obrigatório se o negócio emite nota.
+  let ncm: string | null = null;
+  if (!vazio(campos.ncm)) {
+    if (tipo !== "PRODUTO_FISICO") erros.ncm = MENSAGENS_CATALOGO.ncmSoProduto;
+    else if ((ncm = lerNcm(campos.ncm)) === null) erros.ncm = MENSAGENS_CATALOGO.ncmInvalido;
+  } else if (exigeNcm && tipo === "PRODUTO_FISICO") {
+    erros.ncm = MENSAGENS_CATALOGO.ncmObrigatorio;
+  }
 
   let custoBase: number | null = null;
   if (vazio(campos.custoBase)) erros.custoBase = MENSAGENS_CATALOGO.custoObrigatorio;
@@ -199,6 +217,7 @@ export function validarItem(
       nomeChave: normalizarNome(nome),
       categoria,
       subcategoriaId,
+      ncm,
       unidadeMedida: unidade as Unidade,
       custoBase: custoBase!,
       comissaoPercentual,
@@ -241,3 +260,6 @@ export function validarSubcategoria(campos: Record<string, string>): Validacao<D
  * Renomear exige editar e excluir exige excluir (a própria guarda da Server Action).
  */
 export const podeCriarSubcategoria = (permissoes: Matriz) => pode(permissoes, "catalogo", "criar") || pode(permissoes, "catalogo", "editar");
+
+/** Buscar e conferir na tabela NCM (SPEC-021, 5.7): quem cadastra ou edita itens — a mesma combinação. */
+export const podeUsarTabelaNcm = podeCriarSubcategoria;
