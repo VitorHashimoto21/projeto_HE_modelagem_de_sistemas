@@ -4,6 +4,7 @@
 > **Mapa:** [`MAPA_DE_SPECS.md`](../MAPA_DE_SPECS.md) · **Anteriores:** [SPEC-002](SPEC-002.md) (conta, consentimento e bloqueio de conta excluída), [SPEC-004](SPEC-004.md) (negócios e o Dono), [SPEC-005](SPEC-005.md) (equipe e convites), [SPEC-008](SPEC-008.md) (clientes nas vendas) e [SPEC-013](SPEC-013.md) (CSV e arquivos de exportação) · **Próximas que dependem desta:** nenhuma.
 > **Evolução prevista pela [SPEC-018](SPEC-018.md) (aprovada em 17/10/2026):** a exportação passa a incluir as liberações e o registro do acesso de suporte dos negócios do titular, e a exclusão de conta revoga as liberações ativas dos negócios encerrados (o registro é mantido por 5 anos, RN32).
 > **Evolução prevista pela [SPEC-020](SPEC-020.md) (aprovada em 19/10/2026):** a exportação passa a incluir as subcategorias do negócio e a referência a elas nos itens.
+> **Evolução prevista pela [SPEC-021](SPEC-021.md) (aprovada em 21/10/2026):** os itens exportados trazem o NCM; a tabela NCM oficial não entra, por ser dado público de referência.
 
 ---
 

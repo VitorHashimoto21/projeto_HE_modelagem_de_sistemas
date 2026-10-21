@@ -137,7 +137,7 @@ Também foram corrigidos, sem decisão nova: a ordem do cronograma da Visão (Ca
 | SPEC-018 | Administrador da plataforma e acesso de suporte (somente leitura) | 001, 002, 005, 014, 016 |
 | SPEC-019 *(a gerar)* | Suporte com edição, emergência, ações de plataforma e 2º fator | 018 |
 | SPEC-020 | Subcategorias do negócio e nova categoria Acessórios | 003, 006, 007, 014, 016, 018 |
-| SPEC-021 *(a gerar)* | NCM nos produtos | 006 |
+| SPEC-021 | NCM nos produtos | 003, 004, 006, 007, 008, 011, 014, 016, 018, 020 |
 | SPEC-022 *(a gerar)* | Cliente com dados completos (CPF/CNPJ, endereço, e-mail e telefone) | 008, 014, 018 |
 
 ```mermaid
@@ -177,7 +177,8 @@ flowchart LR
     S18 -.-> S19[SPEC-019 Suporte com edição e 2º fator - a gerar]
     S7 --> S20[SPEC-020 Subcategorias e Acessórios]
     S16 --> S20
-    S6 -.-> S21[SPEC-021 NCM - a gerar]
+    S20 --> S21[SPEC-021 NCM nos produtos]
+    S11 --> S21
     S14 -.-> S22[SPEC-022 Cliente completo - a gerar]
     S18 -.-> S22
 ```
@@ -392,9 +393,21 @@ flowchart LR
 - **Dependências:** SPEC-001, SPEC-003, SPEC-005, SPEC-006, SPEC-007, SPEC-010, SPEC-014, SPEC-016, SPEC-018
 - **Justificativa da ordem:** primeira das melhorias da revisão financeira e contábil (ordem combinada em 19/10/2026); não depende da SPEC-021 nem da SPEC-022.
 
-#### SPEC-021 — NCM nos produtos *(a gerar)*
-- **Escopo combinado (19/10/2026):** campo **NCM** (Nomenclatura Comum do Mercosul, 8 dígitos) **opcional** em produtos e materiais, com validação do formato; avaliar a busca na tabela oficial. Serviços não têm NCM. Prepara a emissão de nota fiscal, que continua pós-MVP (Visão de Negócio, 8.2).
-- **Dependências:** SPEC-006
+#### SPEC-021 — NCM nos produtos
+- **Spec:** [`specs/SPEC-021.md`](./specs/SPEC-021.md) (✅ aprovada em 21/10/2026, com as OPEN-001 a OPEN-006 decididas em entrevista; arquivo oficial da tabela NCM baixado e conferido no mesmo dia)
+- **Objetivo:** permitir que o negócio informe o **NCM** (8 dígitos) de cada produto físico, inclusive os materiais, conferido na **tabela oficial vigente** do Siscomex, carregada de arquivo versionado como os parâmetros fiscais (ADR-004). O dono busca por código ou por palavras.
+- **Valor entregue:**
+  - o catálogo fica pronto para a futura emissão de nota fiscal, que continua pós-MVP (Visão de Negócio, 8.2);
+  - o link "Produtos sem NCM" mostra o que falta preencher;
+  - a sugestão pela subcategoria preenche os produtos parecidos com um toque, com aviso de que a responsabilidade é do negócio;
+  - quando a tabela muda (ex.: SH 2028), o aviso de revisão mostra os produtos afetados;
+  - quem emite nota fiscal de produtos liga uma opção nos Dados do negócio: o NCM vira obrigatório e produto sem NCM sai da venda.
+- **Origem:** revisão de uma profissional da área financeira e contábil (loja de semijoias).
+- **RF:** RF08 (alterado), RF80 (novo), RF79 · **RN:** RN34 e RN35 (novas), RN23, RN33 · **RNF:** RNF01, RNF02, RNF04, RNF10
+- **Entidades:** Item (campo novo `ncm`), Negocio (campo novo `emiteNotaDeProduto`), Ncm (nova, global)
+- **Dependências:** SPEC-001, SPEC-003, SPEC-004, SPEC-005, SPEC-006, SPEC-007, SPEC-008, SPEC-011, SPEC-014, SPEC-016, SPEC-018, SPEC-020
+- **Pré-requisito externo:** o arquivo JSON oficial da tabela NCM (Classif, Portal Único Siscomex). O domínio foi liberado na rede do ambiente em 21/10/2026, e o arquivo foi baixado e conferido (10.516 códigos de 8 dígitos, vigente em 21/10/2026).
+- **Justificativa da ordem:** segunda das melhorias da revisão financeira e contábil; usa as subcategorias da SPEC-020 para a sugestão e não depende da SPEC-022.
 
 #### SPEC-022 — Cliente com dados completos *(a gerar)*
 - **Escopo combinado (19/10/2026):** CPF ou CNPJ (validado), endereço (CEP, logradouro, número, bairro, município, UF), e-mail e telefone, **todos opcionais**, com a indicação de cadastro "completo para nota fiscal"; tela de Clientes; LGPD: base legal (execução de contrato e obrigação fiscal), máscara no modo suporte, exportação e anonimização na exclusão, e nova versão da Política de Privacidade (novo aceite).
@@ -405,11 +418,13 @@ flowchart LR
 
 ## 3. Cobertura da baseline
 
-Todos os 124 requisitos (RF01–RF79, RN01–RN33, RNF01–RNF12) estão associados a pelo menos uma Spec. Requisitos compartilhados aparecem em mais de uma Spec com escopos complementares:
+Todos os 127 requisitos (RF01–RF80, RN01–RN35, RNF01–RNF12) estão associados a pelo menos uma Spec. Requisitos compartilhados aparecem em mais de uma Spec com escopos complementares:
 
 | Requisito | Specs | Divisão |
 |---|---|---|
 | RF06 | 005, 009 | Mecanismo de permissões (005); permissão de despesa operacional (009) |
+| RF08 | 006, 021 | Cadastro do produto físico (006); NCM, opcional ou obrigatório conforme a opção de nota fiscal (021) |
+| RN23 / RN35 | 008, 021 | Item sem preço fora da venda (008); produto sem NCM fora da venda quando o negócio emite nota fiscal de produtos (021) |
 | RF11 | 006, 020 | Lista fixa e categoria obrigatória (006); categoria Acessórios (020) |
 | RF36 | 003, 010, 020 | Dados das margens padrão (003); sugestão na calculadora (010); margem de Acessórios, sem efeito da subcategoria (020) |
 | RF41 / RN15 / RN16 | 006, 010 | Histórico por preço manual (006); por confirmação da calculadora (010) |
@@ -431,7 +446,7 @@ Todos os 124 requisitos (RF01–RF79, RN01–RN33, RNF01–RNF12) estão associa
 
 A conferência do seed fiscal foi concluída em 03/10/2026 (DAS do MEI atualizado para o salário mínimo de 2026), e a SPEC-003 não tem mais pré-requisito pendente. A SPEC-015 depende da aprovação do ADR-007.
 
-**Andamento (20/10/2026):**
+**Andamento (21/10/2026):**
 
 - [SPEC-001](specs/SPEC-001.md) a [SPEC-003](specs/SPEC-003.md): implementadas e verificadas na homologação.
 - [SPEC-004](specs/SPEC-004.md): implementada e verificada no preview da Vercel (04/10/2026).
@@ -445,7 +460,15 @@ A conferência do seed fiscal foi concluída em 03/10/2026 (DAS do MEI atualizad
 - [SPEC-018](specs/SPEC-018.md): implementada (17/10/2026) e verificada na homologação (18/10/2026) — "Relatórios" fora do modo suporte, decidido na homologação e corrigido no PR #87; faixa do modo suporte no celular aceita na baseline (18/10/2026). Concluída.
 - [SPEC-016](specs/SPEC-016.md), **N8** (menu lateral recolhível e rótulo na dica): decidida e implementada em 19/10/2026 (PRs #93 e #94) e verificada na homologação no mesmo dia (N8-T6). Concluída.
 - [SPEC-020](specs/SPEC-020.md) (subcategorias e categoria Acessórios): aprovada e implementada em 19/10/2026 (PR #97), verificada em build local (testes T01–T10 e roteiro no navegador com 70 verificações); as três divergências da implementação foram aceitas pela equipe em 20/10/2026 (baseline ajustada); homologada em 20/10/2026 (T12). Dois problemas de tela da homologação — texto cortado nos filtros e o "voltar" do detalhe, que levava ao início do Catálogo — corrigidos no PR #98 e conferidos na homologação no mesmo dia. Concluída.
-- SPECs 021 e 022 (melhorias da revisão financeira e contábil): a gerar, nesta ordem (a próxima é a SPEC-021), antes da SPEC-019 (decisão de 19/10/2026); escopo na seção 2.2.
+- [SPEC-021](specs/SPEC-021.md) (NCM nos produtos): aprovada em 21/10/2026, com as OPEN-001 a OPEN-006 decididas em entrevista:
+  - tabela oficial no sistema;
+  - código que sai da tabela fica com aviso;
+  - item, busca e "Sem NCM";
+  - sugestão pela subcategoria, com aviso de responsabilidade;
+  - NCM obrigatório para quem liga "Emito nota fiscal de produtos", com a venda de produto sem NCM bloqueada (OPEN-005 e OPEN-006, recomendação da revisora contábil).
+
+  Baseline ajustada (RF08, RF80, RN34 e RN35). Arquivo oficial da tabela NCM baixado e conferido; a implementar.
+- SPEC-022 (cliente com dados completos): a gerar depois da SPEC-021 e antes da SPEC-019 (decisão de 19/10/2026); escopo na seção 2.2.
 - SPEC-019: a gerar depois da SPEC-022, antes de abrir a produção.
 - `main`: atualizada até a SPEC-018 (PR #86, 17/10/2026), sem ambiente de produção ainda (a migração na `main` é pulada enquanto não houver o banco de produção).
 - **E-mails e domínio:** domínio próprio `.com.br` (Registro.br) verificado no Resend, que também passa a ser o SMTP do Supabase Auth ([ADR-009](definicoes_arquitetura/adrs-he.md), 18/10/2026); aguarda a compra.
@@ -456,7 +479,7 @@ Lista mantida até cada item ser resolvido; quem retomar o projeto (em qualquer 
 
 | # | Pendência | Situação |
 |---|---|---|
-| 1 | **SPECs 021 e 022**, nesta ordem: NCM nos produtos (021) e cliente com dados completos (022). A SPEC-020 (subcategorias e categoria Acessórios) foi concluída em 20/10/2026 | Aberta; a próxima é a SPEC-021 |
+| 1 | **SPECs 021 e 022**, nesta ordem. **SPEC-021** (NCM nos produtos): aprovada em 21/10/2026 (NCM obrigatório para quem emite nota fiscal de produtos); falta implementar. O arquivo oficial da tabela NCM já foi baixado. **SPEC-022** (cliente com dados completos): a gerar | Em andamento |
 | 2 | **SPEC-019** (suporte com edição, emergência, ações de plataforma e **2º fator do Administrador**): gerar depois da SPEC-022, **antes de abrir a produção** | Aberta |
 | 3 | **Textos legais** (`docs/legal/`): preencher os campos entre colchetes (responsável, e-mail de contato, cidade/UF, região do Supabase) e revisão do grupo; a versão 2026-10-17 já inclui o acesso de suporte (SPEC-018), e a SPEC-022 trará outra (dados completos do cliente) | Aberta |
 | 4 | **SPEC-015** (cobrança real pelo Stripe): decidir se fica fora do MVP; depende do ADR-007 (proposta) | Aberta |

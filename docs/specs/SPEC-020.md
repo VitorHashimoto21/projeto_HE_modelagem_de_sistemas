@@ -9,6 +9,7 @@
 > **Mapa:** [`MAPA_DE_SPECS.md`](../MAPA_DE_SPECS.md)
 > - **Altera:** [SPEC-006](SPEC-006.md) (cadastro e lista do catálogo), [SPEC-007](SPEC-007.md) (lista do estoque), [SPEC-003](SPEC-003.md) (arquivo fiscal: margem da categoria nova) e [SPEC-014](SPEC-014.md) (exportação).
 > - **Usa:** [SPEC-001](SPEC-001.md) (isolamento), [SPEC-005](SPEC-005.md) (permissões), [SPEC-010](SPEC-010.md) (margem sugerida), [SPEC-016](SPEC-016.md) (componentes) e [SPEC-018](SPEC-018.md) (modo suporte).
+> - **Usada por:** [SPEC-021](SPEC-021.md) (aprovada em 21/10/2026): o cadastro sugere o NCM já usado por outros itens da mesma subcategoria, sempre confirmado pelo dono — a subcategoria continua sem efeito fiscal (RN33).
 
 ---
 

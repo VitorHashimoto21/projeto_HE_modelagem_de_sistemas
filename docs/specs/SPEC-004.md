@@ -2,6 +2,7 @@
 
 > **Status:** ✅ **Implementada em 04/10/2026 e verificada no preview da Vercel** (PR #45, banco de homologação) — questões em aberto decididas pela equipe (seção 13), todas pela opção recomendada; testes T01–T13 no CI, fluxos e telas verificados no preview ([evidências](evidencias/SPEC-004/README.md)). Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar).
 > **Mapa:** [`MAPA_DE_SPECS.md`](../MAPA_DE_SPECS.md) · **Anteriores:** [SPEC-002](SPEC-002.md) (acesso) e [SPEC-003](SPEC-003.md) (parâmetros fiscais) · **Próximas que dependem desta:** SPEC-005 (equipe) e todas as specs operacionais (o negócio é o tenant).
+> **Evolução prevista pela [SPEC-021](SPEC-021.md) (aprovada em 21/10/2026):** os Dados do negócio ganham a opção **"Emito nota fiscal de produtos (NF-e ou NFC-e)"**, só do Dono e desligada por padrão. Ligada, o NCM passa a ser obrigatório nos produtos físicos e produto sem NCM sai da venda (RN35); ligar com produtos sem NCM pede confirmação.
 
 ---
 
