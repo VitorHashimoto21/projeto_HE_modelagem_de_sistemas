@@ -3,6 +3,7 @@
 > **Status:** ✅ **Implementada em 07/10/2026 e verificada na homologação em 08/10/2026** — questões em aberto decididas pela equipe (seção 13), todas pela opção recomendada; testes T01–T15 no CI, telas em 390/768/1440 px nos dois temas (T16) e fluxo na homologação (T17) — [evidências](evidencias/SPEC-006/README.md). Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar).
 > **Mapa:** [`MAPA_DE_SPECS.md`](../MAPA_DE_SPECS.md) · **Anterior:** [SPEC-005](SPEC-005.md) (papéis e permissões) · **Próximas que dependem desta:** SPEC-007 (estoque), SPEC-008 (vendas) e SPEC-010 (calculadora).
 > **Evolução prevista pela [SPEC-020](SPEC-020.md) (aprovada em 19/10/2026):** a lista fixa de categorias ganha **Acessórios** (logo depois de Vestuário), e o item ganha uma **subcategoria opcional** do negócio, escolhida ou criada no cadastro e gerenciada numa tela "Subcategorias" do Catálogo; a lista ganha o filtro de subcategoria e a busca passa a encontrar também pela subcategoria.
+> **Evolução prevista pela [SPEC-021](SPEC-021.md) (aprovada em 21/10/2026):** o produto físico ganha o campo opcional **NCM**, conferido na tabela oficial vigente, com busca por código ou por palavras e sugestão pela subcategoria; o detalhe mostra o NCM (com aviso quando o código sai da tabela), a busca encontra pelo código e a lista ganha o link "Produtos sem NCM" e o aviso de NCM a revisar.
 
 ---
 
