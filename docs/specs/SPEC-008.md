@@ -2,6 +2,7 @@
 
 > **Status:** ✅ **Implementada em 09/10/2026 e verificada na homologação** (PR #58) — questões em aberto decididas pela equipe (seção 13), todas pela opção recomendada; testes T01–T14 no CI, telas em build de produção com login (T15) e fluxo na homologação (T16) — [evidências](evidencias/SPEC-008/README.md). Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar).
 > **Mapa:** [`MAPA_DE_SPECS.md`](../MAPA_DE_SPECS.md) · **Anteriores:** [SPEC-006](SPEC-006.md) (catálogo e preço oficial) e [SPEC-007](SPEC-007.md) (estoque e primitiva de movimentação) · **Próximas que dependem desta:** SPEC-009 (financeiro), SPEC-010 (RBT12 e CMV%), SPEC-011 (cancelamento e troca) e SPEC-012 (dashboard).
+> **Evolução prevista pela [SPEC-021](SPEC-021.md) (aprovada em 21/10/2026):** com a opção "Emito nota fiscal de produtos" ligada no negócio, produto físico sem NCM não aparece na Nova venda e é recusado no servidor (`ItemNaoVendavel`, motivo "sem NCM"), como o item sem preço (RN23), inclusive nos itens novos de uma troca (SPEC-011); a tela avisa quantos produtos estão fora da venda por falta de NCM. Materiais de serviço e NCM fora da tabela vigente não bloqueiam.
 
 ---
 

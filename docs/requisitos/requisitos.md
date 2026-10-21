@@ -62,13 +62,13 @@
 | ID | Descrição |
 |---|---|
 | RF07 | O sistema deve permitir cadastrar itens de dois tipos: **Produto Físico** ou **Serviço**. |
-| RF08 | O cadastro de Produto Físico deve exigir: nome, custo, unidade de medida e categoria. O estoque mínimo é opcional no cadastro (sugerido automaticamente após o 1º ciclo — RN07/RN08), assim como o **NCM** (RF80, SPEC-021). A quantidade em estoque **não** faz parte do cadastro (RF14/RN03). |
+| RF08 | O cadastro de Produto Físico deve exigir: nome, custo, unidade de medida e categoria. O estoque mínimo é opcional no cadastro (sugerido automaticamente após o 1º ciclo — RN07/RN08), assim como o **NCM**, que passa a ser obrigatório quando o negócio informa que emite nota fiscal de produtos (RF80, RN35, SPEC-021). A quantidade em estoque **não** faz parte do cadastro (RF14/RN03). |
 | RF09 | O cadastro de Serviço deve exigir: nome, custo, categoria, e deve perguntar se há materiais/insumos associados. |
 | RF64 | O preço de venda é **opcional** no cadastro do item. O preço oficial é definido por confirmação na Calculadora (RF40) ou por informação manual do usuário; ambos geram registro no histórico de preços, indicando a origem (Calculadora ou Manual). |
 | RF10 | Todo produto/serviço deve ter uma unidade de medida obrigatória (ex: unidade, kg, litro, hora, caixa). |
 | RF11 | Todo produto/serviço deve ter uma categoria obrigatória, escolhida de uma lista fixa do sistema: Serviços, Produtos, Alimentação, Vestuário, Acessórios, Beleza, Saúde, Casa, Tecnologia, Outros (Acessórios incluída pela SPEC-020). |
 | RF79 | O negócio deve poder criar **subcategorias livres** dentro de cada categoria fixa (ex.: Brincos, Colares e Anéis em Acessórios), com nome único na categoria, e associar no máximo uma, **opcional**, a cada produto/serviço da mesma categoria. As subcategorias são criadas no cadastro do item ou numa tela própria do Catálogo, onde também podem ser renomeadas e excluídas (os itens ficam sem subcategoria), e servem de filtro e busca no Catálogo e no Estoque (SPEC-020). |
-| RF80 | O Produto Físico deve poder ter um **NCM** (Nomenclatura Comum do Mercosul, 8 dígitos), **opcional**, conferido na tabela oficial vigente, carregada de arquivo versionado com fonte e vigência. O código é buscado por código ou por palavras. Quando o código deixa de estar vigente, ele é mantido no item com aviso de revisão. O Catálogo mostra os produtos sem NCM e os que precisam de revisão, a busca encontra pelo código, e o cadastro sugere o NCM já usado por outros itens da mesma subcategoria, com aviso de que a responsabilidade pela classificação é do negócio. Serviços não têm NCM (SPEC-021). |
+| RF80 | O Produto Físico deve poder ter um **NCM** (Nomenclatura Comum do Mercosul, 8 dígitos), **opcional**, conferido na tabela oficial vigente, carregada de arquivo versionado com fonte e vigência. O código é buscado por código ou por palavras. Quando o código deixa de estar vigente, ele é mantido no item com aviso de revisão. O Catálogo mostra os produtos sem NCM e os que precisam de revisão, a busca encontra pelo código, e o cadastro sugere o NCM já usado por outros itens da mesma subcategoria, com aviso de que a responsabilidade pela classificação é do negócio. O NCM é obrigatório quando o Dono liga a opção "Emito nota fiscal de produtos" nos Dados do negócio (RN35). Serviços não têm NCM (SPEC-021). |
 | RF12 | Um Serviço deve poder ter múltiplos materiais vinculados, sendo cada material um Produto Físico já cadastrado no Estoque. |
 | RF13 | Ao vincular um material a um Serviço, o sistema deve sugerir automaticamente a quantidade padrão de **1 unidade** por execução, permitindo edição posterior pelo usuário. |
 | RF14 | O cadastro do Produto Físico não deve incluir a quantidade em estoque no mesmo formulário de criação; a quantidade é definida em uma operação separada de entrada de estoque. |
@@ -81,6 +81,7 @@
 - **RN23** — Um item sem preço oficial confirmado não pode ser adicionado a uma venda.
 - **RN33** — A subcategoria só organiza o catálogo: não altera a margem padrão sugerida (que continua por categoria, RF36), o preço, o custo, o estoque nem as regras fiscais do item (SPEC-020).
 - **RN34** — O NCM é informado e conferido pelo negócio: o sistema só confere que o código existe na tabela vigente e sugere, sem nunca preencher sem a confirmação do usuário. O NCM não altera preço, margem, custo, estoque nem impostos calculados (SPEC-021).
+- **RN35** — Com a opção "Emito nota fiscal de produtos" ligada pelo Dono, o NCM é obrigatório no cadastro e na edição de produto físico, e produto físico sem NCM não pode ser vendido, nem em troca (como o item sem preço, RN23). Um NCM fora da tabela vigente não bloqueia a venda; os materiais consumidos por serviços não entram nessa regra (SPEC-021).
 
 ---
 
@@ -290,6 +291,7 @@
 | RN32 | Registro de auditoria do suporte imutável, guardado por 5 anos. |
 | RN33 | Subcategoria só organiza: não altera margem, preço, custo, estoque nem regras fiscais. |
 | RN34 | NCM é responsabilidade do negócio: o sistema confere na tabela vigente e sugere, sem preencher sozinho; não entra em cálculo. |
+| RN35 | Negócio que emite nota fiscal de produtos: NCM obrigatório no produto físico e produto sem NCM fora da venda. |
 
 ---
 

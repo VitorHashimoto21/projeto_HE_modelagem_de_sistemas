@@ -40,7 +40,7 @@
 | ID | Padrão | Requisito EARS |
 |---|---|---|
 | RF07 | Ubíquo | O sistema deve permitir o cadastro de itens dos tipos Produto Físico ou Serviço. |
-| RF08 | Complexo (Estado + Evento) | **ENQUANTO** o tipo do item selecionado for Produto Físico, **QUANDO** o usuário submeter o formulário de cadastro, o sistema deve exigir o preenchimento de nome, custo, unidade de medida e categoria, aceitando estoque mínimo e NCM (RF80) como campos opcionais e sem solicitar quantidade em estoque. |
+| RF08 | Complexo (Estado + Evento) | **ENQUANTO** o tipo do item selecionado for Produto Físico, **QUANDO** o usuário submeter o formulário de cadastro, o sistema deve exigir o preenchimento de nome, custo, unidade de medida e categoria, aceitando estoque mínimo como campo opcional, o NCM como opcional ou obrigatório conforme a opção de nota fiscal do negócio (RF80, RN35), e sem solicitar quantidade em estoque. |
 | RF09 | Complexo (Estado + Evento) | **ENQUANTO** o tipo do item selecionado for Serviço, **QUANDO** o usuário submeter o formulário de cadastro, o sistema deve exigir o preenchimento de nome, custo e categoria, e deve perguntar se há materiais/insumos associados. |
 | RF10 | Ubíquo | O sistema deve exigir que todo produto/serviço tenha uma unidade de medida definida (ex.: unidade, kg, litro, hora, caixa). |
 | RF11 | Ubíquo | O sistema deve exigir que todo produto/serviço seja associado a uma categoria da lista fixa: Serviços, Produtos, Alimentação, Vestuário, Acessórios, Beleza, Saúde, Casa, Tecnologia, Outros. |
@@ -55,6 +55,7 @@
 | RN23 | Comportamento indesejado | **SE** o usuário tentar adicionar a uma venda um item sem preço oficial confirmado, **ENTÃO** o sistema deve impedir a inclusão e orientar a definição do preço. |
 | RN33 | Ubíquo | O sistema deve sugerir a margem padrão pela categoria do item, sem considerar a subcategoria, e não deve alterar preço, custo, estoque nem regras fiscais por causa da subcategoria. |
 | RN34 | Comportamento indesejado | **SE** houver sugestão de NCM (pelos outros itens da mesma subcategoria), **ENTÃO** o sistema deve mostrá-la com o aviso de que a responsabilidade pela classificação é do negócio e só preencher o campo com a confirmação do usuário; o NCM não deve alterar preço, margem, custo, estoque nem impostos calculados. |
+| RN35 | Complexo (Estado + Indesejado) | **ENQUANTO** a opção "Emito nota fiscal de produtos" estiver ligada, o sistema deve exigir o NCM no cadastro e na edição de produto físico; **SE** uma venda ou troca incluir produto físico sem NCM, **ENTÃO** o sistema deve recusá-la, sem considerar os materiais consumidos por serviços nem bloquear produto com NCM fora da tabela vigente. |
 | RN05 | Orientado a evento | **QUANDO** um Serviço com materiais vinculados for vendido, o sistema deve dar baixa automática no estoque desses materiais, na quantidade configurada; **ONDE** a quantidade usada for ajustada na venda, o sistema deve baixar a quantidade ajustada (SPEC-017). |
 
 ---
