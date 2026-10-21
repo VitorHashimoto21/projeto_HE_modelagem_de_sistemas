@@ -394,7 +394,7 @@ flowchart LR
 - **Justificativa da ordem:** primeira das melhorias da revisão financeira e contábil (ordem combinada em 19/10/2026); não depende da SPEC-021 nem da SPEC-022.
 
 #### SPEC-021 — NCM nos produtos
-- **Spec:** [`specs/SPEC-021.md`](./specs/SPEC-021.md) (✅ aprovada em 21/10/2026, com as OPEN-001 a OPEN-006 decididas em entrevista; arquivo oficial da tabela NCM baixado e conferido no mesmo dia)
+- **Spec:** [`specs/SPEC-021.md`](./specs/SPEC-021.md) (✅ aprovada em 21/10/2026, com as OPEN-001 a OPEN-006 decididas em entrevista; arquivo oficial da tabela NCM baixado e conferido no mesmo dia; implementada no mesmo dia e verificada em build local — [evidências](./specs/evidencias/SPEC-021/README.md); falta a homologação, T14)
 - **Objetivo:** permitir que o negócio informe o **NCM** (8 dígitos) de cada produto físico, inclusive os materiais, conferido na **tabela oficial vigente** do Siscomex, carregada de arquivo versionado como os parâmetros fiscais (ADR-004). O dono busca por código ou por palavras.
 - **Valor entregue:**
   - o catálogo fica pronto para a futura emissão de nota fiscal, que continua pós-MVP (Visão de Negócio, 8.2);
@@ -404,7 +404,7 @@ flowchart LR
   - quem emite nota fiscal de produtos liga uma opção nos Dados do negócio: o NCM vira obrigatório e produto sem NCM sai da venda.
 - **Origem:** revisão de uma profissional da área financeira e contábil (loja de semijoias).
 - **RF:** RF08 (alterado), RF80 (novo), RF79 · **RN:** RN34 e RN35 (novas), RN23, RN33 · **RNF:** RNF01, RNF02, RNF04, RNF10
-- **Entidades:** Item (campo novo `ncm`), Negocio (campo novo `emiteNotaDeProduto`), Ncm (nova, global)
+- **Entidades:** Item (campo novo `ncm`), Negocio (campo novo `emiteNotaDeProduto`), Ncm e TabelaNcm (novas, globais)
 - **Dependências:** SPEC-001, SPEC-003, SPEC-004, SPEC-005, SPEC-006, SPEC-007, SPEC-008, SPEC-011, SPEC-014, SPEC-016, SPEC-018, SPEC-020
 - **Pré-requisito externo:** o arquivo JSON oficial da tabela NCM (Classif, Portal Único Siscomex). O domínio foi liberado na rede do ambiente em 21/10/2026, e o arquivo foi baixado e conferido (10.516 códigos de 8 dígitos, vigente em 21/10/2026).
 - **Justificativa da ordem:** segunda das melhorias da revisão financeira e contábil; usa as subcategorias da SPEC-020 para a sugestão e não depende da SPEC-022.
@@ -467,7 +467,7 @@ A conferência do seed fiscal foi concluída em 03/10/2026 (DAS do MEI atualizad
   - sugestão pela subcategoria, com aviso de responsabilidade;
   - NCM obrigatório para quem liga "Emito nota fiscal de produtos", com a venda de produto sem NCM bloqueada (OPEN-005 e OPEN-006, recomendação da revisora contábil).
 
-  Baseline ajustada (RF08, RF80, RN34 e RN35). Arquivo oficial da tabela NCM baixado e conferido; a implementar.
+  Baseline ajustada (RF08, RF80, RN34 e RN35). Implementada em 21/10/2026 e verificada em build local (testes T01–T12 e roteiro no navegador com 74 verificações). Cinco divergências registradas na Spec, depois da seção 9, aguardam a decisão da equipe. Falta a homologação (T14), depois do merge e da carga da tabela no workflow Migrações.
 - SPEC-022 (cliente com dados completos): a gerar depois da SPEC-021 e antes da SPEC-019 (decisão de 19/10/2026); escopo na seção 2.2.
 - SPEC-019: a gerar depois da SPEC-022, antes de abrir a produção.
 - `main`: atualizada até a SPEC-018 (PR #86, 17/10/2026), sem ambiente de produção ainda (a migração na `main` é pulada enquanto não houver o banco de produção).
@@ -479,7 +479,7 @@ Lista mantida até cada item ser resolvido; quem retomar o projeto (em qualquer 
 
 | # | Pendência | Situação |
 |---|---|---|
-| 1 | **SPECs 021 e 022**, nesta ordem. **SPEC-021** (NCM nos produtos): aprovada em 21/10/2026 (NCM obrigatório para quem emite nota fiscal de produtos); falta implementar. O arquivo oficial da tabela NCM já foi baixado. **SPEC-022** (cliente com dados completos): a gerar | Em andamento |
+| 1 | **SPECs 021 e 022**, nesta ordem. **SPEC-021** (NCM nos produtos): implementada em 21/10/2026 e verificada em build local; faltam a homologação (T14), depois do merge, e a decisão da equipe sobre as cinco divergências registradas na Spec (depois da seção 9). **SPEC-022** (cliente com dados completos): a gerar | Em andamento |
 | 2 | **SPEC-019** (suporte com edição, emergência, ações de plataforma e **2º fator do Administrador**): gerar depois da SPEC-022, **antes de abrir a produção** | Aberta |
 | 3 | **Textos legais** (`docs/legal/`): preencher os campos entre colchetes (responsável, e-mail de contato, cidade/UF, região do Supabase) e revisão do grupo; a versão 2026-10-17 já inclui o acesso de suporte (SPEC-018), e a SPEC-022 trará outra (dados completos do cliente) | Aberta |
 | 4 | **SPEC-015** (cobrança real pelo Stripe): decidir se fica fora do MVP; depende do ADR-007 (proposta) | Aberta |

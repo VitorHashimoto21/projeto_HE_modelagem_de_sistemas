@@ -1,7 +1,6 @@
 "use client";
 
 import { AlertDialog } from "radix-ui";
-import { useRef, useState, type FormEvent } from "react";
 import { classeDoBotao } from "./estilos";
 
 // Diálogo de confirmação (SPEC-016, escopo 2; nota N3): substitui o window.confirm do
@@ -46,30 +45,5 @@ export function DialogoDeConfirmacao({
   );
 }
 
-/**
- * Confirmação antes de enviar um formulário: o primeiro envio abre o diálogo; confirmar
- * reenvia o mesmo formulário (com a validação do navegador e a Server Action dele).
- */
-export function useConfirmacaoDoEnvio() {
-  const [aberto, setAberto] = useState(false);
-  const formulario = useRef<HTMLFormElement | null>(null);
-  const confirmado = useRef(false);
-  return {
-    aberto,
-    setAberto,
-    aoEnviar(e: FormEvent<HTMLFormElement>) {
-      if (confirmado.current) {
-        confirmado.current = false;
-        return;
-      }
-      e.preventDefault();
-      formulario.current = e.currentTarget;
-      setAberto(true);
-    },
-    confirmar() {
-      confirmado.current = true;
-      setAberto(false);
-      formulario.current?.requestSubmit();
-    },
-  };
-}
+// O hook mora num arquivo à parte, sem o Radix: quem carrega o diálogo sob demanda usa só ele.
+export { useConfirmacaoDoEnvio } from "./confirmacao-do-envio";

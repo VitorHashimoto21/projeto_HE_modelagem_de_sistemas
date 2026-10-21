@@ -1,11 +1,16 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import Link from "next/link";
-import { useActionState, useState } from "react";
+import { startTransition, useActionState, useState, type FormEvent } from "react";
 import { Aviso } from "@/components/acesso/campos";
-import { DialogoDeConfirmacao, useConfirmacaoDoEnvio } from "@/components/ui/confirmacao";
+import { useConfirmacaoDoEnvio } from "@/components/ui/confirmacao-do-envio";
 import { classeDoBotao, classeDoLink } from "@/components/ui/estilos";
 import { acaoDefinirNotaFiscal, type EstadoDaNotaFiscal } from "@/lib/negocio/acoes";
+
+// O diálogo só serve para ligar a opção com produtos sem NCM: carrega sob demanda, quando a caixa
+// é marcada, para não pesar na página.
+const DialogoDeConfirmacao = dynamic(() => import("@/components/ui/confirmacao").then((m) => m.DialogoDeConfirmacao), { ssr: false });
 
 const produtos = (n: number) => `${n} ${n === 1 ? "produto físico está" : "produtos físicos estão"} sem NCM`;
 
@@ -14,14 +19,26 @@ const produtos = (n: number) => `${n} ${n === 1 ? "produto físico está" : "pro
  * NCM pede confirmação, porque eles saem da venda até receberem o código (OPEN-006).
  */
 export function FormularioNotaFiscal({ emite, produtosSemNcm }: { emite: boolean; produtosSemNcm: number }) {
-  const [estado, executar] = useActionState<EstadoDaNotaFiscal, FormData>(acaoDefinirNotaFiscal, { status: "ocioso" });
+  const [estado, executar, pendente] = useActionState<EstadoDaNotaFiscal, FormData>(acaoDefinirNotaFiscal, { status: "ocioso" });
   const atual = estado.status === "salvo" ? estado.emite : emite;
   const [marcado, setMarcado] = useState(emite);
   const confirmacao = useConfirmacaoDoEnvio();
   const precisaConfirmar = marcado && !atual && produtosSemNcm > 0;
 
+  // Envio pela transição, e não por <form action>: o React reinicia o formulário depois da action, e a
+  // caixa de seleção voltaria a aparecer desmarcada com a opção já ligada.
+  function enviar(e: FormEvent<HTMLFormElement>) {
+    if (precisaConfirmar) {
+      confirmacao.aoEnviar(e);
+      if (e.defaultPrevented) return;
+    }
+    e.preventDefault();
+    const dados = new FormData(e.currentTarget);
+    startTransition(() => executar(dados));
+  }
+
   return (
-    <form action={executar} onSubmit={(e) => precisaConfirmar && confirmacao.aoEnviar(e)} noValidate className="space-y-4">
+    <form onSubmit={enviar} noValidate className="space-y-4">
       {estado.status === "salvo" && (
         <Aviso tipo="sucesso">
           {estado.emite ? "Opção ligada: o NCM passa a ser obrigatório nos produtos físicos." : "Opção desligada: o NCM volta a ser opcional."}
@@ -46,17 +63,19 @@ export function FormularioNotaFiscal({ emite, produtosSemNcm }: { emite: boolean
           </Link>
         </p>
       )}
-      <button type="submit" disabled={marcado === atual} className={classeDoBotao("secundario")}>
+      <button type="submit" disabled={marcado === atual || pendente} className={classeDoBotao("secundario")}>
         Salvar
       </button>
-      <DialogoDeConfirmacao
-        aberto={confirmacao.aberto}
-        aoMudar={confirmacao.setAberto}
-        titulo="Ligar a nota fiscal de produtos?"
-        descricao={`${produtos(produtosSemNcm)}. Com a opção ligada, ${produtosSemNcm === 1 ? "ele não poderá ser vendido" : "eles não poderão ser vendidos"} até receber${produtosSemNcm === 1 ? "" : "em"} o código.`}
-        confirmar="Ligar mesmo assim"
-        aoConfirmar={confirmacao.confirmar}
-      />
+      {precisaConfirmar && (
+        <DialogoDeConfirmacao
+          aberto={confirmacao.aberto}
+          aoMudar={confirmacao.setAberto}
+          titulo="Ligar a nota fiscal de produtos?"
+          descricao={`${produtos(produtosSemNcm)}. Com a opção ligada, ${produtosSemNcm === 1 ? "ele não poderá ser vendido" : "eles não poderão ser vendidos"} até receber${produtosSemNcm === 1 ? "" : "em"} o código.`}
+          confirmar="Ligar mesmo assim"
+          aoConfirmar={confirmacao.confirmar}
+        />
+      )}
     </form>
   );
 }

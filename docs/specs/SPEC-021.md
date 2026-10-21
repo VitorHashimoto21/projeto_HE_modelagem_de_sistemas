@@ -9,7 +9,7 @@
 > - **OPEN-005** (recomendada): a obrigatoriedade vale para quem liga a opção **"Emito nota fiscal de produtos"** nos Dados do negócio;
 > - **OPEN-006**: com a opção ligada, a **venda de produto físico sem NCM é bloqueada**, como a de produto sem preço (RN23).
 >
-> A baseline foi ajustada: RF08 alterado, RF80, RN34 e RN35 novos. Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar), a partir da revisão de uma profissional da área financeira e contábil que está montando uma loja de semijoias (19/10/2026).
+> A baseline foi ajustada: RF08 alterado, RF80, RN34 e RN35 novos. **Implementada em 21/10/2026** e verificada em build local: testes T01–T12 automatizados e o roteiro T13 no navegador, com 74 verificações ([evidências](evidencias/SPEC-021/README.md)). As notas da implementação, com cinco divergências registradas para a decisão da equipe, estão depois da seção 9. Falta a homologação (T14), depois do merge e da carga da tabela. Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar), a partir da revisão de uma profissional da área financeira e contábil que está montando uma loja de semijoias (19/10/2026).
 >
 > **Mapa:** [`MAPA_DE_SPECS.md`](../MAPA_DE_SPECS.md)
 > - **Altera:** [SPEC-006](SPEC-006.md) (cadastro, lista, busca e detalhe do item), [SPEC-007](SPEC-007.md) (busca do estoque), [SPEC-004](SPEC-004.md) (Dados do negócio: opção de nota fiscal de produtos), [SPEC-008](SPEC-008.md) (venda de produto sem NCM, também na troca da SPEC-011) e [SPEC-014](SPEC-014.md) (exportação).
@@ -366,6 +366,56 @@ A loja de semijoias vai emitir nota fiscal no futuro e precisa do NCM de cada pe
 | **Detalhar item** (estendido) | id | + {ncm, descricao, vigente} | os da SPEC-006 |
 | **Carregar tabela NCM** (comando) | arquivo oficial | {inseridos, alterados, encerrados} | `ArquivoInvalido` |
 
+**Implementação (21/10/2026):**
+
+- **Banco:** migração `20261021180000_ncm`.
+  - `Item.ncm` (`varchar(8)`) com os `CHECK` `Item_ncm_formato` (8 dígitos) e `Item_ncm_so_produto`.
+  - `Negocio.emiteNotaDeProduto` (padrão falso).
+  - Tabela global `Ncm`, com restrição única `(codigo, vigenteDesde)`, índice por código e os `CHECK` do código e da vigência.
+  - Tabela global `TabelaNcm`, com uma linha só (`CHECK id = 1`): a data da atualização da tabela e o ato, que alimentam o rodapé da gaveta.
+  - RLS ligado, sem políticas, nas duas tabelas; as duas classificadas como `global` em `src/lib/db/modelos.ts`.
+- **Tabela oficial e carga:**
+  - arquivo `docs/prisma_base/tabela_ncm.json`, sem edição;
+  - leitura e validação em `src/lib/ncm/arquivo.ts`;
+  - carga em `scripts/ncm/carga.ts` e `scripts/carregar-tabela-ncm.ts`, com os comandos `ncm:validar` e `ncm:carregar`;
+  - no CI, a validação e duas cargas seguidas (a segunda precisa dizer "Nada a mudar"); no workflow Migrações, a carga depois das migrações.
+- **Domínio e validação:**
+  - `src/lib/dominio/ncm.ts`: ler, formatar, montar a descrição, o texto de busca e a vigência;
+  - `src/lib/catalogo/validacao.ts`: `ncm` em `validarItem`, obrigatório quando o negócio emite nota, e as mensagens novas.
+- **Dados:**
+  - `src/lib/db/catalogo.ts`: conferência na tabela vigente ao gravar, busca, sugestões, contagens, filtros "sem" e "revisar", e a busca pelo começo do código, também usada pelo Estoque;
+  - `src/lib/db/vendas.ts`: `itensVendaveis` sem os produtos sem NCM, `foraDaVendaPorFaltaDeNcm` e a recusa em `prepararVenda`, que a troca também usa;
+  - `src/lib/db/negocios.ts`: leitura e gravação da opção.
+- **Ações:**
+  - `acaoBuscarNcm` e `acaoConferirNcm` em `src/lib/catalogo/acoes.ts`;
+  - `acaoDefinirNotaFiscal` em `src/lib/negocio/acoes.ts`.
+- **Telas:**
+  - `src/components/catalogo/campo-ncm.tsx`: campo, conferência, descrição, sugestão e avisos;
+  - `src/components/catalogo/busca-ncm.tsx`: a gaveta;
+  - `src/components/negocio/nota-fiscal.tsx`: a opção e o diálogo;
+  - `src/components/vendas/fora-por-ncm.tsx`: a nota da Nova venda e da troca;
+  - linha NCM no detalhe, avisos, link e filtros no Catálogo.
+- **Testes:** `test/unit/ncm.test.ts` e `test/integracao/ncm.test.ts`. Roteiro no navegador (T13) com 74 verificações ([evidências](evidencias/SPEC-021/README.md)).
+
+**Decisões de implementação (dentro do que a Spec pede):**
+
+- **Permissão de buscar e conferir:** como na SPEC-020, a guarda da Server Action exige *Catálogo: ver*, e o corpo confere *criar* ou *editar* antes de consultar a tabela. O teste T08 cobre os dois passos.
+- **Sugestões calculadas ao abrir o formulário**, para todas as subcategorias de uma vez. Trocar a subcategoria no formulário troca a sugestão sem nova consulta (5.3, item 5).
+- **Caminho no arquivo oficial:** a validação exige o capítulo de cada código, mas não a posição de 4 dígitos. Em 483 códigos, a posição não tem desdobramento e vem só no próprio código (ex.: 0205.00.00), sem uma linha de 4 dígitos à parte. O caminho usa os níveis que existem.
+- **Carregamento sob demanda:** a gaveta "Buscar NCM" é baixada no primeiro toque, e o diálogo de ligar a opção, quando a caixa é marcada. Para isso, o hook `useConfirmacaoDoEnvio` foi para `src/components/ui/confirmacao-do-envio.ts`, sem o Radix; `confirmacao.tsx` o reexporta, e as outras telas não mudam. Sem isso, Dados do negócio subiria 18,8 KB; com isso, sobe 1,5 KB.
+- **Formulário da nota fiscal enviado pela transição** (como o de subcategorias), e não por `<form action>`. O React reinicia o formulário depois da Server Action, e a caixa aparecia desmarcada com a opção já ligada (encontrado no T13).
+- **Botão da sugestão em duas linhas no celular:** o texto leva o nome da subcategoria e não cabia na caixa a 390 px (encontrado no T13).
+
+**Divergências registradas na implementação:** proposta (2), ajustar a baseline, em todas; a decisão é da equipe.
+
+1. **Posição do campo (5.2, item 1):** o campo NCM fica **depois da Subcategoria**, e não logo depois de "Unidade de medida". No formulário, a unidade de medida divide a linha com a categoria, e a subcategoria vem em seguida; como a sugestão depende da subcategoria, o NCM logo abaixo dela deixa a relação visível.
+2. **Descrição no detalhe (5.4, item 1):** o exemplo da Spec mostra "7117.19.00 — Bijuterias de metais comuns: outras". A tabela oficial não traz uma descrição curta: a do próprio nível costuma ser só "Outras". O detalhe mostra o código e, abaixo, a mesma descrição do campo e da gaveta, com o caminho sem o capítulo: "Bijuterias › De metais comuns, mesmo prateados, dourados ou platinados › Outras".
+3. **Link "Ver produtos sem NCM" (5.6, item 2):** fica na seção Nota fiscal, ao lado da opção, e não dentro do diálogo. O diálogo de confirmação da SPEC-016 só tem o texto e os dois botões; o link continua visível antes de ligar.
+4. **Texto de busca (5.1, item 2):** não inclui a descrição do **capítulo**. A do capítulo 71 cita "bijuterias", e "bijut" trazia o capítulo inteiro (pérolas, pedras e joalheria). O código, a descrição e os demais níveis do caminho continuam na busca. O caminho guardado mantém o capítulo.
+5. **Tabela `TabelaNcm` (seção 7):** além de `Ncm`, uma tabela global de uma linha guarda a data da atualização e o ato do arquivo carregado. É de onde vem o "atualizada em dd/mm/aaaa" do rodapé da gaveta (5.2, item 3); o arquivo não tem essa data em cada código.
+
+**Observação para a equipe (sem divergência):** a busca segue a ordem de código pedida na Spec (5.2, item 3, e CA-02). Com palavras, isso pode pôr na frente códigos que só citam a palavra. Por exemplo, "bijut" lista primeiro 7018.10.10 a 7018.90.00 (contas de vidro, "exceto bijuterias") e só depois 7117.11.00, 7117.19.00 e 7117.90.00. Uma melhoria possível, para depois: mostrar primeiro os códigos cuja própria descrição tem a palavra. Fica para a equipe decidir.
+
 ---
 
 ## 10. Requisitos não funcionais aplicáveis
@@ -479,14 +529,14 @@ Todas decididas pela equipe em 21/10/2026, em entrevista. A OPEN-005 e a OPEN-00
 
 A SPEC-021 estará concluída quando:
 
-- [ ] todos os critérios de aceitação (CA-01 a CA-21) estiverem implementados, por testes, no navegador (build local) e na homologação (T14);
-- [ ] todos os invariantes (INV-001 a INV-010) estiverem preservados;
-- [ ] os testes derivados (T01 a T14) estiverem aprovados, com o CI verde no PR;
-- [ ] os RNFs aplicáveis (RNF01, RNF02, RNF04, RNF10) tiverem sido verificados como descrito na seção 10;
+- [ ] todos os critérios de aceitação (CA-01 a CA-21) estiverem implementados, por testes, no navegador (build local) e na homologação (T14) — implementados e verificados por testes e no navegador em 21/10/2026; falta a homologação;
+- [x] todos os invariantes (INV-001 a INV-010) estiverem preservados — testes T01–T12;
+- [ ] os testes derivados (T01 a T14) estiverem aprovados, com o CI verde no PR — T01 a T13 aprovados (T13 com 74 verificações); falta o T14;
+- [x] os RNFs aplicáveis (RNF01, RNF02, RNF04, RNF10) tiverem sido verificados como descrito na seção 10 — capturas em 390/768/1440 px nos dois temas, axe-core sem violação, JavaScript dentro do orçamento (no máximo +3,2 KB), busca em até 11 ms com a tabela inteira, RLS e isolamento testados, exportação testada;
 - [x] as questões OPEN-001 a OPEN-006 tiverem sido decididas e registradas (21/10/2026), com o RF08 alterado e o RF80, a RN34 e a RN35 incluídos na baseline;
-- [ ] a tabela NCM oficial estiver no repositório e carregada na homologação;
-- [ ] os documentos de modelo (seção 7) estiverem atualizados;
-- [ ] não existir divergência conhecida entre a implementação e esta Spec;
-- [ ] toda divergência em relação à baseline tiver sido explicitamente analisada e registrada.
+- [ ] a tabela NCM oficial estiver no repositório e carregada na homologação — no repositório (`docs/prisma_base/tabela_ncm.json`); a carga roda no workflow Migrações depois do merge;
+- [x] os documentos de modelo (seção 7) estiverem atualizados;
+- [ ] não existir divergência conhecida entre a implementação e esta Spec — cinco divergências registradas depois da seção 9, aguardando a decisão da equipe;
+- [x] toda divergência em relação à baseline tiver sido explicitamente analisada e registrada (depois da seção 9).
 
 **Regra fundamental:** a implementação obedece a esta Spec aprovada. Se surgir conflito entre código, Spec e documentos de modelagem, o comportamento não é alterado em silêncio: a divergência é registrada com a proposta de (1) corrigir a implementação ou (2) alterar a baseline, e a decisão é da equipe.

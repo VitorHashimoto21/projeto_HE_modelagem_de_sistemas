@@ -155,7 +155,12 @@ export function CampoNcm({
 
       {mostrarSugestao && (
         <div className="mt-3 rounded-xl bg-status-warn-bg px-4 py-3">
-          <button type="button" onClick={() => escolher(sugestao.ncm, sugestao.descricao)} className={classeDoBotao("secundario", "sm")}>
+          {/* O texto leva o nome da subcategoria: quebra a linha no celular em vez de vazar da caixa. */}
+          <button
+            type="button"
+            onClick={() => escolher(sugestao.ncm, sugestao.descricao)}
+            className={classeDoBotao("secundario", "sm", "h-auto min-h-9 max-w-full rounded-2xl py-1.5 text-left whitespace-normal sm:rounded-full")}
+          >
             Usar {formatarNcm(sugestao.ncm)}, o NCM de {sugestao.itens} {sugestao.itens === 1 ? "item" : "itens"} de {sugestao.subcategoria}
           </button>
           <p className="mt-2 flex items-start gap-1.5 text-sm text-status-warn">

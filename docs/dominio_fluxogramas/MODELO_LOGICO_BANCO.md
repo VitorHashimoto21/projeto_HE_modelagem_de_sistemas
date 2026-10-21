@@ -41,6 +41,7 @@ erDiagram
     PARCELA |o--o| CONTA_PAGAR_RECEBER : "origina"
     CONTA_PAGAR_RECEBER |o--o{ LANCAMENTO_FINANCEIRO : "quitada_por"
     CNAE_ANEXO ||..o{ NEGOCIO : "sugere_anexo"
+    NCM |o..o{ ITEM : "classifica_pelo_codigo"
     DESPESA_FIXA |o--o{ CONTA_PAGAR_RECEBER : "gera_mensalmente"
     VENDA |o--o| VENDA : "troca_de"
     USUARIO |o--o{ VENDA : "cancela"
@@ -66,6 +67,7 @@ erDiagram
         decimal faturamento_mensal_estimado
         decimal cmv_estimado
         int dias_cobertura_estoque
+        boolean emite_nota_de_produto "padrao falso (SPEC-021)"
         datetime encerrado_em
         datetime created_at
     }
@@ -121,6 +123,7 @@ erDiagram
         decimal quantidade_estoque "so PRODUTO_FISICO"
         decimal estoque_minimo "opcional"
         decimal comissao_percentual "opcional"
+        string ncm "8 digitos, opcional, so PRODUTO_FISICO (SPEC-021)"
     }
 
     SUBCATEGORIA {
@@ -181,6 +184,24 @@ erDiagram
         string fonte_legal
         datetime vigente_desde
         boolean ativo
+    }
+
+    NCM {
+        uuid id PK
+        string codigo "8 digitos; unico com vigente_desde"
+        string descricao
+        string[] caminho "niveis acima"
+        string texto_busca "sem acentos"
+        date vigente_desde
+        date vigente_ate "null = sem fim"
+        string ato
+    }
+
+    TABELA_NCM {
+        int id PK "sempre 1"
+        date atualizada_em
+        string ato
+        datetime carregada_em
     }
 
     CNAE_ANEXO {
@@ -309,6 +330,7 @@ erDiagram
 | `ITEM` em tabela única com coluna `tipo` (sem tabelas `PRODUTO_FISICO`/`SERVICO`) | Simplifica consultas de catálogo e vendas; campos de estoque só são válidos quando `tipo = PRODUTO_FISICO` (RN04, validado na aplicação). |
 | `categoria` como enum (sem tabela `CATEGORIA`) | A lista de categorias é fixa do sistema (RF11). |
 | `SUBCATEGORIA` do negócio, com `ITEM.subcategoria_id` opcional | Subcategorias livres dentro de cada categoria fixa (RF79, SPEC-020): nome único por negócio e categoria; a categoria da subcategoria é a do item (gatilho) e não muda; excluir deixa `subcategoria_id` nulo nos itens (`ON DELETE SET NULL`). A margem continua por categoria (RN33). |
+| `ITEM.ncm` sem chave estrangeira, e as tabelas globais `NCM` e `TABELA_NCM` | O código fica no item mesmo depois de sair da tabela, com aviso de revisão (SPEC-021, OPEN-002); `CHECK` de 8 dígitos e de que só `PRODUTO_FISICO` tem NCM. `NCM` é a tabela oficial do Siscomex, com vigência e sem `negocio_id`, carregada de arquivo versionado como os parâmetros fiscais (ADR-004); a carga nunca apaga códigos. `TABELA_NCM` tem uma linha com a data e o ato do arquivo carregado. As duas têm RLS ligado, sem políticas. `NEGOCIO.emite_nota_de_produto` torna o NCM obrigatório e tira da venda o produto sem NCM (RF80, RN35). |
 | `MATERIAL_SERVICO` referencia `ITEM` duas vezes | `servico_id` aponta para um item `SERVICO` e `material_id` para um item `PRODUTO_FISICO` (RF12). |
 | `VENDA` 1:N `LANCAMENTO_FINANCEIRO` | Pagamento misto pode gerar mais de um lançamento imediato (RN09). |
 | `PARCELA` 1:1 `CONTA_PAGAR_RECEBER` | Cada parcela de cartão gera sua própria conta a receber com vencimento mensal (RN10, RF28). A parcela não tem status próprio: a situação é o status da conta (RN22). |
