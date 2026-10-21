@@ -1,6 +1,8 @@
 import type { CategoriaItem, OrigemPreco, TipoItem } from "@/generated/prisma/enums";
 import type { DadosDaSubcategoria, DadosDoItem, MaterialInformado } from "@/lib/catalogo/validacao";
 import { custoTotal, normalizarNome } from "@/lib/dominio/catalogo";
+import { hoje } from "@/lib/dominio/datas";
+import { descricaoDoNcm, LIMITE_DA_BUSCA, prefixoDeNcmNaBusca, termosDaBusca } from "@/lib/dominio/ncm";
 import type { ClienteDoNegocio } from "./cliente-do-negocio";
 
 /**
@@ -45,6 +47,20 @@ export class SubcategoriaNaoEncontrada extends Error {
     this.name = "SubcategoriaNaoEncontrada";
   }
 }
+/** SPEC-021 (5.7): NCM novo ou trocado que não está na tabela vigente. */
+export class NcmForaDaTabela extends Error {
+  constructor() {
+    super("NCM fora da tabela vigente.");
+    this.name = "NcmForaDaTabela";
+  }
+}
+/** SPEC-021 (RN35): o negócio emite nota fiscal de produtos e o produto físico está sem NCM. */
+export class NcmObrigatorio extends Error {
+  constructor() {
+    super("NCM obrigatório.");
+    this.name = "NcmObrigatorio";
+  }
+}
 /** Nome já usado na mesma categoria do negócio (INV-003). */
 export class SubcategoriaRepetida extends Error {
   constructor(
@@ -65,7 +81,18 @@ const subcategoriaDoItem = { select: { id: true, nome: true } } as const;
 /** SPEC-020 (5.4): o filtro de subcategoria é o id de uma subcategoria ou "sem" (itens sem subcategoria). */
 export const SEM_SUBCATEGORIA = "sem";
 
-export type FiltroDoCatalogo = { busca?: string; tipo?: TipoItem; categoria?: CategoriaItem; subcategoria?: string; arquivados?: boolean };
+/** SPEC-021 (5.5): produtos físicos ativos sem NCM, ou com NCM fora da tabela vigente. */
+export type FiltroDeNcm = "sem" | "revisar";
+export const FILTROS_DE_NCM: FiltroDeNcm[] = ["sem", "revisar"];
+
+export type FiltroDoCatalogo = {
+  busca?: string;
+  tipo?: TipoItem;
+  categoria?: CategoriaItem;
+  subcategoria?: string;
+  arquivados?: boolean;
+  ncm?: FiltroDeNcm;
+};
 
 /** Condição do filtro de subcategoria (5.4); valor inválido não filtra. */
 export function condicaoDaSubcategoria(subcategoria?: string): { subcategoriaId?: string | null } {
@@ -73,13 +100,34 @@ export function condicaoDaSubcategoria(subcategoria?: string): { subcategoriaId?
   return subcategoria && UUID.test(subcategoria) ? { subcategoriaId: subcategoria } : {};
 }
 
-/** Busca por texto no nome do item ou da subcategoria (5.4), sem diferenciar maiúsculas. */
+/**
+ * Busca por texto no nome do item ou da subcategoria (SPEC-020, 5.4), sem diferenciar maiúsculas.
+ * Só dígitos (com pontos ou espaços, ao menos 2): também pelo começo do NCM (SPEC-021, 5.5).
+ */
 export function condicaoDaBusca(busca?: string) {
   const texto = busca?.trim();
   if (!texto) return {};
   const contem = { contains: texto, mode: "insensitive" as const };
-  return { OR: [{ nome: contem }, { subcategoria: { nome: contem } }] };
+  const prefixo = prefixoDeNcmNaBusca(texto);
+  return { OR: [{ nome: contem }, { subcategoria: { nome: contem } }, ...(prefixo ? [{ ncm: { startsWith: prefixo } }] : [])] };
 }
+
+/** Linha da tabela NCM vigente no dia (AAAA-MM-DD). */
+export function condicaoNcmVigente(dia: string) {
+  const data = new Date(`${dia}T00:00:00Z`);
+  return { vigenteDesde: { lte: data }, OR: [{ vigenteAte: null }, { vigenteAte: { gte: data } }] };
+}
+
+/** NCM do item com a descrição da tabela (5.4); `vigente` false = "fora da tabela vigente — revise". */
+export type NcmDoItem = { codigo: string; descricao: string | null; vigente: boolean };
+
+/** Resultado da busca na tabela (5.2). */
+export type ResultadoDaBuscaNcm =
+  | { status: "curta" }
+  | { status: "ok"; resultados: { codigo: string; descricao: string }[]; maisResultados: boolean; atualizadaEm: string | null };
+
+/** Sugestão pela subcategoria (OPEN-004): o NCM vigente mais usado e quantos itens o usam. */
+export type SugestaoDeNcm = { ncm: string; descricao: string; itens: number };
 
 export type SubcategoriaDoItem = { id: string; nome: string } | null;
 
@@ -111,6 +159,7 @@ export type RegistroDePreco = {
 };
 
 export type DetalheDoItem = ItemResumido & {
+  ncm: NcmDoItem | null;
   comissaoPercentual: number | null;
   estoqueMinimo: number | null;
   quantidadeEstoque: number;
@@ -157,11 +206,49 @@ export function criarConsultasDoCatalogo(cliente: ClienteDoNegocio, negocioId: s
     if (!s || s.categoria !== d.categoria) throw new SubcategoriaInvalida(d.categoria);
   }
 
+  /** Descrição e vigência de um código (5.4): a linha vigente no dia ou, se não houver, a mais recente. */
+  async function descreverNcm(tx: ClienteDoNegocio, codigo: string, dia = hoje()): Promise<NcmDoItem> {
+    const campos = { descricao: true, caminho: true } as const;
+    const vigente = await tx.ncm.findFirst({ where: { codigo, ...condicaoNcmVigente(dia) }, select: campos });
+    const linha = vigente ?? (await tx.ncm.findFirst({ where: { codigo }, orderBy: { vigenteDesde: "desc" }, select: campos }));
+    return { codigo, descricao: linha ? descricaoDoNcm(linha.caminho, linha.descricao) : null, vigente: vigente !== null };
+  }
+
+  /**
+   * SPEC-021 (5.7): com a opção de nota fiscal ligada, produto físico sem NCM é recusado (RN35);
+   * um NCM novo ou trocado precisa estar vigente; o igual ao gravado fica, mesmo fora da tabela (OPEN-002).
+   */
+  async function conferirNcm(tx: ClienteDoNegocio, d: DadosDoItem, gravado: string | null) {
+    if (d.tipo !== "PRODUTO_FISICO") return;
+    if (d.ncm === null) {
+      const negocio = await tx.negocio.findFirst({ select: { emiteNotaDeProduto: true } });
+      if (negocio?.emiteNotaDeProduto) throw new NcmObrigatorio();
+      return;
+    }
+    if (d.ncm === gravado) return;
+    if ((await tx.ncm.count({ where: { codigo: d.ncm, ...condicaoNcmVigente(hoje()) } })) === 0) throw new NcmForaDaTabela();
+  }
+
+  /** Códigos usados por produtos físicos ativos que não estão na tabela vigente (5.5, "NCM a revisar"). */
+  async function codigosForaDaTabela(dia = hoje()): Promise<string[]> {
+    const usados = await cliente.item.findMany({
+      where: { tipo: "PRODUTO_FISICO", arquivadoEm: null, ncm: { not: null } },
+      select: { ncm: true },
+      distinct: ["ncm"],
+    });
+    const codigos = usados.map((u) => u.ncm!);
+    if (!codigos.length) return [];
+    const vigentes = await cliente.ncm.findMany({ where: { codigo: { in: codigos }, ...condicaoNcmVigente(dia) }, select: { codigo: true } });
+    const ok = new Set(vigentes.map((v) => v.codigo));
+    return codigos.filter((c) => !ok.has(c));
+  }
+
   const camposDoItem = (d: DadosDoItem) => ({
     nome: d.nome,
     nomeChave: d.nomeChave,
     categoria: d.categoria,
     subcategoriaId: d.subcategoriaId,
+    ncm: d.tipo === "PRODUTO_FISICO" ? d.ncm : null,
     unidadeMedida: d.unidadeMedida,
     custoBase: d.custoBase,
     comissaoPercentual: d.comissaoPercentual,
@@ -183,10 +270,14 @@ export function criarConsultasDoCatalogo(cliente: ClienteDoNegocio, negocioId: s
 
   return {
     async listar(filtro: FiltroDoCatalogo = {}): Promise<ItemResumido[]> {
+      const foraDaTabela = filtro.ncm === "revisar" ? await codigosForaDaTabela() : [];
       const itens = await cliente.item.findMany({
         where: {
           arquivadoEm: filtro.arquivados ? { not: null } : null,
           ...(filtro.tipo ? { tipo: filtro.tipo } : {}),
+          // SPEC-021 (5.5): só produtos físicos sem NCM, ou com NCM fora da tabela vigente.
+          ...(filtro.ncm === "sem" ? { tipo: "PRODUTO_FISICO" as const, ncm: null } : {}),
+          ...(filtro.ncm === "revisar" ? { tipo: "PRODUTO_FISICO" as const, ncm: { in: foraDaTabela } } : {}),
           ...(filtro.categoria ? { categoria: filtro.categoria, ...condicaoDaSubcategoria(filtro.subcategoria) } : {}),
           ...condicaoDaBusca(filtro.busca),
         },
@@ -263,6 +354,7 @@ export function criarConsultasDoCatalogo(cliente: ClienteDoNegocio, negocioId: s
         precoAtual: num(i.precoAtual),
         materiais: i._count.materiais,
         arquivado: i.arquivadoEm !== null,
+        ncm: i.ncm ? await descreverNcm(cliente, i.ncm) : null,
         comissaoPercentual: num(i.comissaoPercentual),
         estoqueMinimo: num(i.estoqueMinimo),
         quantidadeEstoque: num(i.quantidadeEstoque)!,
@@ -289,6 +381,7 @@ export function criarConsultasDoCatalogo(cliente: ClienteDoNegocio, negocioId: s
         return await cliente.$transaction(async (tx) => {
           await conferirMateriais(tx as ClienteDoNegocio, dados.materiais);
           await conferirSubcategoria(tx as ClienteDoNegocio, dados);
+          await conferirNcm(tx as ClienteDoNegocio, dados, null);
           const item = await tx.item.create({
             data: { ...camposDoItem(dados), negocioId, tipo: dados.tipo, quantidadeEstoque: 0 },
             select: { id: true },
@@ -314,10 +407,11 @@ export function criarConsultasDoCatalogo(cliente: ClienteDoNegocio, negocioId: s
       if (!UUID.test(id)) throw new ItemNaoEncontrado();
       try {
         await cliente.$transaction(async (tx) => {
-          const atual = await tx.item.findFirst({ where: { id }, select: { tipo: true, arquivadoEm: true } });
+          const atual = await tx.item.findFirst({ where: { id }, select: { tipo: true, arquivadoEm: true, ncm: true } });
           if (!atual) throw new ItemNaoEncontrado();
           if (atual.tipo === "SERVICO") await conferirMateriais(tx as ClienteDoNegocio, dados.materiais, id);
           await conferirSubcategoria(tx as ClienteDoNegocio, dados);
+          await conferirNcm(tx as ClienteDoNegocio, dados, atual.ncm);
           await tx.item.update({
             where: { id },
             // Arquivado não ocupa o nome (OPEN-003): a chave só volta ao reativar.
@@ -337,6 +431,88 @@ export function criarConsultasDoCatalogo(cliente: ClienteDoNegocio, negocioId: s
         if (ehUnicidadeDoNome(e)) throw new NomeDuplicado();
         throw e;
       }
+    },
+
+    /** Contagens do Catálogo (5.5): produtos físicos ativos sem NCM e com NCM fora da tabela vigente. */
+    async contagensDoNcm(): Promise<{ semNcm: number; foraDaTabela: number }> {
+      const [semNcm, fora] = await Promise.all([
+        cliente.item.count({ where: { tipo: "PRODUTO_FISICO", arquivadoEm: null, ncm: null } }),
+        codigosForaDaTabela(),
+      ]);
+      const foraDaTabela = fora.length ? await cliente.item.count({ where: { tipo: "PRODUTO_FISICO", arquivadoEm: null, ncm: { in: fora } } }) : 0;
+      return { semNcm, foraDaTabela };
+    },
+
+    /** A opção "Emito nota fiscal de produtos" do negócio (OPEN-005, RN35). */
+    async emiteNotaDeProduto(): Promise<boolean> {
+      const n = await cliente.negocio.findFirst({ select: { emiteNotaDeProduto: true } });
+      return n?.emiteNotaDeProduto ?? false;
+    },
+
+    /** Busca na tabela vigente (5.2): começo do código ou todas as palavras; até 20, em ordem de código. */
+    async buscarNcm(texto: string, dia = hoje()): Promise<ResultadoDaBuscaNcm> {
+      const termos = termosDaBusca(texto);
+      if (termos.tipo === "curta") return { status: "curta" };
+      const condicao =
+        termos.tipo === "codigo" ? { codigo: { startsWith: termos.prefixo } } : { AND: termos.palavras.map((p) => ({ textoBusca: { contains: p } })) };
+      const [linhas, versao] = await Promise.all([
+        cliente.ncm.findMany({
+          where: { ...condicao, ...condicaoNcmVigente(dia) },
+          select: { codigo: true, descricao: true, caminho: true },
+          orderBy: { codigo: "asc" },
+          take: LIMITE_DA_BUSCA + 1,
+        }),
+        cliente.tabelaNcm.findFirst({ select: { atualizadaEm: true } }),
+      ]);
+      return {
+        status: "ok",
+        resultados: linhas.slice(0, LIMITE_DA_BUSCA).map((l) => ({ codigo: l.codigo, descricao: descricaoDoNcm(l.caminho, l.descricao) })),
+        maisResultados: linhas.length > LIMITE_DA_BUSCA,
+        atualizadaEm: versao ? versao.atualizadaEm.toISOString().slice(0, 10) : null,
+      };
+    },
+
+    /** Confere um código digitado (5.2): descrição e vigência; null se o código não existe na tabela. */
+    async conferirCodigoNcm(codigo: string, dia = hoje()): Promise<NcmDoItem | null> {
+      const d = await descreverNcm(cliente, codigo, dia);
+      return d.descricao === null ? null : d;
+    },
+
+    /**
+     * Sugestões pela subcategoria (OPEN-004): por subcategoria, o NCM vigente mais usado pelos outros
+     * produtos físicos ativos do negócio (no empate, o menor código). Não grava nada (INV-003).
+     */
+    async sugestoesDeNcm(excetoItemId?: string, dia = hoje()): Promise<Record<string, SugestaoDeNcm>> {
+      const itens = await cliente.item.findMany({
+        where: {
+          tipo: "PRODUTO_FISICO",
+          arquivadoEm: null,
+          subcategoriaId: { not: null },
+          ncm: { not: null },
+          ...(excetoItemId ? { id: { not: excetoItemId } } : {}),
+        },
+        select: { subcategoriaId: true, ncm: true },
+      });
+      if (!itens.length) return {};
+      const codigos = [...new Set(itens.map((i) => i.ncm!))];
+      const vigentes = await cliente.ncm.findMany({
+        where: { codigo: { in: codigos }, ...condicaoNcmVigente(dia) },
+        select: { codigo: true, descricao: true, caminho: true },
+      });
+      const descricao = new Map(vigentes.map((v) => [v.codigo, descricaoDoNcm(v.caminho, v.descricao)]));
+      const contagem = new Map<string, Map<string, number>>();
+      for (const i of itens) {
+        if (!descricao.has(i.ncm!)) continue;
+        const porNcm = contagem.get(i.subcategoriaId!) ?? new Map<string, number>();
+        porNcm.set(i.ncm!, (porNcm.get(i.ncm!) ?? 0) + 1);
+        contagem.set(i.subcategoriaId!, porNcm);
+      }
+      const sugestoes: Record<string, SugestaoDeNcm> = {};
+      for (const [subcategoriaId, porNcm] of contagem) {
+        const [ncm, quantos] = [...porNcm].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0];
+        sugestoes[subcategoriaId] = { ncm, descricao: descricao.get(ncm)!, itens: quantos };
+      }
+      return sugestoes;
     },
 
     async tipoDoItem(id: string): Promise<TipoItem> {

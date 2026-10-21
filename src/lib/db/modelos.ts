@@ -232,6 +232,8 @@ export const MODELOS = {
   ParametroMei: { classe: "global", relacoes: {} },
   ParametroFatorR: { classe: "global", relacoes: {} },
   MargemPadraoCategoria: { classe: "global", relacoes: {} },
+  Ncm: { classe: "global", relacoes: {} }, // SPEC-021: tabela NCM oficial
+  TabelaNcm: { classe: "global", relacoes: {} }, // SPEC-021: versão da tabela carregada
 } as const satisfies Record<string, DefinicaoModelo>;
 
 export type NomeModelo = keyof typeof MODELOS;

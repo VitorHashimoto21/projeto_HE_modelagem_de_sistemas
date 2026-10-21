@@ -79,7 +79,7 @@ export default async function Estoque({ searchParams }: PageProps<"/estoque">) {
         <form method="get" className="flex flex-wrap gap-2" role="search">
           {situacao && <input type="hidden" name="situacao" value={situacao} />}
           <label className="sr-only" htmlFor="busca">
-            Buscar por nome ou subcategoria
+            Buscar por nome, subcategoria ou NCM
           </label>
           <div className="relative min-w-0 flex-1 basis-52">
             <Search aria-hidden="true" className="pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2 text-muted-foreground" />

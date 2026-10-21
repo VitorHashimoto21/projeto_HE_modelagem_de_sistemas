@@ -8,8 +8,8 @@ import { camposDoFormulario } from "@/lib/auth/validacao";
 import { catalogo } from "@/lib/db";
 import { comRetorno, retornoSeguro } from "@/lib/estrutura/retorno";
 import * as servicos from "./servicos";
-import type { EstadoDaExclusao, EstadoDaSubcategoria, EstadoDoItem, EstadoDoPreco } from "./servicos";
-import { podeCriarSubcategoria } from "./validacao";
+import type { EstadoDaBuscaNcm, EstadoDaConferenciaNcm, EstadoDaExclusao, EstadoDaSubcategoria, EstadoDoItem, EstadoDoPreco } from "./servicos";
+import { podeCriarSubcategoria, podeUsarTabelaNcm } from "./validacao";
 
 // Server Actions do catálogo (SPEC-006). A fábrica exige a permissão do módulo Catálogo
 // (SPEC-005) antes do corpo; o negócio vem do contexto validado, nunca do formulário.
@@ -96,4 +96,17 @@ export const acaoExcluirSubcategoria = acaoComPermissao("catalogo", "excluir", a
     revalidatePath("/estoque", "layout");
   }
   return estado;
+});
+
+// NCM (SPEC-021, 5.2 e 5.7): buscar e conferir na tabela exigem Catálogo — criar ou editar. A fábrica
+// exige o mínimo comum ("ver") e o corpo confere a combinação; no modo suporte, a fábrica recusa.
+
+export const acaoBuscarNcm = acaoComPermissao("catalogo", "ver", async (membro, texto: string): Promise<EstadoDaBuscaNcm> => {
+  if (!podeUsarTabelaNcm(membro.permissoes)) return { status: "erro", mensagem: servicos.MENSAGENS_FLUXO_CATALOGO.semPermissaoNcm };
+  return servicos.buscarNcm(texto, deps(membro));
+});
+
+export const acaoConferirNcm = acaoComPermissao("catalogo", "ver", async (membro, texto: string): Promise<EstadoDaConferenciaNcm> => {
+  if (!podeUsarTabelaNcm(membro.permissoes)) return { status: "erro", mensagem: servicos.MENSAGENS_FLUXO_CATALOGO.semPermissaoNcm };
+  return servicos.conferirNcm(texto, deps(membro));
 });

@@ -28,7 +28,7 @@ import { EstoqueInsuficiente, instanteDaOcorrencia, movimentar } from "./estoque
  */
 
 export class ItemNaoVendavel extends Error {
-  constructor(public readonly nome: string, public readonly motivo: "sem-preco" | "arquivado" | "inexistente") {
+  constructor(public readonly nome: string, public readonly motivo: "sem-preco" | "sem-ncm" | "arquivado" | "inexistente") {
     super("Item não pode ser vendido.");
     this.name = "ItemNaoVendavel";
   }
@@ -214,12 +214,16 @@ export function criarConsultasDeVendas(cliente: ClienteDoNegocio, negocioId: str
    * os ajustes da SPEC-017: preço cobrado (exige `podeAjustarPreco`) e materiais usados.
    */
   async function prepararVenda(c: DadosDoCarrinho, opcoes: OpcoesDaVenda = {}): Promise<{ linhas: LinhaPreparada[]; total: number }> {
+    // SPEC-021 (RN35): com a nota fiscal de produtos ligada, produto físico sem NCM não entra (o estado
+    // do negócio é lido aqui, na gravação, e não o que estava na tela).
+    const negocio = await cliente.negocio.findFirst({ select: { emiteNotaDeProduto: true } });
     const itens = await cliente.item.findMany({
       where: { id: { in: c.linhas.map((l) => l.itemId) } },
       select: {
         id: true,
         nome: true,
         tipo: true,
+        ncm: true,
         precoAtual: true,
         custoBase: true,
         arquivadoEm: true,
@@ -232,6 +236,7 @@ export function criarConsultasDeVendas(cliente: ClienteDoNegocio, negocioId: str
       if (!i) throw new ItemNaoVendavel("Item", "inexistente");
       if (i.arquivadoEm) throw new ItemNaoVendavel(i.nome, "arquivado");
       if (i.precoAtual === null) throw new ItemNaoVendavel(i.nome, "sem-preco");
+      if (negocio?.emiteNotaDeProduto && i.tipo === "PRODUTO_FISICO" && i.ncm === null) throw new ItemNaoVendavel(i.nome, "sem-ncm");
       if (l.ajustePreco && !opcoes.podeAjustarPreco) throw new AjusteDePrecoSemPermissao();
       const precoOficialCentavos = paraCentavos(num(i.precoAtual)!);
       const precoCentavos = l.ajustePreco?.precoCentavos ?? precoOficialCentavos;
@@ -405,10 +410,25 @@ export function criarConsultasDeVendas(cliente: ClienteDoNegocio, negocioId: str
   }
 
   return {
-    /** Itens que podem entrar na venda: não arquivados e com preço oficial (RN23). */
+    /** SPEC-021 (5.6): produtos físicos com preço que estão fora da venda por falta de NCM (opção ligada). */
+    async foraDaVendaPorFaltaDeNcm(): Promise<number> {
+      const negocio = await cliente.negocio.findFirst({ select: { emiteNotaDeProduto: true } });
+      if (!negocio?.emiteNotaDeProduto) return 0;
+      return cliente.item.count({ where: { arquivadoEm: null, precoAtual: { not: null }, tipo: "PRODUTO_FISICO", ncm: null } });
+    },
+
+    /**
+     * Itens que podem entrar na venda: não arquivados e com preço oficial (RN23). Com a nota fiscal de
+     * produtos ligada, também sem os produtos físicos sem NCM (SPEC-021, RN35).
+     */
     async itensVendaveis(): Promise<ItemVendavel[]> {
+      const negocio = await cliente.negocio.findFirst({ select: { emiteNotaDeProduto: true } });
       const itens = await cliente.item.findMany({
-        where: { arquivadoEm: null, precoAtual: { not: null } },
+        where: {
+          arquivadoEm: null,
+          precoAtual: { not: null },
+          ...(negocio?.emiteNotaDeProduto ? { OR: [{ tipo: "SERVICO" as const }, { ncm: { not: null } }] } : {}),
+        },
         select: {
           id: true,
           nome: true,

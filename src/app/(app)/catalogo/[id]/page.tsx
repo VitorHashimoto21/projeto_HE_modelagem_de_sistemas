@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Archive, ArchiveRestore, Calculator, Pencil } from "lucide-react";
+import { Archive, ArchiveRestore, Calculator, Pencil, TriangleAlert } from "lucide-react";
 import { FormularioPreco } from "@/components/catalogo/formularios";
 import { numero, reais, ROTULO_CATEGORIA, ROTULO_ORIGEM, ROTULO_TIPO, rotuloUnidade } from "@/components/catalogo/rotulos";
 import { SeloDeSituacao } from "@/components/estoque/situacao";
@@ -14,8 +14,9 @@ import { exigirPermissao } from "@/lib/auth/servidor";
 import { acaoArquivarItem } from "@/lib/catalogo/acoes";
 import { MENSAGENS_DO_ARQUIVAMENTO } from "@/lib/catalogo/servicos";
 import { catalogo, estoque } from "@/lib/db";
-import { ItemNaoEncontrado } from "@/lib/db/catalogo";
+import { ItemNaoEncontrado, type NcmDoItem } from "@/lib/db/catalogo";
 import { hoje } from "@/lib/dominio/datas";
+import { formatarNcm } from "@/lib/dominio/ncm";
 import { pode } from "@/lib/dominio/permissoes";
 import { comRetorno, retornoSeguro, rotuloDoRetorno } from "@/lib/estrutura/retorno";
 
@@ -29,6 +30,22 @@ function Linha({ rotulo, valor }: { rotulo: string; valor: React.ReactNode }) {
       <dt className="text-sm text-muted-foreground">{rotulo}</dt>
       <dd className="text-sm font-medium break-words text-foreground sm:text-right">{valor}</dd>
     </div>
+  );
+}
+
+/** NCM no detalhe (SPEC-021, 5.4): código, descrição da tabela e o aviso quando saiu da tabela vigente. */
+function ValorDoNcm({ ncm }: { ncm: NcmDoItem }) {
+  return (
+    <span className="flex flex-col items-start gap-0.5 sm:items-end sm:text-right">
+      <span className="tabular-nums">{formatarNcm(ncm.codigo)}</span>
+      {ncm.descricao && <span className="text-xs font-normal text-muted-foreground">{ncm.descricao}</span>}
+      {!ncm.vigente && (
+        <span className="inline-flex items-center gap-1 text-xs font-semibold text-status-warn">
+          <TriangleAlert aria-hidden="true" className="size-3.5" />
+          NCM fora da tabela vigente — revise o código.
+        </span>
+      )}
+    </span>
   );
 }
 
@@ -137,6 +154,8 @@ export default async function DetalheDoItem({ params, searchParams }: PageProps<
               <Linha rotulo="Categoria" valor={ROTULO_CATEGORIA[item.categoria]} />
               <Linha rotulo="Subcategoria" valor={item.subcategoria?.nome ?? "—"} />
               <Linha rotulo="Unidade de medida" valor={rotuloUnidade(item.unidadeMedida)} />
+              {/* SPEC-021 (5.4): o NCM do produto, com a descrição da tabela e o aviso quando saiu dela. */}
+              {item.tipo === "PRODUTO_FISICO" && <Linha rotulo="NCM" valor={item.ncm ? <ValorDoNcm ncm={item.ncm} /> : "—"} />}
               <Linha rotulo={item.tipo === "SERVICO" ? "Custo próprio" : "Custo"} valor={reais(item.custoBase)} />
               {item.tipo === "SERVICO" && item.materiaisDoServico.length > 0 && <Linha rotulo="Custo total (com materiais)" valor={reais(item.custoTotal)} />}
               <Linha rotulo="Comissão" valor={`${numero(item.comissaoPercentual ?? 0)}%`} />

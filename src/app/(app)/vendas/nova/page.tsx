@@ -5,6 +5,7 @@ import { AvisoDaPagina } from "@/components/ui/aviso";
 import { CabecalhoDePagina } from "@/components/ui/cabecalho-de-pagina";
 import { classeDoBotao } from "@/components/ui/estilos";
 import { FrenteDeCaixa } from "@/components/vendas/frente-de-caixa";
+import { AvisoForaPorNcm } from "@/components/vendas/fora-por-ncm";
 import { exigirPermissao } from "@/lib/auth/servidor";
 import { vendas } from "@/lib/db";
 import { hoje } from "@/lib/dominio/datas";
@@ -18,7 +19,7 @@ export const metadata: Metadata = { title: "Nova venda" };
 export default async function NovaVenda() {
   const membro = await exigirPermissao("vendas", "criar");
   const c = vendas(membro);
-  const [itens, clientes] = await Promise.all([c.itensVendaveis(), c.clientes()]);
+  const [itens, clientes, foraPorNcm] = await Promise.all([c.itensVendaveis(), c.clientes(), c.foraDaVendaPorFaltaDeNcm()]);
   const podeAjustarPreco = pode(membro.permissoes, "vendas", "editar");
 
   return (
@@ -31,7 +32,8 @@ export default async function NovaVenda() {
           </Link>
         }
       />
-      {itens.length === 0 && (
+      <AvisoForaPorNcm quantidade={foraPorNcm} podeCompletar={pode(membro.permissoes, "catalogo", "editar")} />
+      {itens.length === 0 && foraPorNcm === 0 && (
         <AvisoDaPagina tom="atencao">
           Nenhum item com preço oficial. Defina o preço dos itens no{" "}
           <Link href="/catalogo" className="font-semibold underline underline-offset-2">

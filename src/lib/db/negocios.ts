@@ -107,6 +107,16 @@ export function criarConsultasDeNegocios(cliente: PrismaClient) {
     async definirDiasCobertura(negocioId: string, dias: number): Promise<void> {
       await cliente.negocio.update({ where: { id: negocioId }, data: { diasCoberturaEstoque: dias } });
     },
+
+    /** SPEC-021 (OPEN-005): "Emito nota fiscal de produtos" — só o Dono altera (a fábrica da ação garante). */
+    async notaFiscalDeProduto(negocioId: string): Promise<boolean> {
+      const n = await cliente.negocio.findUnique({ where: { id: negocioId }, select: { emiteNotaDeProduto: true } });
+      return n?.emiteNotaDeProduto ?? false;
+    },
+
+    async definirNotaFiscalDeProduto(negocioId: string, emite: boolean): Promise<void> {
+      await cliente.negocio.update({ where: { id: negocioId }, data: { emiteNotaDeProduto: emite } });
+    },
   };
 }
 

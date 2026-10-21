@@ -17,6 +17,8 @@
     "db:validate": "prisma validate",
     "fiscal:validar": "tsx scripts/carregar-parametros-fiscais.ts --validar",
     "fiscal:carregar": "tsx scripts/carregar-parametros-fiscais.ts",
+    "ncm:validar": "tsx scripts/carregar-tabela-ncm.ts --validar",
+    "ncm:carregar": "tsx scripts/carregar-tabela-ncm.ts",
     "admin:conceder": "tsx scripts/admin.ts conceder",
     "admin:retirar": "tsx scripts/admin.ts retirar",
     "postinstall": "prisma generate"
