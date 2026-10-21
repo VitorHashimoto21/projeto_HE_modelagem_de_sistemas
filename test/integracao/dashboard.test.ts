@@ -14,7 +14,7 @@ import { criarConsultasDePrecificacao } from "@/lib/db/precificacao";
 import { criarConsultasDeVendas } from "@/lib/db/vendas";
 import { hoje as hojeLocal, intervaloDaCompetencia, intervaloDoDia } from "@/lib/dominio/datas";
 import { somarDias } from "@/lib/dominio/estoque";
-import { competenciaDoDia, somarMeses, vencimentoNaCompetencia } from "@/lib/dominio/financeiro";
+import { competenciaDoDia, DIA_VENCIMENTO_DAS, primeiraCompetencia, somarMeses, vencimentoNaCompetencia } from "@/lib/dominio/financeiro";
 import * as financeiro from "@/lib/financeiro/servicos";
 import { CAMINHO_DO_ARQUIVO, validarParametros } from "@/lib/fiscal/arquivo";
 import * as vendas from "@/lib/vendas/servicos";
@@ -216,7 +216,10 @@ describe("projeção de caixa", () => {
     const p = await dash.carregarProjecao(deps());
     expect(p.meses[0].saidasEstimadasCentavos).toBe(0);
     expect(p.meses[1]).toMatchObject({ entradasCentavos: 20000, saidasEstimadasCentavos: dasDoProximo });
-    expect(p.meses[0].saidasCentavos).toBe(dasDoMes);
+    // A conta do DAS do mês só existe se o dia 20 ainda não passou quando o DAS é ativado (SPEC-009,
+    // primeira competência); do dia 21 em diante, a primeira conta é a do mês seguinte.
+    const dasNoMes = primeiraCompetencia(HOJE, DIA_VENCIMENTO_DAS) === MES ? dasDoMes : 0;
+    expect(p.meses[0].saidasCentavos).toBe(dasNoMes);
   });
 });
 
