@@ -504,7 +504,7 @@ A conferência do seed fiscal foi concluída em 03/10/2026 (DAS do MEI atualizad
 
   Baseline ajustada (RF22, RF58, RF76 e RN27 alterados; RF81 e RN36 novos). A implementar.
 - SPEC-019: a gerar depois da SPEC-022, antes de abrir a produção.
-- `main`: atualizada até a SPEC-018 (PR #86, 17/10/2026), sem ambiente de produção ainda (a migração na `main` é pulada enquanto não houver o banco de produção).
+- `main`: atualizada até a SPEC-020 (PR #105, 22/10/2026: homologação da SPEC-018, N8 da SPEC-016 e SPEC-020, até o PR #101 da `DEVELOP`), sem ambiente de produção ainda (a migração na `main` é pulada enquanto não houver o banco de produção). A SPEC-021 em diante vai na próxima release.
 - **E-mails e domínio:** domínio próprio `.com.br` (Registro.br) verificado no Resend, que também passa a ser o SMTP do Supabase Auth ([ADR-009](definicoes_arquitetura/adrs-he.md), 18/10/2026); aguarda a compra.
 
 ### Pendências abertas
