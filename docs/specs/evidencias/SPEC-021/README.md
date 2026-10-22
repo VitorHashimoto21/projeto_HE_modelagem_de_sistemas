@@ -73,6 +73,26 @@ JavaScript comprimido baixado ao abrir cada tela, com o cache desligado. "Antes"
   - T11: opção ligada (cadastro, edição, venda, troca, material de serviço, desligar);
   - T12: a opção do negócio.
 
+## Homologação (T14) — 22/10/2026
+
+Feita pela equipe em <https://he-homol.vercel.app> (DEVELOP, depois do merge do PR #102), com o Dono do negócio **HE Testing**. Antes, o workflow Migrações aplicou a migração `20261021180000_ncm` e carregou a tabela: "10516 inseridos, 0 alterados, 0 encerrados". Capturas em [`homologacao/`](homologacao/); nenhuma mostra e-mail.
+
+| Passo | Resultado | Captura |
+|---|---|---|
+| Rodapé do Catálogo com "Produtos sem NCM (13)", ao lado de "Ver itens arquivados" (CA-09) | ✅ | `homol_01_rodape_produtos_sem_ncm.png` |
+| Lista só com os produtos sem NCM, com "Mostrando produtos sem NCM." e "Ver todos os itens" (CA-09) | ✅ | `homol_02_lista_sem_ncm.png` |
+| "Buscar NCM" por palavras: os códigos vigentes com o caminho, entre eles 7117.11.00, 7117.19.00 e 7117.90.00, e o rodapé "Tabela NCM oficial (Siscomex), atualizada em 21/10/2026…" (CA-01) | ✅ | `homol_03_busca_por_palavras.png` |
+| "71.17": "3 códigos encontrados.", em ordem de código (CA-02) | ✅ | `homol_04_busca_por_codigo.png` |
+| "Colar Moissanite Azul" salvo com 7117.19.00: detalhe com a linha NCM e "Bijuterias › De metais comuns, mesmo prateados, dourados ou platinados › Outras" (CA-01, CA-07) | ✅ | `homol_05_detalhe_com_ncm.png` |
+| Novo item em Acessórios › Colares: "Usar 7117.19.00, o NCM de 1 item de Colares", com o aviso de responsabilidade, e o campo vazio até o toque (CA-05) | ✅ | `homol_06_sugestao_da_subcategoria.png` |
+| "99999999" na busca: "Nenhum código vigente encontrado." (CA-03) | ✅ | `homol_07_codigo_inexistente.png` |
+| "7117" no Catálogo e no Estoque: os dois colares com esse código (CA-11) | ✅ | `homol_08_busca_no_catalogo.png`, `homol_09_busca_no_estoque.png` |
+| Dados do negócio: "Emito nota fiscal de produtos" ligada, com "Opção ligada: o NCM passa a ser obrigatório nos produtos físicos.", a caixa marcada e "12 produtos físicos estão sem NCM. Ver produtos sem NCM" (CA-18) | ✅ | `homol_10_nota_fiscal_ligada.png` |
+
+- **Sem captura na homologação:** o NCM obrigatório no cadastro e a nota da Nova venda (CA-19, CA-20), e o código fora da tabela vigente (CA-08, CA-10), que só aparece depois de uma atualização da tabela. Os quatro foram verificados no build local (T13, acima) e nos testes de integração (T05, T07 e T11).
+- **Menu lateral:** a equipe notou que "Dados do negócio", "Plano" e "Acesso do suporte" pareciam sumir do menu. Reproduzido no build local com a mesma janela (1325 × 824): os itens continuam lá, abaixo da parte visível da lista do meio, que rola desde a homologação da N8 da SPEC-016 (19/10/2026). A lista precisa de 623 px e, nessa janela, tem 494. Não depende do NCM nem da página. A equipe decidiu **manter como está**.
+- **Divergências:** as cinco registradas na SPEC-021 foram aceitas pela equipe (baseline ajustada), e a busca continua em ordem de código.
+
 ## Pendente
 
-- **Homologação (T14):** depois do merge, o workflow Migrações aplica a migração e carrega a tabela NCM; a equipe percorre o fluxo em <https://he-homol.vercel.app>.
+Nada. A SPEC-021 foi concluída em 22/10/2026.
