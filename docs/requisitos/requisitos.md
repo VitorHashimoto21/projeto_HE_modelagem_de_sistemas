@@ -66,7 +66,8 @@
 | RF09 | O cadastro de Serviço deve exigir: nome, custo, categoria, e deve perguntar se há materiais/insumos associados. |
 | RF64 | O preço de venda é **opcional** no cadastro do item. O preço oficial é definido por confirmação na Calculadora (RF40) ou por informação manual do usuário; ambos geram registro no histórico de preços, indicando a origem (Calculadora ou Manual). |
 | RF10 | Todo produto/serviço deve ter uma unidade de medida obrigatória (ex: unidade, kg, litro, hora, caixa). |
-| RF11 | Todo produto/serviço deve ter uma categoria obrigatória, escolhida de uma lista fixa do sistema: Serviços, Produtos, Alimentação, Vestuário, Beleza, Saúde, Casa, Tecnologia, Outros. |
+| RF11 | Todo produto/serviço deve ter uma categoria obrigatória, escolhida de uma lista fixa do sistema: Serviços, Produtos, Alimentação, Vestuário, Acessórios, Beleza, Saúde, Casa, Tecnologia, Outros (Acessórios incluída pela SPEC-020). |
+| RF79 | O negócio deve poder criar **subcategorias livres** dentro de cada categoria fixa (ex.: Brincos, Colares e Anéis em Acessórios), com nome único na categoria, e associar no máximo uma, **opcional**, a cada produto/serviço da mesma categoria. As subcategorias são criadas no cadastro do item ou numa tela própria do Catálogo, onde também podem ser renomeadas e excluídas (os itens ficam sem subcategoria), e servem de filtro e busca no Catálogo e no Estoque (SPEC-020). |
 | RF12 | Um Serviço deve poder ter múltiplos materiais vinculados, sendo cada material um Produto Físico já cadastrado no Estoque. |
 | RF13 | Ao vincular um material a um Serviço, o sistema deve sugerir automaticamente a quantidade padrão de **1 unidade** por execução, permitindo edição posterior pelo usuário. |
 | RF14 | O cadastro do Produto Físico não deve incluir a quantidade em estoque no mesmo formulário de criação; a quantidade é definida em uma operação separada de entrada de estoque. |
@@ -77,6 +78,7 @@
 - **RN04** — O tipo do item (Físico/Serviço) determina se ele participa do controle de Estoque e se pode receber materiais vinculados.
 - **RN05** — Um Serviço com materiais vinculados consome (dá baixa) automaticamente do estoque desses materiais quando o serviço é vendido, nas quantidades do catálogo; na venda, a quantidade de cada material pode ser ajustada para o que foi de fato usado (SPEC-017), sem alterar o catálogo.
 - **RN23** — Um item sem preço oficial confirmado não pode ser adicionado a uma venda.
+- **RN33** — A subcategoria só organiza o catálogo: não altera a margem padrão sugerida (que continua por categoria, RF36), o preço, o custo, o estoque nem as regras fiscais do item (SPEC-020).
 
 ---
 
@@ -284,6 +286,7 @@
 | RN30 | Administrador sem liberação ativa do Dono não acessa dados operacionais; com ela, só os módulos liberados, somente leitura, em nome próprio. |
 | RN31 | Só o Dono libera e revoga o suporte; prazo de 1 h, 24 h, 3 dias ou 7 dias; uma liberação ativa por negócio. |
 | RN32 | Registro de auditoria do suporte imutável, guardado por 5 anos. |
+| RN33 | Subcategoria só organiza: não altera margem, preço, custo, estoque nem regras fiscais. |
 
 ---
 
@@ -294,4 +297,4 @@
 - [x] ~~Tratamento do Fator R e de negócios multi-anexo~~ — Fator R automático (RF69, RN28); anexo único por negócio no MVP, com aviso (RN24).
 - [ ] Detalhar wireframes das telas de: cadastro de produto/serviço, registro de venda (com pagamento misto), calculadora de precificação e dashboard.
 - [x] ~~Definir a matriz de permissões granulares (RF06)~~ — módulo × ação; a tabela completa é detalhada na SPEC-005.
-- [x] ~~Validar o mapeamento categoria → presunção (RF36)~~ — Serviços, Beleza, Saúde e Tecnologia: 32%; Produtos, Alimentação, Vestuário, Casa e Outros: 8%.
+- [x] ~~Validar o mapeamento categoria → presunção (RF36)~~ — Serviços, Beleza, Saúde e Tecnologia: 32%; Produtos, Alimentação, Vestuário, Casa e Outros: 8%. Acessórios (SPEC-020, 19/10/2026): 8%, comércio.

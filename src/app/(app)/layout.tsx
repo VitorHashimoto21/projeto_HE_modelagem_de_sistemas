@@ -35,7 +35,7 @@ export default async function LayoutDaAplicacao({ children, gaveta }: LayoutProp
     comFaixa ? cartaoSeguro("faixa", () => carregarFaixa(dependenciasDoDashboard(membro))) : Promise.resolve(null),
     membro && !modoSuporte ? suporte().liberacaoAtiva(membro.negocioId, agora) : Promise.resolve(null),
   ]);
-  const menu = modoSuporte && contexto.permissoes ? menuDoSuporte(contexto.permissoes, plano ?? "GRATUITO") : menuDoMembro(contexto.papel, contexto.permissoes, plano ?? "GRATUITO");
+  const menu = modoSuporte && contexto.permissoes ? menuDoSuporte(contexto.permissoes) : menuDoMembro(contexto.papel, contexto.permissoes, plano ?? "GRATUITO");
 
   return (
     <div className="flex min-h-dvh flex-1 flex-col bg-background md:flex-row">

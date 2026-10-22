@@ -1,7 +1,25 @@
+import type { CategoriaItem } from "@/generated/prisma/enums";
 import type { ErrosDeCampo } from "@/lib/auth/validacao";
-import { ItemNaoEncontrado, MaterialInvalido, NomeDuplicado, PrecoIgualAoAtual, type ConsultasDoCatalogo } from "@/lib/db/catalogo";
+import {
+  ItemNaoEncontrado,
+  MaterialInvalido,
+  NomeDuplicado,
+  PrecoIgualAoAtual,
+  SubcategoriaInvalida,
+  SubcategoriaNaoEncontrada,
+  SubcategoriaRepetida,
+  type ConsultasDoCatalogo,
+} from "@/lib/db/catalogo";
 import { formatarReais, precoAbaixoDoCusto } from "@/lib/dominio/catalogo";
-import { MENSAGENS_CATALOGO, validarItem, validarPreco } from "./validacao";
+import {
+  MENSAGENS_CATALOGO,
+  ROTULO_CATEGORIA,
+  subcategoriaDeOutraCategoria,
+  validarItem,
+  validarNomeDaSubcategoria,
+  validarPreco,
+  validarSubcategoria,
+} from "./validacao";
 
 /**
  * Fluxos do catálogo (SPEC-006, seção 5), independentes do Next.js: as Server Actions
@@ -15,6 +33,9 @@ export const MENSAGENS_FLUXO_CATALOGO = {
   precoIgual: "Esse já é o preço atual.",
   falhaInterna: "Não foi possível concluir agora. Tente novamente.",
   precoAbaixoDoCusto: (custo: number) => `Este preço está abaixo do custo do item (${formatarReais(custo)}).`,
+  subcategoriaRepetida: (nome: string, categoria: CategoriaItem) => `Já existe “${nome}” em ${ROTULO_CATEGORIA[categoria]}.`,
+  subcategoriaNaoEncontrada: "Subcategoria não encontrada. Ela pode ter sido excluída.",
+  semPermissaoSubcategoria: "Você não tem permissão para criar subcategorias.",
 } as const;
 
 export type EstadoDoItem =
@@ -37,6 +58,9 @@ function traduzir(e: unknown): { mensagem?: string; erros?: ErrosDeCampo } {
   if (e instanceof MaterialInvalido) return { erros: { materiais: MENSAGENS_CATALOGO.materiaisInvalidos } };
   if (e instanceof ItemNaoEncontrado) return { mensagem: MENSAGENS_FLUXO_CATALOGO.naoEncontrado };
   if (e instanceof PrecoIgualAoAtual) return { erros: { preco: MENSAGENS_FLUXO_CATALOGO.precoIgual } };
+  if (e instanceof SubcategoriaInvalida) return { erros: { subcategoriaId: subcategoriaDeOutraCategoria(e.categoria) } };
+  if (e instanceof SubcategoriaRepetida) return { erros: { nome: MENSAGENS_FLUXO_CATALOGO.subcategoriaRepetida(e.nome, e.categoria) } };
+  if (e instanceof SubcategoriaNaoEncontrada) return { mensagem: MENSAGENS_FLUXO_CATALOGO.subcategoriaNaoEncontrada };
   console.error("[catalogo] falha:", e instanceof Error ? e.name : "erro");
   return { mensagem: MENSAGENS_FLUXO_CATALOGO.falhaInterna };
 }
@@ -108,3 +132,52 @@ export const MENSAGENS_DO_ARQUIVAMENTO: Record<string, { tipo: "ok" | "erro"; te
   "nao-encontrado": { tipo: "erro", texto: MENSAGENS_FLUXO_CATALOGO.naoEncontrado },
   falha: { tipo: "erro", texto: MENSAGENS_FLUXO_CATALOGO.falhaInterna },
 };
+
+// Subcategorias do negócio (SPEC-020, 5.3 e 5.5).
+
+export type SubcategoriaSalva = { id: string; categoria: CategoriaItem; nome: string };
+
+export type EstadoDaSubcategoria =
+  | { status: "ocioso" }
+  | { status: "erro"; mensagem?: string; erros?: ErrosDeCampo }
+  | { status: "salvo"; subcategoria: SubcategoriaSalva };
+
+export type EstadoDaExclusao =
+  | { status: "ocioso" }
+  | { status: "erro"; mensagem: string }
+  | { status: "excluida"; itensAfetados: number };
+
+export const SUBCATEGORIA_INICIAL: EstadoDaSubcategoria = { status: "ocioso" };
+export const EXCLUSAO_INICIAL: EstadoDaExclusao = { status: "ocioso" };
+
+/** Nova subcategoria (no cadastro do item ou na tela Subcategorias). */
+export async function criarSubcategoria(campos: Record<string, string>, deps: DependenciasDoCatalogo): Promise<EstadoDaSubcategoria> {
+  const v = validarSubcategoria(campos);
+  if (!v.ok) return { status: "erro", erros: v.erros };
+  try {
+    return { status: "salvo", subcategoria: await deps.catalogo.criarSubcategoria(v.dados) };
+  } catch (e) {
+    return { status: "erro", ...traduzir(e) };
+  }
+}
+
+/** Renomear: a categoria não muda; o nome novo aparece em todos os itens. */
+export async function renomearSubcategoria(id: string, campos: Record<string, string>, deps: DependenciasDoCatalogo): Promise<EstadoDaSubcategoria> {
+  const v = validarNomeDaSubcategoria(campos.nome);
+  if (!v.ok) return { status: "erro", erros: v.erros };
+  try {
+    return { status: "salvo", subcategoria: await deps.catalogo.renomearSubcategoria(id, v.dados) };
+  } catch (e) {
+    return { status: "erro", ...traduzir(e) };
+  }
+}
+
+/** Excluir (OPEN-004): os itens que a usavam ficam sem subcategoria. */
+export async function excluirSubcategoria(id: string, deps: DependenciasDoCatalogo): Promise<EstadoDaExclusao> {
+  try {
+    return { status: "excluida", ...(await deps.catalogo.excluirSubcategoria(id)) };
+  } catch (e) {
+    const t = traduzir(e);
+    return { status: "erro", mensagem: t.mensagem ?? MENSAGENS_FLUXO_CATALOGO.falhaInterna };
+  }
+}

@@ -9,10 +9,14 @@ import { cn } from "@/lib/utils";
 // o Administrador vê sempre onde está e até quando; a equipe do negócio vê que o suporte
 // pode ver os módulos liberados, e o Dono chega ao registro com um toque.
 
-/** Faixa fixa do Administrador em modo suporte (5.5): cor própria, somente leitura, até quando, e a saída. */
+/**
+ * Faixa do Administrador em modo suporte (5.5): cor própria, somente leitura, até quando, e a saída.
+ * Fixa a partir de 768 px; no celular rola com a página e passa por baixo do cabeçalho fixo
+ * (por isso o z-index só a partir de md — decisão de 18/10/2026, seção 9).
+ */
 export function FaixaDoModoSuporte({ negocio, expiraEm }: { negocio: string; expiraEm: Date }) {
   return (
-    <div role="region" aria-label="Modo suporte" className="z-40 bg-ambar md:sticky md:top-0 text-ambar-foreground shadow-[0_6px_16px_color-mix(in_srgb,var(--estrutura)_18%,transparent)]">
+    <div role="region" aria-label="Modo suporte" className="bg-ambar md:sticky md:top-0 md:z-40 text-ambar-foreground shadow-[0_6px_16px_color-mix(in_srgb,var(--estrutura)_18%,transparent)]">
       <div className="mx-auto flex w-full max-w-[1280px] flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 py-2.5 sm:px-6 lg:px-10">
         <p className="flex min-w-0 items-center gap-2 text-sm font-bold">
           <Eye className="size-4 shrink-0" strokeWidth={2.4} aria-hidden="true" />

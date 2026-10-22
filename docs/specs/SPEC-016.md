@@ -1,6 +1,6 @@
 # SPEC-016 — Design system e redesign (Direção "Balcão")
 
-> **Status:** ✅ **Implementada (PR #72) e verificada na homologação em 15/10/2026 (T10)**; os quatro ajustes encontrados na homologação foram corrigidos nos PRs #74 e #75 e aprovados nos testes da equipe em 16/10/2026, e as notas N1–N5 da seção 15 foram decididas pela equipe em 16/10/2026 (todas pela proposta; N3 e N5 implementadas) — aprovada em 14/10/2026 (OPEN-001 a OPEN-005 e OPEN-007 pela opção recomendada; OPEN-006 por **um PR único**); as 6 etapas num único PR, testes T01–T06 no CI, roteiros, acessibilidade e desempenho em build de produção (T07–T09) — [evidências](evidencias/SPEC-016/README.md); notas da implementação na seção 15. Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar).
+> **Status:** ✅ **Implementada (PR #72) e verificada na homologação em 15/10/2026 (T10)**; **N8 — menu lateral recolhível e rótulo na dica (seção 15): divergência encontrada e decidida em 19/10/2026, implementada no mesmo dia (PRs #93 e #94) e verificada na homologação (N8-T6, 19/10/2026)**; os quatro ajustes encontrados na homologação foram corrigidos nos PRs #74 e #75 e aprovados nos testes da equipe em 16/10/2026, e as notas N1–N5 da seção 15 foram decididas pela equipe em 16/10/2026 (todas pela proposta; N3 e N5 implementadas) — aprovada em 14/10/2026 (OPEN-001 a OPEN-005 e OPEN-007 pela opção recomendada; OPEN-006 por **um PR único**); as 6 etapas num único PR, testes T01–T06 no CI, roteiros, acessibilidade e desempenho em build de produção (T07–T09) — [evidências](evidencias/SPEC-016/README.md); notas da implementação na seção 15. Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar).
 > **Mapa:** [`MAPA_DE_SPECS.md`](../MAPA_DE_SPECS.md) · **Anteriores:** todas as telas das SPECs 002 a 014; [SPEC-012](SPEC-012.md) (gráficos em SVG próprio, OPEN-002) · **Base visual:** [`IDENTIDADE_VISUAL.md`](../design/IDENTIDADE_VISUAL.md) e o protótipo aprovado da Direção B (quadro "HE — Direções visuais", linha B, 14/10/2026).
 
 ---
@@ -89,8 +89,8 @@
 
 | Largura | Navegação |
 |---|---|
-| ≥ 1024 px | Menu lateral verde-escuro com rótulos (pode recolher para ícones); conteúdo em largura fluida com colunas quando couber |
-| 640–1023 px | Trilho lateral só com ícones (rótulo na dica) |
+| ≥ 1024 px | Menu lateral verde-escuro com rótulos (pode recolher para ícones — detalhado na N8, seção 15); conteúdo em largura fluida com colunas quando couber |
+| 640–1023 px | Trilho lateral só com ícones (rótulo na dica — N8) |
 | < 640 px | Barra inferior flutuante: Painel, Vendas, **Vender** (destaque), Caixa (ou Estoque, para quem não vê o Financeiro), Mais |
 
 - O menu continua vindo de `menuDoMembro` (SPEC-005): esconder é conveniência, a barreira segue no servidor.
@@ -303,7 +303,7 @@ A SPEC-016 estará concluída quando:
 - [x] os RNFs aplicáveis (RNF01, RNF02, RNF10 e desempenho) tiverem sido verificados como descrito na seção 10;
 - [x] as questões OPEN-001 a OPEN-007 tiverem sido decididas e registradas;
 - [x] `IDENTIDADE_VISUAL.md` estiver na versão 2;
-- [x] não existir divergência conhecida entre a implementação e esta Spec — as notas N1–N5 da seção 15 foram decididas em 16/10/2026 e incorporadas (N3 e N5 implementadas);
+- [x] não existir divergência conhecida entre a implementação e esta Spec — as notas N1–N5 da seção 15 foram decididas em 16/10/2026 e incorporadas (N3 e N5 implementadas); a N8 (menu recolhível e rótulo na dica), decidida em 19/10/2026, foi implementada no mesmo dia e verificada na homologação (N8-T6) ([evidências](evidencias/SPEC-016/README.md#n8--menu-lateral-recolhível-e-dica-19102026));
 - [x] toda divergência em relação à baseline tiver sido explicitamente analisada e registrada nos documentos (seção 15).
 
 **Regra fundamental:** a implementação obedece a esta Spec aprovada. Se surgir conflito entre código, Spec e documentos de modelagem, o comportamento não é alterado em silêncio: a divergência é registrada com a proposta de (1) corrigir a implementação ou (2) alterar a baseline, e a decisão é da equipe.
@@ -323,6 +323,7 @@ Registradas conforme a regra fundamental: cada ponto traz a proposta e a decisã
 | N3 | **"Cancelar conta" = cancelar conta a pagar ou a receber.** Criado o componente **Diálogo de confirmação** (Radix AlertDialog, tokens, tema escuro, foco inicial em "Voltar"), usado em cancelar conta, estornar lançamento e cancelar venda no lugar do `window.confirm`. Texto do OPEN-003 explicitado para não haver nova ambiguidade. |
 | N4 | **Aceita a regressão como T07** (seção 12 atualizada). |
 | N5 | **Taxa da maquininha também nos Relatórios**, sobre o período escolhido e só para quem vê o Financeiro (como no Painel); o cálculo é a mesma função de domínio (`custoDaMaquininha`) nos dois lugares. |
+| N8 | **(1) Corrigir a implementação** (decisão de 19/10/2026, em entrevista, todas as questões pela recomendação), aqui mesmo na SPEC-016, em vez de uma Spec nova — a "SPEC-021 — Barra lateral recolhível" planejada no Mapa foi incorporada a esta nota. Detalhes na subseção N8 abaixo. |
 
 Notas originais:
 
@@ -335,4 +336,77 @@ Notas originais:
 | N5 | **"Como os clientes pagam" nos Relatórios** sem a taxa da maquininha (a seção 5.5 pede a taxa média dos parâmetros, que o Painel mostra); os Relatórios não carregam os parâmetros da Calculadora. | Diferença pequena | (1) incluir a taxa num ajuste futuro, ou (2) manter só no Painel |
 | N6 | **Desempenho:** a primeira medição passou do limite (+39,3 KB); a gaveta do "Mais" e a biblioteca de avisos passaram a ser baixadas só quando usadas. Resultado: +17 KB no pior caso. | Resolvido | — |
 | N7 | **Acessibilidade:** dois achados do axe corrigidos (contraste de um rótulo no estoque; `<p>` dentro de `<dl>` na Calculadora, vindo da SPEC-010). | Resolvido | — |
+| N8 | **Menu lateral recolhível e rótulo na dica** (escopo, item 3, e seção 5.2) — **implementada em 19/10/2026** (subseção N8): não implementados — no computador o menu fica sempre com rótulos, e no trilho do tablet o nome aparece só na dica nativa do navegador (`title`), que não aparece no foco pelo teclado. A falta não foi registrada na época; foi encontrada em 19/10/2026, a partir da revisão de uma profissional da área financeira e contábil (pedido: recolher a barra no computador). | Divergência (19/10/2026) | (1) corrigir a implementação |
+
+### N8 — Menu lateral recolhível e rótulo na dica (19/10/2026)
+
+**Decisões da equipe (19/10/2026, em entrevista, todas pela recomendação):**
+
+| # | Questão | Decisão |
+|---|---|---|
+| N8.1 | Onde guardar a escolha | **No navegador, como o tema** (OPEN-004): chave `he-menu` no armazenamento local, aplicada pelo layout raiz antes da pintura — a página já abre no estado salvo, sem piscar. Nada vai ao servidor nem ao banco; cada computador lembra a sua escolha. |
+| N8.2 | Onde fica o botão | **No topo do menu, junto do logo**: expandido, à direita do logo ("Recolher menu"); recolhido, logo abaixo do símbolo ("Expandir menu"). |
+| N8.3 | Tablet (768–1023 px) | **Sem mudança**: continua o trilho só com ícones; o botão só aparece a partir de 1024 px. |
+| N8.4 | Trocar de negócio com o menu recolhido | **Pelo "Meus negócios"**, como no tablet; o seletor de negócio aparece só com o menu expandido. |
+| N8.5 | Nome dos itens | **Dica própria** (Radix Tooltip, com os tokens), no **foco pelo teclado e ao passar o mouse**, com o selo quando houver (ex.: "Relatórios — Plano pago"). Vale para o menu recolhido e para o trilho do tablet, cumprindo o "rótulo na dica" da 5.2. |
+| N8.6 | Atalho de teclado | **Sem atalho** (evita conflito com atalhos do navegador e de leitores de tela); o botão é alcançável pelo Tab. |
+| N8.7 | Estado inicial | **Expandido**, como hoje; a escolha passa a valer depois do primeiro clique. |
+| N8.8 | Requisito | **Sem RF novo**: é apresentação, coberta pelo RNF01 e pela seção 5.2 desta Spec. |
+
+**Comportamento esperado:**
+
+1. **A partir de 1024 px**, o botão "Recolher menu" fica no topo do menu. Ao recolher, o menu passa à largura do trilho (80 px), só com ícones, e o conteúdo ocupa o espaço liberado. O foco continua no botão, que passa a "Expandir menu" (`aria-expanded`, `aria-controls` apontando para o menu).
+2. **Recolhido**, o menu tem a mesma estrutura do trilho do tablet: símbolo, botão, módulos, configurações, "Meus negócios", conta (iniciais), tema e sair. O item da página atual continua destacado em âmbar, e todo item com ícone tem a dica com o nome.
+3. **Modo suporte (SPEC-018):** recolher funciona igual; o nome do negócio em âmbar sai do menu, e a faixa do modo suporte continua mostrando o negócio.
+4. **Preferência:** lida antes da pintura; ausente ou com valor inválido → expandido. A troca vale para as próximas páginas (abas já abertas não precisam ser sincronizadas).
+5. **Movimento:** a largura muda com os tokens da 5.6 (`--duracao-layout`); sem animação com "reduzir movimento".
+6. **Abaixo de 1024 px** nada muda (trilho no tablet, barra inferior no celular), além da dica própria no trilho.
+
+**Invariantes:**
+
+| ID | Invariante | Como verificar |
+|---|---|---|
+| N8-INV1 | Recolher não muda os itens do menu (os mesmos de `menuDoMembro` e `menuDoSuporte`) nem as permissões. | Teste de componente / navegador. |
+| N8-INV2 | Todo item continua com nome acessível para leitor de tela e com a dica visível no foco e no mouse. | Navegador (Tab e hover) e axe. |
+| N8-INV3 | A página abre no estado salvo, sem mudança de largura do menu depois da pintura. | Navegador: largura do menu medida no carregamento. |
+| N8-INV4 | Abaixo de 1024 px a estrutura não muda. | Capturas em 768 e 390. |
+
+**Critérios de aceitação:**
+
+- **N8-CA1 — Recolher e expandir.** Dado o app em 1440 px, quando a pessoa clica em "Recolher menu", então o menu fica só com ícones e o conteúdo se alarga; clicando em "Expandir menu", volta como estava.
+- **N8-CA2 — Lembrar.** Dado o menu recolhido, quando a pessoa recarrega ou abre outra página, então ele já abre recolhido, sem piscar.
+- **N8-CA3 — Dica.** Dado o menu recolhido (ou o trilho do tablet), quando a pessoa passa o mouse ou chega pelo Tab num item, então aparece a dica com o nome (e o selo, ex.: "Relatórios — Plano pago"); o leitor de tela anuncia o nome.
+- **N8-CA4 — Tablet e celular.** Dado o app em 768 px, então não há botão de recolher e o trilho mostra as dicas; em 390 px, nada muda.
+- **N8-CA5 — Modo suporte.** Dado o Administrador em modo suporte, quando recolhe o menu, então funciona igual e a faixa do modo suporte continua mostrando o negócio.
+- **N8-CA6 — Movimento reduzido.** Dado "reduzir movimento" ativo, então o menu muda de largura sem animação.
+- **N8-CA7 — Visual.** Dado o menu recolhido e expandido em 1024 e 1440 px, claro e escuro, então segue o design system, sem rolagem horizontal.
+
+**Casos de teste:**
+
+| # | Teste | Tipo | Cobre |
+|---|---|---|---|
+| N8-T1 | Leitura e gravação da preferência (ausente ou inválida → expandido) | Unitário | N8.1, N8.7 |
+| N8-T2 | Texto da dica (rótulo + selo) | Unitário | N8.5 |
+| N8-T3 | Recolher, expandir, recarregar e navegar; largura estável no carregamento; `aria-expanded` | Navegador (build local) | N8-CA1, N8-CA2, N8-INV3 |
+| N8-T4 | Dica no Tab e no mouse, recolhido em 1440 e no trilho em 768; axe sem achados novos | Navegador (build local) | N8-CA3, N8-CA4, N8-INV2 |
+| N8-T5 | Capturas: 1024 e 1440 recolhido/expandido, claro e escuro; 768 e 390; modo suporte | Manual com captura | N8-CA5, N8-CA7, N8-INV4 |
+| N8-T6 | Recolher na homologação, recarregar e conferir as dicas — ✅ 19/10/2026 | Manual (uma vez) | N8-CA1 a N8-CA3 |
+
+**Impacto na implementação:** `src/components/estrutura/navegacao.tsx` (estado, botão, classes do recolhido reaproveitando as do trilho), `src/app/layout.tsx` (script antes da pintura, junto do tema), um componente de dica em `src/components/ui/` (Radix Tooltip) e uma variante de CSS para o estado recolhido. Sem mudança em banco, servidor ou permissões. Entrega num PR de correção (`fix/`), que marca a N8 como implementada e devolve o item da DoD.
+
+**Implementação (19/10/2026):**
+
+- `src/lib/estrutura/menu-lateral.ts`: chave `he-menu`, classe `menu-recolhido` no `<html>`, `estadoDoMenu` e o trecho do script do layout raiz (junto do tema, antes da pintura).
+- `src/app/globals.css`: variantes **`trilho:`** (tablet, ou computador com o menu recolhido) e **`largo:`** (computador com rótulos), que substituem os pares `md:`/`lg:` do menu lateral; animação `dica-entrar`.
+- `src/components/ui/dica.tsx`: **Dica** (Radix Tooltip, com os tokens), no foco e no mouse, Esc fecha; `desativada` mantém a mesma árvore quando a dica deixa de valer (o item não é recriado e não perde o foco).
+- `src/components/estrutura/navegacao.tsx`: botão "Recolher menu"/"Expandir menu" no topo (só a partir de 1024 px), com `aria-expanded` e `aria-controls`; dica em todos os itens, em "Meus negócios", "Minha conta", tema e sair, só no modo trilho; texto da dica com o selo (`textoDaDica`, em `src/lib/equipe/menu.ts`).
+- Testes: `test/unit/menu-lateral.test.ts` (N8-T1 e N8-T2).
+
+**Decisões de implementação e divergências registradas:**
+
+- **Dica baixada sob demanda.** O Radix Tooltip pesa cerca de 22 KB comprimidos; importado direto, o `/painel` passaria de 160,8 KB para 184,6 KB, acima do orçamento de +30 KB da seção 10. A dica só é baixada quando o menu está no modo trilho **e** a pessoa passa o mouse ou chega pelo teclado no menu; ao carregar, o foco volta ao mesmo item. Resultado: **+1,7 KB** em todas as telas medidas (expandido, recolhido e tablet). Quem usa o menu expandido nunca baixa a dica.
+- **Com o menu expandido**, tema e sair continuam só com ícone e sem dica, como antes (a N8 cobre o modo só com ícones); "Minha conta" mantém a dica nativa com o e-mail.
+- **Primeira dica pelo mouse** numa página recém-aberta: aparece no movimento seguinte ao carregamento (alguns milissegundos), dentro do atraso normal da dica.
+- **Homologação (19/10/2026) — botão sobre o nome:** em navegador com barra de rolagem visível (Windows), o menu inteiro rolava quando os itens não cabiam na altura da tela, e a barra (15 px) empurrava o botão "Recolher menu" para cima de "Health Enterprise" (a linha do logo já estava no limite e o teste automatizado escondia as barras). Corrigido: **só a lista do meio rola** (módulos e configurações, com barra fina); o topo (logo, botão e seletor) e o rodapé (Meus negócios, conta, tema e sair) ficam fixos — o rodapé passa a estar sempre visível; a linha do logo ficou mais compacta e o nome encurta com reticências em vez de passar por baixo do botão. Verificado com a barra visível em 1900×898, 1440×760, 1280×700 e 1024×700.
+- **Homologação (N8-T6, 19/10/2026):** depois do merge dos PRs #93 e #94, a equipe conferiu na homologação o menu expandido em tela cheia (botão ao lado do nome, sem sobreposição) e o menu recolhido depois de recarregar, com a dica no item em foco. Aprovada; a N8 está concluída.
 

@@ -1,5 +1,5 @@
 import type { CategoriaItem, OrigemPreco, TipoItem } from "@/generated/prisma/enums";
-import type { DadosDoItem, MaterialInformado } from "@/lib/catalogo/validacao";
+import type { DadosDaSubcategoria, DadosDoItem, MaterialInformado } from "@/lib/catalogo/validacao";
 import { custoTotal, normalizarNome } from "@/lib/dominio/catalogo";
 import type { ClienteDoNegocio } from "./cliente-do-negocio";
 
@@ -32,19 +32,66 @@ export class PrecoIgualAoAtual extends Error {
     this.name = "PrecoIgualAoAtual";
   }
 }
+/** SPEC-020 (5.5): a subcategoria do item não é da categoria dele (ou não é do negócio). */
+export class SubcategoriaInvalida extends Error {
+  constructor(public readonly categoria: CategoriaItem) {
+    super("Subcategoria inválida.");
+    this.name = "SubcategoriaInvalida";
+  }
+}
+export class SubcategoriaNaoEncontrada extends Error {
+  constructor() {
+    super("Subcategoria não encontrada.");
+    this.name = "SubcategoriaNaoEncontrada";
+  }
+}
+/** Nome já usado na mesma categoria do negócio (INV-003). */
+export class SubcategoriaRepetida extends Error {
+  constructor(
+    public readonly nome: string,
+    public readonly categoria: CategoriaItem,
+  ) {
+    super("Já existe uma subcategoria com esse nome.");
+    this.name = "SubcategoriaRepetida";
+  }
+}
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const num = (d: { toString(): string } | null) => (d === null ? null : Number(d.toString()));
 const ehUnicidadeDoNome = (e: unknown) =>
   typeof e === "object" && e !== null && (e as { code?: string }).code === "P2002";
+const subcategoriaDoItem = { select: { id: true, nome: true } } as const;
 
-export type FiltroDoCatalogo = { busca?: string; tipo?: TipoItem; categoria?: CategoriaItem; arquivados?: boolean };
+/** SPEC-020 (5.4): o filtro de subcategoria é o id de uma subcategoria ou "sem" (itens sem subcategoria). */
+export const SEM_SUBCATEGORIA = "sem";
+
+export type FiltroDoCatalogo = { busca?: string; tipo?: TipoItem; categoria?: CategoriaItem; subcategoria?: string; arquivados?: boolean };
+
+/** Condição do filtro de subcategoria (5.4); valor inválido não filtra. */
+export function condicaoDaSubcategoria(subcategoria?: string): { subcategoriaId?: string | null } {
+  if (subcategoria === SEM_SUBCATEGORIA) return { subcategoriaId: null };
+  return subcategoria && UUID.test(subcategoria) ? { subcategoriaId: subcategoria } : {};
+}
+
+/** Busca por texto no nome do item ou da subcategoria (5.4), sem diferenciar maiúsculas. */
+export function condicaoDaBusca(busca?: string) {
+  const texto = busca?.trim();
+  if (!texto) return {};
+  const contem = { contains: texto, mode: "insensitive" as const };
+  return { OR: [{ nome: contem }, { subcategoria: { nome: contem } }] };
+}
+
+export type SubcategoriaDoItem = { id: string; nome: string } | null;
+
+/** Subcategoria na lista e nas escolhas (5.3): itens ativos e arquivados que a usam. */
+export type SubcategoriaResumida = { id: string; categoria: CategoriaItem; nome: string; itensAtivos: number; itensArquivados: number };
 
 export type ItemResumido = {
   id: string;
   tipo: TipoItem;
   nome: string;
   categoria: CategoriaItem;
+  subcategoria: SubcategoriaDoItem;
   unidadeMedida: string;
   custoBase: number;
   precoAtual: number | null;
@@ -103,10 +150,18 @@ export function criarConsultasDoCatalogo(cliente: ClienteDoNegocio, negocioId: s
     return copia as Omit<T, "estoqueMinimo">;
   };
 
+  /** A subcategoria informada é do negócio (cliente do negócio) e da categoria do item (INV-002). */
+  async function conferirSubcategoria(tx: ClienteDoNegocio, d: DadosDoItem) {
+    if (d.subcategoriaId === null) return;
+    const s = await tx.subcategoria.findFirst({ where: { id: d.subcategoriaId }, select: { categoria: true } });
+    if (!s || s.categoria !== d.categoria) throw new SubcategoriaInvalida(d.categoria);
+  }
+
   const camposDoItem = (d: DadosDoItem) => ({
     nome: d.nome,
     nomeChave: d.nomeChave,
     categoria: d.categoria,
+    subcategoriaId: d.subcategoriaId,
     unidadeMedida: d.unidadeMedida,
     custoBase: d.custoBase,
     comissaoPercentual: d.comissaoPercentual,
@@ -132,14 +187,15 @@ export function criarConsultasDoCatalogo(cliente: ClienteDoNegocio, negocioId: s
         where: {
           arquivadoEm: filtro.arquivados ? { not: null } : null,
           ...(filtro.tipo ? { tipo: filtro.tipo } : {}),
-          ...(filtro.categoria ? { categoria: filtro.categoria } : {}),
-          ...(filtro.busca?.trim() ? { nome: { contains: filtro.busca.trim(), mode: "insensitive" as const } } : {}),
+          ...(filtro.categoria ? { categoria: filtro.categoria, ...condicaoDaSubcategoria(filtro.subcategoria) } : {}),
+          ...condicaoDaBusca(filtro.busca),
         },
         select: {
           id: true,
           tipo: true,
           nome: true,
           categoria: true,
+          subcategoria: subcategoriaDoItem,
           unidadeMedida: true,
           custoBase: true,
           precoAtual: true,
@@ -154,6 +210,7 @@ export function criarConsultasDoCatalogo(cliente: ClienteDoNegocio, negocioId: s
         tipo: i.tipo,
         nome: i.nome,
         categoria: i.categoria,
+        subcategoria: i.subcategoria,
         unidadeMedida: i.unidadeMedida,
         custoBase: num(i.custoBase)!,
         precoAtual: num(i.precoAtual),
@@ -171,6 +228,7 @@ export function criarConsultasDoCatalogo(cliente: ClienteDoNegocio, negocioId: s
       const i = await cliente.item.findFirst({
         where: { id },
         include: {
+          subcategoria: subcategoriaDoItem,
           materiais: { include: { material: true }, orderBy: { material: { nome: "asc" } } },
           usadoEm: { where: { servico: { arquivadoEm: null } }, include: { servico: { select: { id: true, nome: true } } } },
           historicoPrecos: { include: { usuario: { select: { nome: true } } }, orderBy: { dataConfirmacao: "desc" } },
@@ -199,6 +257,7 @@ export function criarConsultasDoCatalogo(cliente: ClienteDoNegocio, negocioId: s
         tipo: i.tipo,
         nome: i.nome,
         categoria: i.categoria,
+        subcategoria: i.subcategoria,
         unidadeMedida: i.unidadeMedida,
         custoBase: num(i.custoBase)!,
         precoAtual: num(i.precoAtual),
@@ -229,6 +288,7 @@ export function criarConsultasDoCatalogo(cliente: ClienteDoNegocio, negocioId: s
       try {
         return await cliente.$transaction(async (tx) => {
           await conferirMateriais(tx as ClienteDoNegocio, dados.materiais);
+          await conferirSubcategoria(tx as ClienteDoNegocio, dados);
           const item = await tx.item.create({
             data: { ...camposDoItem(dados), negocioId, tipo: dados.tipo, quantidadeEstoque: 0 },
             select: { id: true },
@@ -257,6 +317,7 @@ export function criarConsultasDoCatalogo(cliente: ClienteDoNegocio, negocioId: s
           const atual = await tx.item.findFirst({ where: { id }, select: { tipo: true, arquivadoEm: true } });
           if (!atual) throw new ItemNaoEncontrado();
           if (atual.tipo === "SERVICO") await conferirMateriais(tx as ClienteDoNegocio, dados.materiais, id);
+          await conferirSubcategoria(tx as ClienteDoNegocio, dados);
           await tx.item.update({
             where: { id },
             // Arquivado não ocupa o nome (OPEN-003): a chave só volta ao reativar.
@@ -333,6 +394,85 @@ export function criarConsultasDoCatalogo(cliente: ClienteDoNegocio, negocioId: s
         if (ehUnicidadeDoNome(e)) throw new NomeDuplicado();
         throw e;
       }
+    },
+
+    // Subcategorias do negócio (SPEC-020, RF79).
+
+    /** Na ordem da lista fixa (a ordem do enum no banco) e por nome, com os itens que a usam. */
+    async subcategorias(categoria?: CategoriaItem): Promise<SubcategoriaResumida[]> {
+      const [lista, arquivados] = await Promise.all([
+        cliente.subcategoria.findMany({
+          where: categoria ? { categoria } : {},
+          select: { id: true, categoria: true, nome: true, _count: { select: { itens: { where: { arquivadoEm: null } } } } },
+          orderBy: [{ categoria: "asc" }, { nomeChave: "asc" }],
+        }),
+        cliente.item.groupBy({ by: ["subcategoriaId"], where: { subcategoriaId: { not: null }, arquivadoEm: { not: null } }, _count: { _all: true } }),
+      ]);
+      const porSubcategoria = new Map(arquivados.map((a) => [a.subcategoriaId, a._count._all]));
+      return lista.map((s) => ({
+        id: s.id,
+        categoria: s.categoria,
+        nome: s.nome,
+        itensAtivos: s._count.itens,
+        itensArquivados: porSubcategoria.get(s.id) ?? 0,
+      }));
+    },
+
+    async criarSubcategoria(d: DadosDaSubcategoria): Promise<{ id: string; categoria: CategoriaItem; nome: string }> {
+      try {
+        return await cliente.subcategoria.create({
+          data: { negocioId, categoria: d.categoria, nome: d.nome, nomeChave: d.nomeChave },
+          select: { id: true, categoria: true, nome: true },
+        });
+      } catch (e) {
+        if (ehUnicidadeDoNome(e)) throw new SubcategoriaRepetida(d.nome, d.categoria);
+        throw e;
+      }
+    },
+
+    /** Renomeia (5.3): os itens passam a mostrar o nome novo; a categoria não muda. */
+    async renomearSubcategoria(id: string, nome: { nome: string; nomeChave: string }): Promise<{ id: string; categoria: CategoriaItem; nome: string }> {
+      if (!UUID.test(id)) throw new SubcategoriaNaoEncontrada();
+      const atual = await cliente.subcategoria.findFirst({ where: { id }, select: { categoria: true } });
+      if (!atual) throw new SubcategoriaNaoEncontrada();
+      try {
+        return await cliente.subcategoria.update({
+          where: { id },
+          data: { nome: nome.nome, nomeChave: nome.nomeChave },
+          select: { id: true, categoria: true, nome: true },
+        });
+      } catch (e) {
+        if (ehUnicidadeDoNome(e)) throw new SubcategoriaRepetida(nome.nome, atual.categoria);
+        throw e;
+      }
+    },
+
+    /** Itens que usam a subcategoria, ativos e arquivados (confirmação da exclusão — 5.3). */
+    async usoDaSubcategoria(id: string): Promise<{ nome: string; categoria: CategoriaItem; itensAtivos: number; itensArquivados: number }> {
+      if (!UUID.test(id)) throw new SubcategoriaNaoEncontrada();
+      const s = await cliente.subcategoria.findFirst({ where: { id }, select: { nome: true, categoria: true } });
+      if (!s) throw new SubcategoriaNaoEncontrada();
+      const [itensAtivos, itensArquivados] = await Promise.all([
+        cliente.item.count({ where: { subcategoriaId: id, arquivadoEm: null } }),
+        cliente.item.count({ where: { subcategoriaId: id, arquivadoEm: { not: null } } }),
+      ]);
+      return { ...s, itensAtivos, itensArquivados };
+    },
+
+    /**
+     * Exclui (OPEN-004): os itens que a usavam ficam sem subcategoria na mesma transação
+     * (a chave estrangeira faz o mesmo; a atualização explícita deixa a contagem no resultado).
+     * Nenhum outro campo do item muda (INV-004).
+     */
+    async excluirSubcategoria(id: string): Promise<{ itensAfetados: number }> {
+      if (!UUID.test(id)) throw new SubcategoriaNaoEncontrada();
+      return cliente.$transaction(async (tx) => {
+        const s = await tx.subcategoria.findFirst({ where: { id }, select: { id: true } });
+        if (!s) throw new SubcategoriaNaoEncontrada();
+        const { count } = await tx.item.updateMany({ where: { subcategoriaId: id }, data: { subcategoriaId: null } });
+        await tx.subcategoria.delete({ where: { id } });
+        return { itensAfetados: count };
+      });
     },
   };
 }

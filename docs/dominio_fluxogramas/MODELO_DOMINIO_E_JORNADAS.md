@@ -68,11 +68,17 @@ classDiagram
         Produtos
         Alimentacao
         Vestuario
+        Acessorios
         Beleza
         Saude
         Casa
         Tecnologia
         Outros
+    }
+
+    class Subcategoria {
+        +nome  unico na categoria do negocio
+        +categoria  fixa depois de criada
     }
 
     class Item {
@@ -180,6 +186,9 @@ classDiagram
     Item <|-- ProdutoFisico
     Item <|-- Servico
     Item "N" --> "1" Categoria : pertence a
+    Negocio "1" --> "N" Subcategoria : organiza com
+    Subcategoria "N" --> "1" Categoria : fica dentro de
+    Item "N" --> "0..1" Subcategoria : pode ter
     Item "1" --> "N" HistoricoPreco : acumula
 
     Servico "1" --> "N" MaterialServico : consome
@@ -210,6 +219,7 @@ classDiagram
 | `Pagamento` | Dinheiro/PIX/Débito geram `LancamentoFinanceiro` imediato; Cartão de Crédito gera `Parcela(s)` → `ContaPagarReceber` (RN09, RN10). |
 | `Parcela` | Vencimentos gerados mensalmente a partir da data da `Venda`, limitado a 12 parcelas (RF27, RF28); diferença de centavos na 1ª parcela (RN11). Não tem status próprio: a situação é a da `ContaPagarReceber` (RN22). |
 | `ContaPagarReceber` | Cada pagamento/recebimento (total ou parcial) gera um `LancamentoFinanceiro` com a categoria da conta (RN22). |
+| `Subcategoria` | Criada pelo próprio negócio dentro de uma categoria fixa, com nome único na categoria; só organiza o catálogo: a margem sugerida continua pela categoria (RF79, RN33). O item tem no máximo uma, opcional e da mesma categoria; excluir a subcategoria deixa os itens sem ela (SPEC-020). |
 | `Item.precoAtual` | Opcional; definido por confirmação na Calculadora ou manual, sempre com `HistoricoPreco` (RF64). Item sem preço não pode ser vendido (RN23). |
 | `ItemVenda.custoUnitarioNaVenda` | Base do CMV% usado no ponto de equilíbrio e na meta (RF55, RF56, RF62). |
 | `Negocio` (dados fiscais) | CNPJ, CNAE e regime obtidos da Receita (RF58); um Anexo do Simples por negócio (RN24); MEI usa DAS como despesa fixa (RF60). |

@@ -10,7 +10,7 @@ import {
   type ResumoDoConsumo,
   type Situacao,
 } from "@/lib/dominio/estoque";
-import { ItemNaoEncontrado } from "./catalogo";
+import { condicaoDaBusca, condicaoDaSubcategoria, ItemNaoEncontrado, type SubcategoriaDoItem } from "./catalogo";
 import type { ClienteDoNegocio } from "./cliente-do-negocio";
 
 /**
@@ -117,12 +117,13 @@ export function instanteDaOcorrencia(dia: string, agora = new Date()): Date {
   return new Date(intervaloDoDia(dia).inicio.getTime() + 12 * 3_600_000);
 }
 
-export type FiltroDoEstoque = { busca?: string; categoria?: CategoriaItem; situacao?: "baixo" | "sem-estoque" };
+export type FiltroDoEstoque = { busca?: string; categoria?: CategoriaItem; subcategoria?: string; situacao?: "baixo" | "sem-estoque" };
 
 export type ProdutoEmEstoque = {
   id: string;
   nome: string;
   categoria: CategoriaItem;
+  subcategoria: SubcategoriaDoItem;
   unidadeMedida: string;
   saldo: number;
   minimoManual: number | null;
@@ -194,7 +195,15 @@ export function criarConsultasDoEstoque(cliente: ClienteDoNegocio, negocioId: st
   const VAZIO: ResumoDoConsumo = { cicloCompleto: false, primeiroDia: null, saidasNaJanela: 0, estornosNaJanela: 0 };
 
   function montar(
-    i: { id: string; nome: string; categoria: CategoriaItem; unidadeMedida: string; quantidadeEstoque: unknown; estoqueMinimo: unknown },
+    i: {
+      id: string;
+      nome: string;
+      categoria: CategoriaItem;
+      subcategoria: SubcategoriaDoItem;
+      unidadeMedida: string;
+      quantidadeEstoque: unknown;
+      estoqueMinimo: unknown;
+    },
     r: ResumoDoConsumo,
     dias: number,
     hoje: string,
@@ -207,6 +216,7 @@ export function criarConsultasDoEstoque(cliente: ClienteDoNegocio, negocioId: st
       id: i.id,
       nome: i.nome,
       categoria: i.categoria,
+      subcategoria: i.subcategoria,
       unidadeMedida: i.unidadeMedida,
       saldo,
       minimoManual,
@@ -216,17 +226,35 @@ export function criarConsultasDoEstoque(cliente: ClienteDoNegocio, negocioId: st
     };
   }
 
-  const camposDoProduto = { id: true, nome: true, categoria: true, unidadeMedida: true, quantidadeEstoque: true, estoqueMinimo: true } as const;
+  const camposDoProduto = {
+    id: true,
+    nome: true,
+    categoria: true,
+    subcategoria: { select: { id: true, nome: true } },
+    unidadeMedida: true,
+    quantidadeEstoque: true,
+    estoqueMinimo: true,
+  } as const;
 
   return {
+    /** Filtro do Estoque (SPEC-020, 5.4): só as subcategorias com algum produto físico ativo. */
+    async subcategoriasDosProdutos(): Promise<{ id: string; categoria: CategoriaItem; nome: string }[]> {
+      return cliente.subcategoria.findMany({
+        where: { itens: { some: { tipo: "PRODUTO_FISICO", arquivadoEm: null } } },
+        select: { id: true, categoria: true, nome: true },
+        orderBy: [{ categoria: "asc" }, { nomeChave: "asc" }],
+      });
+    },
+
     async listar(filtro: FiltroDoEstoque, hoje: string): Promise<ProdutoEmEstoque[]> {
       const [itens, mapa, dias] = await Promise.all([
         cliente.item.findMany({
           where: {
             tipo: "PRODUTO_FISICO",
             arquivadoEm: null,
-            ...(filtro.categoria ? { categoria: filtro.categoria } : {}),
-            ...(filtro.busca?.trim() ? { nome: { contains: filtro.busca.trim(), mode: "insensitive" as const } } : {}),
+            // SPEC-020 (5.4): subcategoria só com a categoria escolhida; a busca encontra também pela subcategoria.
+            ...(filtro.categoria ? { categoria: filtro.categoria, ...condicaoDaSubcategoria(filtro.subcategoria) } : {}),
+            ...condicaoDaBusca(filtro.busca),
           },
           select: camposDoProduto,
           orderBy: { nome: "asc" },

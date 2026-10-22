@@ -166,8 +166,8 @@ Valores monetários e quantidades usam `tabular-nums`. Linhas de texto corrido c
 
 | Largura | Navegação |
 |---|---|
-| ≥ 1024 px | Menu lateral verde-escuro com módulos, configurações e o seletor de negócio |
-| 640–1023 px | Trilho só com ícones |
+| ≥ 1024 px | Menu lateral verde-escuro com módulos, configurações e o seletor de negócio; pode ser recolhido para ícones (SPEC-016, N8) |
+| 640–1023 px | Trilho só com ícones, com o nome de cada item numa dica |
 | < 640 px | Barra superior + barra inferior flutuante: Painel, Vendas, **Vender** (âmbar), Caixa (ou Estoque) e Mais (gaveta) |
 
 A **faixa do caixa** fica no topo de todas as telas (versão compacta) e em destaque no Painel (versão grande), só para quem vê o Dashboard completo. Depois de uma venda, o saldo ganha um destaque curto (o "momento-assinatura").

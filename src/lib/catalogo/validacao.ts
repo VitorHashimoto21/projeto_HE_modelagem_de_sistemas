@@ -1,5 +1,6 @@
 import type { CategoriaItem, TipoItem } from "@/generated/prisma/enums";
 import type { ErrosDeCampo } from "@/lib/auth/validacao";
+import { pode, type Matriz } from "@/lib/dominio/permissoes";
 import { casasDecimais, ehUnidade, lerNumero, normalizarNome, type Unidade } from "@/lib/dominio/catalogo";
 
 /**
@@ -7,18 +8,37 @@ import { casasDecimais, ehUnidade, lerNumero, normalizarNome, type Unidade } fro
  * chegam num campo "materiais" com JSON [{ materialId, quantidade }], montado pela tela.
  */
 
+/** Lista fixa (RF11), na ordem de exibição; Acessórios logo depois de Vestuário (SPEC-020, OPEN-001). */
 export const CATEGORIAS: CategoriaItem[] = [
   "SERVICOS",
   "PRODUTOS",
   "ALIMENTACAO",
   "VESTUARIO",
+  "ACESSORIOS",
   "BELEZA",
   "SAUDE",
   "CASA",
   "TECNOLOGIA",
   "OUTROS",
 ];
+
+export const ROTULO_CATEGORIA: Record<CategoriaItem, string> = {
+  SERVICOS: "Serviços",
+  PRODUTOS: "Produtos",
+  ALIMENTACAO: "Alimentação",
+  VESTUARIO: "Vestuário",
+  ACESSORIOS: "Acessórios",
+  BELEZA: "Beleza",
+  SAUDE: "Saúde",
+  CASA: "Casa",
+  TECNOLOGIA: "Tecnologia",
+  OUTROS: "Outros",
+};
+
 const TIPOS: TipoItem[] = ["PRODUTO_FISICO", "SERVICO"];
+/** Subcategoria (SPEC-020, OPEN-002): até 40 caracteres. */
+export const MAX_NOME_SUBCATEGORIA = 40;
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export const VALOR_MAXIMO = 9_999_999.99;
 
 export const MENSAGENS_CATALOGO = {
@@ -37,7 +57,14 @@ export const MENSAGENS_CATALOGO = {
   materiaisInvalidos: "Revise os materiais do serviço",
   materialRepetido: "Este material já está no serviço",
   quantidadeInvalida: "Use uma quantidade maior que zero, com até 3 casas",
+  subcategoriaNomeObrigatorio: "Informe o nome da subcategoria",
+  subcategoriaNomeLongo: `Use no máximo ${MAX_NOME_SUBCATEGORIA} caracteres`,
+  subcategoriaInvalida: "Escolha uma subcategoria da lista",
 } as const;
+
+/** Subcategoria da categoria do item (SPEC-020, 5.5). */
+export const subcategoriaDeOutraCategoria = (categoria: CategoriaItem) =>
+  `Escolha uma subcategoria de ${ROTULO_CATEGORIA[categoria]}`;
 
 export type MaterialInformado = { materialId: string; quantidade: number };
 
@@ -46,6 +73,8 @@ export type DadosDoItem = {
   nome: string;
   nomeChave: string;
   categoria: CategoriaItem;
+  /** SPEC-020: opcional; o servidor confere que é da mesma categoria e do mesmo negócio. */
+  subcategoriaId: string | null;
   unidadeMedida: Unidade;
   custoBase: number;
   comissaoPercentual: number | null;
@@ -124,6 +153,9 @@ export function validarItem(
   const categoria = campos.categoria as CategoriaItem;
   if (!CATEGORIAS.includes(categoria)) erros.categoria = MENSAGENS_CATALOGO.categoriaObrigatoria;
 
+  const subcategoriaId = vazio(campos.subcategoriaId) ? null : campos.subcategoriaId.trim();
+  if (subcategoriaId !== null && !UUID.test(subcategoriaId)) erros.subcategoriaId = MENSAGENS_CATALOGO.subcategoriaInvalida;
+
   const unidade = campos.unidadeMedida;
   if (!ehUnidade(unidade)) erros.unidadeMedida = MENSAGENS_CATALOGO.unidadeObrigatoria;
 
@@ -166,6 +198,7 @@ export function validarItem(
       nome,
       nomeChave: normalizarNome(nome),
       categoria,
+      subcategoriaId,
       unidadeMedida: unidade as Unidade,
       custoBase: custoBase!,
       comissaoPercentual,
@@ -181,3 +214,30 @@ export function validarPreco(campos: Record<string, string>): Validacao<number> 
   const preco = lerReais(campos.preco, { positivo: true });
   return preco === null ? { ok: false, erros: { preco: MENSAGENS_CATALOGO.precoInvalido } } : { ok: true, dados: preco };
 }
+
+export type DadosDaSubcategoria = { categoria: CategoriaItem; nome: string; nomeChave: string };
+
+/** Nome da subcategoria (5.5): espaços das pontas tirados e repetidos juntados; 1 a 40 caracteres. */
+export function validarNomeDaSubcategoria(texto: string | undefined): Validacao<{ nome: string; nomeChave: string }> {
+  const nome = (texto ?? "").trim().replace(/\s+/g, " ");
+  if (!nome) return { ok: false, erros: { nome: MENSAGENS_CATALOGO.subcategoriaNomeObrigatorio } };
+  if (nome.length > MAX_NOME_SUBCATEGORIA) return { ok: false, erros: { nome: MENSAGENS_CATALOGO.subcategoriaNomeLongo } };
+  return { ok: true, dados: { nome, nomeChave: normalizarNome(nome) } };
+}
+
+/** Nova subcategoria (5.3): uma das categorias fixas e o nome. */
+export function validarSubcategoria(campos: Record<string, string>): Validacao<DadosDaSubcategoria> {
+  const erros: ErrosDeCampo = {};
+  const categoria = campos.categoria as CategoriaItem;
+  if (!CATEGORIAS.includes(categoria)) erros.categoria = MENSAGENS_CATALOGO.categoriaObrigatoria;
+  const nome = validarNomeDaSubcategoria(campos.nome);
+  if (!nome.ok) Object.assign(erros, nome.erros);
+  if (Object.keys(erros).length || !nome.ok) return { ok: false, erros };
+  return { ok: true, dados: { categoria, ...nome.dados } };
+}
+
+/**
+ * Quem cria subcategoria (OPEN-005): quem cadastra ou edita itens — Catálogo: criar ou editar.
+ * Renomear exige editar e excluir exige excluir (a própria guarda da Server Action).
+ */
+export const podeCriarSubcategoria = (permissoes: Matriz) => pode(permissoes, "catalogo", "criar") || pode(permissoes, "catalogo", "editar");

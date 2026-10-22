@@ -17,6 +17,7 @@ import { catalogo, estoque } from "@/lib/db";
 import { ItemNaoEncontrado } from "@/lib/db/catalogo";
 import { hoje } from "@/lib/dominio/datas";
 import { pode } from "@/lib/dominio/permissoes";
+import { comRetorno, retornoSeguro, rotuloDoRetorno } from "@/lib/estrutura/retorno";
 
 export const metadata: Metadata = { title: "Item do catálogo" };
 
@@ -48,23 +49,26 @@ export default async function DetalheDoItem({ params, searchParams }: PageProps<
   const verEstoque = pode(membro.permissoes, "estoque", "ver");
   const situacao = item.tipo === "PRODUTO_FISICO" && verEstoque ? await estoque(membro).situacaoDoProduto(item.id, hoje()) : null;
 
-  const voltar = item.arquivado ? "/catalogo?arquivados=1" : "/catalogo";
+  // "Voltar" para a lista de onde a pessoa veio, com os filtros (SPEC-020, correção da homologação T12).
+  const padrao = item.arquivado ? "/catalogo?arquivados=1" : "/catalogo";
+  const voltar = retornoSeguro(busca.voltar, padrao);
+  const retorno = voltar === padrao ? null : voltar;
 
   return (
     <div className="space-y-6">
       <CabecalhoDePagina
-        voltar={{ href: voltar, rotulo: item.arquivado ? "Itens arquivados" : "Catálogo" }}
+        voltar={{ href: voltar, rotulo: rotuloDoRetorno(voltar) }}
         titulo={
           <span className="inline-flex flex-wrap items-center gap-3 break-words">
             {item.nome}
             {item.arquivado && <Selo tom="neutro">Arquivado</Selo>}
           </span>
         }
-        descricao={`${ROTULO_TIPO[item.tipo]}, ${ROTULO_CATEGORIA[item.categoria].toLowerCase()}`}
+        descricao={`${ROTULO_TIPO[item.tipo]}, ${ROTULO_CATEGORIA[item.categoria].toLowerCase()}${item.subcategoria ? ` › ${item.subcategoria.nome.toLowerCase()}` : ""}`}
         acoes={
           podeEditar &&
           !item.arquivado && (
-            <Link href={`/catalogo/${item.id}/editar`} className={classeDoBotao("secundario", "sm")}>
+            <Link href={comRetorno(`/catalogo/${item.id}/editar`, retorno)} className={classeDoBotao("secundario", "sm")}>
               <Pencil aria-hidden="true" />
               Editar item
             </Link>
@@ -114,6 +118,7 @@ export default async function DetalheDoItem({ params, searchParams }: PageProps<
             <form action={acaoArquivarItem} className="px-1 text-sm">
               <input type="hidden" name="itemId" value={item.id} />
               <input type="hidden" name="arquivar" value={item.arquivado ? "0" : "1"} />
+              {retorno && <input type="hidden" name="voltar" value={retorno} />}
               <button type="submit" className={classeDoBotao("fantasma", "sm", item.arquivado ? "-ml-4" : "-ml-4 text-status-danger hover:bg-status-danger-bg")}>
                 {item.arquivado ? <ArchiveRestore aria-hidden="true" /> : <Archive aria-hidden="true" />}
                 {item.arquivado ? "Reativar item" : "Arquivar item"}
@@ -130,6 +135,7 @@ export default async function DetalheDoItem({ params, searchParams }: PageProps<
             <TituloDaSuperficie id="titulo-dados" titulo="Dados do item" />
             <dl>
               <Linha rotulo="Categoria" valor={ROTULO_CATEGORIA[item.categoria]} />
+              <Linha rotulo="Subcategoria" valor={item.subcategoria?.nome ?? "—"} />
               <Linha rotulo="Unidade de medida" valor={rotuloUnidade(item.unidadeMedida)} />
               <Linha rotulo={item.tipo === "SERVICO" ? "Custo próprio" : "Custo"} valor={reais(item.custoBase)} />
               {item.tipo === "SERVICO" && item.materiaisDoServico.length > 0 && <Linha rotulo="Custo total (com materiais)" valor={reais(item.custoTotal)} />}
@@ -153,7 +159,7 @@ export default async function DetalheDoItem({ params, searchParams }: PageProps<
                       valor={
                         <span className="inline-flex flex-wrap items-center justify-end gap-2">
                           <SeloDeSituacao situacao={situacao.situacao} />
-                          <Link href={`/estoque/${item.id}`} className={classeDoLink()}>
+                          <Link href={comRetorno(`/estoque/${item.id}`, `/catalogo/${item.id}`)} className={classeDoLink()}>
                             Ver estoque
                           </Link>
                         </span>
@@ -175,7 +181,7 @@ export default async function DetalheDoItem({ params, searchParams }: PageProps<
                   {item.materiaisDoServico.map((m) => (
                     <li key={m.materialId} className="flex flex-wrap items-center justify-between gap-2 py-3 text-sm">
                       <span className="inline-flex items-center gap-2">
-                        <Link href={`/catalogo/${m.materialId}`} className={classeDoLink("text-foreground")}>
+                        <Link href={comRetorno(`/catalogo/${m.materialId}`, `/catalogo/${item.id}`)} className={classeDoLink("text-foreground")}>
                           {m.nome}
                         </Link>
                         {m.arquivado && (

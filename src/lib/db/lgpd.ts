@@ -95,12 +95,14 @@ export function criarConsultasDaLgpd(cliente: PrismaClient) {
       const negociosComoDono = await Promise.all(
         donos.map(async (negocioId) => {
           const f = { where: { negocioId } };
-          const [negocio, membros, convites, itens, materiais, movimentacoes, historicoPrecos, vendas, itensVenda, pagamentos, parcelas, clientes, lancamentos, contas, despesasFixas, historicoPlano, acessosSuporte, registrosSuporte] =
+          const [negocio, membros, convites, itens, subcategorias, materiais, movimentacoes, historicoPrecos, vendas, itensVenda, pagamentos, parcelas, clientes, lancamentos, contas, despesasFixas, historicoPlano, acessosSuporte, registrosSuporte] =
             await Promise.all([
               cliente.negocio.findUniqueOrThrow({ where: { id: negocioId } }),
               cliente.membroNegocio.findMany({ ...f, select: { id: true, papel: true, permissoesCustom: true, suspensoEm: true, usuarioId: true, usuario: { select: { nome: true, email: true } } } }),
               cliente.convite.findMany({ ...f, select: { id: true, email: true, papel: true, status: true, createdAt: true, expiraEm: true, respondidoEm: true } }),
               cliente.item.findMany(f),
+              // SPEC-020 (RNF04): subcategorias do negócio; os itens trazem a referência (subcategoriaId).
+              cliente.subcategoria.findMany(f),
               cliente.materialServico.findMany(f),
               cliente.movimentacaoEstoque.findMany(f),
               cliente.historicoPreco.findMany(f),
@@ -121,6 +123,7 @@ export function criarConsultasDaLgpd(cliente: PrismaClient) {
             membros: membros.map(({ usuario, ...m }) => linha({ ...m, nome: usuario.nome, email: usuario.email })),
             convites: linhas(convites),
             itens: linhas(itens),
+            subcategorias: linhas(subcategorias),
             materiaisServico: linhas(materiais),
             movimentacoesEstoque: linhas(movimentacoes),
             historicoPrecos: linhas(historicoPrecos),

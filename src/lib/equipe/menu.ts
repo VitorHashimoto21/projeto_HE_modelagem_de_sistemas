@@ -13,6 +13,9 @@ type Exigencia = "membro" | "dono" | { modulo: Modulo; acao: Acao; semAcao?: Aca
 /** `selo`: aviso ao lado do item (ex.: "Plano pago" nos Relatórios do plano gratuito — SPEC-013, OPEN-004). */
 export type ItemDoMenu = { rotulo: string; href: string; selo?: string };
 
+/** Texto da dica do item no menu só com ícones (SPEC-016, N8.5): o nome e, se houver, o selo. */
+export const textoDaDica = (item: ItemDoMenu) => (item.selo ? `${item.rotulo} — ${item.selo}` : item.rotulo);
+
 const ITENS: (ItemDoMenu & { exige: Exigencia })[] = [
   // Página inicial (Dashboard — SPEC-012): aberta a todo membro; sem "Dashboard: ver", só atalhos (OPEN-005).
   { rotulo: "Painel", href: "/painel", exige: "membro" },
@@ -53,12 +56,13 @@ export function menuDoMembro(papel: Papel | null, permissoes: Matriz | null, pla
 /**
  * Menu do modo suporte (SPEC-018, 5.5): só os módulos liberados, só o que se lê — sem
  * "Nova venda", "Lançar despesa" nem Configurações. O Painel entra só com o Dashboard liberado.
+ * Relatórios (`algum`) cruzam módulos e ficam fora do modo suporte (decisão da homologação, 18/10/2026).
  */
-export function menuDoSuporte(permissoes: Matriz, plano: Plano = "PAGO"): ItemDoMenu[] {
+export function menuDoSuporte(permissoes: Matriz): ItemDoMenu[] {
   return ITENS.filter(({ exige }) => {
     if (exige === "dono") return false;
     if (exige === "membro") return pode(permissoes, "dashboard", "ver");
-    if ("algum" in exige) return exige.algum.some((e) => pode(permissoes, e.modulo, e.acao));
+    if ("algum" in exige) return false;
     return exige.acao === "ver" && pode(permissoes, exige.modulo, exige.acao) && !exige.semAcao;
-  }).map(({ rotulo, href }) => (href === "/relatorios" && !podeNoPlano(plano, "relatorios") ? { rotulo, href, selo: "Plano pago" } : { rotulo, href }));
+  }).map(({ rotulo, href }) => ({ rotulo, href }));
 }

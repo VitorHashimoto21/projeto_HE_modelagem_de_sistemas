@@ -136,6 +136,9 @@ Também foram corrigidos, sem decisão nova: a ordem do cronograma da Visão (Ca
 | SPEC-017 | Ajustes na venda: materiais e preço por venda | 005, 006, 007, 008, 016 |
 | SPEC-018 | Administrador da plataforma e acesso de suporte (somente leitura) | 001, 002, 005, 014, 016 |
 | SPEC-019 *(a gerar)* | Suporte com edição, emergência, ações de plataforma e 2º fator | 018 |
+| SPEC-020 | Subcategorias do negócio e nova categoria Acessórios | 003, 006, 007, 014, 016, 018 |
+| SPEC-021 *(a gerar)* | NCM nos produtos | 006 |
+| SPEC-022 *(a gerar)* | Cliente com dados completos (CPF/CNPJ, endereço, e-mail e telefone) | 008, 014, 018 |
 
 ```mermaid
 flowchart LR
@@ -172,7 +175,14 @@ flowchart LR
     S14 --> S18[SPEC-018 Administrador e suporte]
     S16 --> S18
     S18 -.-> S19[SPEC-019 Suporte com edição e 2º fator - a gerar]
+    S7 --> S20[SPEC-020 Subcategorias e Acessórios]
+    S16 --> S20
+    S6 -.-> S21[SPEC-021 NCM - a gerar]
+    S14 -.-> S22[SPEC-022 Cliente completo - a gerar]
+    S18 -.-> S22
 ```
+
+**Ordem de execução combinada em 19/10/2026:** **N8 da SPEC-016** (menu lateral recolhível — concluída e homologada em 19/10/2026) → SPEC-020 (concluída em 20/10/2026) → SPEC-021 → SPEC-022 → SPEC-019 (antes de abrir a produção). A barra lateral recolhível, planejada como SPEC-021, já estava prevista na SPEC-016 e não tinha sido entregue: virou a nota N8 dela (divergência corrigida), e as Specs seguintes foram renumeradas (NCM → 021, Cliente completo → 022). Esses itens vêm da revisão de uma profissional da área financeira e contábil que está montando uma loja de semijoias; a SPEC-019 continua obrigatória antes da produção (2º fator do Administrador).
 
 ### 2.2 Detalhamento
 
@@ -340,7 +350,7 @@ flowchart LR
 - **Justificativa da ordem:** fora do caminho crítico do MVP; só substitui o ponto de troca de plano criado na SPEC-013. Feita se sobrar tempo no semestre ou na continuação rumo à produção.
 
 #### SPEC-016 — Design system e redesign (Direção "Balcão")
-- **Spec:** [`specs/SPEC-016.md`](./specs/SPEC-016.md) (✅ implementada em 15/10/2026 num único PR, #72, e verificada na homologação no mesmo dia; ajustes da homologação corrigidos nos PRs #74 e #75 e aprovados pela equipe em 16/10/2026; notas N1–N5 decididas em 16/10/2026 — [evidências](./specs/evidencias/SPEC-016/README.md))
+- **Spec:** [`specs/SPEC-016.md`](./specs/SPEC-016.md) (✅ implementada em 15/10/2026 num único PR, #72, e verificada na homologação no mesmo dia; ajustes da homologação corrigidos nos PRs #74 e #75 e aprovados pela equipe em 16/10/2026; notas N1–N5 decididas em 16/10/2026; **N8 — menu lateral recolhível e rótulo na dica**: divergência encontrada, decidida e implementada em 19/10/2026 (PRs #93 e #94) e verificada na homologação no mesmo dia (N8-T6) — [evidências](./specs/evidencias/SPEC-016/README.md))
 - **Objetivo:** criar os componentes de interface e de gráfico, os tokens de movimento e a nova estrutura do app, e migrar todas as telas para a Direção B aprovada (estrutura verde-escura, Manrope, faixa do caixa, gráficos interativos), sem mudar comportamento.
 - **Valor entregue:** produto fácil de ler, agradável de manusear e consistente em qualquer tela; visual mantido em componentes, não em cópias.
 - **RF:** RF43, RF44, RF57, RF68, RF70 (apresentação) · **RN:** RN18 (plano nos cartões novos) · **RNF:** RNF01, RNF02, RNF10
@@ -359,7 +369,7 @@ flowchart LR
 - **Justificativa da ordem:** evolução do MVP depois dos testes em aula; revê a decisão "sem desconto no MVP" da SPEC-008 (OPEN-001), por isso é uma Spec própria, com decisão da equipe.
 
 #### SPEC-018 — Administrador da plataforma e acesso de suporte (somente leitura)
-- **Spec:** [`specs/SPEC-018.md`](./specs/SPEC-018.md) (🔵 aprovada e implementada em 17/10/2026; homologação pendente — [evidências](./specs/evidencias/SPEC-018/README.md))
+- **Spec:** [`specs/SPEC-018.md`](./specs/SPEC-018.md) (✅ implementada e verificada na homologação em 18/10/2026 — [evidências](./specs/evidencias/SPEC-018/README.md))
 - **Objetivo:** criar o Administrador da plataforma (conta exclusiva, painel só com metadados) e o acesso de suporte que o Dono libera por módulos e prazo, em somente leitura, com dados pessoais mascarados, registro de auditoria imutável e novo aceite da Política e dos Termos.
 - **Origem:** decisão da equipe em 17/10/2026 (um centralizador para atender pedidos dos usuários, sem quebrar a privacidade).
 - **RF:** RF74–RF78 (novos) · **RN:** RN30–RN32 (novas), RN01 (complementada), RN27 · **RNF:** RNF02 (ajustado), RNF04, RNF05, RNF12 (novo) · **ADR:** ADR-008 (nova)
@@ -370,17 +380,38 @@ flowchart LR
 #### SPEC-019 — Suporte com edição, emergência, ações de plataforma e 2º fator *(a gerar)*
 - **Escopo combinado (17/10/2026):** **camada de segurança da autenticação do Administrador (2º fator TOTP), em destaque e antes da edição**; edição em modo suporte; acesso de emergência sem liberação (justificativa, só leitura, aviso posterior); ações de plataforma (suspender/reativar negócio, trocar plano).
 - **Dependências:** SPEC-018
+- **Ordem:** depois das SPECs 020 a 022 e **antes de abrir a produção** (decisão de 19/10/2026).
+
+#### SPEC-020 — Subcategorias do negócio e nova categoria Acessórios
+- **Spec:** [`specs/SPEC-020.md`](./specs/SPEC-020.md) (✅ aprovada em 19/10/2026, com as OPEN-001 a OPEN-006 decididas em entrevista; implementada no mesmo dia (PR #97) e verificada em build local; homologada em 20/10/2026 (T12), com as duas correções de tela do PR #98 conferidas no mesmo dia; **concluída em 20/10/2026** — [evidências](./specs/evidencias/SPEC-020/README.md))
+- **Objetivo:** permitir que cada negócio crie **subcategorias livres** dentro das categorias fixas (ex.: Brincos, Colares e Anéis em Acessórios), no cadastro do item ou numa tela "Subcategorias" do Catálogo, para organizar o catálogo e o estoque **sem mexer na margem padrão** da categoria; e acrescentar a categoria fixa **Acessórios** (logo depois de Vestuário), com margem padrão de 8% no arquivo fiscal.
+- **Valor entregue:** cada negócio encontra os itens pela própria organização (filtros e busca no Catálogo e no Estoque), e semijoias, bijuterias e bolsas deixam de ficar em "Vestuário" ou "Outros".
+- **Origem:** revisão de uma profissional da área financeira e contábil (loja de semijoias): faltava a categoria Acessórios e um jeito de separar os tipos de peça.
+- **RF:** RF11 (alterado), RF79 (novo), RF08, RF09, RF36 · **RN:** RN33 (nova), RN17 · **RNF:** RNF01, RNF02, RNF04
+- **Entidades:** Subcategoria (nova), Item (campo novo), MargemPadraoCategoria (registro novo), enum CategoriaItem (valor novo)
+- **Dependências:** SPEC-001, SPEC-003, SPEC-005, SPEC-006, SPEC-007, SPEC-010, SPEC-014, SPEC-016, SPEC-018
+- **Justificativa da ordem:** primeira das melhorias da revisão financeira e contábil (ordem combinada em 19/10/2026); não depende da SPEC-021 nem da SPEC-022.
+
+#### SPEC-021 — NCM nos produtos *(a gerar)*
+- **Escopo combinado (19/10/2026):** campo **NCM** (Nomenclatura Comum do Mercosul, 8 dígitos) **opcional** em produtos e materiais, com validação do formato; avaliar a busca na tabela oficial. Serviços não têm NCM. Prepara a emissão de nota fiscal, que continua pós-MVP (Visão de Negócio, 8.2).
+- **Dependências:** SPEC-006
+
+#### SPEC-022 — Cliente com dados completos *(a gerar)*
+- **Escopo combinado (19/10/2026):** CPF ou CNPJ (validado), endereço (CEP, logradouro, número, bairro, município, UF), e-mail e telefone, **todos opcionais**, com a indicação de cadastro "completo para nota fiscal"; tela de Clientes; LGPD: base legal (execução de contrato e obrigação fiscal), máscara no modo suporte, exportação e anonimização na exclusão, e nova versão da Política de Privacidade (novo aceite).
+- **Contexto fiscal:** NF-e exige o destinatário completo; na NFC-e (varejo) a identificação do consumidor é opcional (CPF a pedido); o MEI é dispensado de emitir nota para pessoa física. Por isso os campos são opcionais.
+- **Dependências:** SPEC-008, SPEC-014, SPEC-018
 
 ---
 
 ## 3. Cobertura da baseline
 
-Todos os 122 requisitos (RF01–RF78, RN01–RN32, RNF01–RNF12) estão associados a pelo menos uma Spec. Requisitos compartilhados aparecem em mais de uma Spec com escopos complementares:
+Todos os 124 requisitos (RF01–RF79, RN01–RN33, RNF01–RNF12) estão associados a pelo menos uma Spec. Requisitos compartilhados aparecem em mais de uma Spec com escopos complementares:
 
 | Requisito | Specs | Divisão |
 |---|---|---|
 | RF06 | 005, 009 | Mecanismo de permissões (005); permissão de despesa operacional (009) |
-| RF36 | 003, 010 | Dados das margens padrão (003); sugestão na calculadora (010) |
+| RF11 | 006, 020 | Lista fixa e categoria obrigatória (006); categoria Acessórios (020) |
+| RF36 | 003, 010, 020 | Dados das margens padrão (003); sugestão na calculadora (010); margem de Acessórios, sem efeito da subcategoria (020) |
 | RF41 / RN15 / RN16 | 006, 010 | Histórico por preço manual (006); por confirmação da calculadora (010) |
 | RF47 | 005, 013 | Limite de convites (005); relatórios avançados (013) |
 | RF60 | 009, 010 | DAS como despesa fixa e conta mensal (009); Imposto% = 0 no markup (010) |
@@ -400,7 +431,7 @@ Todos os 122 requisitos (RF01–RF78, RN01–RN32, RNF01–RNF12) estão associa
 
 A conferência do seed fiscal foi concluída em 03/10/2026 (DAS do MEI atualizado para o salário mínimo de 2026), e a SPEC-003 não tem mais pré-requisito pendente. A SPEC-015 depende da aprovação do ADR-007.
 
-**Andamento (17/10/2026):**
+**Andamento (20/10/2026):**
 
 - [SPEC-001](specs/SPEC-001.md) a [SPEC-003](specs/SPEC-003.md): implementadas e verificadas na homologação.
 - [SPEC-004](specs/SPEC-004.md): implementada e verificada no preview da Vercel (04/10/2026).
@@ -411,9 +442,13 @@ A conferência do seed fiscal foi concluída em 03/10/2026 (DAS do MEI atualizad
 - SPEC-015 (opcional): não iniciada; depende da aprovação do ADR-007.
 - [SPEC-016](specs/SPEC-016.md): implementada (PR #72) e verificada na homologação (15/10/2026); ajustes da homologação corrigidos (PRs #74 e #75) e aprovados nos testes da equipe (16/10/2026); notas N1–N5 da seção 15 decididas em 16/10/2026 (diálogo de confirmação e taxa da maquininha nos Relatórios implementados).
 - [SPEC-017](specs/SPEC-017.md): implementada (PR #82, 16/10/2026) e verificada na homologação (17/10/2026).
-- [SPEC-018](specs/SPEC-018.md): aprovada e implementada (17/10/2026); falta a verificação na homologação (T13) e a decisão da divergência da seção 9 (faixa do modo suporte no celular).
-- SPEC-019: a gerar depois da SPEC-018 (escopo combinado na seção 2.2).
-- `main`: atualizada até a SPEC-006 (PR #54); as SPECs 007 a 017 estão só na DEVELOP.
+- [SPEC-018](specs/SPEC-018.md): implementada (17/10/2026) e verificada na homologação (18/10/2026) — "Relatórios" fora do modo suporte, decidido na homologação e corrigido no PR #87; faixa do modo suporte no celular aceita na baseline (18/10/2026). Concluída.
+- [SPEC-016](specs/SPEC-016.md), **N8** (menu lateral recolhível e rótulo na dica): decidida e implementada em 19/10/2026 (PRs #93 e #94) e verificada na homologação no mesmo dia (N8-T6). Concluída.
+- [SPEC-020](specs/SPEC-020.md) (subcategorias e categoria Acessórios): aprovada e implementada em 19/10/2026 (PR #97), verificada em build local (testes T01–T10 e roteiro no navegador com 70 verificações); as três divergências da implementação foram aceitas pela equipe em 20/10/2026 (baseline ajustada); homologada em 20/10/2026 (T12). Dois problemas de tela da homologação — texto cortado nos filtros e o "voltar" do detalhe, que levava ao início do Catálogo — corrigidos no PR #98 e conferidos na homologação no mesmo dia. Concluída.
+- SPECs 021 e 022 (melhorias da revisão financeira e contábil): a gerar, nesta ordem (a próxima é a SPEC-021), antes da SPEC-019 (decisão de 19/10/2026); escopo na seção 2.2.
+- SPEC-019: a gerar depois da SPEC-022, antes de abrir a produção.
+- `main`: atualizada até a SPEC-018 (PR #86, 17/10/2026), sem ambiente de produção ainda (a migração na `main` é pulada enquanto não houver o banco de produção).
+- **E-mails e domínio:** domínio próprio `.com.br` (Registro.br) verificado no Resend, que também passa a ser o SMTP do Supabase Auth ([ADR-009](definicoes_arquitetura/adrs-he.md), 18/10/2026); aguarda a compra.
 
 ### Pendências abertas
 
@@ -421,9 +456,8 @@ Lista mantida até cada item ser resolvido; quem retomar o projeto (em qualquer 
 
 | # | Pendência | Situação |
 |---|---|---|
-| 1 | **SPEC-018** (Administrador e acesso de suporte): homologação (T13) depois do merge — criar a conta exclusiva do suporte e conceder o papel pelo workflow **Administradores** — e decisão da divergência da seção 9 (faixa no celular) | Em andamento |
-| 2 | **SPEC-019** (suporte com edição, emergência, ações de plataforma e **2º fator do Administrador**): gerar depois da SPEC-018 | Aberta |
-| 3 | **Textos legais** (`docs/legal/`): preencher os campos entre colchetes (responsável, e-mail de contato, cidade/UF, região do Supabase) e revisão do grupo; a nova versão com o acesso de suporte entra na SPEC-018 | Aberta |
+| 1 | **SPECs 021 e 022**, nesta ordem: NCM nos produtos (021) e cliente com dados completos (022). A SPEC-020 (subcategorias e categoria Acessórios) foi concluída em 20/10/2026 | Aberta; a próxima é a SPEC-021 |
+| 2 | **SPEC-019** (suporte com edição, emergência, ações de plataforma e **2º fator do Administrador**): gerar depois da SPEC-022, **antes de abrir a produção** | Aberta |
+| 3 | **Textos legais** (`docs/legal/`): preencher os campos entre colchetes (responsável, e-mail de contato, cidade/UF, região do Supabase) e revisão do grupo; a versão 2026-10-17 já inclui o acesso de suporte (SPEC-018), e a SPEC-022 trará outra (dados completos do cliente) | Aberta |
 | 4 | **SPEC-015** (cobrança real pelo Stripe): decidir se fica fora do MVP; depende do ADR-007 (proposta) | Aberta |
-| 5 | **Domínio no Resend** (opcional): para enviar convites e os avisos do suporte (SPEC-018) a qualquer e-mail; hoje só chega ao e-mail da conta Resend | Aberta (opcional) |
-| 6 | **PR da DEVELOP para a `main`**: só quando a equipe pedir | Aguardando a equipe |
+| 5 | **Domínio próprio** ([ADR-009](definicoes_arquitetura/adrs-he.md)): comprar o `.com.br` no Registro.br, verificar no Resend (DNS), trocar `EMAIL_REMETENTE` na Vercel e pôr o Resend como SMTP do Supabase Auth com o modelo de link `token_hash`. Resolve convites e avisos do suporte a qualquer e-mail e o "Este link expirou" da confirmação de conta em outro navegador | Decidida; aguarda a compra |

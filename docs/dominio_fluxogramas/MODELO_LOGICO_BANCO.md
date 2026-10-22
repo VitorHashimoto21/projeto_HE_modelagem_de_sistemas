@@ -13,6 +13,8 @@ erDiagram
     USUARIO ||--o{ MEMBRO_NEGOCIO : "participa_como"
     NEGOCIO ||--o{ MEMBRO_NEGOCIO : "possui"
     NEGOCIO ||--o{ ITEM : "cadastra"
+    NEGOCIO ||--o{ SUBCATEGORIA : "organiza"
+    SUBCATEGORIA |o--o{ ITEM : "agrupa"
     NEGOCIO ||--o{ CLIENTE : "atende"
     NEGOCIO ||--o{ VENDA : "registra"
     NEGOCIO ||--o{ LANCAMENTO_FINANCEIRO : "mantem"
@@ -112,12 +114,22 @@ erDiagram
         enum tipo "PRODUTO_FISICO | SERVICO"
         string nome
         enum categoria "lista fixa RF11"
+        uuid subcategoria_id FK "opcional, mesma categoria (SPEC-020)"
         string unidade_medida
         decimal custo_base
         decimal preco_atual "null = nao vendavel"
         decimal quantidade_estoque "so PRODUTO_FISICO"
         decimal estoque_minimo "opcional"
         decimal comissao_percentual "opcional"
+    }
+
+    SUBCATEGORIA {
+        uuid id PK
+        uuid negocio_id FK
+        enum categoria "lista fixa RF11; nao muda"
+        string nome "ate 40"
+        string nome_chave "unico com negocio e categoria"
+        datetime criada_em
     }
 
     MATERIAL_SERVICO {
@@ -296,6 +308,7 @@ erDiagram
 | `USUARIO.id` = `auth.users.id`, sem senha | A credencial fica só no Supabase Auth (ADR-003, OPEN-14). |
 | `ITEM` em tabela única com coluna `tipo` (sem tabelas `PRODUTO_FISICO`/`SERVICO`) | Simplifica consultas de catálogo e vendas; campos de estoque só são válidos quando `tipo = PRODUTO_FISICO` (RN04, validado na aplicação). |
 | `categoria` como enum (sem tabela `CATEGORIA`) | A lista de categorias é fixa do sistema (RF11). |
+| `SUBCATEGORIA` do negócio, com `ITEM.subcategoria_id` opcional | Subcategorias livres dentro de cada categoria fixa (RF79, SPEC-020): nome único por negócio e categoria; a categoria da subcategoria é a do item (gatilho) e não muda; excluir deixa `subcategoria_id` nulo nos itens (`ON DELETE SET NULL`). A margem continua por categoria (RN33). |
 | `MATERIAL_SERVICO` referencia `ITEM` duas vezes | `servico_id` aponta para um item `SERVICO` e `material_id` para um item `PRODUTO_FISICO` (RF12). |
 | `VENDA` 1:N `LANCAMENTO_FINANCEIRO` | Pagamento misto pode gerar mais de um lançamento imediato (RN09). |
 | `PARCELA` 1:1 `CONTA_PAGAR_RECEBER` | Cada parcela de cartão gera sua própria conta a receber com vencimento mensal (RN10, RF28). A parcela não tem status próprio: a situação é o status da conta (RN22). |
