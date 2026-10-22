@@ -1,6 +1,6 @@
 # SPEC-022 — Cliente com dados completos
 
-> **Status:** 🟢 **Aprovada em 22/10/2026.** As questões em aberto foram decididas pela equipe em entrevista (seção 13), todas pela opção recomendada:
+> **Status:** 🟢 **Aprovada em 22/10/2026.** As questões em aberto foram decididas pela equipe em entrevista (seção 13); as OPEN-001 a OPEN-008, todas pela opção recomendada:
 > - a tela de Clientes fica **dentro de Vendas**, com as permissões de Vendas;
 > - o documento aparece **mascarado na lista**, e completo só para quem pode editar clientes;
 > - o cliente pode ser **pessoa física ou empresa**;
@@ -8,7 +8,8 @@
 > - **excluir** apaga o cliente sem vendas e anonimiza o que tem vendas;
 > - o cadastro "completo para nota" vira **selo e aviso**, sem bloquear nada;
 > - o **CNPJ com letras** passa a valer no cliente e no próprio negócio;
-> - o detalhe do cliente mostra **os dados e as compras**.
+> - o detalhe do cliente mostra **os dados e as compras**;
+> - depois de comparar com o cadastro de clientes de um ERP de mercado (vídeo da equipe, 22/10/2026), entram o **nome fantasia**, a **inscrição municipal** e o preenchimento de **telefone e e-mail pelo CNPJ** (OPEN-009).
 >
 > A baseline foi ajustada: RF22, RF58 e RF76 e a RN27 alterados; RF81 e RN36 novos. Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar), a partir da revisão de uma profissional da área financeira e contábil que está montando uma loja de semijoias (19/10/2026).
 >
@@ -83,11 +84,11 @@ A loja de semijoias vende no balcão, pelo Instagram com entrega, e para revende
 
 1. **Tipo de cliente** (OPEN-003): **pessoa física** ou **empresa**.
    - Pessoa física: nome e CPF.
-   - Empresa: razão social, CNPJ, situação na inscrição estadual (tem inscrição, com o número; isenta; não contribuinte do ICMS) e o nome de quem compra (contato na empresa).
+   - Empresa: razão social, nome fantasia, CNPJ, situação na inscrição estadual (tem inscrição, com o número; isenta; não contribuinte do ICMS), inscrição municipal e o nome de quem compra (contato na empresa) (OPEN-009).
 2. **Dados de contato e endereço**, para os dois tipos: e-mail, telefone e endereço (CEP, logradouro, número, complemento, bairro, município e UF). Só o nome (ou a razão social) é obrigatório.
 3. **Preenchimento automático** (OPEN-004):
    - o **CEP** preenche logradouro, bairro, município e UF;
-   - o **CNPJ** do cliente empresa preenche razão social e endereço;
+   - o **CNPJ** do cliente empresa preenche razão social, nome fantasia, endereço, telefone e e-mail (OPEN-009);
    - pela consulta pública já usada nos Dados do negócio (BrasilAPI, ADR-006), com tempo limite e preenchimento manual quando falha;
    - o **CPF nunca é enviado** a serviço externo.
 4. **Tela de Clientes dentro de Vendas** (OPEN-001), aberta pelo botão "Clientes" no cabeçalho de Vendas:
@@ -121,6 +122,8 @@ A loja de semijoias vende no balcão, pelo Instagram com entrega, e para revende
 | Buscar cliente por CPF no seletor da Nova venda | Fora: o seletor continua pelo nome. A busca por documento fica na tela de Clientes. |
 | Mensagens de marketing (e-mail, WhatsApp) e consentimento para elas | Fora: outra finalidade, com outra base legal. |
 | Aniversário, observações, limite de crédito, fiado | Fora. |
+| RG | Fora (OPEN-009): a nota fiscal não pede, e a LGPD manda guardar só o necessário. |
+| Outros campos do ERP de referência: fornecedor no mesmo cadastro, "consumidor final", ramo de atividade, área, grupo de tributação, Suframa, transportadora, representante, tabela de preço, prazo de entrega, site, fax, campos livres e logotipo | Fora: são de um ERP maior (atacado e representantes). O "consumidor final" é decidido em cada nota e entra com a Spec da nota fiscal. |
 | Importar clientes de planilha | Fora. |
 | Módulo "Clientes" próprio na matriz de permissões e item no menu lateral | Fora (OPEN-001): a tela fica dentro de Vendas, com as permissões de Vendas. |
 | Mostrar o documento completo para quem só vê clientes | Fora (OPEN-002). |
@@ -161,9 +164,9 @@ A loja de semijoias vende no balcão, pelo Instagram com entrega, e para revende
 
 1. **Acesso:** a tela de Vendas ganha o botão **"Clientes"** no cabeçalho, ao lado de "Nova venda", para quem tem *Vendas: ver*. A tela fica em `/vendas/clientes` e tem o "voltar" para Vendas. Não há item novo no menu lateral (OPEN-001).
 2. **Lista:**
-   - cada linha mostra o nome (ou a razão social), o tipo ("Pessoa física" ou "Empresa"), o documento **mascarado** (`***.456.789-**` ou `12.***.***/0001-**`), o município/UF quando houver e o selo (5.4);
+   - cada linha mostra o nome (na empresa, o nome fantasia quando houver, com a razão social abaixo), o tipo ("Pessoa física" ou "Empresa"), o documento **mascarado** (`***.456.789-**` ou `12.***.***/0001-**`), o município/UF quando houver e o selo (5.4);
    - ordem alfabética pelo nome;
-   - **busca** por nome, por documento (dígitos e letras, com ou sem pontuação), por e-mail e por telefone (só dígitos);
+   - **busca** por nome, razão social, nome fantasia, por documento (dígitos e letras, com ou sem pontuação), por e-mail e por telefone (só dígitos);
    - **filtro** "Todos" ou "Faltam dados para nota";
    - botão **"Novo cliente"** para quem tem *Vendas: criar*;
    - estado vazio: "Nenhum cliente cadastrado. Os clientes cadastrados na Nova venda também aparecem aqui."
@@ -177,15 +180,17 @@ A loja de semijoias vende no balcão, pelo Instagram com entrega, e para revende
    - **CPF** (opcional): 11 dígitos, validados pelos dígitos verificadores; mostrado como `123.456.789-09`.
 3. **Empresa:**
    - **Razão social** (obrigatória, até 150 caracteres);
+   - **Nome fantasia** (opcional, até 150 caracteres) (OPEN-009);
    - **CNPJ** (opcional): numérico ou com letras (5.7), validado pelos dígitos verificadores;
    - **Inscrição estadual:** "Contribuinte do ICMS" (com o número, até 14 letras e dígitos), "Isenta" ou "Não contribuinte do ICMS". Sem escolha, fica em branco;
+   - **Inscrição municipal** (opcional, até 20 letras e dígitos) (OPEN-009): algumas prefeituras a pedem na nota de serviço (NFS-e) quando o tomador é empresa. É guardada como informada;
    - **Nome de quem compra** (opcional, até 120): a pessoa de contato na empresa.
 4. **Contato**, para os dois tipos:
    - **E-mail** (opcional, até 254, formato de e-mail);
    - **Telefone** (opcional): DDD e número, 10 ou 11 dígitos; mostrado como `(11) 98765-4321`.
 5. **Endereço**, para os dois tipos, num bloco **"Endereço (para nota fiscal)"**: CEP (8 dígitos), logradouro, número, complemento, bairro, município e UF (lista das 27). Todos opcionais; um endereço parcial é aceito.
 6. **Preenchimento pelo CEP** (OPEN-004): ao completar os 8 dígitos, o sistema consulta o CEP e preenche logradouro, bairro, município e UF que estiverem vazios. Se algum já tiver valor, ele não é trocado sem confirmação: "Trocar o endereço pelo do CEP?". Se a consulta falhar ou o CEP não existir: "Não encontramos este CEP. Preencha o endereço." Tudo continua editável.
-7. **Preenchimento pelo CNPJ** (OPEN-004): no cliente empresa, o botão **"Buscar dados do CNPJ"**, ao lado do campo, preenche razão social e endereço, com a mesma regra de não trocar o que já foi digitado sem confirmação. Se a consulta falhar ou não encontrar o CNPJ (inclusive um CNPJ com letras que a base pública ainda não tenha): "Não foi possível consultar o CNPJ agora. Preencha os dados." A consulta **não** traz a inscrição estadual.
+7. **Preenchimento pelo CNPJ** (OPEN-004, OPEN-009): no cliente empresa, o botão **"Buscar dados do CNPJ"**, ao lado do campo, preenche razão social, nome fantasia, endereço, telefone e e-mail, quando a base pública os tiver. Vale a mesma regra de não trocar o que já foi digitado sem confirmação. O telefone e o e-mail vêm do cadastro da empresa na Receita. Se a consulta falhar ou não encontrar o CNPJ (inclusive um CNPJ com letras que a base pública ainda não tenha): "Não foi possível consultar o CNPJ agora. Preencha os dados." A consulta **não** traz a inscrição estadual nem a municipal.
 8. **CPF nunca sai do sistema:** o CPF não é consultado em nenhum serviço externo.
 9. **Documento repetido:** o mesmo CPF ou CNPJ não pode estar em dois clientes ativos do mesmo negócio. A mensagem diz qual é o outro: "Já existe um cliente com este CPF: Maria Silva." Quem não vê o documento completo também recebe a mensagem, sem o documento.
 10. **Valores antigos fora do formato:** um e-mail ou telefone vindo da migração (5.9) que não passe na validação é mantido. Ele só é validado quando é alterado (mesmo padrão da OPEN-002 da SPEC-021).
@@ -193,7 +198,7 @@ A loja de semijoias vende no balcão, pelo Instagram com entrega, e para revende
 
 ### 5.3 Detalhe do cliente (OPEN-008)
 
-1. **Dados:** tipo, nome ou razão social, documento, inscrição estadual, nome de quem compra, e-mail, telefone e endereço, com a máscara conforme a permissão (5.5). Campo vazio aparece como "—".
+1. **Dados:** tipo, nome ou razão social, nome fantasia, documento, inscrições estadual e municipal, nome de quem compra, e-mail, telefone e endereço, com a máscara conforme a permissão (5.5). Campo vazio aparece como "—".
 2. **Selo** "Completo para nota" ou "Faltam dados para nota", com a lista do que falta (ex.: "Faltam: CPF, número do endereço").
 3. **Compras do cliente:**
    - as vendas desse cliente, da mais recente para a mais antiga: número, data, valor e situação ("Concluída" ou "Cancelada", com a marca "Troca" quando a venda veio de uma troca, SPEC-011);
@@ -208,7 +213,7 @@ A loja de semijoias vende no balcão, pelo Instagram com entrega, e para revende
 1. **Completo** quando tem:
    - **pessoa física:** nome, CPF e endereço completo (CEP, logradouro, número, bairro, município e UF; complemento não conta);
    - **empresa:** razão social, CNPJ, a situação na inscrição estadual escolhida (com o número, se contribuinte) e endereço completo.
-2. E-mail e telefone **não** contam para o selo.
+2. E-mail, telefone, nome fantasia e inscrição municipal **não** contam para o selo.
 3. O selo é **calculado** a cada leitura, nunca gravado à mão.
 4. **Nova venda:** quando o negócio liga "Emito nota fiscal de produtos" (SPEC-021) e alguém escolhe um cliente incompleto, aparece abaixo do seletor: "Faltam dados para a nota fiscal deste cliente: CPF, endereço." Para quem tem *Vendas: editar*, o aviso traz o link "Completar". Com a opção desligada, a venda não mostra o aviso. O selo continua na tela de Clientes.
 5. **Nada bloqueia:** a venda com cliente incompleto, ou sem cliente, é registrada normalmente (RF22).
@@ -266,6 +271,7 @@ A loja de semijoias vende no balcão, pelo Instagram com entrega, e para revende
 | Tipo e documento | CPF só em pessoa física e CNPJ só em empresa. Dígitos verificadores errados → `DocumentoInvalido` ("CPF inválido." / "CNPJ inválido."). O banco também garante o formato e a coerência com o tipo. |
 | Documento repetido | Mesmo documento em outro cliente ativo do negócio → `DocumentoRepetido` ("Já existe um cliente com este CPF: Maria Silva."). O banco também garante a unicidade entre os clientes não anonimizados do negócio. |
 | Inscrição estadual | Só em empresa. "Contribuinte" exige o número (1 a 14 letras e dígitos); "Isenta" e "Não contribuinte" não têm número. |
+| Nome fantasia e inscrição municipal | Só em empresa. Nome fantasia até 150 caracteres; inscrição municipal de 1 a 20 letras e dígitos (pontos, barras e traços são ignorados). |
 | E-mail | Formato de e-mail, até 254 caracteres → senão `CampoInvalido` ("E-mail inválido."). |
 | Telefone | 10 ou 11 dígitos, DDD válido → senão `CampoInvalido` ("Informe o telefone com DDD."). |
 | Endereço | CEP com 8 dígitos; UF da lista; os demais campos com até 120 caracteres (número e complemento até 30). |
@@ -327,7 +333,7 @@ A loja de semijoias vende no balcão, pelo Instagram com entrega, e para revende
 
 | Entidade | Mudança |
 |---|---|
-| `Cliente` | **Novos campos:**<br>• `tipo`: `PESSOA_FISICA` ou `PESSOA_JURIDICA`, padrão pessoa física;<br>• `documento`: CPF com 11 dígitos ou CNPJ com 14 posições, sem pontuação, opcional;<br>• `situacaoIe`: `CONTRIBUINTE`, `ISENTO` ou `NAO_CONTRIBUINTE`, opcional, só em empresa;<br>• `inscricaoEstadual`: opcional, só com `CONTRIBUINTE`;<br>• `nomeContato`: opcional, só em empresa;<br>• `email` e `telefone`;<br>• `cep`, `logradouro`, `numero`, `complemento`, `bairro`, `municipio` e `uf`;<br>• `criadoEm` e `atualizadoEm`.<br>**Migrado e removido:** `contato`.<br>**Mantido:** `anonimizadoEm`.<br>**Restrições:** `CHECK` de formato e de coerência com o tipo; unicidade do documento por negócio entre os não anonimizados; índice para a busca. |
+| `Cliente` | **Novos campos:**<br>• `tipo`: `PESSOA_FISICA` ou `PESSOA_JURIDICA`, padrão pessoa física;<br>• `documento`: CPF com 11 dígitos ou CNPJ com 14 posições, sem pontuação, opcional;<br>• `situacaoIe`: `CONTRIBUINTE`, `ISENTO` ou `NAO_CONTRIBUINTE`, opcional, só em empresa;<br>• `inscricaoEstadual`: opcional, só com `CONTRIBUINTE`;<br>• `nomeFantasia` e `inscricaoMunicipal`: opcionais, só em empresa (OPEN-009);<br>• `nomeContato`: opcional, só em empresa;<br>• `email` e `telefone`;<br>• `cep`, `logradouro`, `numero`, `complemento`, `bairro`, `municipio` e `uf`;<br>• `criadoEm` e `atualizadoEm`.<br>**Migrado e removido:** `contato`.<br>**Mantido:** `anonimizadoEm`.<br>**Restrições:** `CHECK` de formato e de coerência com o tipo; unicidade do documento por negócio entre os não anonimizados; índice para a busca. |
 | `Negocio` | Sem coluna nova: `cnpj` passa a aceitar o formato com letras (só a validação e a formatação mudam). |
 
 **Selo "completo para nota":** calculado (5.4), não gravado.
@@ -377,11 +383,11 @@ A loja de semijoias vende no balcão, pelo Instagram com entrega, e para revende
 |---|---|---|---|
 | **Listar clientes** | busca?, filtro? ("incompletos") | [{id, tipo, nome, documento mascarado, município/UF, completoParaNota}] | `SemPermissao` |
 | **Detalhar cliente** | id | dados (completos ou mascarados conforme a permissão), completoParaNota, o que falta, compras [{venda, número, data, valor, situação}] (até 50), quantidade e total comprado | `NaoEncontrado`, `SemPermissao` |
-| **Cadastrar cliente** | tipo, nome, documento?, situacaoIe?, inscricaoEstadual?, nomeContato?, email?, telefone?, endereço? | cliente (com a máscara de quem cadastrou) | `CampoInvalido`, `DocumentoInvalido`, `DocumentoRepetido`, `SemPermissao` |
+| **Cadastrar cliente** | tipo, nome, nomeFantasia?, documento?, situacaoIe?, inscricaoEstadual?, inscricaoMunicipal?, nomeContato?, email?, telefone?, endereço? | cliente (com a máscara de quem cadastrou) | `CampoInvalido`, `DocumentoInvalido`, `DocumentoRepetido`, `SemPermissao` |
 | **Editar cliente** | id + os mesmos campos | cliente | os do cadastro + `NaoEncontrado` |
 | **Excluir cliente** | id | {resultado: "apagado" ou "anonimizado"} | `NaoEncontrado`, `SemPermissao` |
 | **Consultar CEP** | cep | {logradouro, bairro, municipio, uf} | `CampoInvalido`, `NaoEncontrado`, `ConsultaIndisponivel`, `SemPermissao` |
-| **Consultar CNPJ do cliente** | cnpj | {razaoSocial, endereço} | `DocumentoInvalido`, `NaoEncontrado`, `ConsultaIndisponivel`, `SemPermissao` |
+| **Consultar CNPJ do cliente** | cnpj | {razaoSocial, nomeFantasia, endereço, telefone, email} (os que a base tiver) | `DocumentoInvalido`, `NaoEncontrado`, `ConsultaIndisponivel`, `SemPermissao` |
 | **Clientes da venda** (estendido, SPEC-008) | — | [{id, nome, completoParaNota, faltando}] sem anonimizados | — |
 | **Registrar venda / troca** (SPEC-008, SPEC-011) | sem mudança | — | `ClienteInvalido` também para cliente anonimizado (já existente) |
 | **Salvar CNPJ do negócio** (SPEC-004) | cnpj numérico ou com letras | — | `CnpjInvalido` |
@@ -404,7 +410,7 @@ A loja de semijoias vende no balcão, pelo Instagram com entrega, e para revende
 
 **CA-01 — Cadastrar pessoa física pelo CEP.** Dado o Dono na tela de Clientes, quando cadastra "Ana Souza" com um CPF válido e digita o CEP, então rua, bairro, município e UF são preenchidos. Ao completar o número e salvar, a Ana aparece na lista com o CPF mascarado e o selo "Completo para nota".
 
-**CA-02 — Cadastrar empresa pelo CNPJ.** Dado o Dono cadastrando uma empresa, quando informa o CNPJ e toca em "Buscar dados do CNPJ", então a razão social e o endereço são preenchidos. Com a situação "Contribuinte do ICMS" e o número da inscrição, o selo fica "Completo para nota".
+**CA-02 — Cadastrar empresa pelo CNPJ.** Dado o Dono cadastrando uma empresa, quando informa o CNPJ e toca em "Buscar dados do CNPJ", então a razão social, o nome fantasia, o endereço, o telefone e o e-mail que a base pública tiver são preenchidos, sem trocar o que já foi digitado. A lista mostra o nome fantasia, com a razão social abaixo. Com a situação "Contribuinte do ICMS" e o número da inscrição, o selo fica "Completo para nota".
 
 **CA-03 — Consulta indisponível.** Dado que a consulta de CEP ou de CNPJ falha, quando o Dono continua o cadastro, então vê a mensagem para preencher à mão e consegue salvar com os dados digitados.
 
@@ -451,9 +457,9 @@ A loja de semijoias vende no balcão, pelo Instagram com entrega, e para revende
 | T01 | CPF: validação e formatação (dígitos, todos iguais, tamanho errado, pontuação) | Unitário | CA-04, INV-001 |
 | T02 | CNPJ numérico e com letras: normalização, dígitos verificadores (exemplos oficiais), minúsculas, formatação; os numéricos antigos continuam válidos | Unitário | CA-14, INV-009 |
 | T03 | Telefone, CEP, e-mail, máscaras (CPF, CNPJ, e-mail, telefone, endereço) e o selo "completo para nota" (o que falta, por tipo) | Unitário | CA-01, CA-02, CA-05, INV-010 |
-| T04 | Cadastrar e editar: tipo e documento coerentes, inscrição estadual, valores antigos mantidos, documento repetido no negócio (inclusive simultâneo) e aceito em outro negócio, restrições do banco | Integração | CA-01, CA-02, CA-04, CA-05, INV-001, INV-002 |
+| T04 | Cadastrar e editar: tipo e documento coerentes, inscrições estadual e municipal, nome fantasia, valores antigos mantidos, documento repetido no negócio (inclusive simultâneo) e aceito em outro negócio, restrições do banco | Integração | CA-01, CA-02, CA-04, CA-05, INV-001, INV-002 |
 | T05 | Máscara pela permissão: lista, detalhe, seletor da venda e respostas das ações, para Dono, Gerente, Colaborador e suporte | Integração | CA-06, CA-13, INV-003 |
-| T06 | Consultas de CEP e CNPJ com o adaptador falso: preenchimento, falha, não encontrado; o CPF nunca é enviado; suporte e falta de permissão recusados | Unitário + integração | CA-01, CA-02, CA-03, INV-004 |
+| T06 | Consultas de CEP e CNPJ com o adaptador falso: preenchimento (no CNPJ, também nome fantasia, telefone e e-mail, só nos campos vazios), falha, não encontrado; o CPF nunca é enviado; suporte e falta de permissão recusados | Unitário + integração | CA-01, CA-02, CA-03, INV-004 |
 | T07 | Detalhe com as compras: ordem, situação, total sem canceladas, limite de 50, isolamento | Integração | CA-09 |
 | T08 | Excluir: sem vendas apaga; com vendas anonimiza; vendas, pagamentos, contas e lançamentos iguais; o anonimizado sai da lista e do seletor e é recusado numa venda nova | Integração | CA-10, CA-11, INV-005, INV-011 |
 | T09 | Busca e filtro "Faltam dados para nota" | Integração | CA-12 |
@@ -467,7 +473,7 @@ A loja de semijoias vende no balcão, pelo Instagram com entrega, e para revende
 
 ## 13. Questões em aberto
 
-Todas decididas pela equipe em 22/10/2026, em entrevista, pela opção recomendada:
+Todas decididas pela equipe em 22/10/2026, em entrevista. As OPEN-001 a OPEN-008 seguiram a opção recomendada; a OPEN-009 veio depois, da comparação com o cadastro de clientes de um ERP de mercado mostrado pela equipe:
 
 | ID | Decisão |
 |---|---|
@@ -479,6 +485,7 @@ Todas decididas pela equipe em 22/10/2026, em entrevista, pela opção recomenda
 | **OPEN-006** — Cadastro "completo para nota fiscal" | **Selo e aviso** (recomendada): selo e filtro na tela de Clientes, e aviso na Nova venda ao escolher um cliente incompleto. Nada bloqueia a venda, porque a NFC-e muitas vezes nem pede CPF. Descartado: só o selo. |
 | **OPEN-007** — CNPJ com letras | **No cliente e no negócio** (recomendada): a validação nova vale para o cliente empresa e para o CNPJ do próprio negócio, no cadastro e nos Dados do negócio. Sem isso, um MEI aberto depois de julho de 2026 não consegue informar o CNPJ no HE. Descartado: só no cliente. |
 | **OPEN-008** — Detalhe do cliente | **Dados e compras** (recomendada): os dados e as compras do cliente (número, data, valor e situação), com link para cada venda e o total comprado. Descartado: só os dados. |
+| **OPEN-009** — Campos do ERP de referência | A equipe comparou a Spec com o cadastro de clientes de um ERP de mercado (vídeo de 22/10/2026). Nele, a pessoa física com CPF não preenche nada sozinha, como nesta Spec, e o CNPJ preenche os dados da empresa. Escolhidos:<br>• **nome fantasia** (recomendado), preenchido pelo CNPJ e mostrado na lista;<br>• **o CNPJ também preenche telefone e e-mail** (recomendado), quando a base pública os tiver e só nos campos vazios;<br>• **inscrição municipal**, opcional, para a nota de serviço.<br>Descartado: **RG**, que a nota não pede (minimização, LGPD). Os demais campos do ERP ficam fora (seção 3). |
 
 **Decisões derivadas do escopo combinado e da baseline (sem questão nova):**
 - todos os campos novos são **opcionais**; só o nome (ou a razão social) é obrigatório, como hoje (RF22, escopo de 19/10/2026);
@@ -502,7 +509,7 @@ A SPEC-022 estará concluída quando:
 - [ ] todos os invariantes (INV-001 a INV-011) estiverem preservados;
 - [ ] os testes derivados (T01 a T14) estiverem aprovados, com o CI verde no PR;
 - [ ] os RNFs aplicáveis (RNF01, RNF02, RNF04, RNF10) tiverem sido verificados como descrito na seção 10;
-- [x] as questões OPEN-001 a OPEN-008 tiverem sido decididas e registradas (22/10/2026), com RF22, RF58, RF76 e RN27 alterados e o RF81 e a RN36 incluídos na baseline;
+- [x] as questões OPEN-001 a OPEN-009 tiverem sido decididas e registradas (22/10/2026), com RF22, RF58, RF76 e RN27 alterados e o RF81 e a RN36 incluídos na baseline;
 - [ ] a nova versão da Política de Privacidade e dos Termos de Uso estiver publicada, com o novo aceite;
 - [ ] os documentos de modelo (seção 7) e a nota de ampliação da ADR-006 estiverem atualizados;
 - [ ] não existir divergência conhecida entre a implementação e esta Spec;

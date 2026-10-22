@@ -412,9 +412,9 @@ flowchart LR
 - **Justificativa da ordem:** segunda das melhorias da revisão financeira e contábil; usa as subcategorias da SPEC-020 para a sugestão e não depende da SPEC-022.
 
 #### SPEC-022 — Cliente com dados completos
-- **Spec:** [`specs/SPEC-022.md`](./specs/SPEC-022.md) (✅ aprovada em 22/10/2026, com as OPEN-001 a OPEN-008 decididas em entrevista, todas pela opção recomendada)
+- **Spec:** [`specs/SPEC-022.md`](./specs/SPEC-022.md) (✅ aprovada em 22/10/2026, com as OPEN-001 a OPEN-008 decididas em entrevista, todas pela opção recomendada, e a OPEN-009 depois da comparação com o cadastro de um ERP de mercado)
 - **Objetivo:** permitir que o negócio guarde os dados dos clientes que a nota fiscal pede e os de contato, todos **opcionais** além do nome:
-  - pessoa física (CPF) ou empresa (CNPJ, situação na inscrição estadual e nome de quem compra);
+  - pessoa física (CPF) ou empresa (razão social, nome fantasia, CNPJ, situação na inscrição estadual, inscrição municipal e nome de quem compra);
   - endereço, e-mail e telefone.
 
   A proteção segue a LGPD.
@@ -491,7 +491,7 @@ A conferência do seed fiscal foi concluída em 03/10/2026 (DAS do MEI atualizad
   - NCM obrigatório para quem liga "Emito nota fiscal de produtos", com a venda de produto sem NCM bloqueada (OPEN-005 e OPEN-006, recomendação da revisora contábil).
 
   Baseline ajustada (RF08, RF80, RN34 e RN35). Implementada em 21/10/2026 e verificada em build local (testes T01–T12 e roteiro no navegador com 74 verificações). Mesclada no PR #102; o workflow Migrações carregou a tabela na homologação (10.516 códigos). Homologada em 22/10/2026 (T14); as cinco divergências da implementação foram aceitas pela equipe (baseline ajustada) e a busca continua em ordem de código. No T14, os itens de Configurações pareciam sumir do menu em janelas baixas: é a rolagem da lista do meio (N8 da SPEC-016), e a equipe decidiu manter. Concluída.
-- [SPEC-022](specs/SPEC-022.md) (cliente com dados completos): aprovada em 22/10/2026, com as OPEN-001 a OPEN-008 decididas em entrevista, todas pela opção recomendada:
+- [SPEC-022](specs/SPEC-022.md) (cliente com dados completos): aprovada em 22/10/2026, com as OPEN-001 a OPEN-009 decididas em entrevista (as oito primeiras pela opção recomendada):
   - tela de Clientes dentro de Vendas, com as permissões de Vendas;
   - documento mascarado na lista e completo só para quem edita clientes;
   - pessoa física ou empresa;
@@ -499,7 +499,8 @@ A conferência do seed fiscal foi concluída em 03/10/2026 (DAS do MEI atualizad
   - excluir apaga ou anonimiza;
   - selo e aviso de "completo para nota";
   - CNPJ com letras no cliente e no negócio;
-  - detalhe com as compras.
+  - detalhe com as compras;
+  - nome fantasia, inscrição municipal e telefone e e-mail pelo CNPJ (OPEN-009, depois da comparação com um ERP de mercado; RG descartado).
 
   Baseline ajustada (RF22, RF58, RF76 e RN27 alterados; RF81 e RN36 novos). A implementar.
 - SPEC-019: a gerar depois da SPEC-022, antes de abrir a produção.
