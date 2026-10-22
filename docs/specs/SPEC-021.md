@@ -1,6 +1,6 @@
 # SPEC-021 — NCM nos produtos
 
-> **Status:** 🟢 **Aprovada em 21/10/2026.** As questões em aberto foram decididas pela equipe em entrevista (seção 13):
+> **Status:** ✅ **Concluída em 22/10/2026** — implementada (PR #102), homologada (T14) e com as cinco divergências da implementação aceitas pela equipe. **Aprovada em 21/10/2026.** As questões em aberto foram decididas pela equipe em entrevista (seção 13):
 > - OPEN-001 e OPEN-002 pela opção recomendada (tabela oficial no sistema; código que sai da tabela fica no item, com aviso);
 > - OPEN-003 com a lista de produtos **"Sem NCM"**, além do item e da busca;
 > - OPEN-004 com a **sugestão pela subcategoria**, mais um complemento: ao lado da sugestão fica um aviso explícito de que ela pode estar errada e de que a responsabilidade pelo NCM correto é do próprio negócio.
@@ -9,7 +9,7 @@
 > - **OPEN-005** (recomendada): a obrigatoriedade vale para quem liga a opção **"Emito nota fiscal de produtos"** nos Dados do negócio;
 > - **OPEN-006**: com a opção ligada, a **venda de produto físico sem NCM é bloqueada**, como a de produto sem preço (RN23).
 >
-> A baseline foi ajustada: RF08 alterado, RF80, RN34 e RN35 novos. **Implementada em 21/10/2026** e verificada em build local: testes T01–T12 automatizados e o roteiro T13 no navegador, com 74 verificações ([evidências](evidencias/SPEC-021/README.md)). As notas da implementação, com cinco divergências registradas para a decisão da equipe, estão depois da seção 9. Falta a homologação (T14), depois do merge e da carga da tabela. Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar), a partir da revisão de uma profissional da área financeira e contábil que está montando uma loja de semijoias (19/10/2026).
+> A baseline foi ajustada: RF08 alterado, RF80, RN34 e RN35 novos. **Implementada em 21/10/2026** e verificada em build local: testes T01–T12 automatizados e o roteiro T13 no navegador, com 74 verificações ([evidências](evidencias/SPEC-021/README.md)). **Homologação (T14) em 22/10/2026:** fluxo aprovado pela equipe, com a tabela NCM carregada pelo workflow Migrações. As cinco divergências da implementação foram aceitas (opção 2, baseline ajustada nas seções 5.1, 5.2, 5.4, 5.6 e 7), e a busca continua em ordem de código. As notas da implementação e da homologação estão depois da seção 9. Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar), a partir da revisão de uma profissional da área financeira e contábil que está montando uma loja de semijoias (19/10/2026).
 >
 > **Mapa:** [`MAPA_DE_SPECS.md`](../MAPA_DE_SPECS.md)
 > - **Altera:** [SPEC-006](SPEC-006.md) (cadastro, lista, busca e detalhe do item), [SPEC-007](SPEC-007.md) (busca do estoque), [SPEC-004](SPEC-004.md) (Dados do negócio: opção de nota fiscal de produtos), [SPEC-008](SPEC-008.md) (venda de produto sem NCM, também na troca da SPEC-011) e [SPEC-014](SPEC-014.md) (exportação).
@@ -163,7 +163,8 @@ A loja de semijoias vai emitir nota fiscal no futuro e precisa do NCM de cada pe
    - **carrega** no workflow Migrações, depois das migrações;
    - grava só os códigos de **8 dígitos**, com a descrição do próprio nível e o **caminho**, que são as descrições dos níveis acima (capítulo, posição, subposição);
    - guarda a vigência (início e fim) e o ato legal;
-   - grava um **texto de busca** sem acentos e em minúsculas, com o código, a descrição e o caminho.
+   - grava um **texto de busca** sem acentos e em minúsculas, com o código, a descrição e o caminho **sem o capítulo** (a descrição do capítulo 71, por exemplo, cita "bijuterias", e a busca traria o capítulo inteiro);
+   - guarda numa tabela de uma linha a **data da atualização** e o ato do arquivo carregado, mostrados no rodapé da busca (5.2, item 3).
 3. **Atualização:** quando a Receita publicar mudanças, a equipe troca o arquivo por PR e a carga roda no próximo workflow Migrações.
    - Exemplos de mudança: uma resolução nova ou a edição **SH 2028**, que entra em vigor em 01/01/2028.
    - A carga **não apaga** códigos: um código que não está mais no arquivo recebe como data de fim o dia anterior à atualização da tabela.
@@ -172,7 +173,7 @@ A loja de semijoias vai emitir nota fiscal no futuro e precisa do NCM de cada pe
 
 ### 5.2 Campo NCM no cadastro e na edição
 
-1. O formulário de **produto físico** tem o campo **NCM**, depois de "Unidade de medida". O formulário de serviço não tem o campo.
+1. O formulário de **produto físico** tem o campo **NCM**, logo depois da **Subcategoria**, de quem vem a sugestão (5.3). O formulário de serviço não tem o campo.
    - Com a opção de nota fiscal **desligada**, o rótulo é "NCM (opcional)"; **ligada**, é "NCM", obrigatório (5.6).
    - Texto de ajuda: "Código da mercadoria na nota fiscal, com 8 dígitos. Busque pelo código ou por palavras. A classificação correta é responsabilidade do negócio; na dúvida, confirme com o seu contador."
 2. **Digitar o código:** o campo aceita 8 dígitos e mostra no formato 0000.00.00. Ao completar os 8 dígitos, o sistema confere na tabela:
@@ -211,7 +212,7 @@ A loja de semijoias vai emitir nota fiscal no futuro e precisa do NCM de cada pe
 ### 5.4 Detalhe do item e código fora da tabela vigente
 
 1. **Detalhe do item (Catálogo):**
-   - nova linha **"NCM"** em "Dados do item", com o código formatado e a descrição curta (ex.: "7117.19.00 — Bijuterias de metais comuns: outras");
+   - nova linha **"NCM"** em "Dados do item", com o código formatado e, abaixo, a mesma descrição do campo e da busca, com o caminho sem o capítulo (ex.: "7117.19.00" e "Bijuterias › De metais comuns, mesmo prateados, dourados ou platinados › Outras"). A tabela oficial não tem descrição curta: a do próprio nível costuma ser só "Outras";
    - "—" quando não houver;
    - em serviço, a linha não aparece.
 2. **Código fora da tabela vigente** (OPEN-002), por exemplo depois de uma atualização da tabela:
@@ -240,7 +241,8 @@ A loja de semijoias vai emitir nota fiscal no futuro e precisa do NCM de cada pe
 1. **Onde fica:** em Dados do negócio (SPEC-004), a opção **"Emito nota fiscal de produtos (NF-e ou NFC-e)"**, com o texto: "Ligada, o NCM passa a ser obrigatório nos produtos físicos, e produto sem NCM não pode ser vendido." Só o Dono altera (OPEN-005). Nasce **desligada**, inclusive nos negócios que já existem.
 2. **Ligar com produtos sem NCM:** se há produto físico ativo sem NCM, um diálogo de confirmação (SPEC-016) avisa antes de ligar:
    - "12 produtos físicos estão sem NCM. Com a opção ligada, eles não poderão ser vendidos até receberem o código.";
-   - botões "Ligar mesmo assim" e "Voltar", e o link "Ver produtos sem NCM".
+   - botões "Ligar mesmo assim" e "Voltar";
+   - o link "Ver produtos sem NCM" fica na seção, ao lado da opção, visível antes de ligar: o diálogo de confirmação da SPEC-016 só tem o texto e os dois botões.
 3. **Com a opção ligada** (OPEN-005 e OPEN-006):
    - o NCM é **obrigatório** ao cadastrar e ao editar qualquer produto físico, inclusive os materiais. Um produto já cadastrado sem NCM só salva a edição depois de receber o código;
    - um código **fora da tabela vigente** já gravado continua aceito na edição (OPEN-002) e **não** bloqueia a venda, só mostra o aviso de revisão;
@@ -304,6 +306,7 @@ A loja de semijoias vai emitir nota fiscal no futuro e precisa do NCM de cada pe
 | `Item` | Novo campo opcional `ncm` (texto de 8 dígitos, sem pontos). `CHECK` do formato e `CHECK` de que só produto físico tem NCM. Não é chave estrangeira: o código fica no item mesmo depois de sair da tabela (OPEN-002). Itens existentes ficam com o campo nulo. |
 | `Negocio` | Novo campo `emiteNotaDeProduto` (booleano, padrão falso): a opção "Emito nota fiscal de produtos" (OPEN-005). |
 | `Ncm` (nova, **global**) | `codigo` (8 dígitos), `descricao` (do próprio nível), `caminho` (descrições dos níveis acima), `textoBusca` (normalizado), `vigenteDesde`, `vigenteAte` (nulo = sem fim), `ato` (tipo, número e ano). Restrição única `(codigo, vigenteDesde)`; índice para a busca por começo do código. RLS ligado, sem políticas; o acesso é só pelo servidor, como as tabelas fiscais. |
+| `TabelaNcm` (nova, **global**) | Uma linha só (`id = 1`): `atualizadaEm` (data da tabela no arquivo), `ato` e `carregadaEm`. Alimenta o rodapé da busca ("atualizada em dd/mm/aaaa"). RLS ligado, sem políticas. |
 
 **Contagens e filtros:**
 - "Sem NCM" = produto físico ativo com `ncm` nulo;
@@ -406,7 +409,7 @@ A loja de semijoias vai emitir nota fiscal no futuro e precisa do NCM de cada pe
 - **Formulário da nota fiscal enviado pela transição** (como o de subcategorias), e não por `<form action>`. O React reinicia o formulário depois da Server Action, e a caixa aparecia desmarcada com a opção já ligada (encontrado no T13).
 - **Botão da sugestão em duas linhas no celular:** o texto leva o nome da subcategoria e não cabia na caixa a 390 px (encontrado no T13).
 
-**Divergências registradas na implementação:** proposta (2), ajustar a baseline, em todas; a decisão é da equipe.
+**Divergências registradas na implementação:** as cinco foram **aceitas pela equipe em 22/10/2026** pela opção (2), ajustar a baseline. As seções 5.1 (item 2), 5.2 (item 1), 5.4 (item 1), 5.6 (item 2) e 7 já trazem o texto novo.
 
 1. **Posição do campo (5.2, item 1):** o campo NCM fica **depois da Subcategoria**, e não logo depois de "Unidade de medida". No formulário, a unidade de medida divide a linha com a categoria, e a subcategoria vem em seguida; como a sugestão depende da subcategoria, o NCM logo abaixo dela deixa a relação visível.
 2. **Descrição no detalhe (5.4, item 1):** o exemplo da Spec mostra "7117.19.00 — Bijuterias de metais comuns: outras". A tabela oficial não traz uma descrição curta: a do próprio nível costuma ser só "Outras". O detalhe mostra o código e, abaixo, a mesma descrição do campo e da gaveta, com o caminho sem o capítulo: "Bijuterias › De metais comuns, mesmo prateados, dourados ou platinados › Outras".
@@ -414,7 +417,11 @@ A loja de semijoias vai emitir nota fiscal no futuro e precisa do NCM de cada pe
 4. **Texto de busca (5.1, item 2):** não inclui a descrição do **capítulo**. A do capítulo 71 cita "bijuterias", e "bijut" trazia o capítulo inteiro (pérolas, pedras e joalheria). O código, a descrição e os demais níveis do caminho continuam na busca. O caminho guardado mantém o capítulo.
 5. **Tabela `TabelaNcm` (seção 7):** além de `Ncm`, uma tabela global de uma linha guarda a data da atualização e o ato do arquivo carregado. É de onde vem o "atualizada em dd/mm/aaaa" do rodapé da gaveta (5.2, item 3); o arquivo não tem essa data em cada código.
 
-**Observação para a equipe (sem divergência):** a busca segue a ordem de código pedida na Spec (5.2, item 3, e CA-02). Com palavras, isso pode pôr na frente códigos que só citam a palavra. Por exemplo, "bijut" lista primeiro 7018.10.10 a 7018.90.00 (contas de vidro, "exceto bijuterias") e só depois 7117.11.00, 7117.19.00 e 7117.90.00. Uma melhoria possível, para depois: mostrar primeiro os códigos cuja própria descrição tem a palavra. Fica para a equipe decidir.
+**Observação para a equipe (sem divergência):** a busca segue a ordem de código pedida na Spec (5.2, item 3, e CA-02). Com palavras, isso pode pôr na frente códigos que só citam a palavra. Por exemplo, "bijut" lista primeiro 7018.10.10 a 7018.90.00 (contas de vidro, "exceto bijuterias") e só depois 7117.11.00, 7117.19.00 e 7117.90.00. Uma melhoria possível seria mostrar primeiro os códigos cuja própria descrição tem a palavra. **Decisão da equipe (22/10/2026): manter a ordem de código**, como a Spec pede; os resultados trazem a descrição completa, e a pessoa escolhe o código certo.
+
+**Homologação (T14, 22/10/2026):** a equipe percorreu o fluxo em <https://he-homol.vercel.app>, com o Dono do negócio **HE Testing**, depois do merge do PR #102. O workflow Migrações aplicou a migração e carregou a tabela ("10516 inseridos"). Fluxo aprovado ([evidências](evidencias/SPEC-021/README.md#homologação-t14--22102026)).
+
+- **Menu lateral (sem mudança):** a equipe notou que, em janelas mais baixas, "Dados do negócio", "Plano" e "Acesso do suporte" pareciam sumir do menu. Não é defeito da SPEC-021: desde a homologação da N8 da SPEC-016 (19/10/2026), só a lista do meio do menu rola, e numa janela de 824 px de altura ela mostra até "Equipe"; os demais itens ficam logo abaixo, ao rolar a lista. A equipe decidiu **manter como está**.
 
 ---
 
@@ -529,14 +536,14 @@ Todas decididas pela equipe em 21/10/2026, em entrevista. A OPEN-005 e a OPEN-00
 
 A SPEC-021 estará concluída quando:
 
-- [ ] todos os critérios de aceitação (CA-01 a CA-21) estiverem implementados, por testes, no navegador (build local) e na homologação (T14) — implementados e verificados por testes e no navegador em 21/10/2026; falta a homologação;
+- [x] todos os critérios de aceitação (CA-01 a CA-21) estiverem implementados, por testes, no navegador (build local) e na homologação (T14) — implementados e verificados por testes e no navegador em 21/10/2026; homologados em 22/10/2026;
 - [x] todos os invariantes (INV-001 a INV-010) estiverem preservados — testes T01–T12;
-- [ ] os testes derivados (T01 a T14) estiverem aprovados, com o CI verde no PR — T01 a T13 aprovados (T13 com 74 verificações); falta o T14;
+- [x] os testes derivados (T01 a T14) estiverem aprovados, com o CI verde no PR — T01 a T13 aprovados (T13 com 74 verificações), CI verde no PR #102; T14 aprovado em 22/10/2026;
 - [x] os RNFs aplicáveis (RNF01, RNF02, RNF04, RNF10) tiverem sido verificados como descrito na seção 10 — capturas em 390/768/1440 px nos dois temas, axe-core sem violação, JavaScript dentro do orçamento (no máximo +3,2 KB), busca em até 11 ms com a tabela inteira, RLS e isolamento testados, exportação testada;
 - [x] as questões OPEN-001 a OPEN-006 tiverem sido decididas e registradas (21/10/2026), com o RF08 alterado e o RF80, a RN34 e a RN35 incluídos na baseline;
-- [ ] a tabela NCM oficial estiver no repositório e carregada na homologação — no repositório (`docs/prisma_base/tabela_ncm.json`); a carga roda no workflow Migrações depois do merge;
+- [x] a tabela NCM oficial estiver no repositório e carregada na homologação — `docs/prisma_base/tabela_ncm.json`; carregada pelo workflow Migrações em 21/10/2026 (10.516 códigos);
 - [x] os documentos de modelo (seção 7) estiverem atualizados;
-- [ ] não existir divergência conhecida entre a implementação e esta Spec — cinco divergências registradas depois da seção 9, aguardando a decisão da equipe;
+- [x] não existir divergência conhecida entre a implementação e esta Spec — as cinco divergências registradas depois da seção 9 foram aceitas pela equipe em 22/10/2026 (opção 2, baseline ajustada);
 - [x] toda divergência em relação à baseline tiver sido explicitamente analisada e registrada (depois da seção 9).
 
 **Regra fundamental:** a implementação obedece a esta Spec aprovada. Se surgir conflito entre código, Spec e documentos de modelagem, o comportamento não é alterado em silêncio: a divergência é registrada com a proposta de (1) corrigir a implementação ou (2) alterar a baseline, e a decisão é da equipe.
