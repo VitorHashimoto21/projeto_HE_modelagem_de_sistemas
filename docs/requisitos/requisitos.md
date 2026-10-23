@@ -34,12 +34,12 @@
 | RF05 | O sistema deve oferecer 3 papéis fixos de acesso: **Dono** (acesso total), **Gerente** (acesso total exceto configurações) e **Colaborador** (acesso restrito a Vendas, Estoque e Dashboard restrito — RF63 —, sem Financeiro). |
 | RF06 | O dono deve poder configurar permissões granulares customizadas por módulo para um colaborador, além dos 3 papéis fixos (ex.: liberar a um Colaborador apenas o lançamento de despesas operacionais no Financeiro, sem acesso a saldo, relatórios, custos fixos ou margens). A granularidade é **módulo × ação**: para cada módulo (Catálogo, Estoque, Vendas, Calculadora, Financeiro, Dashboard), as ações ver, criar, editar e excluir/cancelar; os 3 papéis fixos são predefinições dessa matriz. |
 | RF72 | O convite de colaborador (RF04) deve ser enviado por e-mail com link de uso único e prazo de validade, informando o papel (e as permissões customizadas, se houver) que o convidado receberá. O convidado pode ainda não ter conta: ao aceitar, cadastra-se (ou entra) e passa a ser membro do negócio. O Dono pode cancelar um convite pendente; convites pendentes contam no limite de colaboradores do plano gratuito (RF47). |
-| RF58 | Ao cadastrar um negócio, o sistema deve solicitar o CNPJ e consultar a base pública de CNPJ da Receita Federal para preencher automaticamente razão social, CNAE principal e opção pelo Simples Nacional/MEI (regime tributário). |
+| RF58 | Ao cadastrar um negócio, o sistema deve solicitar o CNPJ e consultar a base pública de CNPJ da Receita Federal para preencher automaticamente razão social, CNAE principal e opção pelo Simples Nacional/MEI (regime tributário). O CNPJ pode ser numérico ou no formato com letras (IN RFB nº 2.229/2024, SPEC-022). |
 | RF69 | Para negócios do Simples Nacional cujo CNAE seja sujeito ao **Fator R**, o sistema deve calcular Fator R = folha de salários (lançamentos da categoria Salário) ÷ receita bruta, ambas no mesmo período usado no RBT12 (RN21), e aplicar o Anexo III quando Fator R ≥ 28% ou o Anexo V caso contrário (limite e anexos parametrizáveis — RN17), avisando o usuário quando o anexo efetivo mudar. |
 | RF59 | A partir do CNAE principal, o sistema deve sugerir o **Anexo do Simples Nacional** do negócio (tabela oficial CNAE → Anexo) ou, para MEI, o tipo de atividade (comércio/indústria, serviços ou ambos), permitindo edição. Quando a consulta estiver indisponível, esses dados devem ser preenchidos manualmente. Para **autônomos sem CNPJ**, o regime do negócio é **Autônomo** e o usuário informa o percentual de imposto que paga (ex.: ISS e IR estimados), usado como Imposto% na Calculadora (RF38). |
 | RF74 | O sistema deve ter o papel de **Administrador da plataforma**, concedido e retirado apenas por script da equipe (nunca por tela), numa conta **exclusiva** que não é membro de nenhum negócio. O Administrador vê um painel com os negócios da plataforma **somente por metadados** (nome, regime, plano, data de criação, número de membros, situação, nome e e-mail do Dono e situação do acesso de suporte), sem dados operacionais (SPEC-018). |
 | RF75 | O Dono deve poder **liberar o acesso do suporte** ao seu negócio, informando o motivo, os módulos liberados e o prazo (1 h, 24 h, 3 dias ou 7 dias), e **revogar** a liberação a qualquer momento (SPEC-018). |
-| RF76 | Com uma liberação ativa, o Administrador deve poder entrar no negócio em **modo suporte**, vendo apenas os módulos liberados, **somente leitura** (a edição é da SPEC-019), com faixa de aviso e com nome e contato de clientes e e-mails de membros mascarados (SPEC-018). |
+| RF76 | Com uma liberação ativa, o Administrador deve poder entrar no negócio em **modo suporte**, vendo apenas os módulos liberados, **somente leitura** (a edição é da SPEC-019), com faixa de aviso e com os dados pessoais de clientes (nome, documento, e-mail, telefone e endereço) e os e-mails de membros mascarados (SPEC-018, SPEC-022). |
 | RF77 | O sistema deve registrar cada liberação, revogação, entrada, tela aberta e saída do modo suporte, com data, hora e autor, e mostrar esse registro ao Dono na tela "Acessos do suporte"; os membros veem uma faixa enquanto a liberação estiver ativa, e o Dono recebe e-mail ao liberar e na primeira entrada do suporte (SPEC-018). |
 | RF78 | Quando a Política de Privacidade ou os Termos de Uso mudarem de versão, o sistema deve exigir o **novo aceite** de cada usuário no próximo acesso, mostrando o resumo das mudanças e registrando a versão e a data do aceite; até aceitar, o usuário só acessa Minha conta e Sair (SPEC-018). |
 
@@ -113,7 +113,7 @@
 
 | ID | Descrição |
 |---|---|
-| RF22 | O sistema deve permitir registrar uma venda com ou sem cliente identificado (campo opcional). |
+| RF22 | O sistema deve permitir registrar uma venda com ou sem cliente identificado (campo opcional). O cliente pode ser cadastrado na própria venda ou na tela de Clientes, com todos os dados além do nome opcionais (RF81, SPEC-022). |
 | RF23 | Uma venda deve poder conter múltiplos itens, combinando produtos físicos e/ou serviços. |
 | RF24 | O sistema deve suportar as formas de pagamento: Dinheiro, PIX, Cartão de Débito e Cartão de Crédito. |
 | RF25 | O sistema deve permitir pagamento misto em uma mesma venda (ex: parte em PIX + parte em Cartão de Crédito parcelado). |
@@ -121,6 +121,7 @@
 | RF27 | O sistema deve permitir parcelamento no Cartão de Crédito em até 12 vezes. |
 | RF28 | As datas de vencimento das parcelas devem ser geradas automaticamente de forma mensal, a partir da data da venda. |
 | RF65 | O sistema deve permitir que Dono e Gerente (ou Colaborador com permissão granular — RF06) cancelem uma venda inteira, informando motivo obrigatório. A venda cancelada nunca é apagada: fica com status Cancelada e registro auditável de quem cancelou, quando e por quê. |
+| RF81 | O negócio deve poder manter um **cadastro de clientes**, pessoa física (nome e CPF) ou empresa (razão social, nome fantasia, CNPJ, situação na inscrição estadual, inscrição municipal e nome de quem compra), com e-mail, telefone e endereço, todos **opcionais** além do nome. O endereço é preenchido pelo CEP, e os dados da empresa (inclusive telefone e e-mail públicos) pelo CNPJ, em base pública com preenchimento manual quando a consulta falha. A tela de Clientes fica dentro de Vendas, com as permissões de Vendas, e tem busca, o selo "completo para nota" (que não bloqueia a venda), o detalhe com as compras do cliente, a edição e a exclusão (RN27, RN36, SPEC-022). |
 | RF66 | Ao cancelar uma venda, o operador pode opcionalmente realizar uma **troca**: escolher itens de substituição de valor total menor ou igual ao da venda original. O sistema registra uma nova venda vinculada à original, abatendo o valor com crédito de troca, e reembolsa a diferença na forma escolhida. Troca por itens de valor maior fica fora do MVP. |
 
 ### Regras de Negócio
@@ -130,6 +131,7 @@
 - **RN11** — O valor de cada parcela é o valor pago no crédito dividido igualmente pelo número de parcelas, arredondado em centavos, com a diferença de arredondamento somada à **1ª parcela** (ex.: R$ 100,00 em 3x = R$ 33,34 + R$ 33,33 + R$ 33,33), sem desconto de taxa de maquininha no MVP.
 - **RN12** — Toda venda registrada dispara automaticamente: (1) baixa de estoque dos itens/materiais envolvidos e (2) lançamento(s) no Financeiro, conforme a(s) forma(s) de pagamento.
 - **RN25** — O cancelamento de venda ocorre em uma única transação: (1) a venda passa a Cancelada; (2) o estoque dos produtos e materiais é devolvido por movimentação de entrada de estorno; (3) as contas a receber ainda abertas da venda são canceladas (estorno feito na maquininha); (4) os valores já recebidos no caixa são estornados por lançamento de saída — exceto a parte usada como crédito de troca (RN26). Vendas canceladas não entram no RBT12, no faturamento nem no CMV%.
+- **RN36** — Os dados do cliente pertencem ao negócio, e só o nome é obrigatório. O CPF ou CNPJ é validado pelos dígitos verificadores, aceita o CNPJ com letras e é único entre os clientes ativos do negócio. O documento, o e-mail, o telefone e o endereço completos só chegam a quem pode editar clientes (*Vendas: editar*); os demais veem esses dados mascarados, e o suporte vê inclusive o nome mascarado. O CPF nunca é enviado a serviço externo. O selo "completo para nota" é calculado pelos dados e nunca bloqueia a venda (SPEC-022).
 - **RN26** — O crédito de troca é limitado ao valor da venda original que já entrou no caixa. Ele é registrado como forma de pagamento "Crédito de troca" da nova venda e não gera novo lançamento (o dinheiro já está no caixa). O reembolso ao cliente é o valor recebido menos o crédito usado. Se o crédito não cobrir a nova venda (ex.: original no cartão ainda não recebido), o restante é pago normalmente.
 
 ---
@@ -249,7 +251,7 @@
 ### Regras de Negócio
 
 - **RN29** — Datas são armazenadas em UTC; "dia", "mês" e "competência" (vendas do dia, RBT12, faturamento do mês, semáforo, contas mensais, gráficos) são sempre calculados no fuso **America/Sao_Paulo**.
-- **RN27** — A exclusão de conta (LGPD) bloqueia o acesso e **anonimiza** os dados pessoais (nome, e-mail e senha do usuário; nome e contato de clientes dos negócios em que ele é o único Dono). Os registros fiscais e financeiros desses negócios (vendas, lançamentos, contas, movimentações) são mantidos por 5 anos, sem identificação pessoal, para cumprimento de obrigações legais, e os negócios ficam encerrados.
+- **RN27** — A exclusão de conta (LGPD) bloqueia o acesso e **anonimiza** os dados pessoais (nome, e-mail e senha do usuário; todos os dados pessoais dos clientes dos negócios em que ele é o único Dono: nome, documento, e-mail, telefone e endereço). Os registros fiscais e financeiros desses negócios (vendas, lançamentos, contas, movimentações) são mantidos por 5 anos, sem identificação pessoal, para cumprimento de obrigações legais, e os negócios ficam encerrados. Um cliente também pode ser excluído sozinho, a pedido: sem vendas, o cadastro é apagado; com vendas, é anonimizado, e as vendas são mantidas sem identificação e com os mesmos valores (SPEC-022).
 
 ---
 
@@ -283,7 +285,7 @@
 | RN24 | O Anexo do Simples é definido por negócio e aplicado a todo o faturamento; separação por atividade fora do MVP. |
 | RN25 | Cancelamento de venda em transação única: estoque devolvido, contas abertas canceladas, recebidos estornados (exceto crédito de troca); venda cancelada sai do RBT12, faturamento e CMV%. |
 | RN26 | Crédito de troca limitado ao já recebido; não gera novo lançamento; reembolso = recebido − crédito usado. |
-| RN27 | Exclusão de conta anonimiza dados pessoais e mantém registros fiscais/financeiros por 5 anos sem identificação. |
+| RN27 | Exclusão de conta anonimiza dados pessoais e mantém registros fiscais/financeiros por 5 anos sem identificação. Um cliente também pode ser excluído sozinho: sem vendas, é apagado; com vendas, é anonimizado. |
 | RN28 | Anexo efetivo sujeito ao Fator R recalculado a cada cálculo; sem RBT12, usa o Anexo V. |
 | RN29 | Datas em UTC; dia, mês e competência calculados em America/Sao_Paulo. |
 | RN30 | Administrador sem liberação ativa do Dono não acessa dados operacionais; com ela, só os módulos liberados, somente leitura, em nome próprio. |
@@ -292,6 +294,7 @@
 | RN33 | Subcategoria só organiza: não altera margem, preço, custo, estoque nem regras fiscais. |
 | RN34 | NCM é responsabilidade do negócio: o sistema confere na tabela vigente e sugere, sem preencher sozinho; não entra em cálculo. |
 | RN35 | Negócio que emite nota fiscal de produtos: NCM obrigatório no produto físico e produto sem NCM fora da venda. |
+| RN36 | Dados do cliente: só o nome obrigatório; documento validado e único no negócio; dados completos só para quem edita clientes; CPF nunca enviado a serviço externo; selo "completo para nota" não bloqueia a venda. |
 
 ---
 

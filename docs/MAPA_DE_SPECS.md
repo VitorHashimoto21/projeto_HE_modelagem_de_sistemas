@@ -138,7 +138,7 @@ Também foram corrigidos, sem decisão nova: a ordem do cronograma da Visão (Ca
 | SPEC-019 *(a gerar)* | Suporte com edição, emergência, ações de plataforma e 2º fator | 018 |
 | SPEC-020 | Subcategorias do negócio e nova categoria Acessórios | 003, 006, 007, 014, 016, 018 |
 | SPEC-021 | NCM nos produtos | 003, 004, 006, 007, 008, 011, 014, 016, 018, 020 |
-| SPEC-022 *(a gerar)* | Cliente com dados completos (CPF/CNPJ, endereço, e-mail e telefone) | 008, 014, 018 |
+| SPEC-022 | Cliente com dados completos (CPF/CNPJ, endereço, e-mail e telefone) | 001, 004, 005, 008, 011, 014, 016, 018, 020, 021 |
 
 ```mermaid
 flowchart LR
@@ -179,8 +179,10 @@ flowchart LR
     S16 --> S20
     S20 --> S21[SPEC-021 NCM nos produtos]
     S11 --> S21
-    S14 -.-> S22[SPEC-022 Cliente completo - a gerar]
-    S18 -.-> S22
+    S8 --> S22[SPEC-022 Cliente completo]
+    S14 --> S22
+    S18 --> S22
+    S21 --> S22
 ```
 
 **Ordem de execução combinada em 19/10/2026:** **N8 da SPEC-016** (menu lateral recolhível — concluída e homologada em 19/10/2026) → SPEC-020 (concluída em 20/10/2026) → SPEC-021 (concluída em 22/10/2026) → SPEC-022 → SPEC-019 (antes de abrir a produção). A barra lateral recolhível, planejada como SPEC-021, já estava prevista na SPEC-016 e não tinha sido entregue: virou a nota N8 dela (divergência corrigida), e as Specs seguintes foram renumeradas (NCM → 021, Cliente completo → 022). Esses itens vêm da revisão de uma profissional da área financeira e contábil que está montando uma loja de semijoias; a SPEC-019 continua obrigatória antes da produção (2º fator do Administrador).
@@ -409,16 +411,33 @@ flowchart LR
 - **Pré-requisito externo:** o arquivo JSON oficial da tabela NCM (Classif, Portal Único Siscomex). O domínio foi liberado na rede do ambiente em 21/10/2026, e o arquivo foi baixado e conferido (10.516 códigos de 8 dígitos, vigente em 21/10/2026).
 - **Justificativa da ordem:** segunda das melhorias da revisão financeira e contábil; usa as subcategorias da SPEC-020 para a sugestão e não depende da SPEC-022.
 
-#### SPEC-022 — Cliente com dados completos *(a gerar)*
-- **Escopo combinado (19/10/2026):** CPF ou CNPJ (validado), endereço (CEP, logradouro, número, bairro, município, UF), e-mail e telefone, **todos opcionais**, com a indicação de cadastro "completo para nota fiscal"; tela de Clientes; LGPD: base legal (execução de contrato e obrigação fiscal), máscara no modo suporte, exportação e anonimização na exclusão, e nova versão da Política de Privacidade (novo aceite).
-- **Contexto fiscal:** NF-e exige o destinatário completo; na NFC-e (varejo) a identificação do consumidor é opcional (CPF a pedido); o MEI é dispensado de emitir nota para pessoa física. Por isso os campos são opcionais.
-- **Dependências:** SPEC-008, SPEC-014, SPEC-018
+#### SPEC-022 — Cliente com dados completos
+- **Spec:** [`specs/SPEC-022.md`](./specs/SPEC-022.md) (✅ aprovada em 22/10/2026, com as OPEN-001 a OPEN-008 decididas em entrevista, todas pela opção recomendada, e a OPEN-009 depois da comparação com o cadastro de um ERP de mercado)
+- **Objetivo:** permitir que o negócio guarde os dados dos clientes que a nota fiscal pede e os de contato, todos **opcionais** além do nome:
+  - pessoa física (CPF) ou empresa (razão social, nome fantasia, CNPJ, situação na inscrição estadual, inscrição municipal e nome de quem compra);
+  - endereço, e-mail e telefone.
+
+  A proteção segue a LGPD.
+- **Valor entregue:**
+  - tela de Clientes dentro de Vendas, com busca e o detalhe com as compras de cada cliente;
+  - endereço preenchido pelo CEP e dados da empresa pelo CNPJ;
+  - selo "completo para nota", com aviso na Nova venda para quem emite nota fiscal de produtos;
+  - documento e endereço completos só para quem edita clientes, e tudo mascarado no suporte;
+  - exclusão a pedido do cliente (apaga ou anonimiza);
+  - CNPJ com letras aceito também no próprio negócio.
+- **Origem:** revisão de uma profissional da área financeira e contábil (loja de semijoias).
+- **Contexto fiscal:** a NF-e exige o destinatário completo; na NFC-e (varejo) a identificação do consumidor costuma ser opcional (CPF a pedido), com regras que variam por estado; o MEI é dispensado de emitir nota para pessoa física. Por isso os campos são opcionais.
+- **RF:** RF22, RF58 e RF76 (alterados), RF81 (novo) · **RN:** RN27 (alterada), RN36 (nova), RN01, RN25, RN26 · **RNF:** RNF01, RNF02, RNF04, RNF10
+- **Entidades:** Cliente (campos novos; `contato` migrado), Negocio (formato do `cnpj`)
+- **Dependências:** SPEC-001, SPEC-004, SPEC-005, SPEC-008, SPEC-011, SPEC-014, SPEC-016, SPEC-018, SPEC-020, SPEC-021
+- **Pré-requisito externo:** consulta pública de CEP e CNPJ (BrasilAPI, ADR-006), com preenchimento manual quando falha.
+- **Justificativa da ordem:** última das melhorias da revisão financeira e contábil; vem antes da SPEC-019 e da abertura da produção, porque muda a Política de Privacidade (novo aceite).
 
 ---
 
 ## 3. Cobertura da baseline
 
-Todos os 127 requisitos (RF01–RF80, RN01–RN35, RNF01–RNF12) estão associados a pelo menos uma Spec. Requisitos compartilhados aparecem em mais de uma Spec com escopos complementares:
+Todos os 129 requisitos (RF01–RF81, RN01–RN36, RNF01–RNF12) estão associados a pelo menos uma Spec. Requisitos compartilhados aparecem em mais de uma Spec com escopos complementares:
 
 | Requisito | Specs | Divisão |
 |---|---|---|
@@ -437,6 +456,10 @@ Todos os 127 requisitos (RF01–RF80, RN01–RN35, RNF01–RNF12) estão associa
 | RNF11 | 001, 015 | Ambientes e variáveis por ambiente (001); chaves de teste × produção do gateway (015) |
 | RN01 / RNF02 | 001, 018 | Isolamento por negócio (001); única exceção: acesso de suporte liberado pelo Dono (018) |
 | RNF12 | 018, 019 | Sessão de 8 h do Administrador (018); 2º fator obrigatório (019) |
+| RF22 | 008, 022 | Venda com cliente opcional (008); cadastro completo do cliente, também fora da venda (022) |
+| RF58 | 004, 022 | Consulta do CNPJ no cadastro do negócio (004); CNPJ com letras (022) |
+| RF76 | 018, 022 | Máscara do modo suporte (018); todos os dados pessoais novos dos clientes (022) |
+| RN27 | 014, 022 | Exclusão de conta com anonimização (014); campos novos dos clientes e exclusão de um cliente (022) |
 
 ---
 
@@ -468,9 +491,20 @@ A conferência do seed fiscal foi concluída em 03/10/2026 (DAS do MEI atualizad
   - NCM obrigatório para quem liga "Emito nota fiscal de produtos", com a venda de produto sem NCM bloqueada (OPEN-005 e OPEN-006, recomendação da revisora contábil).
 
   Baseline ajustada (RF08, RF80, RN34 e RN35). Implementada em 21/10/2026 e verificada em build local (testes T01–T12 e roteiro no navegador com 74 verificações). Mesclada no PR #102; o workflow Migrações carregou a tabela na homologação (10.516 códigos). Homologada em 22/10/2026 (T14); as cinco divergências da implementação foram aceitas pela equipe (baseline ajustada) e a busca continua em ordem de código. No T14, os itens de Configurações pareciam sumir do menu em janelas baixas: é a rolagem da lista do meio (N8 da SPEC-016), e a equipe decidiu manter. Concluída.
-- SPEC-022 (cliente com dados completos): a gerar depois da SPEC-021 e antes da SPEC-019 (decisão de 19/10/2026); escopo na seção 2.2.
+- [SPEC-022](specs/SPEC-022.md) (cliente com dados completos): aprovada em 22/10/2026, com as OPEN-001 a OPEN-009 decididas em entrevista (as oito primeiras pela opção recomendada):
+  - tela de Clientes dentro de Vendas, com as permissões de Vendas;
+  - documento mascarado na lista e completo só para quem edita clientes;
+  - pessoa física ou empresa;
+  - preenchimento pelo CEP e pelo CNPJ;
+  - excluir apaga ou anonimiza;
+  - selo e aviso de "completo para nota";
+  - CNPJ com letras no cliente e no negócio;
+  - detalhe com as compras;
+  - nome fantasia, inscrição municipal e telefone e e-mail pelo CNPJ (OPEN-009, depois da comparação com um ERP de mercado; RG descartado).
+
+  Baseline ajustada (RF22, RF58, RF76 e RN27 alterados; RF81 e RN36 novos). A implementar.
 - SPEC-019: a gerar depois da SPEC-022, antes de abrir a produção.
-- `main`: atualizada até a SPEC-018 (PR #86, 17/10/2026), sem ambiente de produção ainda (a migração na `main` é pulada enquanto não houver o banco de produção).
+- `main`: atualizada até a SPEC-020 (PR #105, 22/10/2026: homologação da SPEC-018, N8 da SPEC-016 e SPEC-020, até o PR #101 da `DEVELOP`), sem ambiente de produção ainda (a migração na `main` é pulada enquanto não houver o banco de produção). A SPEC-021 em diante vai na próxima release.
 - **E-mails e domínio:** domínio próprio `.com.br` (Registro.br) verificado no Resend, que também passa a ser o SMTP do Supabase Auth ([ADR-009](definicoes_arquitetura/adrs-he.md), 18/10/2026); aguarda a compra.
 
 ### Pendências abertas
@@ -479,8 +513,9 @@ Lista mantida até cada item ser resolvido; quem retomar o projeto (em qualquer 
 
 | # | Pendência | Situação |
 |---|---|---|
-| 1 | **SPEC-022** (cliente com dados completos): a gerar. A SPEC-021 (NCM nos produtos) foi concluída em 22/10/2026 | Aberta |
+| 1 | **SPEC-022** (cliente com dados completos): aprovada em 22/10/2026; falta implementar. A SPEC-021 (NCM nos produtos) foi concluída em 22/10/2026 | Em andamento |
 | 2 | **SPEC-019** (suporte com edição, emergência, ações de plataforma e **2º fator do Administrador**): gerar depois da SPEC-022, **antes de abrir a produção** | Aberta |
 | 3 | **Textos legais** (`docs/legal/`): preencher os campos entre colchetes (responsável, e-mail de contato, cidade/UF, região do Supabase) e revisão do grupo; a versão 2026-10-17 já inclui o acesso de suporte (SPEC-018), e a SPEC-022 trará outra (dados completos do cliente) | Aberta |
 | 4 | **SPEC-015** (cobrança real pelo Stripe): decidir se fica fora do MVP; depende do ADR-007 (proposta) | Aberta |
 | 5 | **Domínio próprio** ([ADR-009](definicoes_arquitetura/adrs-he.md)): comprar o `.com.br` no Registro.br, verificar no Resend (DNS), trocar `EMAIL_REMETENTE` na Vercel e pôr o Resend como SMTP do Supabase Auth com o modelo de link `token_hash`. Resolve convites e avisos do suporte a qualquer e-mail e o "Este link expirou" da confirmação de conta em outro navegador | Decidida; aguarda a compra |
+| 6 | **Dados do emitente para a futura nota fiscal** (pós-MVP): a nota de exemplo da loja de semijoias (NF-e nº 35685, 22/10/2026) pede do **próprio negócio** endereço, telefone, inscrição estadual e inscrição municipal, que os Dados do negócio ainda não guardam (hoje: nome, CNPJ, regime e enquadramento). Entra com a Spec da emissão de nota fiscal, junto com os dados de cada nota que não são do cadastro: código IBGE do município (do negócio e do cliente), endereço de entrega diferente do cadastro, natureza da operação, CFOP, CSOSN/CST, transportador e volumes. Os dados do cliente estão cobertos pela SPEC-022, e o NCM pela SPEC-021 | Registrada; aguarda a Spec da nota fiscal |
