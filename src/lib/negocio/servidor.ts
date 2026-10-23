@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { COOKIE_NEGOCIO_ATIVO } from "@/lib/auth/contexto";
 import { obterContexto } from "@/lib/auth/servidor";
 import { negocios, parametrosFiscais } from "@/lib/db";
+import { ambiente } from "@/lib/env";
 import { criarConsultaBrasilApi } from "@/lib/integracoes/consulta-cnpj";
 import type { DependenciasDoNegocio } from "./servicos";
 
@@ -27,7 +28,7 @@ export async function dependenciasDoNegocio(): Promise<DependenciasDoNegocio> {
   const fiscais = parametrosFiscais();
   return {
     usuarioId: contexto?.usuarioId ?? null,
-    consulta: criarConsultaBrasilApi(),
+    consulta: criarConsultaBrasilApi({ base: ambiente().BRASILAPI_URL }),
     anexoDoCnae: async (cnae) => {
       const r = await fiscais.anexoDoCnae(cnae);
       return r ? { anexo: r.anexo, sujeitoFatorR: r.sujeitoFatorR } : null;

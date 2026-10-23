@@ -1,7 +1,6 @@
 import { Prisma, type PrismaClient } from "@/generated/prisma/client";
 import { diaLocal } from "@/lib/dominio/datas";
 import {
-  CLIENTE_ANONIMO,
   dataDeEliminacao,
   DIAS_ATE_LIMPAR_CONVITE,
   DOMINIO_ANONIMO,
@@ -12,6 +11,7 @@ import {
   type Tabelas,
   type Valor,
 } from "@/lib/dominio/lgpd";
+import { DADOS_ANONIMOS } from "./clientes";
 
 /**
  * LGPD (SPEC-014). Fora do cliente do negócio, como as consultas de acesso: a exportação e
@@ -192,7 +192,8 @@ export function criarConsultasDaLgpd(cliente: PrismaClient) {
             where: { id: { in: donos } },
             data: { encerradoEm: agora, eliminarApos: new Date(`${dataDeEliminacao(diaLocal(agora))}T00:00:00Z`) },
           });
-          await tx.cliente.updateMany({ where: { negocioId: { in: donos } }, data: { nome: CLIENTE_ANONIMO, contato: null, anonimizadoEm: agora } });
+          // SPEC-022 (INV-006): todos os dados pessoais dos clientes, não só nome e contato.
+          await tx.cliente.updateMany({ where: { negocioId: { in: donos }, anonimizadoEm: null }, data: { ...DADOS_ANONIMOS, anonimizadoEm: agora } });
           // SPEC-018 (5.4.6): negócio encerrado não fica com acesso de suporte liberado; o registro fica (RN32).
           const liberacoes = await tx.acessoSuporte.findMany({ where: { negocioId: { in: donos }, revogadoEm: null, expiraEm: { gt: agora } }, select: { id: true, negocioId: true } });
           if (liberacoes.length) {

@@ -19,7 +19,7 @@ export const metadata: Metadata = { title: "Nova venda" };
 export default async function NovaVenda() {
   const membro = await exigirPermissao("vendas", "criar");
   const c = vendas(membro);
-  const [itens, clientes, foraPorNcm] = await Promise.all([c.itensVendaveis(), c.clientes(), c.foraDaVendaPorFaltaDeNcm()]);
+  const [itens, clientes, foraPorNcm, emiteNota] = await Promise.all([c.itensVendaveis(), c.clientes(), c.foraDaVendaPorFaltaDeNcm(), c.emiteNotaDeProduto()]);
   const podeAjustarPreco = pode(membro.permissoes, "vendas", "editar");
 
   return (
@@ -45,6 +45,8 @@ export default async function NovaVenda() {
       <FrenteDeCaixa
         hoje={hoje()}
         clientes={clientes}
+        emiteNotaDeProduto={emiteNota}
+        podeEditarClientes={pode(membro.permissoes, "vendas", "editar")}
         podeAjustarPreco={podeAjustarPreco}
         itens={itens.map((i) => ({
           id: i.id,

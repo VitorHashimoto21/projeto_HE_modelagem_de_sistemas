@@ -7,6 +7,7 @@ import { criarConsultasDoEstoque } from "./estoque";
 import { criarConsultasFinanceiras } from "./financeiro";
 import { criarConsultasDePrecificacao } from "./precificacao";
 import { criarConsultasDeVendas } from "./vendas";
+import { criarConsultasDeClientes, visaoDoCliente } from "./clientes";
 import { criarConsultasDeEquipe } from "./equipe";
 import { criarConsultasDeNegocios } from "./negocios";
 import { criarConsultasDaLgpd } from "./lgpd";
@@ -15,10 +16,13 @@ import { criarConsultasDeRelatorios } from "./relatorios";
 import { criarConsultasFiscais } from "./parametros-fiscais";
 import { criarConsultasDeSuporte } from "./suporte";
 import { prismaBase } from "./prisma";
+import type { Matriz } from "@/lib/dominio/permissoes";
 
 export type { ConsultasDeAcesso } from "./acesso";
 export type { ConsultasDoDashboard, VendasDoDia } from "./dashboard";
-export type { ConsultasDeVendas, DetalheDaVenda, ItemVendavel, VendaResumida } from "./vendas";
+export type { ClienteDaVenda, ConsultasDeVendas, DetalheDaVenda, ItemVendavel, VendaResumida } from "./vendas";
+export { ClienteNaoEncontrado, DocumentoRepetido, FILTRO_INCOMPLETOS, LIMITE_DA_LISTA, LIMITE_DE_COMPRAS } from "./clientes";
+export type { ClienteDaLista, CompraDoCliente, ConsultasDeClientes, DetalheDoCliente, ValoresDoCliente, Visao } from "./clientes";
 export type { ConsultasDePrecificacao, ItemCalculavel, ParametrosDePrecificacao } from "./precificacao";
 export type { ConsultasFinanceiras, ContaExibida, DespesaExibida, DetalheDaConta, FluxoDeCaixa, LancamentoExibido } from "./financeiro";
 export type { ConsultasDoEstoque, DetalheDoEstoque, ProdutoEmEstoque } from "./estoque";
@@ -58,6 +62,14 @@ export function estoque(contexto: ContextoDeNegocio) {
 /** Vendas do negócio ativo (SPEC-008): sempre pelo cliente do negócio; no modo suporte, clientes mascarados (SPEC-018). */
 export function vendas(contexto: ContextoDeNegocio) {
   return criarConsultasDeVendas(clienteDoNegocio(contexto), contexto.negocioId, { mascararClientes: contexto.modoSuporte === true });
+}
+
+/**
+ * Clientes do negócio ativo (SPEC-022): a visão sai das permissões (OPEN-002). Quem tem
+ * Vendas — editar vê tudo; quem só vê recebe os dados mascarados; o suporte, inclusive o nome.
+ */
+export function clientes(contexto: ContextoDeNegocio & { permissoes: Matriz }) {
+  return criarConsultasDeClientes(clienteDoNegocio(contexto), contexto.negocioId, visaoDoCliente(contexto));
 }
 
 /** Financeiro do negócio ativo (SPEC-009): sempre pelo cliente do negócio. */

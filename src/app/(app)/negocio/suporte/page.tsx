@@ -59,7 +59,7 @@ export default async function AcessoDoSuporte({ searchParams }: PageProps<"/nego
       {liberacoes.length === 0 ? (
         <Superficie>
           <EstadoVazio Icone={LifeBuoy} titulo="Nenhum acesso liberado ainda">
-            Nomes e contatos dos seus clientes e e-mails da equipe aparecem mascarados para o suporte, e cada tela aberta fica registrada aqui.
+            Os dados dos seus clientes (nome, documento, contato e endereço) e os e-mails da equipe aparecem mascarados para o suporte, e cada tela aberta fica registrada aqui.
           </EstadoVazio>
         </Superficie>
       ) : (

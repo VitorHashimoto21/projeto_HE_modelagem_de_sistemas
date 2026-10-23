@@ -1,11 +1,13 @@
 # Termos de Uso — Health Enterprise
 
-> **RASCUNHO — versão 2026-10-17 — revisão do grupo pendente (SPEC-002, OPEN-003; acesso de suporte: SPEC-018).**
+> **RASCUNHO — versão 2026-10-23 — revisão do grupo pendente (SPEC-002, OPEN-003; acesso de suporte: SPEC-018; cadastro de clientes: SPEC-022).**
 > Itens entre `[colchetes]` precisam ser preenchidos pelo grupo. Antes da produção, recomenda-se revisão jurídica.
 
-**Versão:** 2026-10-17 · **Vigência:** a partir da publicação
+**Versão:** 2026-10-23 · **Vigência:** a partir da publicação
 
-**O que mudou nesta versão:** nova seção 4-A, sobre o acesso de suporte liberado pelo Dono.
+**O que mudou nesta versão:** a seção 4 trata do cadastro completo de clientes (CPF ou CNPJ, endereço e contato), da consulta de CEP e CNPJ em base pública e da exclusão de um cliente; a seção 4-A passa a dizer que o suporte vê esses dados mascarados.
+
+**Versão anterior (2026-10-17):** nova seção 4-A, sobre o acesso de suporte liberado pelo Dono.
 
 Ao criar uma conta no Health Enterprise ("HE"), você concorda com estes Termos e com a [Política de Privacidade](politica-de-privacidade.md).
 
@@ -27,13 +29,16 @@ O HE é um sistema web de gestão para microempreendedores e autônomos, com con
 ## 4. Seus dados e os dados dos seus clientes
 
 - Os dados que você registra sobre o seu negócio continuam sendo seus.
-- Se registrar dados pessoais dos seus clientes, você é o controlador desses dados e deve ter base legal para isso (LGPD). O HE trata esses dados apenas para prestar o serviço.
+- Se registrar dados pessoais dos seus clientes (nome, CPF ou CNPJ, endereço, e-mail e telefone), você é o controlador desses dados e deve ter base legal para isso (LGPD), registrando só o que precisar — por exemplo, para identificar a venda e emitir a nota fiscal. O HE trata esses dados apenas para prestar o serviço.
+- Ao completar o endereço pelo CEP ou os dados de uma empresa pelo CNPJ, o HE consulta uma base pública (BrasilAPI) enviando só o CEP ou o CNPJ. O CPF nunca é enviado a serviço externo. Confira os dados preenchidos: eles vêm da base pública e podem estar desatualizados.
+- Você define quem da equipe vê o cadastro completo dos clientes pelas permissões de Vendas; quem não pode editar vendas vê esses dados em parte.
+- Quando um cliente pedir, você pode excluí-lo: sem compras, o cadastro é apagado; com compras, os dados pessoais dele são apagados e as vendas continuam registradas, sem identificação.
 - Você pode exportar os seus dados e excluir a sua conta a qualquer momento, nos termos da Política de Privacidade.
 
 ## 4-A. Acesso de suporte
 
 - Quando precisar de ajuda, o **Dono** pode liberar o suporte do HE para **ver** (sem alterar) os módulos que escolher do negócio, informando o motivo, por um prazo de até 7 dias. Sem essa liberação, o suporte não vê os dados do negócio.
-- O suporte vê os dados em modo **somente leitura**, com nomes e contatos de clientes e e-mails da equipe mascarados (os valores dos módulos liberados, como vendas e saldo, aparecem normalmente), e age em nome próprio, sem usar a sua conta ou a sua senha.
+- O suporte vê os dados em modo **somente leitura**, com os dados dos clientes (nome, documento, contato e endereço) e os e-mails da equipe mascarados (os valores dos módulos liberados, como vendas e saldo, aparecem normalmente), e age em nome próprio, sem usar a sua conta ou a sua senha.
 - Cada acesso fica registrado e visível ao Dono, que pode revogá-lo a qualquer momento. Detalhes na seção 5 da Política de Privacidade.
 - O HE **nunca pede a sua senha**, nem para o suporte.
 

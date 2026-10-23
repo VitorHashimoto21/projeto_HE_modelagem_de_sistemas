@@ -1,7 +1,8 @@
 import type { FormaPagamento, StatusConta, StatusVenda, TipoItem, TipoMovimentacao } from "@/generated/prisma/enums";
 import { custoTotal } from "@/lib/dominio/catalogo";
 import { intervaloDoDia } from "@/lib/dominio/datas";
-import { mascararContato, mascararNome } from "@/lib/dominio/suporte";
+import { faltandoParaNota, nomeDeExibicao } from "@/lib/dominio/cliente";
+import { mascararNome } from "@/lib/dominio/suporte";
 import {
   acertoDoCancelamento,
   custoUnitarioComMateriais,
@@ -201,10 +202,15 @@ export type PreviaDoCancelamento = {
   status: StatusVenda;
   valorTotalCentavos: number;
   trocaDe: { id: string; numero: number } | null;
+  /** Cliente da venda, se ainda ativo: a troca já começa com ele (SPEC-022, 5.10, item 4). */
+  clienteId: string | null;
   devolucoes: { itemId: string; nome: string; unidadeMedida: string; quantidade: number }[];
   contasAbertas: { quantidade: number; restanteCentavos: number };
   recebidoCentavos: number;
 };
+
+/** Cliente no seletor da venda (SPEC-022, 5.10): nome de exibição e o que falta para a nota. */
+export type ClienteDaVenda = { id: string; nome: string; faltando: string[] };
 
 export function criarConsultasDeVendas(cliente: ClienteDoNegocio, negocioId: string, opcoes: { mascararClientes?: boolean } = {}) {
   /** SPEC-018 (INV-006): no modo suporte, nome e contato do cliente saem do servidor mascarados. */
@@ -410,6 +416,12 @@ export function criarConsultasDeVendas(cliente: ClienteDoNegocio, negocioId: str
   }
 
   return {
+    /** SPEC-021: opção "Emito nota fiscal de produtos" (condição do aviso de cliente incompleto, SPEC-022 5.4). */
+    async emiteNotaDeProduto(): Promise<boolean> {
+      const negocio = await cliente.negocio.findFirst({ select: { emiteNotaDeProduto: true } });
+      return negocio?.emiteNotaDeProduto ?? false;
+    },
+
     /** SPEC-021 (5.6): produtos físicos com preço que estão fora da venda por falta de NCM (opção ligada). */
     async foraDaVendaPorFaltaDeNcm(): Promise<number> {
       const negocio = await cliente.negocio.findFirst({ select: { emiteNotaDeProduto: true } });
@@ -461,18 +473,34 @@ export function criarConsultasDeVendas(cliente: ClienteDoNegocio, negocioId: str
       }));
     },
 
-    async clientes(): Promise<{ id: string; nome: string; contato: string | null }[]> {
+    /**
+     * Seletor de cliente da venda (SPEC-022, 5.10): só o nome de exibição e o que falta para a
+     * nota (aviso da 5.4), sem dado pessoal; anonimizados ficam fora (INV-011).
+     */
+    async clientes(): Promise<ClienteDaVenda[]> {
       const lista = await cliente.cliente.findMany({
         where: { anonimizadoEm: null },
-        select: { id: true, nome: true, contato: true },
+        select: {
+          id: true,
+          tipo: true,
+          nome: true,
+          nomeFantasia: true,
+          documento: true,
+          situacaoIe: true,
+          inscricaoEstadual: true,
+          cep: true,
+          logradouro: true,
+          numero: true,
+          bairro: true,
+          municipio: true,
+          uf: true,
+        },
         orderBy: { nome: "asc" },
         take: 1000,
       });
-      return opcoes.mascararClientes ? lista.map((c) => ({ ...c, nome: mascararNome(c.nome), contato: c.contato && mascararContato(c.contato) })) : lista;
-    },
-
-    async criarCliente(nome: string, contato: string | null) {
-      return cliente.cliente.create({ data: { negocioId, nome, contato }, select: { id: true, nome: true, contato: true } });
+      return lista
+        .map((c) => ({ id: c.id, nome: opcoes.mascararClientes ? mascararNome(nomeDeExibicao(c)) : nomeDeExibicao(c), faltando: faltandoParaNota(c) }))
+        .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
     },
 
     /**
@@ -510,6 +538,7 @@ export function criarConsultasDeVendas(cliente: ClienteDoNegocio, negocioId: str
           status: true,
           valorTotal: true,
           vendaOrigem: { select: { id: true, numero: true } },
+          cliente: { select: { id: true, anonimizadoEm: true } },
           movimentacoes: { where: { tipo: "SAIDA_VENDA" }, select: { itemId: true, quantidade: true, item: { select: { nome: true, unidadeMedida: true } } } },
         },
       });
@@ -532,6 +561,7 @@ export function criarConsultasDeVendas(cliente: ClienteDoNegocio, negocioId: str
         status: v.status,
         valorTotalCentavos: paraCentavos(num(v.valorTotal)!),
         trocaDe: v.vendaOrigem,
+        clienteId: v.cliente && !v.cliente.anonimizadoEm ? v.cliente.id : null,
         devolucoes: [...devolucoes.values()],
         contasAbertas: { quantidade: contas.quantidade, restanteCentavos: paraCentavos(num(contas.restante)!) },
         recebidoCentavos: r,

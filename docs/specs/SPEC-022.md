@@ -1,6 +1,6 @@
 # SPEC-022 — Cliente com dados completos
 
-> **Status:** 🟢 **Aprovada em 22/10/2026.** As questões em aberto foram decididas pela equipe em entrevista (seção 13); as OPEN-001 a OPEN-008, todas pela opção recomendada:
+> **Status:** 🟢 **Implementada em 23/10/2026; falta a homologação (T14).** **Aprovada em 22/10/2026.** As questões em aberto foram decididas pela equipe em entrevista (seção 13); as OPEN-001 a OPEN-008, todas pela opção recomendada:
 > - a tela de Clientes fica **dentro de Vendas**, com as permissões de Vendas;
 > - o documento aparece **mascarado na lista**, e completo só para quem pode editar clientes;
 > - o cliente pode ser **pessoa física ou empresa**;
@@ -11,7 +11,7 @@
 > - o detalhe do cliente mostra **os dados e as compras**;
 > - depois de comparar com o cadastro de clientes de um ERP de mercado (vídeo da equipe, 22/10/2026), entram o **nome fantasia**, a **inscrição municipal** e o preenchimento de **telefone e e-mail pelo CNPJ** (OPEN-009).
 >
-> A baseline foi ajustada: RF22, RF58 e RF76 e a RN27 alterados; RF81 e RN36 novos. Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar), a partir da revisão de uma profissional da área financeira e contábil que está montando uma loja de semijoias (19/10/2026).
+> A baseline foi ajustada: RF22, RF58 e RF76 e a RN27 alterados; RF81 e RN36 novos. **Implementada em 23/10/2026** e verificada em build local: testes T01–T12 automatizados e o roteiro T13 no navegador, com 120 verificações e uma BrasilAPI falsa ([evidências](evidencias/SPEC-022/README.md)). Nenhuma divergência conhecida. Falta a homologação (T14), com a consulta real de CEP e CNPJ. As notas da implementação estão depois da seção 9. Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar), a partir da revisão de uma profissional da área financeira e contábil que está montando uma loja de semijoias (19/10/2026).
 >
 > **Mapa:** [`MAPA_DE_SPECS.md`](../MAPA_DE_SPECS.md)
 > - **Altera:** [SPEC-008](SPEC-008.md) (cliente na Nova venda), [SPEC-004](SPEC-004.md) (CNPJ com letras no cadastro e nos Dados do negócio), [SPEC-014](SPEC-014.md) (exportação e anonimização) e [SPEC-018](SPEC-018.md) (máscara do modo suporte).
@@ -393,6 +393,47 @@ A loja de semijoias vende no balcão, pelo Instagram com entrega, e para revende
 | **Salvar CNPJ do negócio** (SPEC-004) | cnpj numérico ou com letras | — | `CnpjInvalido` |
 | **Exportar dados** (SPEC-014) | — | clientes com os campos novos | — |
 
+**Implementação (23/10/2026):**
+
+- **Banco:** migração `20261023120000_clientes_completos`.
+  - Enums `TipoCliente` e `SituacaoIe`; as colunas novas do `Cliente`, todas opcionais além do nome, com `criadoEm` e `atualizadoEm`.
+  - Migração do `contato` (5.9) só nos clientes não anonimizados, e depois a coluna sai.
+  - Índice único `(negocioId, documento)`: o anonimizado fica com o documento nulo, e o Postgres aceita vários nulos.
+  - `CHECK` de formato e coerência: `Cliente_documento_formato`, `Cliente_campos_de_empresa`, `Cliente_inscricao_estadual`, `Cliente_inscricao_municipal`, `Cliente_cep_formato`, `Cliente_uf` e `Cliente_anonimizado_sem_dados`.
+- **Domínio e validação:**
+  - `src/lib/dominio/cnpj.ts`: CNPJ com letras (valor de cada caractere = código ASCII − 48);
+  - `src/lib/dominio/cliente.ts`: CPF, telefone, CEP, máscaras, o selo "completo para nota" e o nome de exibição;
+  - `src/lib/clientes/validacao.ts`: `validarCliente`, que roda no navegador e de novo no servidor.
+- **Integrações (ADR-006, com nota de ampliação):**
+  - `src/lib/integracoes/consulta-cep.ts`: `ConsultaCep`;
+  - `src/lib/integracoes/consulta-cnpj.ts`: `consultarEmpresa`, ao lado do `consultar` mínimo do negócio;
+  - `BRASILAPI_URL` opcional em `src/lib/env.ts`, só para apontar os testes locais para um serviço falso.
+- **Dados:**
+  - `src/lib/db/clientes.ts`: lista, busca, filtro, detalhe com as compras, cadastro, edição e exclusão, com a máscara aplicada pela visão (`visaoDoCliente`: completa, mascarada ou suporte);
+  - `src/lib/db/vendas.ts`: `clientes()` com o nome de exibição e o que falta para a nota; `emiteNotaDeProduto()`; a prévia da troca traz o cliente da venda original, se ainda ativo; o `criarCliente` antigo saiu;
+  - `src/lib/db/lgpd.ts`: a anonimização da conta limpa todos os campos.
+- **Ações:** `src/lib/clientes/acoes.ts` e `servicos.ts` (cadastrar, editar, excluir, consultar CEP e CNPJ). O cadastro antigo de `src/lib/vendas/` saiu.
+- **Telas:**
+  - `src/app/(app)/vendas/clientes/`: lista, novo, detalhe e edição; o botão "Clientes" no cabeçalho de Vendas;
+  - `src/components/clientes/formulario-cliente.tsx`: o formulário compartilhado pela tela e pela Nova venda;
+  - `excluir-cliente.tsx` e `selo-para-nota.tsx`;
+  - `src/components/vendas/frente-de-caixa.tsx`: o formulário carregado sob demanda, o aviso de nota e o cliente inicial da troca;
+  - o campo de CNPJ do negócio com teclado de texto.
+- **Textos legais:** versão 2026-10-23 da Política de Privacidade e dos Termos de Uso, `VERSAO_TERMOS` e o resumo do novo aceite. Os textos do suporte passam a dizer que nome, documento, contato e endereço dos clientes aparecem mascarados.
+- **Testes:** `test/unit/clientes.test.ts` e `test/integracao/clientes.test.ts`, mais os ajustes em LGPD, suporte, vendas e negócio. Roteiro no navegador (T13) com 120 verificações ([evidências](evidencias/SPEC-022/README.md)).
+
+**Decisões de implementação (dentro do que a Spec pede):**
+
+- **"Completar" abre a edição em outra aba.** Na mesma aba, a pessoa perderia a venda que está montando. O aviso só some depois de recarregar a Nova venda.
+- **A troca começa com o cliente da venda original** (5.10, item 4) e ainda pode ser trocado na frente de caixa. Se o cliente foi anonimizado, a troca começa sem cliente.
+- **Contratos:** "Clientes da venda" devolve `{id, nome, faltando}`; o completo para nota é `faltando` vazio. A resposta do cadastro também é só `{id, nome, faltando}`, sem nenhum dado pessoal além do nome, para valer a máscara de quem cadastrou (5.5).
+- **Troca de tipo na edição:** além do aviso antes de salvar (5.2, item 1), o documento que não serve para o novo tipo sai do campo na hora.
+- **Telefone e e-mail pelo CNPJ** só entram nos campos vazios, sem a pergunta de troca (OPEN-009). Os demais campos seguem a regra da confirmação (5.2, item 7).
+- **Inscrições e nome de quem compra:** quem só vê recebe esses campos completos, porque a 5.5 só manda mascarar documento, e-mail, telefone e endereço. No suporte, tudo sai mascarado.
+- **Endereço da Receita** em maiúsculas e minúsculas ("Rua das Flores"), com os conectivos em minúsculas e os numerais romanos em maiúsculas ("Torre II").
+
+**Divergências:** nenhuma conhecida entre a implementação e esta Spec. Duas falhas encontradas pelos testes antes do PR foram corrigidas na própria migração: o `CHECK` da inscrição estadual aceitava contribuinte sem número (`NULL ~ '…'` dá nulo), e a migração do contato tocaria nos clientes já anonimizados.
+
 ---
 
 ## 10. Requisitos não funcionais aplicáveis
@@ -510,9 +551,9 @@ A SPEC-022 estará concluída quando:
 - [ ] os testes derivados (T01 a T14) estiverem aprovados, com o CI verde no PR;
 - [ ] os RNFs aplicáveis (RNF01, RNF02, RNF04, RNF10) tiverem sido verificados como descrito na seção 10;
 - [x] as questões OPEN-001 a OPEN-009 tiverem sido decididas e registradas (22/10/2026), com RF22, RF58, RF76 e RN27 alterados e o RF81 e a RN36 incluídos na baseline;
-- [ ] a nova versão da Política de Privacidade e dos Termos de Uso estiver publicada, com o novo aceite;
-- [ ] os documentos de modelo (seção 7) e a nota de ampliação da ADR-006 estiverem atualizados;
-- [ ] não existir divergência conhecida entre a implementação e esta Spec;
+- [x] a nova versão da Política de Privacidade e dos Termos de Uso estiver publicada, com o novo aceite (versão 2026-10-23);
+- [x] os documentos de modelo (seção 7) e a nota de ampliação da ADR-006 estiverem atualizados;
+- [x] não existir divergência conhecida entre a implementação e esta Spec;
 - [ ] toda divergência em relação à baseline tiver sido explicitamente analisada e registrada.
 
 **Regra fundamental:** a implementação obedece a esta Spec aprovada. Se surgir conflito entre código, Spec e documentos de modelagem, o comportamento não é alterado em silêncio: a divergência é registrada com a proposta de (1) corrigir a implementação ou (2) alterar a baseline, e a decisão é da equipe.

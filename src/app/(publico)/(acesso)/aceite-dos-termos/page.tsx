@@ -12,7 +12,7 @@ export const metadata: Metadata = { title: "Atualizamos nossos termos", robots: 
 
 const link = "font-semibold text-primary underline-offset-2 hover:text-primary-hover hover:underline";
 
-// Novo aceite (SPEC-018, 5.7 — RF78, OPEN-011): quem aceitou uma versão anterior da política e dos
+// Novo aceite (SPEC-018, 5.7 — RF78, OPEN-011; versão da SPEC-022): quem aceitou uma versão anterior da política e dos
 // termos só volta ao app depois de aceitar a vigente; até lá, pode abrir Minha conta (exportar os
 // dados ou excluir a conta) ou sair.
 export default async function AceiteDosTermos({ searchParams }: PageProps<"/aceite-dos-termos">) {
@@ -28,11 +28,14 @@ export default async function AceiteDosTermos({ searchParams }: PageProps<"/acei
           <p className="font-semibold">O que mudou nesta versão ({VERSAO_TERMOS})</p>
           <ul className="mt-2 list-disc space-y-1.5 pl-5 text-muted-foreground">
             <li>
-              <strong className="text-foreground">Acesso do suporte:</strong> quando você precisar de ajuda, o Dono pode liberar o suporte do HE para ver (sem alterar) os
-              módulos escolhidos, por um prazo de até 7 dias.
+              <strong className="text-foreground">Cadastro de clientes:</strong> além do nome, o cliente pode ter CPF ou CNPJ, endereço, e-mail e telefone, para
+              identificar a venda e preparar a nota fiscal. O negócio é o responsável por esses dados e registra só o que precisar.
             </li>
-            <li>O suporte nunca entra sem essa liberação, vê nomes e contatos de clientes mascarados e não tem acesso à sua senha.</li>
-            <li>Cada tela que o suporte abre fica registrada, e o Dono acompanha e pode revogar o acesso a qualquer momento.</li>
+            <li>O endereço pode ser completado pelo CEP e os dados de uma empresa pelo CNPJ, numa base pública. O CPF nunca é enviado a outro serviço.</li>
+            <li>
+              Só quem pode editar as vendas vê o cadastro completo; o restante da equipe e o suporte veem os dados em parte. Excluir um cliente apaga os dados pessoais
+              dele, e as vendas continuam registradas sem identificação.
+            </li>
           </ul>
           <p className="mt-3">
             Textos completos:{" "}

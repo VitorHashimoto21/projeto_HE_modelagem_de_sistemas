@@ -1,8 +1,9 @@
 import { randomUUID } from "node:crypto";
-import { afterAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { PrismaClient } from "@/generated/prisma/client";
 import { comNegocio } from "@/lib/db/cliente-do-negocio";
 import { criarPrismaClient } from "@/lib/db/criar-cliente";
+import { criarConsultasDeClientes } from "@/lib/db/clientes";
 import { criarConsultasDeVendas } from "@/lib/db/vendas";
 import { hoje as hojeLocal, intervaloDoDia } from "@/lib/dominio/datas";
 import { somarDias } from "@/lib/dominio/estoque";
@@ -10,6 +11,8 @@ import { vencimentoDaParcela } from "@/lib/dominio/venda";
 import * as servicos from "@/lib/vendas/servicos";
 import { MENSAGENS_FLUXO_VENDA as F } from "@/lib/vendas/servicos";
 import { MENSAGENS_VENDA as M } from "@/lib/vendas/validacao";
+import { cadastrarCliente } from "@/lib/clientes/servicos";
+import { MENSAGENS_CLIENTE } from "@/lib/clientes/validacao";
 import { urlDoBancoDeTeste } from "../apoio/banco-de-teste";
 
 // SPEC-008 — testes de integração (seção 12): banco real, cliente do negócio e a primitiva
@@ -216,15 +219,21 @@ describe("registro da venda", () => {
 
   it("T11 — cliente cadastrado na hora; venda sem cliente; cliente de outro negócio recusado (CA-10)", async () => {
     const esmalte = await item("Esmalte");
-    const r = await servicos.cadastrarCliente({ nome: "  Maria   Souza ", contato: "(11) 99999-0000" }, deps());
-    if (r.status !== "criado") throw new Error("esperava criado");
+    // SPEC-022: o "Novo cliente" da venda usa o cadastro de clientes (Vendas — criar).
+    const depsDoCliente = {
+      clientes: criarConsultasDeClientes(comNegocio(base, { negocioId: negocioA, usuarioId: usuario }), negocioA, "mascarada"),
+      consultaCep: { consultar: vi.fn() },
+      consultaCnpj: { consultarEmpresa: vi.fn() },
+    };
+    const r = await cadastrarCliente({ tipo: "PESSOA_FISICA", nome: "  Maria   Souza ", telefone: "(11) 99999-0000" }, depsDoCliente);
+    if (r.status !== "salvo") throw new Error("esperava salvo");
     expect(r.cliente.nome).toBe("Maria Souza");
     const comCliente = id(await vender([{ itemId: esmalte, quantidade: 1 }], [{ forma: "PIX", valor: 18 }], { clienteId: r.cliente.id }));
     expect((await base.venda.findUniqueOrThrow({ where: { id: comCliente } })).clienteId).toBe(r.cliente.id);
     expect((await vender([{ itemId: esmalte, quantidade: 1 }], [{ forma: "PIX", valor: 18 }])).status).toBe("registrada");
     const alheio = await base.cliente.create({ data: { negocioId: negocioB, nome: "Outro" } });
     expect(await vender([{ itemId: esmalte, quantidade: 1 }], [{ forma: "PIX", valor: 18 }], { clienteId: alheio.id })).toMatchObject({ mensagem: F.clienteInvalido });
-    expect(await servicos.cadastrarCliente({ nome: "" }, deps())).toMatchObject({ status: "erro", erros: { nome: M.nomeObrigatorio } });
+    expect(await cadastrarCliente({ nome: "" }, depsDoCliente)).toMatchObject({ status: "erro", erros: { nome: MENSAGENS_CLIENTE.nomeObrigatorio } });
   });
 
   it("T12 — data retroativa, histórico por período e detalhe (CA-11, OPEN-002)", async () => {

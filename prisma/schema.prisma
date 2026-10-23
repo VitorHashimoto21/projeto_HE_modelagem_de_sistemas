@@ -171,6 +171,18 @@ enum StatusConta {
   CANCELADA // RN25: conta a receber de venda cancelada
 }
 
+// SPEC-022: tipo de cliente e situação na inscrição estadual (indIEDest da NF-e).
+enum TipoCliente {
+  PESSOA_FISICA
+  PESSOA_JURIDICA
+}
+
+enum SituacaoIe {
+  CONTRIBUINTE
+  ISENTO
+  NAO_CONTRIBUINTE
+}
+
 // SPEC-018 (RF77, OPEN-008): eventos do registro de auditoria do suporte.
 enum EventoSuporte {
   PAPEL_CONCEDIDO // script da equipe (5.1)
@@ -321,17 +333,40 @@ model Convite {
 // Clientes
 // ==========================================================
 
-// Referenciado em Negocio.clientes e Venda.cliente na v1, mas nunca definido — adicionado agora.
+// SPEC-022 (OPEN-003): pessoa física ou empresa. Só o nome (razão social, na empresa) é obrigatório.
 model Cliente {
-  id            String    @id @default(uuid()) @db.Uuid
-  negocioId     String    @db.Uuid
-  nome          String
-  contato       String?
-  anonimizadoEm DateTime? // RN27
+  id                 String      @id @default(uuid()) @db.Uuid
+  negocioId          String      @db.Uuid
+  tipo               TipoCliente @default(PESSOA_FISICA)
+  /// Pessoa física: nome. Empresa: razão social.
+  nome               String
+  nomeFantasia       String?
+  /// CPF (11 dígitos) ou CNPJ (14 posições, com letras desde 07/2026), sem pontuação. Único por negócio.
+  documento          String?     @db.VarChar(14)
+  situacaoIe         SituacaoIe?
+  inscricaoEstadual  String?     @db.VarChar(14)
+  inscricaoMunicipal String?     @db.VarChar(20)
+  /// Empresa: nome de quem compra.
+  nomeContato        String?
+  email              String?
+  telefone           String?
+  cep                String?     @db.VarChar(8)
+  logradouro         String?
+  numero             String?
+  complemento        String?
+  bairro             String?
+  municipio          String?
+  uf                 String?     @db.VarChar(2)
+  criadoEm           DateTime    @default(now())
+  atualizadoEm       DateTime    @default(now()) @updatedAt
+  /// RN27 e SPEC-022 (OPEN-005): anonimizado, com todos os dados pessoais vazios.
+  anonimizadoEm      DateTime?
 
   negocio Negocio @relation(fields: [negocioId], references: [id])
   vendas  Venda[]
 
+  // O documento fica vazio ao anonimizar, e o Postgres aceita vários nulos: a unicidade vale entre os ativos.
+  @@unique([negocioId, documento])
   @@index([negocioId])
 }
 

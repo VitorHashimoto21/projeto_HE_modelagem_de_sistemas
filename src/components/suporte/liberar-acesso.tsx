@@ -48,7 +48,7 @@ export function LiberarAcesso({ substitui }: { substitui: boolean }) {
       aberta={aberta}
       aoMudar={setAberta}
       titulo="Liberar acesso ao suporte"
-      descricao="O suporte do HE poderá ver (sem alterar) os módulos marcados até o fim do prazo. Nomes e contatos dos seus clientes e e-mails da equipe aparecem mascarados. Tudo fica registrado aqui e você pode revogar quando quiser."
+      descricao="O suporte do HE poderá ver (sem alterar) os módulos marcados até o fim do prazo. Os dados dos seus clientes (nome, documento, contato e endereço) e os e-mails da equipe aparecem mascarados. Tudo fica registrado aqui e você pode revogar quando quiser."
       gatilho={
         <button type="button" className={classeDoBotao("principal")}>
           <LifeBuoy aria-hidden="true" />

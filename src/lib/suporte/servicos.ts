@@ -117,7 +117,7 @@ function emailDeLiberacao(dono: { nome: string; email: string; negocio: string }
       `Olá, ${dono.nome}!`,
       "",
       `Você liberou o suporte do Health Enterprise para ver (sem alterar) ${listaDeModulos(modulos)} do negócio ${dono.negocio}, por ${prazo}: até ${dataHoraCompleta(expira)}.`,
-      "Nomes e contatos dos seus clientes e e-mails da equipe aparecem mascarados para o suporte; os valores desses módulos (vendas e, com Dashboard e Financeiro, o saldo) aparecem normalmente.",
+      "Os dados dos seus clientes (nome, documento, contato e endereço) e os e-mails da equipe aparecem mascarados para o suporte; os valores desses módulos (vendas e, com Dashboard e Financeiro, o saldo) aparecem normalmente.",
       `Você acompanha cada tela aberta e pode revogar quando quiser em ${origem}/negocio/suporte.`,
       "",
       "Se não foi você, revogue o acesso e troque a sua senha.",

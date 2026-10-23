@@ -87,7 +87,7 @@ afterAll(async () => {
 
 describe("exportação", () => {
   it("T03 — CA-01/CA-02/CA-10: Dono leva tudo do negócio; de outros negócios, só o que registrou; nada de outro titular (INV-004, INV-006)", async () => {
-    const ana = await base.cliente.create({ data: { negocioId: studio, nome: "Ana Cliente", contato: "11 99999-0000" } });
+    const ana = await base.cliente.create({ data: { negocioId: studio, nome: "Ana Cliente", documento: "52998224725", email: "ana.cliente@exemplo.com", telefone: "11999990000", cep: "01310100", logradouro: "Avenida Paulista", numero: "1000", bairro: "Bela Vista", municipio: "São Paulo", uf: "SP" } });
     await venda(studio, gisele, 36, ana.id);
     await venda(studio, rafa, 50);
     await venda(clinica, gisele, 80);
@@ -101,7 +101,11 @@ describe("exportação", () => {
     expect(d.titular).toMatchObject({ nome: NOME, email: EMAIL, versaoTermosAceita: "2026-10-03" });
     expect(d.negociosComoDono).toHaveLength(1);
     expect(d.negociosComoDono[0].tabelas.vendas.map((v: { valorTotal: string }) => v.valorTotal).sort()).toEqual(["36", "50"]);
-    expect(d.negociosComoDono[0].tabelas.clientes[0]).toMatchObject({ nome: "Ana Cliente", contato: "11 99999-0000" });
+    // SPEC-022 (5.11): a exportação traz todos os campos novos do cliente, no JSON e no CSV.
+    expect(d.negociosComoDono[0].tabelas.clientes[0]).toMatchObject({ nome: "Ana Cliente", tipo: "PESSOA_FISICA", documento: "52998224725", telefone: "11999990000", cep: "01310100", municipio: "São Paulo", uf: "SP" });
+    const csv = strFromU8(zip["clientes.csv"]);
+    for (const coluna of ["documento", "email", "telefone", "cep", "logradouro", "numero", "bairro", "municipio", "uf", "situacaoIe", "inscricaoMunicipal"]) expect(csv.split("\n")[0]).toContain(coluna);
+    expect(csv).toContain("52998224725");
     expect(d.registrosEmOutrosNegocios[0].tabelas.vendasRegistradas.map((v: { valorTotal: string }) => v.valorTotal)).toEqual(["80"]);
     expect(strFromU8(zip["dados.json"])).not.toContain('"valorTotal": "999"'); // venda do Bruno fica fora
 
@@ -113,7 +117,7 @@ describe("exportação", () => {
 
 describe("exclusão", () => {
   it("T04/T05 — CA-03/CA-04: Dona excluída — negócio encerrado, clientes e convites anonimizados, equipe sem acesso, registros intactos (INV-002, INV-005)", async () => {
-    const ana = await base.cliente.create({ data: { negocioId: studio, nome: "Ana Cliente", contato: "11 99999-0000" } });
+    const ana = await base.cliente.create({ data: { negocioId: studio, nome: "Ana Cliente", documento: "52998224725", email: "ana.cliente@exemplo.com", telefone: "11999990000", cep: "01310100", logradouro: "Avenida Paulista", numero: "1000", bairro: "Bela Vista", municipio: "São Paulo", uf: "SP" } });
     await venda(studio, gisele, 36, ana.id);
     await venda(studio, rafa, 50);
     const vendaNaClinica = await venda(clinica, gisele, 80);
@@ -135,7 +139,10 @@ describe("exclusão", () => {
     const n = await base.negocio.findUniqueOrThrow({ where: { id: studio } });
     expect(n.encerradoEm).not.toBeNull();
     expect(n.eliminarApos!.toISOString().slice(0, 10)).toBe(dataDeEliminacao(HOJE));
-    expect(await base.cliente.findUniqueOrThrow({ where: { id: ana.id } })).toMatchObject({ nome: CLIENTE_ANONIMO, contato: null });
+    // SPEC-022 (INV-006): todos os campos pessoais do cliente ficam vazios, não só o nome.
+    const anonima = await base.cliente.findUniqueOrThrow({ where: { id: ana.id } });
+    expect(anonima).toMatchObject({ nome: CLIENTE_ANONIMO, documento: null, email: null, telefone: null, cep: null, logradouro: null, numero: null, bairro: null, municipio: null, uf: null });
+    expect(anonima.anonimizadoEm).not.toBeNull();
     expect(await base.convite.findUniqueOrThrow({ where: { id: pendenteStudio.id } })).toMatchObject({ status: "CANCELADO", email: `convite-${pendenteStudio.id}@anonimo.invalid` });
     expect(await base.convite.findUniqueOrThrow({ where: { id: paraGisele.id } })).toMatchObject({ status: "CANCELADO", email: `convite-${paraGisele.id}@anonimo.invalid` });
     expect(await fiscais(studio)).toBe(antes);
@@ -146,7 +153,7 @@ describe("exclusão", () => {
   });
 
   it("T06 — CA-05: o nome e o e-mail originais não aparecem em nenhuma coluna de texto do banco (INV-001)", async () => {
-    await base.cliente.create({ data: { negocioId: studio, nome: "Ana Cliente", contato: EMAIL } });
+    await base.cliente.create({ data: { negocioId: studio, nome: "Ana Cliente", email: EMAIL } });
     await base.convite.create({ data: { negocioId: clinica, email: EMAIL, tokenHash: randomUUID(), expiraEm: new Date(Date.now() - 86_400_000), convidadoPorId: bruno, status: "EXPIRADO" } });
     await excluirConta(confirmar, deps());
     const colunas = await base.$queryRaw<{ tabela: string; coluna: string }[]>`
