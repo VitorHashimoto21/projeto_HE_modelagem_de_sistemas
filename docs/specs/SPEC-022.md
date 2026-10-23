@@ -11,7 +11,7 @@
 > - o detalhe do cliente mostra **os dados e as compras**;
 > - depois de comparar com o cadastro de clientes de um ERP de mercado (vídeo da equipe, 22/10/2026), entram o **nome fantasia**, a **inscrição municipal** e o preenchimento de **telefone e e-mail pelo CNPJ** (OPEN-009).
 >
-> A baseline foi ajustada: RF22, RF58 e RF76 e a RN27 alterados; RF81 e RN36 novos. **Implementada em 23/10/2026** e verificada em build local: testes T01–T12 automatizados e o roteiro T13 no navegador, com 120 verificações e uma BrasilAPI falsa ([evidências](evidencias/SPEC-022/README.md)). Nenhuma divergência conhecida. Falta a homologação (T14), com a consulta real de CEP e CNPJ. As notas da implementação estão depois da seção 9. Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar), a partir da revisão de uma profissional da área financeira e contábil que está montando uma loja de semijoias (19/10/2026).
+> A baseline foi ajustada: RF22, RF58 e RF76 e a RN27 alterados; RF81 e RN36 novos. **Implementada em 23/10/2026** (PR #106) e verificada em build local: testes T01–T12 automatizados e o roteiro T13 no navegador, com 120 verificações e uma BrasilAPI falsa ([evidências](evidencias/SPEC-022/README.md)). Nenhuma divergência conhecida. Falta a homologação (T14), com a consulta real de CEP e CNPJ. As notas da implementação estão depois da seção 9. Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar), a partir da revisão de uma profissional da área financeira e contábil que está montando uma loja de semijoias (19/10/2026).
 >
 > **Mapa:** [`MAPA_DE_SPECS.md`](../MAPA_DE_SPECS.md)
 > - **Altera:** [SPEC-008](SPEC-008.md) (cliente na Nova venda), [SPEC-004](SPEC-004.md) (CNPJ com letras no cadastro e nos Dados do negócio), [SPEC-014](SPEC-014.md) (exportação e anonimização) e [SPEC-018](SPEC-018.md) (máscara do modo suporte).
@@ -393,7 +393,7 @@ A loja de semijoias vende no balcão, pelo Instagram com entrega, e para revende
 | **Salvar CNPJ do negócio** (SPEC-004) | cnpj numérico ou com letras | — | `CnpjInvalido` |
 | **Exportar dados** (SPEC-014) | — | clientes com os campos novos | — |
 
-**Implementação (23/10/2026):**
+**Implementação (23/10/2026, PR #106):**
 
 - **Banco:** migração `20261023120000_clientes_completos`.
   - Enums `TipoCliente` e `SituacaoIe`; as colunas novas do `Cliente`, todas opcionais além do nome, com `criadoEm` e `atualizadoEm`.

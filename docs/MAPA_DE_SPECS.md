@@ -412,7 +412,7 @@ flowchart LR
 - **Justificativa da ordem:** segunda das melhorias da revisão financeira e contábil; usa as subcategorias da SPEC-020 para a sugestão e não depende da SPEC-022.
 
 #### SPEC-022 — Cliente com dados completos
-- **Spec:** [`specs/SPEC-022.md`](./specs/SPEC-022.md) (✅ aprovada em 22/10/2026, com as OPEN-001 a OPEN-008 decididas em entrevista, todas pela opção recomendada, e a OPEN-009 depois da comparação com o cadastro de um ERP de mercado; implementada em 23/10/2026 e verificada em build local, sem divergência conhecida; falta a homologação (T14) — [evidências](./specs/evidencias/SPEC-022/README.md))
+- **Spec:** [`specs/SPEC-022.md`](./specs/SPEC-022.md) (✅ aprovada em 22/10/2026, com as OPEN-001 a OPEN-008 decididas em entrevista, todas pela opção recomendada, e a OPEN-009 depois da comparação com o cadastro de um ERP de mercado; implementada em 23/10/2026 (PR #106) e verificada em build local, sem divergência conhecida; falta a homologação (T14) — [evidências](./specs/evidencias/SPEC-022/README.md))
 - **Objetivo:** permitir que o negócio guarde os dados dos clientes que a nota fiscal pede e os de contato, todos **opcionais** além do nome:
   - pessoa física (CPF) ou empresa (razão social, nome fantasia, CNPJ, situação na inscrição estadual, inscrição municipal e nome de quem compra);
   - endereço, e-mail e telefone.
@@ -502,7 +502,7 @@ A conferência do seed fiscal foi concluída em 03/10/2026 (DAS do MEI atualizad
   - detalhe com as compras;
   - nome fantasia, inscrição municipal e telefone e e-mail pelo CNPJ (OPEN-009, depois da comparação com um ERP de mercado; RG descartado).
 
-  Baseline ajustada (RF22, RF58, RF76 e RN27 alterados; RF81 e RN36 novos). **Implementada em 23/10/2026** e verificada em build local (testes T01–T12 e o roteiro T13 com 120 verificações), sem divergência conhecida. Política de Privacidade e Termos na versão 2026-10-23, com novo aceite. Falta a homologação (T14), com a consulta real de CEP e CNPJ.
+  Baseline ajustada (RF22, RF58, RF76 e RN27 alterados; RF81 e RN36 novos). **Implementada em 23/10/2026** (PR #106) e verificada em build local (testes T01–T12 e o roteiro T13 com 120 verificações), sem divergência conhecida. Política de Privacidade e Termos na versão 2026-10-23, com novo aceite. Falta a homologação (T14), com a consulta real de CEP e CNPJ.
 - SPEC-019: a gerar depois da SPEC-022, antes de abrir a produção.
 - `main`: atualizada até a SPEC-020 (PR #105, 22/10/2026: homologação da SPEC-018, N8 da SPEC-016 e SPEC-020, até o PR #101 da `DEVELOP`), sem ambiente de produção ainda (a migração na `main` é pulada enquanto não houver o banco de produção). A SPEC-021 em diante vai na próxima release.
 - **E-mails e domínio:** domínio próprio `.com.br` (Registro.br) verificado no Resend, que também passa a ser o SMTP do Supabase Auth ([ADR-009](definicoes_arquitetura/adrs-he.md), 18/10/2026); aguarda a compra.
@@ -513,7 +513,7 @@ Lista mantida até cada item ser resolvido; quem retomar o projeto (em qualquer 
 
 | # | Pendência | Situação |
 |---|---|---|
-| 1 | **SPEC-022** (cliente com dados completos): implementada em 23/10/2026 e verificada em build local; falta o merge do PR e a homologação (T14) com a consulta real de CEP e CNPJ. Depois do merge, todos os usuários verão o novo aceite dos termos (versão 2026-10-23) | Em andamento |
+| 1 | **SPEC-022** (cliente com dados completos): implementada em 23/10/2026 e verificada em build local; falta o merge do PR #106 e a homologação (T14) com a consulta real de CEP e CNPJ. Depois do merge, todos os usuários verão o novo aceite dos termos (versão 2026-10-23) | Em andamento |
 | 2 | **SPEC-019** (suporte com edição, emergência, ações de plataforma e **2º fator do Administrador**): gerar depois da SPEC-022, **antes de abrir a produção** | Aberta |
 | 3 | **Textos legais** (`docs/legal/`): preencher os campos entre colchetes (responsável, e-mail de contato, cidade/UF, região do Supabase) e revisão do grupo; a versão 2026-10-23 inclui o acesso de suporte (SPEC-018) e o cadastro completo de clientes (SPEC-022) | Aberta |
 | 4 | **SPEC-015** (cobrança real pelo Stripe): decidir se fica fora do MVP; depende do ADR-007 (proposta) | Aberta |
