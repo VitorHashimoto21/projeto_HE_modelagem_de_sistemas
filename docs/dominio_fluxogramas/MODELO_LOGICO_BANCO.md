@@ -105,8 +105,25 @@ erDiagram
     CLIENTE {
         uuid id PK
         uuid negocio_id FK
-        string nome
-        string contato
+        enum tipo "PESSOA_FISICA | PESSOA_JURIDICA (SPEC-022)"
+        string nome "nome ou razao social"
+        string nome_fantasia "so empresa"
+        string documento "CPF 11 ou CNPJ 14, unico no negocio"
+        enum situacao_ie "CONTRIBUINTE | ISENTO | NAO_CONTRIBUINTE"
+        string inscricao_estadual "so CONTRIBUINTE"
+        string inscricao_municipal "so empresa"
+        string nome_contato "so empresa"
+        string email
+        string telefone
+        string cep
+        string logradouro
+        string numero
+        string complemento
+        string bairro
+        string municipio
+        string uf
+        datetime criado_em
+        datetime atualizado_em
         datetime anonimizado_em
     }
 
@@ -331,6 +348,7 @@ erDiagram
 | `categoria` como enum (sem tabela `CATEGORIA`) | A lista de categorias é fixa do sistema (RF11). |
 | `SUBCATEGORIA` do negócio, com `ITEM.subcategoria_id` opcional | Subcategorias livres dentro de cada categoria fixa (RF79, SPEC-020): nome único por negócio e categoria; a categoria da subcategoria é a do item (gatilho) e não muda; excluir deixa `subcategoria_id` nulo nos itens (`ON DELETE SET NULL`). A margem continua por categoria (RN33). |
 | `ITEM.ncm` sem chave estrangeira, e as tabelas globais `NCM` e `TABELA_NCM` | O código fica no item mesmo depois de sair da tabela, com aviso de revisão (SPEC-021, OPEN-002); `CHECK` de 8 dígitos e de que só `PRODUTO_FISICO` tem NCM. `NCM` é a tabela oficial do Siscomex, com vigência e sem `negocio_id`, carregada de arquivo versionado como os parâmetros fiscais (ADR-004); a carga nunca apaga códigos. `TABELA_NCM` tem uma linha com a data e o ato do arquivo carregado. As duas têm RLS ligado, sem políticas. `NEGOCIO.emite_nota_de_produto` torna o NCM obrigatório e tira da venda o produto sem NCM (RF80, RN35). |
+| `CLIENTE` com documento, inscrições, contato e endereço, todos opcionais além do nome | Dados do destinatário da nota fiscal (RF81, SPEC-022). `CHECK` de formato e de coerência com o tipo (CPF só em pessoa física, CNPJ com letras ou dígitos só em empresa; campos de empresa só em empresa; número da inscrição estadual só com `CONTRIBUINTE`; CEP de 8 dígitos; UF da lista). Índice único `(negocio_id, documento)`: ao anonimizar, o documento fica nulo, e o Postgres aceita vários nulos, então a unicidade vale entre os ativos. `Cliente_anonimizado_sem_dados` garante que o anonimizado não guarda nenhum dado pessoal (RN27, RN36). O antigo `contato` foi migrado para `email` ou `telefone` e removido. |
 | `MATERIAL_SERVICO` referencia `ITEM` duas vezes | `servico_id` aponta para um item `SERVICO` e `material_id` para um item `PRODUTO_FISICO` (RF12). |
 | `VENDA` 1:N `LANCAMENTO_FINANCEIRO` | Pagamento misto pode gerar mais de um lançamento imediato (RN09). |
 | `PARCELA` 1:1 `CONTA_PAGAR_RECEBER` | Cada parcela de cartão gera sua própria conta a receber com vencimento mensal (RN10, RF28). A parcela não tem status próprio: a situação é o status da conta (RN22). |

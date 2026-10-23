@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ChevronRight, Plus, Receipt } from "lucide-react";
+import { ChevronRight, Plus, Receipt, Users } from "lucide-react";
 import { GraficoDeBarras } from "@/components/graficos/barras";
 import { AvisoDoHistorico } from "@/components/planos/avisos";
 import { CabecalhoDePagina } from "@/components/ui/cabecalho-de-pagina";
@@ -76,12 +76,19 @@ export default async function Vendas({ searchParams }: PageProps<"/vendas">) {
       <CabecalhoDePagina
         titulo="Vendas"
         acoes={
-          pode(membro.permissoes, "vendas", "criar") && (
-            <Link href="/vendas/nova" className={classeDoBotao("principal")}>
-              <Plus aria-hidden="true" />
-              Nova venda
+          <>
+            {/* SPEC-022 (OPEN-001): a tela de Clientes fica dentro de Vendas, sem item novo no menu. */}
+            <Link href="/vendas/clientes" className={classeDoBotao("secundario")}>
+              <Users aria-hidden="true" />
+              Clientes
             </Link>
-          )
+            {pode(membro.permissoes, "vendas", "criar") && (
+              <Link href="/vendas/nova" className={classeDoBotao("principal")}>
+                <Plus aria-hidden="true" />
+                Nova venda
+              </Link>
+            )}
+          </>
         }
       />
 

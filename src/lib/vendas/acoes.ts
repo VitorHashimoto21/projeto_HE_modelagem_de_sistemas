@@ -10,7 +10,7 @@ import { vendas } from "@/lib/db";
 import { hoje } from "@/lib/dominio/datas";
 import { pode } from "@/lib/dominio/permissoes";
 import * as servicos from "./servicos";
-import type { EstadoDaVenda, EstadoDoCancelamento, EstadoDoCliente } from "./servicos";
+import type { EstadoDaVenda, EstadoDoCancelamento } from "./servicos";
 
 // Server Actions da venda (SPEC-008). A fábrica exige Vendas — criar (SPEC-005); o negócio
 // vem do contexto validado, "hoje" do relógio do servidor e o preço sempre do banco.
@@ -37,10 +37,6 @@ export const acaoRegistrarVenda = acaoComPermissao("vendas", "criar", async (mem
   }
   return estado;
 });
-
-export const acaoCadastrarCliente = acaoComPermissao("vendas", "criar", async (membro, _: EstadoDoCliente, form: FormData) =>
-  servicos.cadastrarCliente(camposDoFormulario(form), deps(membro)),
-);
 
 // SPEC-011 (OPEN-005): cancelar exige Vendas — excluir/cancelar; trocar exige também criar,
 // porque registra uma venda nova. O Colaborador predefinido não cancela (RF65).

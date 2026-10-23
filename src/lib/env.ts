@@ -30,6 +30,12 @@ const esquema = z.object({
   // de quem exclui a conta. Opcional: sem ela, a conta fica bloqueada e anonimizada, e a
   // remoção da credencial fica pendente até a chave ser configurada (a rotina diária tenta de novo).
   SUPABASE_SECRET_KEY: z.string().optional(),
+  // Base das consultas públicas de CNPJ e CEP (ADR-006; SPEC-022). Opcional: vazia, usa a BrasilAPI.
+  // Só os testes no navegador apontam para um serviço falso local.
+  BRASILAPI_URL: z
+    .string()
+    .optional()
+    .refine((v) => !v || v.startsWith("https://") || v.startsWith("http://localhost") || v.startsWith("http://127.0.0.1"), "deve ser uma URL https"),
 });
 
 export type Ambiente = z.infer<typeof esquema>;

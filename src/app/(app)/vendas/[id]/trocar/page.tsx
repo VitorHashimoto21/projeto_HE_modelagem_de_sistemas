@@ -25,7 +25,7 @@ export default async function TrocarVenda({ params }: PageProps<"/vendas/[id]/tr
     throw e;
   });
   if (p.status === "CANCELADA") redirect(`/vendas/${p.id}`);
-  const [itens, clientes, foraPorNcm] = await Promise.all([c.itensVendaveis(), c.clientes(), c.foraDaVendaPorFaltaDeNcm()]);
+  const [itens, clientes, foraPorNcm, emiteNota] = await Promise.all([c.itensVendaveis(), c.clientes(), c.foraDaVendaPorFaltaDeNcm(), c.emiteNotaDeProduto()]);
   // O estoque da venda original volta antes da baixa da troca: o aviso da tela já considera isso.
   const devolve = new Map(p.devolucoes.map((d) => [d.itemId, d.quantidade]));
   const comDevolucao = (itemId: string, saldo: number) => saldo + (devolve.get(itemId) ?? 0);
@@ -41,6 +41,9 @@ export default async function TrocarVenda({ params }: PageProps<"/vendas/[id]/tr
       <FrenteDeCaixa
         hoje={hoje()}
         clientes={clientes}
+        clienteInicial={p.clienteId}
+        emiteNotaDeProduto={emiteNota}
+        podeEditarClientes={pode(membro.permissoes, "vendas", "editar")}
         troca={{ vendaId: p.id, numero: p.numero, limiteCentavos: p.valorTotalCentavos, recebidoCentavos: p.recebidoCentavos }}
         itens={itens.map((i) => ({
           id: i.id,

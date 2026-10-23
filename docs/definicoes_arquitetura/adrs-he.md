@@ -224,6 +224,16 @@ O imposto embutido no preço depende do regime tributário e do Anexo do Simples
 
 **Drivers Relacionados:** AD-RF04, AD-RF05, RF58, RF59, RN17, RN24.
 
+##### Nota de ampliação (SPEC-022, 23/10/2026)
+
+O mesmo provedor e o mesmo padrão (adaptador, tempo limite e preenchimento manual) passam a servir o **cadastro de clientes**, sem ADR novo:
+
+* **CEP** (`ConsultaCep`, rota `cep/v1` da BrasilAPI): preenche logradouro, bairro, município e UF;
+* **CNPJ do cliente empresa** (`ConsultaCnpj.consultarEmpresa`): preenche razão social, nome fantasia, endereço, telefone e e-mail. Os sócios nunca saem do adaptador. A consulta do negócio (`consultar`) continua mínima, como na SPEC-004;
+* **CPF nunca é consultado** nem enviado a serviço externo (INV-004 da SPEC-022). Só o CEP ou o CNPJ saem do sistema;
+* o CNPJ com letras (IN RFB nº 2.229/2024) vale na consulta. Enquanto a base pública não tiver um CNPJ desses, a consulta responde "não encontrado", e a pessoa preenche os dados;
+* a base do provedor é configurável (`BRASILAPI_URL`, opcional), só para apontar os testes no navegador para um serviço falso local.
+
 ---
 
 #### ADR-007 — Cobrança do Plano Pago via Adaptador de Gateway de Pagamento (Stripe)

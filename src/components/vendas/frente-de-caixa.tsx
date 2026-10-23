@@ -1,10 +1,12 @@
 "use client";
 
-import { useActionState, useEffect, useMemo, useState } from "react";
+import { useActionState, useMemo, useState } from "react";
+import dynamic from "next/dynamic";
+import Link from "next/link";
 import { Minus, Plus, Search, Trash2, UserPlus } from "lucide-react";
 import { Aviso, MensagemDeCampo } from "@/components/acesso/campos";
 import { classeDoCampo } from "@/components/ui/classes";
-import { classeDoBotao } from "@/components/ui/estilos";
+import { classeDoBotao, classeDoLink } from "@/components/ui/estilos";
 import { Superficie, TituloDaSuperficie } from "@/components/ui/superficie";
 import { lerNumero } from "@/lib/dominio/catalogo";
 import { somarDias } from "@/lib/dominio/estoque";
@@ -23,8 +25,9 @@ import {
   type FormaDePagamento,
 } from "@/lib/dominio/venda";
 import { cn } from "@/lib/utils";
-import { acaoCadastrarCliente, acaoRegistrarVenda, acaoTrocarVenda } from "@/lib/vendas/acoes";
-import { VENDA_INICIAL, type EstadoDoCliente } from "@/lib/vendas/servicos";
+import type { ClienteDaVenda } from "@/lib/db/vendas";
+import { acaoRegistrarVenda, acaoTrocarVenda } from "@/lib/vendas/acoes";
+import { VENDA_INICIAL } from "@/lib/vendas/servicos";
 import { GavetaDeMateriais, GavetaDePreco, type MaterialDaLinha } from "./ajustes-da-linha";
 
 export type ItemDaFrente = {
@@ -38,7 +41,6 @@ export type ItemDaFrente = {
   /** Custo próprio (só para quem ajusta preço: aviso de preço abaixo do custo — SPEC-017, OPEN-007). */
   custoBase?: number | null;
 };
-type Cliente = { id: string; nome: string; contato: string | null };
 /** SPEC-017: materiais usados na linha (total, OPEN-002) e preço cobrado com motivo; null = padrão do catálogo. */
 type Linha = { itemId: string; quantidade: string; materiais?: Record<string, string> | null; ajuste?: { preco: string; motivo: string } | null };
 /** `auto`: com um só pagamento, o valor acompanha o total até a pessoa editar o campo. */
@@ -46,6 +48,9 @@ type Pagamento = { chave: number; forma: FormaDePagamento; valor: string; parcel
 
 /** Modo troca (SPEC-011, OPEN-004): a venda original, o limite e o que já foi recebido. */
 export type TrocaDaFrente = { vendaId: string; numero: number; limiteCentavos: number; recebidoCentavos: number };
+
+// SPEC-022 (5.10): o formulário completo do cliente só é baixado quando a pessoa abre "Novo cliente".
+const FormularioCliente = dynamic(() => import("@/components/clientes/formulario-cliente").then((m) => m.FormularioCliente), { ssr: false });
 
 const MAX_NA_LISTA = 30;
 const reaisCampo = (centavos: number) => (centavos / 100).toFixed(2).replace(".", ",");
@@ -64,13 +69,22 @@ export function FrenteDeCaixa({
   hoje,
   troca,
   podeAjustarPreco = false,
+  emiteNotaDeProduto = false,
+  podeEditarClientes = false,
+  clienteInicial = null,
 }: {
   itens: ItemDaFrente[];
-  clientes: Cliente[];
+  clientes: ClienteDaVenda[];
   hoje: string;
   troca?: TrocaDaFrente;
   /** SPEC-017 (OPEN-005): Vendas — editar. Na troca não há ajustes (OPEN-008). */
   podeAjustarPreco?: boolean;
+  /** SPEC-022 (5.4, item 4): com a nota fiscal de produtos ligada, avisa quando o cliente está incompleto. */
+  emiteNotaDeProduto?: boolean;
+  /** Vendas — editar: o aviso traz o link "Completar". */
+  podeEditarClientes?: boolean;
+  /** Na troca, o cliente da venda original (SPEC-022, 5.10, item 4); ainda pode ser trocado. */
+  clienteInicial?: string | null;
 }) {
   // Na troca, a ação é a de cancelar e trocar; os estados de erro têm a mesma forma e o sucesso redireciona.
   const [estado, executar, enviando] = useActionState(troca ? (acaoTrocarVenda as unknown as typeof acaoRegistrarVenda) : acaoRegistrarVenda, VENDA_INICIAL);
@@ -79,8 +93,9 @@ export function FrenteDeCaixa({
   const [busca, setBusca] = useState("");
   const [linhas, setLinhas] = useState<Linha[]>([]);
   const [clientes, setClientes] = useState(clientesIniciais);
-  const [clienteId, setClienteId] = useState("");
+  const [clienteId, setClienteId] = useState(clienteInicial ?? "");
   const [novoCliente, setNovoCliente] = useState(false);
+  const faltando = emiteNotaDeProduto ? (clientes.find((c) => c.id === clienteId)?.faltando ?? []) : [];
   const [dia, setDia] = useState(hoje);
   const [pagamentos, setPagamentos] = useState<Pagamento[]>(troca ? [] : [{ chave: 1, forma: "PIX", valor: "", parcelas: 1, auto: true }]);
   const [recebido, setRecebido] = useState("");
@@ -416,7 +431,6 @@ export function FrenteDeCaixa({
                 {clientes.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.nome}
-                    {c.contato ? `, ${c.contato}` : ""}
                   </option>
                 ))}
               </select>
@@ -424,11 +438,32 @@ export function FrenteDeCaixa({
                 <UserPlus aria-hidden="true" />
                 Novo cliente
               </button>
+              {faltando.length > 0 && (
+                <p role="status" className="w-full rounded-lg bg-status-warn-bg px-4 py-3 text-sm text-status-warn">
+                  <span aria-hidden="true">▲ </span>
+                  Faltam dados para a nota fiscal deste cliente: {faltando.join(", ")}.
+                  {podeEditarClientes && (
+                    <>
+                      {" "}
+                      <Link
+                        href={`/vendas/clientes/${clienteId}/editar`}
+                        target="_blank"
+                        rel="noopener"
+                        aria-label="Completar o cadastro do cliente (abre em outra aba)"
+                        className={classeDoLink("text-status-warn underline")}
+                      >
+                        Completar
+                      </Link>
+                    </>
+                  )}
+                </p>
+              )}
             </div>
           ) : (
-            <NovoCliente
+            <FormularioCliente
+              modo="venda"
               aoCriar={(c) => {
-                setClientes((cs) => [...cs, c].sort((a, b) => a.nome.localeCompare(b.nome)));
+                setClientes((cs) => [...cs, c].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")));
                 setClienteId(c.id);
                 setNovoCliente(false);
               }}
@@ -657,48 +692,5 @@ export function FrenteDeCaixa({
         </Superficie>
       </aside>
     </div>
-  );
-}
-
-function NovoCliente({ aoCriar, aoCancelar }: { aoCriar: (c: Cliente) => void; aoCancelar: () => void }) {
-  const [estado, executar, enviando] = useActionState<EstadoDoCliente, FormData>(acaoCadastrarCliente, { status: "ocioso" });
-  useEffect(() => {
-    if (estado.status === "criado") aoCriar(estado.cliente);
-    // aoCriar muda a cada renderização do pai; o efeito só deve rodar quando o estado muda.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [estado]);
-  const erros = estado.status === "erro" ? estado.erros : {};
-  return (
-    <form action={executar} className="space-y-3">
-      <div>
-        <label htmlFor="nome-cliente" className={rotulo}>
-          Nome
-        </label>
-        <input
-          id="nome-cliente"
-          name="nome"
-          maxLength={120}
-          aria-invalid={erros.nome ? true : undefined}
-          aria-describedby={erros.nome ? "nome-cliente-erro" : undefined}
-          className={classeDoCampo(erros.nome)}
-        />
-        <MensagemDeCampo id="nome-cliente-erro" erro={erros.nome} />
-      </div>
-      <div>
-        <label htmlFor="contato-cliente" className={rotulo}>
-          Contato <span className="font-normal text-muted-foreground">(opcional: telefone ou e-mail)</span>
-        </label>
-        <input id="contato-cliente" name="contato" maxLength={120} className={classeDoCampo(erros.contato)} />
-        <MensagemDeCampo id="contato-cliente-erro" erro={erros.contato} />
-      </div>
-      <div className="flex flex-wrap gap-3">
-        <button type="submit" disabled={enviando} className={classeDoBotao("principal")}>
-          Cadastrar cliente
-        </button>
-        <button type="button" onClick={aoCancelar} className={classeDoBotao("secundario")}>
-          Cancelar
-        </button>
-      </div>
-    </form>
   );
 }

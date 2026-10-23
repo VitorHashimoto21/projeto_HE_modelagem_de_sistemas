@@ -125,8 +125,9 @@ function EtapaCnpj({ aoVoltar }: { aoVoltar: () => void }) {
           <input
             id="cnpj"
             name="cnpj"
-            inputMode="numeric"
             autoComplete="off"
+            autoCapitalize="characters"
+            spellCheck={false}
             placeholder="00.000.000/0000-00"
             aria-invalid={erro ? true : undefined}
             aria-describedby={erro ? "cnpj-erro" : "cnpj-ajuda"}
@@ -134,7 +135,7 @@ function EtapaCnpj({ aoVoltar }: { aoVoltar: () => void }) {
             className={classeDoCampo(erro)}
           />
           <p id="cnpj-ajuda" className="mt-1.5 text-xs text-muted-foreground">
-            Buscamos razão social, atividade e regime na base pública da Receita Federal.
+            Buscamos razão social, atividade e regime na base pública da Receita Federal. Aceita também o CNPJ com letras.
           </p>
           <MensagemDeCampo id="cnpj-erro" erro={erro} />
         </div>
