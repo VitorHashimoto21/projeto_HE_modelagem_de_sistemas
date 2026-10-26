@@ -22,7 +22,7 @@ import {
 } from "@/lib/dominio/cliente";
 import { cnpjValido, formatarCnpj, normalizarCnpj } from "@/lib/dominio/cnpj";
 import { criarConsultaCepBrasilApi, mapearCepBrasilApi } from "@/lib/integracoes/consulta-cep";
-import { criarConsultaBrasilApi, mapearEmpresaBrasilApi } from "@/lib/integracoes/consulta-cnpj";
+import { criarConsultaBrasilApi, mapearEmpresaBrasilApi, type DadosDaEmpresa } from "@/lib/integracoes/consulta-cnpj";
 import { validarNegocio } from "@/lib/negocio/validacao";
 
 // SPEC-022 — testes unitários (seção 12): T01, T02, T03 e as partes unitárias de T06 e T10.
@@ -289,6 +289,57 @@ describe("T06 — consultas de CEP e CNPJ (adaptador falso; INV-004)", () => {
     for (const arquivo of ["src/lib/integracoes/consulta-cep.ts", "src/lib/integracoes/consulta-cnpj.ts", "src/lib/clientes/servicos.ts"]) {
       expect(readFileSync(arquivo, "utf-8")).not.toMatch(/normalizarCpf|cpfValido/);
     }
+  });
+});
+
+describe("Endereço do CNPJ completado pelo CEP (homologação, observação 1)", () => {
+  const empresa: DadosDaEmpresa = {
+    razaoSocial: "PADARIA BOM PAO LTDA",
+    nomeFantasia: null,
+    cep: "01310100",
+    logradouro: "Avenida Sao Joao Quadra 5 Bloco B",
+    numero: "120",
+    complemento: null,
+    bairro: "Centro",
+    municipio: "Sao Paulo",
+    uf: "SP",
+    telefone: null,
+    email: null,
+  };
+  const deps = (cep: Awaited<ReturnType<DependenciasDoCliente["consultaCep"]["consultar"]>>, dados = empresa): DependenciasDoCliente => ({
+    clientes: { criar: vi.fn(), editar: vi.fn(), excluir: vi.fn(), atuais: vi.fn() },
+    consultaCep: { consultar: vi.fn(async () => cep) },
+    consultaCnpj: { consultarEmpresa: vi.fn(async () => ({ ok: true as const, dados })) },
+  });
+  const doCep = (endereco: Partial<{ logradouro: string | null; bairro: string | null; municipio: string | null; uf: string | null }>) => ({
+    ok: true as const,
+    endereco: { cep: "01310100", logradouro: null, bairro: null, municipio: null, uf: null, ...endereco },
+  });
+
+  it("município, bairro e UF vêm do CEP, com acento; a rua também, mantendo o que vem depois dela", async () => {
+    expect(await consultarEmpresa("11222333000181", deps(doCep({ logradouro: "Avenida São João" }), { ...empresa, logradouro: "Avenida Sao Joaozinho" }))).toMatchObject({
+      dados: { logradouro: "Avenida Sao Joaozinho" }, // outra rua: só vale em palavras inteiras
+    });
+    const d = deps(doCep({ logradouro: "Avenida São João", bairro: "República", municipio: "São Paulo", uf: "SP" }));
+    const r = await consultarEmpresa("11.222.333/0001-81", d);
+    expect(r).toMatchObject({ status: "ok", dados: { logradouro: "Avenida São João Quadra 5 Bloco B", bairro: "República", municipio: "São Paulo", uf: "SP", numero: "120" } });
+    expect(d.consultaCep.consultar).toHaveBeenCalledWith("01310100");
+  });
+
+  it("rua diferente fica a do CNPJ; CEP sem rua (de cidade pequena) mantém a rua e o bairro do CNPJ", async () => {
+    expect(await consultarEmpresa("11222333000181", deps(doCep({ logradouro: "Rua das Flores", municipio: "São Paulo" })))).toMatchObject({
+      dados: { logradouro: "Avenida Sao Joao Quadra 5 Bloco B", municipio: "São Paulo" },
+    });
+    expect(await consultarEmpresa("11222333000181", deps(doCep({ municipio: "Pirapora do Bom Jesus", uf: "SP" })))).toMatchObject({
+      dados: { logradouro: "Avenida Sao Joao Quadra 5 Bloco B", bairro: "Centro", municipio: "Pirapora do Bom Jesus" },
+    });
+  });
+
+  it("sem CEP no CNPJ, não consulta; se a consulta do CEP falhar, ficam os dados do CNPJ", async () => {
+    const semCep = deps(doCep({ municipio: "São Paulo" }), { ...empresa, cep: null });
+    expect(await consultarEmpresa("11222333000181", semCep)).toMatchObject({ dados: { municipio: "Sao Paulo" } });
+    expect(semCep.consultaCep.consultar).not.toHaveBeenCalled();
+    expect(await consultarEmpresa("11222333000181", deps({ ok: false, erro: "Indisponivel" }))).toEqual({ status: "ok", dados: empresa });
   });
 });
 

@@ -96,6 +96,6 @@ Feita pela equipe em <https://he-homol.vercel.app> (DEVELOP, depois do merge do 
 1. **Corrigir a implementação:** quando a consulta do CNPJ trouxer o CEP, consultar também o CEP (base dos Correios, com acentos) e usar dele o município, o bairro e a rua, quando vierem; se o CEP não trouxer algum desses campos, fica o do CNPJ. Uma consulta a mais por CNPJ.
 2. **Manter como está:** a pessoa corrige o nome à mão, se quiser. Na futura nota fiscal, o município vai pelo código do IBGE, que virá na Spec da nota (pendência 6 do Mapa).
 
-**Decisão da equipe:** pendente.
+**Decisão da equipe (26/10/2026): opção 1**, corrigida no PR da branch `fix/endereco-do-cnpj-pelo-cep`. Quando o CNPJ traz o CEP, o sistema consulta também o CEP: município, bairro e UF vêm dele, com acento, e a rua também, quando for a mesma (o que vier depois dela no CNPJ, como quadra e bloco, fica). Se o CEP não trouxer algum campo, ou a consulta falhar, fica o do CNPJ. Testes em `test/unit/clientes.test.ts`.
 
 - **Sem captura na homologação:** o CNPJ com letras (CA-14), a busca e o filtro (CA-12), o documento repetido (CA-04) e o "Novo cliente" na Nova venda (CA-07). Os quatro foram verificados no build local (T13, acima) e nos testes de integração.
