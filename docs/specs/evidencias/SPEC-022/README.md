@@ -75,6 +75,27 @@ JavaScript comprimido baixado ao abrir cada tela, com o cache desligado. "Antes"
   - T11: a migração do `contato`, rodando as mesmas instruções da migração numa tabela à parte.
 - Ajustados: `test/integracao/lgpd.test.ts` (T12: exportação com os campos novos no JSON e no CSV; exclusão de conta limpando todos), `suporte.test.ts`, `vendas.test.ts` e `negocio.test.ts`.
 
-## Pendente
+## Homologação (T14) — 26/10/2026
 
-- **Homologação (T14):** o fluxo com a consulta real de CEP e CNPJ na BrasilAPI, depois do merge, em <https://he-homol.vercel.app>.
+Feita pela equipe em <https://he-homol.vercel.app> (DEVELOP, depois do merge do PR #106), com o Dono e o Colaborador do negócio **HE Testing** e a **consulta real** de CEP e CNPJ na BrasilAPI. Capturas em [`homologacao/`](homologacao/). Os nomes de clientes, a razão social e o nome fantasia, o CNPJ, o telefone, o CEP, a rua, o bairro e os e-mails estão cobertos. Os valores mascarados pelo próprio sistema (documento e telefone em parte) ficaram visíveis, porque são a evidência da máscara.
+
+| Passo | Resultado | Captura |
+|---|---|---|
+| Ao entrar, o novo aceite com o resumo da versão 2026-10-23, nos dois temas (CA-17) | ✅ | `homol_01_novo_aceite_claro.png`, `homol_02_novo_aceite_escuro.png` |
+| Vendas → Clientes: a cliente que já existia aparece como pessoa física, com "Faltam dados para nota"; o contato antigo dela, com "@", virou o e-mail (migração, CA-05 e CA-15) | ✅ | `homol_03_lista_claro.png`, `homol_04_lista_escuro.png` |
+| Pessoa física com **CEP real**: o CEP preencheu rua, bairro, município e UF, com "Endereço do CEP preenchido. Confira e complete o número."; salva como "Completo para nota" (CA-01) | ✅ | `homol_05_cadastro_pelo_cep.png`, `homol_06_pessoa_fisica_salva.png` |
+| Empresa com **CNPJ real**: "Buscar dados do CNPJ" preencheu razão social, nome fantasia, endereço e telefone, com "Dados da empresa preenchidos…"; salva com "Falta: inscrição estadual." e o link "Completar" (CA-02) | ✅ | `homol_07_cadastro_pelo_cnpj.png`, `homol_08_empresa_salva.png` |
+| Nova venda com a nota fiscal de produtos ligada: "Faltam dados para a nota fiscal deste cliente: inscrição estadual." com "Completar" (CA-08) | ✅ | `homol_09_nova_venda_aviso.png` |
+| Colaborador: na lista, documentos mascarados; no detalhe, CNPJ e telefone em parte e, do endereço, só o município e a UF; sem "Editar" e "Excluir", com o aviso de que os dados aparecem em parte (CA-06) | ✅ | `homol_10_lista_colaborador.png`, `homol_11_detalhe_colaborador.png` |
+| Cliente com 2 compras: "2 compras · total de R$ 624,00" (CA-09); o diálogo de exclusão explica a anonimização (CA-11) | ✅ | `homol_12_cliente_com_compras.png`, `homol_13_excluir_dialogo.png` |
+| Depois de excluir: "Dados do cliente apagados. As vendas continuam registradas, sem identificação."; a cliente sai da lista, e as duas vendas dela mostram "Cliente anonimizado" com os mesmos valores (CA-11, INV-005) | ✅ | `homol_14_cliente_anonimizado.png`, `homol_15_vendas_cliente_anonimizado.png` |
+| Cadastro de negócio com CNPJ real na conta de outra pessoa, depois de liberar o CNPJ do negócio de teste (contorno da pendência 7 do Mapa) | ✅ | — |
+
+**Observação 1 — município sem acento quando vem do CNPJ:** a base pública do CNPJ (Receita) guarda os nomes em maiúsculas e **sem acento**. Por isso, o cliente cadastrado pelo CNPJ ficou com "Sao Paulo/SP", e o cadastrado pelo CEP, com "São Paulo/SP" (`homol_10_lista_colaborador.png`). O mesmo pode acontecer com a rua e o bairro. A Spec não trata disso. Propostas:
+
+1. **Corrigir a implementação:** quando a consulta do CNPJ trouxer o CEP, consultar também o CEP (base dos Correios, com acentos) e usar dele o município, o bairro e a rua, quando vierem; se o CEP não trouxer algum desses campos, fica o do CNPJ. Uma consulta a mais por CNPJ.
+2. **Manter como está:** a pessoa corrige o nome à mão, se quiser. Na futura nota fiscal, o município vai pelo código do IBGE, que virá na Spec da nota (pendência 6 do Mapa).
+
+**Decisão da equipe:** pendente.
+
+- **Sem captura na homologação:** o CNPJ com letras (CA-14), a busca e o filtro (CA-12), o documento repetido (CA-04) e o "Novo cliente" na Nova venda (CA-07). Os quatro foram verificados no build local (T13, acima) e nos testes de integração.
