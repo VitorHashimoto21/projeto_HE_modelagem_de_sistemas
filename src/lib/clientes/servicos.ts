@@ -90,5 +90,36 @@ export async function consultarEmpresa(texto: string, deps: DependenciasDoClient
   const cnpj = normalizarCnpj(texto);
   if (!cnpj || !cnpjValido(cnpj)) return { status: "erro", mensagem: MENSAGENS_CLIENTE.cnpjInvalido };
   const r = await deps.consultaCnpj.consultarEmpresa(cnpj);
-  return r.ok ? { status: "ok", dados: r.dados } : { status: "erro", mensagem: MENSAGENS_FLUXO_CLIENTE.cnpjIndisponivel };
+  if (!r.ok) return { status: "erro", mensagem: MENSAGENS_FLUXO_CLIENTE.cnpjIndisponivel };
+  return { status: "ok", dados: await completarPeloCep(r.dados, deps.consultaCep) };
+}
+
+const semAcento = (valor: string) => valor.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
+
+/** A rua do CEP, com acentos, quando é a mesma do CNPJ; o que vier depois dela no CNPJ (quadra, bloco…) fica. */
+function ruaComAcento(doCnpj: string | null, doCep: string | null): string | null {
+  if (!doCnpj || !doCep) return doCnpj ?? doCep;
+  const base = semAcento(doCep);
+  const resto = doCnpj.slice(base.length);
+  // Só a mesma rua, em palavras inteiras: "Rua A" não vale para "Rua Abc".
+  return semAcento(doCnpj).startsWith(base) && !/^[\p{L}\p{N}]/u.test(resto) ? doCep + resto : doCnpj;
+}
+
+/**
+ * A base pública do CNPJ guarda os nomes sem acento ("SAO PAULO"); a do CEP, com acento. Quando o
+ * CNPJ traz o CEP, município, bairro e UF vêm do CEP, e a rua também, se for a mesma (homologação
+ * da SPEC-022, observação 1). Se a consulta do CEP falhar, ficam os dados do CNPJ.
+ */
+async function completarPeloCep(dados: DadosDaEmpresa, consultaCep: ConsultaCep): Promise<DadosDaEmpresa> {
+  if (!dados.cep) return dados;
+  const r = await consultaCep.consultar(dados.cep);
+  if (!r.ok) return dados;
+  const e = r.endereco;
+  return {
+    ...dados,
+    logradouro: ruaComAcento(dados.logradouro, e.logradouro),
+    bairro: e.bairro ?? dados.bairro,
+    municipio: e.municipio ?? dados.municipio,
+    uf: e.uf ?? dados.uf,
+  };
 }
