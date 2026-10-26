@@ -89,13 +89,19 @@ Feita pela equipe em <https://he-homol.vercel.app> (DEVELOP, depois do merge do 
 | Colaborador: na lista, documentos mascarados; no detalhe, CNPJ e telefone em parte e, do endereço, só o município e a UF; sem "Editar" e "Excluir", com o aviso de que os dados aparecem em parte (CA-06) | ✅ | `homol_10_lista_colaborador.png`, `homol_11_detalhe_colaborador.png` |
 | Cliente com 2 compras: "2 compras · total de R$ 624,00" (CA-09); o diálogo de exclusão explica a anonimização (CA-11) | ✅ | `homol_12_cliente_com_compras.png`, `homol_13_excluir_dialogo.png` |
 | Depois de excluir: "Dados do cliente apagados. As vendas continuam registradas, sem identificação."; a cliente sai da lista, e as duas vendas dela mostram "Cliente anonimizado" com os mesmos valores (CA-11, INV-005) | ✅ | `homol_14_cliente_anonimizado.png`, `homol_15_vendas_cliente_anonimizado.png` |
-| Cadastro de negócio com CNPJ real na conta de outra pessoa, depois de liberar o CNPJ do negócio de teste (contorno da pendência 7 do Mapa) | ✅ | — |
+| Cadastro de negócio com CNPJ real na conta de outra pessoa, depois de liberar o CNPJ do negócio de teste (contorno da pendência "Encerrar negócio e liberar o CNPJ" do Mapa) | ✅ | — |
 
 **Observação 1 — município sem acento quando vem do CNPJ:** a base pública do CNPJ (Receita) guarda os nomes em maiúsculas e **sem acento**. Por isso, o cliente cadastrado pelo CNPJ ficou com "Sao Paulo/SP", e o cadastrado pelo CEP, com "São Paulo/SP" (`homol_10_lista_colaborador.png`). O mesmo pode acontecer com a rua e o bairro. A Spec não trata disso. Propostas:
 
 1. **Corrigir a implementação:** quando a consulta do CNPJ trouxer o CEP, consultar também o CEP (base dos Correios, com acentos) e usar dele o município, o bairro e a rua, quando vierem; se o CEP não trouxer algum desses campos, fica o do CNPJ. Uma consulta a mais por CNPJ.
-2. **Manter como está:** a pessoa corrige o nome à mão, se quiser. Na futura nota fiscal, o município vai pelo código do IBGE, que virá na Spec da nota (pendência 6 do Mapa).
+2. **Manter como está:** a pessoa corrige o nome à mão, se quiser. Na futura nota fiscal, o município vai pelo código do IBGE, que virá na Spec da nota (pendência "Dados do emitente" do Mapa).
 
-**Decisão da equipe (26/10/2026): opção 1**, corrigida no PR da branch `fix/endereco-do-cnpj-pelo-cep`. Quando o CNPJ traz o CEP, o sistema consulta também o CEP: município, bairro e UF vêm dele, com acento, e a rua também, quando for a mesma (o que vier depois dela no CNPJ, como quadra e bloco, fica). Se o CEP não trouxer algum campo, ou a consulta falhar, fica o do CNPJ. Testes em `test/unit/clientes.test.ts`.
+**Decisão da equipe (26/10/2026): opção 1**, corrigida no PR #108. Quando o CNPJ traz o CEP, o sistema consulta também o CEP: município, bairro e UF vêm dele, com acento, e a rua também, quando for a mesma (o que vier depois dela no CNPJ, como quadra e bloco, fica). Se o CEP não trouxer algum campo, ou a consulta falhar, fica o do CNPJ. Testes em `test/unit/clientes.test.ts`.
+
+**Conferência depois da correção (26/10/2026):** com o CNPJ de uma empresa de São Paulo, o município veio "São Paulo", com acento, e o bairro veio do CEP. A rua ficou "Avenida Brigadeiro Luiz Antonio", como na Receita: os Correios escrevem "Luís Antônio", com "s", e a regra só troca a rua quando o nome é o mesmo, sem contar os acentos. **Decisão da equipe: manter assim** (a rua com outra grafia fica a do CNPJ). A pessoa pode corrigir à mão; na nota fiscal valem o CEP e o código do IBGE do município.
 
 - **Sem captura na homologação:** o CNPJ com letras (CA-14), a busca e o filtro (CA-12), o documento repetido (CA-04) e o "Novo cliente" na Nova venda (CA-07). Os quatro foram verificados no build local (T13, acima) e nos testes de integração.
+
+## Pendente
+
+Nada. A SPEC-022 foi concluída em 26/10/2026.
