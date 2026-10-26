@@ -1,6 +1,6 @@
 # SPEC-022 — Cliente com dados completos
 
-> **Status:** 🟢 **Implementada em 23/10/2026; falta a homologação (T14).** **Aprovada em 22/10/2026.** As questões em aberto foram decididas pela equipe em entrevista (seção 13); as OPEN-001 a OPEN-008, todas pela opção recomendada:
+> **Status:** 🟢 **Homologada em 26/10/2026 (T14); falta a decisão da equipe sobre a observação 1 (município sem acento vindo do CNPJ).** Implementada em 23/10/2026. **Aprovada em 22/10/2026.** As questões em aberto foram decididas pela equipe em entrevista (seção 13); as OPEN-001 a OPEN-008, todas pela opção recomendada:
 > - a tela de Clientes fica **dentro de Vendas**, com as permissões de Vendas;
 > - o documento aparece **mascarado na lista**, e completo só para quem pode editar clientes;
 > - o cliente pode ser **pessoa física ou empresa**;
@@ -11,7 +11,7 @@
 > - o detalhe do cliente mostra **os dados e as compras**;
 > - depois de comparar com o cadastro de clientes de um ERP de mercado (vídeo da equipe, 22/10/2026), entram o **nome fantasia**, a **inscrição municipal** e o preenchimento de **telefone e e-mail pelo CNPJ** (OPEN-009).
 >
-> A baseline foi ajustada: RF22, RF58 e RF76 e a RN27 alterados; RF81 e RN36 novos. **Implementada em 23/10/2026** (PR #106) e verificada em build local: testes T01–T12 automatizados e o roteiro T13 no navegador, com 120 verificações e uma BrasilAPI falsa ([evidências](evidencias/SPEC-022/README.md)). Nenhuma divergência conhecida. Falta a homologação (T14), com a consulta real de CEP e CNPJ. As notas da implementação estão depois da seção 9. Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar), a partir da revisão de uma profissional da área financeira e contábil que está montando uma loja de semijoias (19/10/2026).
+> A baseline foi ajustada: RF22, RF58 e RF76 e a RN27 alterados; RF81 e RN36 novos. **Implementada em 23/10/2026** (PR #106) e verificada em build local: testes T01–T12 automatizados e o roteiro T13 no navegador, com 120 verificações e uma BrasilAPI falsa ([evidências](evidencias/SPEC-022/README.md)). Nenhuma divergência conhecida. **Homologação (T14) em 26/10/2026**, com a consulta real de CEP e CNPJ: fluxo aprovado, com uma observação para a equipe decidir. As notas da implementação e da homologação estão depois da seção 9. Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar), a partir da revisão de uma profissional da área financeira e contábil que está montando uma loja de semijoias (19/10/2026).
 >
 > **Mapa:** [`MAPA_DE_SPECS.md`](../MAPA_DE_SPECS.md)
 > - **Altera:** [SPEC-008](SPEC-008.md) (cliente na Nova venda), [SPEC-004](SPEC-004.md) (CNPJ com letras no cadastro e nos Dados do negócio), [SPEC-014](SPEC-014.md) (exportação e anonimização) e [SPEC-018](SPEC-018.md) (máscara do modo suporte).
@@ -434,6 +434,11 @@ A loja de semijoias vende no balcão, pelo Instagram com entrega, e para revende
 
 **Divergências:** nenhuma conhecida entre a implementação e esta Spec. Duas falhas encontradas pelos testes antes do PR foram corrigidas na própria migração: o `CHECK` da inscrição estadual aceitava contribuinte sem número (`NULL ~ '…'` dá nulo), e a migração do contato tocaria nos clientes já anonimizados.
 
+**Homologação (T14, 26/10/2026):** a equipe percorreu o fluxo em <https://he-homol.vercel.app>, com o Dono e o Colaborador do negócio **HE Testing** e a consulta real de CEP e CNPJ, depois do merge do PR #106. Fluxo aprovado: novo aceite, lista, cadastro pelo CEP e pelo CNPJ, aviso na Nova venda, dados mascarados para o Colaborador, compras no detalhe e exclusão com anonimização ([evidências](evidencias/SPEC-022/README.md#homologação-t14--26102026)).
+
+- **Observação 1 — município sem acento vindo do CNPJ:** a base pública do CNPJ guarda os nomes sem acento. O cliente cadastrado pelo CNPJ ficou com "Sao Paulo/SP", e o cadastrado pelo CEP, com "São Paulo/SP". Propostas: (1) **corrigir a implementação**, consultando também o CEP que vem do CNPJ e usando dele município, bairro e rua (com acentos), quando vierem; (2) **manter**, com a correção à mão e o código do IBGE na futura Spec da nota fiscal. **Decisão da equipe: pendente.**
+- **Pendência 7 do Mapa (encontrada na homologação):** o CNPJ de um negócio de teste não podia ser cadastrado em outra conta, porque não há como encerrar um negócio nem liberar o CNPJ. Contornado na homologação direto no banco; a solução no produto aguarda decisão da equipe.
+
 ---
 
 ## 10. Requisitos não funcionais aplicáveis
@@ -546,14 +551,14 @@ Todas decididas pela equipe em 22/10/2026, em entrevista. As OPEN-001 a OPEN-008
 
 A SPEC-022 estará concluída quando:
 
-- [ ] todos os critérios de aceitação (CA-01 a CA-18) estiverem implementados, por testes, no navegador (build local) e na homologação (T14);
-- [ ] todos os invariantes (INV-001 a INV-011) estiverem preservados;
-- [ ] os testes derivados (T01 a T14) estiverem aprovados, com o CI verde no PR;
-- [ ] os RNFs aplicáveis (RNF01, RNF02, RNF04, RNF10) tiverem sido verificados como descrito na seção 10;
+- [x] todos os critérios de aceitação (CA-01 a CA-18) estiverem implementados, por testes, no navegador (build local) e na homologação (T14, 26/10/2026);
+- [x] todos os invariantes (INV-001 a INV-011) estiverem preservados;
+- [x] os testes derivados (T01 a T14) estiverem aprovados, com o CI verde no PR;
+- [x] os RNFs aplicáveis (RNF01, RNF02, RNF04, RNF10) tiverem sido verificados como descrito na seção 10;
 - [x] as questões OPEN-001 a OPEN-009 tiverem sido decididas e registradas (22/10/2026), com RF22, RF58, RF76 e RN27 alterados e o RF81 e a RN36 incluídos na baseline;
 - [x] a nova versão da Política de Privacidade e dos Termos de Uso estiver publicada, com o novo aceite (versão 2026-10-23);
 - [x] os documentos de modelo (seção 7) e a nota de ampliação da ADR-006 estiverem atualizados;
 - [x] não existir divergência conhecida entre a implementação e esta Spec;
-- [ ] toda divergência em relação à baseline tiver sido explicitamente analisada e registrada.
+- [ ] toda divergência em relação à baseline tiver sido explicitamente analisada e registrada (falta a decisão da observação 1 da homologação).
 
 **Regra fundamental:** a implementação obedece a esta Spec aprovada. Se surgir conflito entre código, Spec e documentos de modelagem, o comportamento não é alterado em silêncio: a divergência é registrada com a proposta de (1) corrigir a implementação ou (2) alterar a baseline, e a decisão é da equipe.
