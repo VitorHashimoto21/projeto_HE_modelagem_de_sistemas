@@ -2,6 +2,7 @@
 
 > **Status:** ✅ **Implementada e verificada na homologação em 11/10/2026** (PR #62) — questões em aberto decididas pela equipe (seção 13), todas pela opção recomendada; testes T01–T11 no CI, telas em build de produção com login (T12) e fluxo na homologação (T13) — [evidências](evidencias/SPEC-010/README.md). Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar).
 > **Mapa:** [`MAPA_DE_SPECS.md`](../MAPA_DE_SPECS.md) · **Anteriores:** [SPEC-003](SPEC-003.md) (parâmetros fiscais), [SPEC-004](SPEC-004.md) (regime e Anexo), [SPEC-006](SPEC-006.md) (catálogo e preço oficial), [SPEC-008](SPEC-008.md) (vendas com custo unitário) e [SPEC-009](SPEC-009.md) (despesas fixas, DAS e lançamentos de salário) · **Próximas que dependem desta:** SPEC-012 (ponto de equilíbrio e meta no dashboard).
+> **Evolução prevista pela [SPEC-024](SPEC-024.md) (aprovada em 26/10/2026):** a comissão do item aparece **separada da taxa da maquininha** e com o **valor em reais**. A barra "Para onde vai cada venda" ganha as partes "Maquininha" e "Comissão" (com uma 6ª cor na paleta), e "Como o preço foi calculado" troca a linha "Despesas variáveis" por "Taxa da maquininha" e "Comissão do item", com os reais em todas as parcelas. A fórmula do preço, a confirmação e o histórico não mudam; a comissão continua só percentual.
 
 ---
 
@@ -327,7 +328,10 @@ Todas decididas pela equipe em 11/10/2026, pela opção recomendada:
 | **OPEN-007** — Folha do Fator R | **Saídas da categoria Salário** (líquidas de estornos) no período do RBT12 real; sem vendas no período → Anexo V (RN28). |
 | **OPEN-008** — Aviso de mudança do Anexo | **Comparar com o Anexo efetivo do último preço confirmado** (guardado na memória do cálculo). |
 
----|---|---|---|
+Opções analisadas na entrevista:
+
+| ID | Pergunta | Opções | Recomendação |
+|---|---|---|---|
 | **OPEN-001** — Onde fica a Calculadora | Tela própria ou só a partir do item? | (a) **`/calculadora`** com a escolha do item + atalho "Calcular preço" no detalhe do item; (b) só no detalhe do item do Catálogo | **(a)** — a tela própria também abriga o ponto de equilíbrio, a meta e os parâmetros; o atalho leva direto ao item. |
 | **OPEN-002** — Parâmetros de precificação | Onde e por quem são editados? | (a) **Tela da Calculadora**, com permissão da Calculadora (Dono e Gerente, UC16); (b) em "Dados do negócio", só o Dono | **(a)** — o UC16 inclui o Gerente, e os parâmetros ficam perto de onde são usados. |
 | **OPEN-003** — Permissões | Como dividir ver/criar/editar? | (a) ***ver***: calcular, simular, ver PE e meta; ***criar***: confirmar preço; ***editar***: parâmetros; (b) ***ver***: calcular; ***editar***: confirmar preço e parâmetros | **(a)** — confirmar um preço cria um registro de histórico; separar permite um Colaborador que simula sem mudar preços. |
