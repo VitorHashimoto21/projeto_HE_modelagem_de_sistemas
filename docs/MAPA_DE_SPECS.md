@@ -135,7 +135,7 @@ Também foram corrigidos, sem decisão nova: a ordem do cronograma da Visão (Ca
 | SPEC-016 | Design system e redesign (Direção "Balcão") | 002–014 |
 | SPEC-017 | Ajustes na venda: materiais e preço por venda | 005, 006, 007, 008, 016 |
 | SPEC-018 | Administrador da plataforma e acesso de suporte (somente leitura) | 001, 002, 005, 014, 016 |
-| SPEC-019 *(a gerar)* | Suporte com edição, emergência, ações de plataforma e 2º fator | 018 |
+| SPEC-019 | Suporte com edição, emergência, ações de plataforma e 2º fator | 002, 005, 006, 007, 009, 010, 013, 014, 016, 018, 020, 022 |
 | SPEC-020 | Subcategorias do negócio e nova categoria Acessórios | 003, 006, 007, 014, 016, 018 |
 | SPEC-021 | NCM nos produtos | 003, 004, 006, 007, 008, 011, 014, 016, 018, 020 |
 | SPEC-022 | Cliente com dados completos (CPF/CNPJ, endereço, e-mail e telefone) | 001, 004, 005, 008, 011, 014, 016, 018, 020, 021 |
@@ -174,7 +174,9 @@ flowchart LR
     S16 --> S17
     S14 --> S18[SPEC-018 Administrador e suporte]
     S16 --> S18
-    S18 -.-> S19[SPEC-019 Suporte com edição e 2º fator - a gerar]
+    S18 --> S19[SPEC-019 Suporte com edição, emergência e 2º fator]
+    S13 --> S19
+    S22 --> S19
     S7 --> S20[SPEC-020 Subcategorias e Acessórios]
     S16 --> S20
     S20 --> S21[SPEC-021 NCM nos produtos]
@@ -186,6 +188,8 @@ flowchart LR
 ```
 
 **Ordem de execução combinada em 19/10/2026:** **N8 da SPEC-016** (menu lateral recolhível — concluída e homologada em 19/10/2026) → SPEC-020 (concluída em 20/10/2026) → SPEC-021 (concluída em 22/10/2026) → SPEC-022 (concluída em 26/10/2026) → SPEC-019 (antes de abrir a produção). A barra lateral recolhível, planejada como SPEC-021, já estava prevista na SPEC-016 e não tinha sido entregue: virou a nota N8 dela (divergência corrigida), e as Specs seguintes foram renumeradas (NCM → 021, Cliente completo → 022). Esses itens vêm da revisão de uma profissional da área financeira e contábil que está montando uma loja de semijoias; a SPEC-019 continua obrigatória antes da produção (2º fator do Administrador).
+
+**SPEC-019 (28/10/2026):** gerada por outro colega da equipe depois da SPEC-022 e aprovada em 28/10/2026, com as OPEN-001 a OPEN-014 decididas em entrevista. Continua **obrigatória antes de abrir a produção** (2º fator do Administrador) e pode ser implementada em paralelo à SPEC-024, que só muda a apresentação da Calculadora.
 
 ### 2.2 Detalhamento
 
@@ -380,9 +384,21 @@ flowchart LR
 - **Dependências:** SPEC-001, SPEC-002, SPEC-005, SPEC-014, SPEC-016
 - **Justificativa da ordem:** depois do MVP completo; a parte de privacidade (liberação, máscara e auditoria) é entregue e homologada antes de qualquer edição pelo suporte.
 
-#### SPEC-019 — Suporte com edição, emergência, ações de plataforma e 2º fator *(a gerar)*
-- **Escopo combinado (17/10/2026):** **camada de segurança da autenticação do Administrador (2º fator TOTP), em destaque e antes da edição**; edição em modo suporte; acesso de emergência sem liberação (justificativa, só leitura, aviso posterior); ações de plataforma (suspender/reativar negócio, trocar plano).
-- **Dependências:** SPEC-018
+#### SPEC-019 — Suporte com edição, emergência, ações de plataforma e 2º fator
+- **Spec:** [`specs/SPEC-019.md`](./specs/SPEC-019.md) (✅ aprovada em 28/10/2026, com as OPEN-001 a OPEN-014 decididas em entrevista, pela opção recomendada, com quatro ajustes da equipe: prazo de 12 h para a liberação com correção e para o pedido de emergência expirar, e duas pessoas também na troca de plano; a implementar)
+- **Objetivo:** proteger a conta de Administrador com o **2º fator obrigatório** e ampliar o suporte da SPEC-018 com correções autorizadas pelo Dono, acesso de emergência, suspensão de negócio e troca de plano pela plataforma.
+- **Valor entregue:**
+  - 2º fator TOTP pelo MFA do Supabase Auth, com dois autenticadores, reconfirmação do código nas ações críticas e redefinição pelo workflow "Administradores", rodado por outra pessoa;
+  - o Dono marca cada módulo como "ver" ou "ver e corrigir" (até 12 h); o suporte só faz as correções de uma **lista fechada**, com o antes e o depois registrados, e o Dono pode **desfazer** cada uma em até 30 dias;
+  - **acesso de emergência** sem liberação, só com **duas contas de Administrador** (o pedido expira em 12 h), somente leitura, por até 4 h, visível ao Dono desde o pedido: não existe acesso secreto;
+  - **suspender e reativar** negócio (um Administrador; o negócio fica somente leitura, com a exportação mantida) e **trocar plano** (duas pessoas).
+- **Origem:** divisão de escopo da SPEC-018 (17/10/2026).
+- **Nunca pelo suporte:** vendas, clientes, equipe, configurações, plano pelo Dono, acesso do suporte e LGPD (RN37).
+- **Fora:** trocar o e-mail do Dono, recuperar a conta e transferir o negócio vão para a Spec da pendência 6, com a **troca do e-mail como prioridade** (OPEN-010).
+- **RF:** RF73–RF77 (alterados), RF82–RF86 (novos) · **RN:** RN30–RN32 (alteradas), RN37–RN39 (novas), RN01 · **RNF:** RNF12 (alterado), RNF02, RNF03, RNF04, RNF05 · **ADR:** ADR-008 (ampliada)
+- **Entidades:** Usuario, AcessoSuporte, RegistroSuporte, Negocio e HistoricoPlano (campos novos); PedidoPlataforma (nova)
+- **Dependências:** SPEC-002, SPEC-005, SPEC-006, SPEC-007, SPEC-009, SPEC-010, SPEC-013, SPEC-014, SPEC-016, SPEC-018, SPEC-020, SPEC-022
+- **Pré-requisitos externos:** MFA TOTP habilitado no Supabase Auth de cada ambiente; chave secreta do Supabase como segredo do ambiente no GitHub (só para `redefinir-2fator`); pelo menos duas contas de Administrador, de pessoas diferentes. O 2º fator não depende de domínio; os e-mails ao Dono, sim (ADR-009).
 - **Ordem:** depois das SPECs 020 a 022 e **antes de abrir a produção** (decisão de 19/10/2026).
 
 #### SPEC-020 — Subcategorias do negócio e nova categoria Acessórios
@@ -437,7 +453,7 @@ flowchart LR
 
 ## 3. Cobertura da baseline
 
-Todos os 129 requisitos (RF01–RF81, RN01–RN36, RNF01–RNF12) estão associados a pelo menos uma Spec. Requisitos compartilhados aparecem em mais de uma Spec com escopos complementares:
+Todos os 137 requisitos (RF01–RF86, RN01–RN39, RNF01–RNF12) estão associados a pelo menos uma Spec. Requisitos compartilhados aparecem em mais de uma Spec com escopos complementares:
 
 | Requisito | Specs | Divisão |
 |---|---|---|
@@ -452,9 +468,10 @@ Todos os 129 requisitos (RF01–RF81, RN01–RN36, RNF01–RNF12) estão associa
 | RF62 | 008, 010 | Gravação do custo unitário na venda (008); cálculo do CMV% (010) |
 | RN21 / RN25 | 010–012 | Regra aplicada nas agregações de cada Spec |
 | RN29 | 001, 008, 010, 012 | Utilitário de datas (001); aplicado nas vendas do dia, RBT12, competência e gráficos |
-| RF73 | 013, 015 | Troca de plano simulada (013); troca pelo gateway de pagamento (015, opcional) |
+| RF73 | 013, 015, 019 | Troca de plano simulada (013); troca pelo gateway de pagamento (015, opcional); troca pela plataforma, com duas pessoas (019, RF86) |
+| RF74–RF77 / RN30–RN32 | 018, 019 | Administrador, liberação, modo suporte somente leitura e registro (018); 2º fator, correções, emergência e ações de plataforma (019) |
 | RNF11 | 001, 015 | Ambientes e variáveis por ambiente (001); chaves de teste × produção do gateway (015) |
-| RN01 / RNF02 | 001, 018 | Isolamento por negócio (001); única exceção: acesso de suporte liberado pelo Dono (018) |
+| RN01 / RNF02 | 001, 018, 019 | Isolamento por negócio (001); exceções: acesso de suporte liberado pelo Dono (018) e acesso de emergência com duas pessoas (019) |
 | RNF12 | 018, 019 | Sessão de 8 h do Administrador (018); 2º fator obrigatório (019) |
 | RF22 | 008, 022 | Venda com cliente opcional (008); cadastro completo do cliente, também fora da venda (022) |
 | RF58 | 004, 022 | Consulta do CNPJ no cadastro do negócio (004); CNPJ com letras (022) |
@@ -503,7 +520,7 @@ A conferência do seed fiscal foi concluída em 03/10/2026 (DAS do MEI atualizad
   - nome fantasia, inscrição municipal e telefone e e-mail pelo CNPJ (OPEN-009, depois da comparação com um ERP de mercado; RG descartado).
 
   Baseline ajustada (RF22, RF58, RF76 e RN27 alterados; RF81 e RN36 novos). **Implementada em 23/10/2026** (PR #106) e verificada em build local (testes T01–T12 e o roteiro T13 com 120 verificações), sem divergência conhecida. Política de Privacidade e Termos na versão 2026-10-23, com novo aceite. **Homologada em 26/10/2026** (T14), com a consulta real de CEP e CNPJ. O município sem acento vindo do CNPJ foi corrigido no PR #108 (o endereço é completado pelo CEP); uma rua com outra grafia na Receita e nos Correios fica a do CNPJ, por decisão da equipe. Na homologação apareceu também a pendência "Encerrar negócio e liberar o CNPJ". Concluída.
-- SPEC-019: a gerar agora, antes de abrir a produção (a SPEC-022 foi concluída).
+- [SPEC-019](specs/SPEC-019.md) (suporte com edição, emergência, ações de plataforma e 2º fator): aprovada em 28/10/2026, com as OPEN-001 a OPEN-014 decididas em entrevista (pela opção recomendada, com os ajustes de 12 h e de duas pessoas na troca de plano). Baseline ajustada (RF73–RF77, RN30–RN32 e RNF12 alterados; RF82–RF86 e RN37–RN39 novos; ADR-008 ampliada). A implementar, antes de abrir a produção.
 - `main`: atualizada até a SPEC-020 (PR #105, 22/10/2026: homologação da SPEC-018, N8 da SPEC-016 e SPEC-020, até o PR #101 da `DEVELOP`), sem ambiente de produção ainda (a migração na `main` é pulada enquanto não houver o banco de produção). As SPEC-021 e SPEC-022 vão na próxima release.
 - **E-mails e domínio:** domínio próprio `.com.br` (Registro.br) verificado no Resend, que também passa a ser o SMTP do Supabase Auth ([ADR-009](definicoes_arquitetura/adrs-he.md), 18/10/2026); aguarda a compra.
 
@@ -513,9 +530,9 @@ Lista mantida até cada item ser resolvido; quem retomar o projeto (em qualquer 
 
 | # | Pendência | Situação |
 |---|---|---|
-| 1 | **SPEC-019** (suporte com edição, emergência, ações de plataforma e **2º fator do Administrador**): gerar agora (a SPEC-022 foi concluída em 26/10/2026), **antes de abrir a produção** | Aberta |
+| 1 | **SPEC-019** (suporte com edição, emergência, ações de plataforma e **2º fator do Administrador**): implementar e homologar **antes de abrir a produção**. Antes de começar: conferir o MFA TOTP habilitado no Supabase de homologação (*Authentication → Multi-Factor*), cadastrar a chave secreta do Supabase no ambiente `homologacao` do GitHub e preparar duas contas de Administrador para o teste das duas pessoas (T17) | Aprovada em 28/10/2026; a implementar |
 | 2 | **Textos legais** (`docs/legal/`): preencher os campos entre colchetes (responsável, e-mail de contato, cidade/UF, região do Supabase) e revisão do grupo; a versão 2026-10-23 inclui o acesso de suporte (SPEC-018) e o cadastro completo de clientes (SPEC-022) | Aberta |
 | 3 | **SPEC-015** (cobrança real pelo Stripe): decidir se fica fora do MVP; depende do ADR-007 (proposta) | Aberta |
 | 4 | **Domínio próprio** ([ADR-009](definicoes_arquitetura/adrs-he.md)): comprar o `.com.br` no Registro.br, verificar no Resend (DNS), trocar `EMAIL_REMETENTE` na Vercel e pôr o Resend como SMTP do Supabase Auth com o modelo de link `token_hash`. Resolve convites e avisos do suporte a qualquer e-mail e o "Este link expirou" da confirmação de conta em outro navegador | Decidida; aguarda a compra |
 | 5 | **Dados do emitente para a futura nota fiscal** (pós-MVP): a nota de exemplo da loja de semijoias (NF-e nº 35685, 22/10/2026) pede do **próprio negócio** endereço, telefone, inscrição estadual e inscrição municipal, que os Dados do negócio ainda não guardam (hoje: nome, CNPJ, regime e enquadramento). Entra com a Spec da emissão de nota fiscal, junto com os dados de cada nota que não são do cadastro: código IBGE do município (do negócio e do cliente), endereço de entrega diferente do cadastro, natureza da operação, CFOP, CSOSN/CST, transportador e volumes. Os dados do cliente estão cobertos pela SPEC-022, e o NCM pela SPEC-021 | Registrada; aguarda a Spec da nota fiscal |
-| 6 | **Encerrar negócio e liberar o CNPJ** (encontrada em 26/10/2026, na homologação da SPEC-022): hoje não há como o Dono encerrar um negócio sem excluir a conta inteira (SPEC-014). Mesmo encerrado, o negócio continua com o CNPJ, que é único entre **todos** os negócios, e o cadastro recusa um CNPJ já usado. Também não há como transferir o negócio para outro Dono. Assim, um negócio cadastrado por engano ou fechado prende o CNPJ: ninguém mais consegue cadastrá-lo. Decidir se vira Spec, com as questões: (a) o Dono encerra um negócio sozinho, com confirmação; (b) o CNPJ fica livre ao encerrar, mantendo os registros fiscais por 5 anos (RN27); (c) transferir o negócio para outro membro como Dono. **Contorno na homologação (aplicado em 26/10/2026):** o negócio de teste foi encerrado e o CNPJ tirado dele direto no banco (SQL Editor do Supabase), e o negócio foi cadastrado na conta certa. Nunca usar na produção | Aberta |
+| 6 | **Encerrar negócio e liberar o CNPJ** (encontrada em 26/10/2026, na homologação da SPEC-022): hoje não há como o Dono encerrar um negócio sem excluir a conta inteira (SPEC-014). Mesmo encerrado, o negócio continua com o CNPJ, que é único entre **todos** os negócios, e o cadastro recusa um CNPJ já usado. Também não há como transferir o negócio para outro Dono. Assim, um negócio cadastrado por engano ou fechado prende o CNPJ: ninguém mais consegue cadastrá-lo. Decidir se vira Spec, com as questões: (a) o Dono encerra um negócio sozinho, com confirmação; (b) o CNPJ fica livre ao encerrar, mantendo os registros fiscais por 5 anos (RN27); (c) transferir o negócio para outro membro como Dono. **Contorno na homologação (aplicado em 26/10/2026):** o negócio de teste foi encerrado e o CNPJ tirado dele direto no banco (SQL Editor do Supabase), e o negócio foi cadastrado na conta certa. Nunca usar na produção. **Acréscimo da SPEC-019 (OPEN-010, 28/10/2026):** a Spec desta pendência também cobre recuperar a conta do Dono sem acesso, e a **troca do e-mail do Dono é a funcionalidade prioritária**, com verificação de identidade própria (é o caminho clássico para roubar uma conta) | Aberta |

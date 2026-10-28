@@ -2,6 +2,7 @@
 
 > **Status:** ✅ **Implementada e verificada na homologação em 11/10/2026** (PR #68) — questões em aberto decididas pela equipe (seção 13), todas pela opção recomendada; testes T01–T12 no CI, telas em build de produção com login (T13) e fluxo na homologação (T14) — [evidências](evidencias/SPEC-013/README.md). Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar).
 > **Mapa:** [`MAPA_DE_SPECS.md`](../MAPA_DE_SPECS.md) · **Anteriores:** [SPEC-005](SPEC-005.md) (equipe, permissões e limite de colaboradores), [SPEC-008](SPEC-008.md) (vendas com custo gravado), [SPEC-009](SPEC-009.md) (fluxo de caixa e contas) e [SPEC-012](SPEC-012.md) (Dashboard) · **Próximas que dependem desta:** SPEC-015 (cobrança real, que substitui só o ponto de troca de plano).
+> **Evolução prevista pela [SPEC-019](SPEC-019.md) (aprovada em 28/10/2026):** o plano também pode ser trocado **pela plataforma**, nos dois sentidos, com motivo (cortesia, correção ou teste), pedido por uma conta de Administrador e aprovado por outra, com as mesmas regras da troca pelo Dono (RF73, RF86); o histórico de planos marca a troca como "pela plataforma". Num negócio suspenso pela plataforma, o Dono não troca o plano (RN39).
 
 ---
 
