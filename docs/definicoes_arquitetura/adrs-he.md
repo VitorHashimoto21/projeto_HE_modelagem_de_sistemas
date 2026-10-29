@@ -271,7 +271,7 @@ O modelo freemium (RF45–RF47) precisa de um caminho para o negócio passar ao 
 
 #### ADR-008 — Administrador da Plataforma com Acesso de Suporte Liberado pelo Dono
 
-> **Status: Aceita em 17/10/2026.** Implementação na SPEC-018 (somente leitura) e na SPEC-019 (edição, emergência, ações de plataforma e 2º fator).
+> **Status: Aceita em 17/10/2026.** Implementação na SPEC-018 (somente leitura) e na SPEC-019 (edição, emergência, ações de plataforma e 2º fator, aprovada em 28/10/2026; ver a nota de ampliação).
 
 ##### Decisão
 
@@ -301,6 +301,19 @@ A equipe precisa atender pedidos dos usuários (entender um problema, conferir e
 * **Negativas:** nova versão da Política e dos Termos, com novo aceite de todos os usuários; um segundo tipo de contexto de autorização a manter em todas as ações; até a SPEC-019, a conta de Administrador fica sem 2º fator (risco mitigado por somente leitura, liberação do Dono, sessão de 8 h e registro).
 
 **Drivers Relacionados:** RF74–RF78, RN01, RN30–RN32, RNF02, RNF03, RNF04, RNF05, RNF12.
+
+##### Nota de ampliação (SPEC-019, 28/10/2026)
+
+A SPEC-019 completa o modelo sem trocar a decisão. O Administrador continua agindo em nome próprio, e o acesso continua conferido no servidor a cada requisição:
+
+* **2º fator obrigatório:** o MFA TOTP do próprio Supabase Auth (ADR-003). O servidor exige `aal2` no JWT validado em todo contexto de Administrador, e as ações críticas pedem o código verificado nos últimos 10 min. Nenhum segredo de 2º fator fica no banco do HE. A redefinição é feita pelo workflow da equipe, por outra pessoa;
+* **correções:** só nos módulos que o Dono marca como "ver e corrigir", e só das ações de uma lista fechada no código (`CORRECOES_PERMITIDAS`), todas com compensação para o Dono desfazer. Toda ação nova nasce proibida no contexto de suporte. O antes e o depois vão para o `RegistroSuporte` na mesma transação da correção;
+* **acesso de emergência:** uma segunda exceção ao isolamento, tão estreita quanto a liberação: pedido por uma conta de Administrador e aprovado por outra (`PedidoPlataforma`), somente leitura, até 4 h, visível ao Dono desde o pedido e encerrável por ele. **Não existe acesso secreto:** nenhum parâmetro ou papel esconde um acesso do Dono;
+* **ações de plataforma:** suspender e reativar negócio (um Administrador; o negócio fica somente leitura, sem apagar nada) e trocar o plano (duas pessoas), registradas e avisadas ao Dono.
+
+Alternativa rejeitada para a emergência: o acesso aberto por um único Administrador, porque uma conta roubada ou mal-intencionada leria qualquer negócio sozinha. Alternativa rejeitada para o aviso: adiá-lo por sigilo judicial, porque criaria justamente o acesso escondido que uma conta comprometida usaria. Ordens com sigilo são tratadas fora do produto, com orientação jurídica.
+
+**Drivers acrescentados:** RF82–RF86, RN37–RN39.
 
 ---
 
