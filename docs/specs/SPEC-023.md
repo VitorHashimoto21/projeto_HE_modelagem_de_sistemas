@@ -1,6 +1,6 @@
 # SPEC-023 — Comissão em reais na Calculadora
 
-> **Status:** ✅ **Aprovada em 26/10/2026**, a implementar. Gerada como SPEC-024 e renumerada para SPEC-023 em 29/10/2026, por decisão da equipe (o número 024 passou à proposta de fornecedores; os commits e a branch do PR #110 ainda usam o número antigo). As questões em aberto foram decididas pela equipe em entrevista (seção 13), todas pela opção recomendada:
+> **Status:** ✅ **Aprovada em 26/10/2026**, a implementar. Gerada como SPEC-024 e renumerada para SPEC-023 em 29/10/2026, por decisão da equipe (o 024 ficou para o código interno dos itens e o 025 para a proposta de fornecedores; os commits e a branch do PR #110 ainda usam o número antigo). As questões em aberto foram decididas pela equipe em entrevista (seção 13), todas pela opção recomendada:
 > - a comissão **não é somada ao custo do item**: aparece como despesa variável própria, **separada da maquininha**;
 > - a barra "Para onde vai cada venda" ganha as partes **"Maquininha" e "Comissão"**, com uma 6ª cor na paleta;
 > - "Como o preço foi calculado" mostra o **valor em reais em todas as parcelas**, com maquininha e comissão em linhas próprias;
