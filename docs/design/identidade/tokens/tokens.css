@@ -75,6 +75,7 @@
   --chart-3: #2a78d6;
   --chart-4: #d55181;
   --chart-5: #4a3aa7;
+  --chart-6: #8e0374;                   /* SPEC-023: 6ª série (ameixa), validada com as outras cinco */
   --chart-neutro: #84948d;              /* séries de contexto (forma "destaque") — 3.18:1 */
 }
 
@@ -131,6 +132,7 @@
   --chart-3: #3987e5;
   --chart-4: #d55181;
   --chart-5: #9085e9;
+  --chart-6: #9c43b9;
   --chart-neutro: #647770;
 }
 
@@ -195,6 +197,7 @@
   --color-chart-3: var(--chart-3);
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
+  --color-chart-6: var(--chart-6);
   --color-chart-neutro: var(--chart-neutro);
 
   /* Pré-paleta — escalas 50–950 (classes bg-verde-100, text-ambar-700, border-neutro-300…) */

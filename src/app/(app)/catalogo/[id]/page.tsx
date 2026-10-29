@@ -18,11 +18,20 @@ import { ItemNaoEncontrado, type NcmDoItem } from "@/lib/db/catalogo";
 import { hoje } from "@/lib/dominio/datas";
 import { formatarNcm } from "@/lib/dominio/ncm";
 import { pode } from "@/lib/dominio/permissoes";
+import { comissaoNoPreco } from "@/lib/dominio/precificacao";
+import { reaisDeCentavos } from "@/lib/dominio/venda";
 import { comRetorno, retornoSeguro, rotuloDoRetorno } from "@/lib/estrutura/retorno";
 
 export const metadata: Metadata = { title: "Item do catálogo" };
 
 const quando = new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short", timeZone: "America/Sao_Paulo" });
+
+/** SPEC-023 (5.4): a comissão em reais no preço oficial; sem preço ou sem comissão, só o percentual. */
+function textoDaComissao(percentual: number | null, precoAtual: number | null) {
+  const centavos = comissaoNoPreco(precoAtual === null ? null : Math.round(precoAtual * 100), percentual);
+  const texto = `${numero(percentual ?? 0)}%`;
+  return centavos === null ? texto : `${texto} (${reaisDeCentavos(centavos)} no preço atual)`;
+}
 
 function Linha({ rotulo, valor }: { rotulo: string; valor: React.ReactNode }) {
   return (
@@ -158,7 +167,7 @@ export default async function DetalheDoItem({ params, searchParams }: PageProps<
               {item.tipo === "PRODUTO_FISICO" && <Linha rotulo="NCM" valor={item.ncm ? <ValorDoNcm ncm={item.ncm} /> : "—"} />}
               <Linha rotulo={item.tipo === "SERVICO" ? "Custo próprio" : "Custo"} valor={reais(item.custoBase)} />
               {item.tipo === "SERVICO" && item.materiaisDoServico.length > 0 && <Linha rotulo="Custo total (com materiais)" valor={reais(item.custoTotal)} />}
-              <Linha rotulo="Comissão" valor={`${numero(item.comissaoPercentual ?? 0)}%`} />
+              <Linha rotulo="Comissão" valor={textoDaComissao(item.comissaoPercentual, item.precoAtual)} />
               {item.tipo === "PRODUTO_FISICO" && (
                 <>
                   <Linha rotulo="Em estoque" valor={`${numero(item.quantidadeEstoque)} ${rotuloUnidade(item.unidadeMedida)}`} />

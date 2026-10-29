@@ -1,6 +1,6 @@
 # SPEC-023 — Comissão em reais na Calculadora
 
-> **Status:** ✅ **Aprovada em 26/10/2026**, a implementar. Gerada como SPEC-024 e renumerada para SPEC-023 em 29/10/2026, por decisão da equipe (o 024 ficou para o código interno dos itens e o 025 para a proposta de fornecedores; os commits e a branch do PR #110 ainda usam o número antigo). As questões em aberto foram decididas pela equipe em entrevista (seção 13), todas pela opção recomendada:
+> **Status:** ✅ **Aprovada em 26/10/2026 e implementada em 29/10/2026**, verificada em build local: testes T01 a T05 automatizados e o roteiro no navegador (T06 e T07) com 41 verificações ([evidências](evidencias/SPEC-023/README.md)). Falta a homologação (T08). As notas da implementação estão depois da seção 9. Gerada como SPEC-024 e renumerada para SPEC-023 em 29/10/2026, por decisão da equipe (o 024 ficou para o código interno dos itens e o 025 para a proposta de fornecedores; os commits e a branch do PR #110 ainda usam o número antigo). As questões em aberto foram decididas pela equipe em entrevista (seção 13), todas pela opção recomendada:
 > - a comissão **não é somada ao custo do item**: aparece como despesa variável própria, **separada da maquininha**;
 > - a barra "Para onde vai cada venda" ganha as partes **"Maquininha" e "Comissão"**, com uma 6ª cor na paleta;
 > - "Como o preço foi calculado" mostra o **valor em reais em todas as parcelas**, com maquininha e comissão em linhas próprias;
@@ -219,6 +219,19 @@ Custo do item   = preço sugerido − (despesas fixas + maquininha + comissão +
 | **Comissão no preço oficial** (domínio) | preço oficial (centavos, ou nenhum), comissão% | centavos, ou nada sem preço ou com comissão 0 | — |
 | **Calcular preço** (SPEC-010) | Sem mudança | Sem mudança; a tela usa o contrato acima | Sem mudança |
 
+**Implementação (29/10/2026):**
+- **Domínio** (`src/lib/dominio/precificacao.ts`): `partesDoPrecoEmReais` (5.1) e `comissaoNoPreco` (5.4), funções puras.
+- **Calculadora** (`src/app/(app)/calculadora/page.tsx`): a barra e a memória usam a mesma `partesDoPrecoEmReais` (INV-003); a barra tem as seis partes; a memória tem "Taxa da maquininha" e "Comissão do item" no lugar de "Despesas variáveis", com os reais em todas as parcelas.
+- **Catálogo** (`src/app/(app)/catalogo/[id]/page.tsx`): a linha "Comissão" com os reais no preço oficial.
+- **Paleta:** `--chart-6` (`#8e0374` no claro, `#9c43b9` no escuro) em `src/app/globals.css` e em `docs/design/identidade/tokens/tokens.css`, a série 6 na tabela da identidade visual (5.1) e a sexta cor na `BarraEmpilhada`.
+- **Testes:** `test/unit/comissao-em-reais.test.ts` (T01, T02, T03 e T05) e a conferência dos campos da memória gravada no T07 da SPEC-010 (`test/integracao/calculadora.test.ts`, T04).
+- Sem mudança no banco, nas ações, nas permissões ou nas consultas.
+
+**Decisões de implementação (sem mudar o comportamento da Spec):**
+- **Formato na memória:** o percentual e os reais aparecem separados por um ponto, "10,00% · R$ 9,52", em vez da vírgula usada nos exemplos ("10,00%, R$ 9,52"). Com números que já têm vírgula decimal, a vírgula entre eles confundia a leitura.
+- **Custo de poucos centavos:** a regra da 5.1 (cada parcela arredondada; o custo do item é o que sobra) pode, em tese, passar do preço por um ou dois centavos quando o custo é de poucos centavos. Nesse caso, a maior parcela devolve a diferença, e a soma continua sendo o preço sem nenhuma parte negativa (INV-002). Nos valores reais, nada muda.
+- **6ª cor:** escolhida com o validador da paleta e medida contra cada uma das outras cinco, porque as partes zeradas somem da barra e a Margem pode encostar em qualquer outra parte. Os números estão nas evidências e na identidade visual.
+
 ---
 
 ## 10. Requisitos não funcionais aplicáveis
@@ -291,12 +304,12 @@ Todas decididas pela equipe em 26/10/2026, em entrevista, pela opção recomenda
 
 A SPEC-023 estará concluída quando:
 
-- [ ] todos os critérios de aceitação (CA-01 a CA-07) estiverem implementados;
-- [ ] todos os invariantes (INV-001 a INV-006) estiverem preservados;
-- [ ] os testes derivados (T01 a T08) estiverem aprovados, com o CI verde no PR;
-- [ ] os RNFs aplicáveis (RNF01, RNF05, RNF06) tiverem sido verificados como descrito na seção 10;
+- [x] todos os critérios de aceitação (CA-01 a CA-07) estiverem implementados — por testes e no navegador (build local, 29/10/2026);
+- [x] todos os invariantes (INV-001 a INV-006) estiverem preservados — testes T01 a T05;
+- [ ] os testes derivados (T01 a T08) estiverem aprovados, com o CI verde no PR — T01 a T07 aprovados; falta a homologação (T08);
+- [x] os RNFs aplicáveis (RNF01, RNF05, RNF06) tiverem sido verificados como descrito na seção 10 — capturas em 390, 768 e 1440 px nos dois temas, memória gravada sem mudança e nenhuma consulta nova;
 - [x] as questões OPEN-001 a OPEN-006 tiverem sido decididas e registradas (26/10/2026), com o RF52 e a regra de séries da identidade visual ajustados na baseline;
-- [ ] não existir divergência conhecida entre a implementação e esta Spec;
-- [ ] toda divergência em relação à baseline tiver sido explicitamente analisada e registrada nos documentos (seção 9).
+- [x] não existir divergência conhecida entre a implementação e esta Spec — as decisões de implementação (seção 9) não mudam o comportamento;
+- [x] toda divergência em relação à baseline tiver sido explicitamente analisada e registrada nos documentos (seção 9).
 
 **Regra fundamental:** a implementação obedece a esta Spec aprovada. Se surgir conflito entre código, Spec e documentos de modelagem, o comportamento não é alterado em silêncio: a divergência é registrada com a proposta de (1) corrigir a implementação ou (2) alterar a baseline, e a decisão é da equipe.
