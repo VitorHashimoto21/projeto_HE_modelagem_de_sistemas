@@ -203,7 +203,9 @@ describe("contas", () => {
     expect(await servicos.editarConta(parcela.id, campos, deps())).toEqual({ status: "erro", mensagem: F.contaNaoEditavel.venda });
     expect(await servicos.cancelarConta(parcela.id, deps())).toEqual({ status: "erro", mensagem: F.contaNaoEditavel.venda });
 
-    salvo(await servicos.criarDespesa({ descricao: "Aluguel", valor: "1200", diaVencimento: "28", categoria: "OUTROS" }, deps()));
+    // Dia 31 vence no último dia do mês: a conta do mês atual existe em qualquer dia do mês (com "28",
+    // o teste falhava de 29 a 31, quando a primeira conta só vem no mês seguinte).
+    salvo(await servicos.criarDespesa({ descricao: "Aluguel", valor: "1200", diaVencimento: "31", categoria: "OUTROS" }, deps()));
     const fixa = await base.contaPagarReceber.findFirstOrThrow({ where: { despesaFixaId: { not: null } } });
     expect(await servicos.cancelarConta(fixa.id, deps())).toEqual({ status: "erro", mensagem: F.contaNaoEditavel.despesa });
 
