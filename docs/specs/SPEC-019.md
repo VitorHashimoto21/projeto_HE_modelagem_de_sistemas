@@ -6,7 +6,7 @@
 > - **acesso de emergência** sem liberação do Dono só com **duas pessoas** (o pedido expira em **12 h**), somente leitura, por até 4 h, com **aviso na hora ao Dono**: não existe acesso secreto no HE;
 > - **ações de plataforma:** suspender e reativar negócio (um Administrador; o negócio fica somente leitura) e trocar plano (**duas pessoas**).
 >
-> A troca do e-mail do Dono, a recuperação da conta e a transferência do negócio ficam para a Spec da pendência 6, com a **troca do e-mail como prioridade** (decisão da equipe, 28/10/2026). A baseline foi ajustada: RF73, RF74, RF75, RF76, RF77, RN30, RN31, RN32 e RNF12 alterados; RF82 a RF86 e RN37 a RN39 novos; ADR-008 ampliada. Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar), a partir da divisão de escopo da [SPEC-018](SPEC-018.md) (17/10/2026).
+> A troca do e-mail do Dono, a recuperação da conta e a transferência do negócio ficam para a Spec da pendência "Encerrar negócio e liberar o CNPJ" do Mapa, com a **troca do e-mail como prioridade** (decisão da equipe, 28/10/2026). A baseline foi ajustada: RF73, RF74, RF75, RF76, RF77, RN30, RN31, RN32 e RNF12 alterados; RF82 a RF86 e RN37 a RN39 novos; ADR-008 ampliada. Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar), a partir da divisão de escopo da [SPEC-018](SPEC-018.md) (17/10/2026).
 >
 > **Mapa:** [`MAPA_DE_SPECS.md`](../MAPA_DE_SPECS.md)
 > - **Altera:** [SPEC-018](SPEC-018.md) (autenticação do Administrador, liberação, modo suporte, registro e painel), [SPEC-013](SPEC-013.md) (troca de plano também pela plataforma), [SPEC-009](SPEC-009.md) (a rotina diária pula negócio suspenso) e [SPEC-014](SPEC-014.md) (exportação com os eventos novos).
@@ -65,7 +65,7 @@
 | | ADR-003 | Mantida: o 2º fator usa o MFA do próprio Supabase Auth; a autorização continua no servidor. |
 | **Caso de uso / fluxo** | Novos: UC-A4 Cadastrar e usar o 2º fator; UC-A5 Corrigir em modo suporte; UC-A6 Desfazer correção; UC-A7 Pedir e aprovar emergência; UC-A8 Suspender e reativar; UC-A9 Trocar plano pela plataforma | Ver seção 5. |
 | **Entidades** | Usuario (campo novo), AcessoSuporte (campos novos), **PedidoPlataforma** (nova), RegistroSuporte (campos e eventos novos), Negocio (campos novos), HistoricoPlano (campos novos) | Ver seção 7. |
-| **Pendências** | Pendência 6 do Mapa | A troca do e-mail do Dono fica para a Spec da pendência 6, **como prioridade** (OPEN-010). |
+| **Pendências** | Pendência "Encerrar negócio e liberar o CNPJ" do Mapa | A troca do e-mail do Dono fica para a Spec dessa pendência, **como prioridade** (OPEN-010). |
 
 ---
 
@@ -101,13 +101,13 @@
 
 | Comportamento | Onde fica |
 |---|---|
-| **Trocar o e-mail do Dono**, recuperar a conta e transferir o negócio | Spec da pendência 6, com a **troca do e-mail como prioridade** e verificação de identidade própria (OPEN-010) |
+| **Trocar o e-mail do Dono**, recuperar a conta e transferir o negócio | Spec da pendência "Encerrar negócio e liberar o CNPJ", com a **troca do e-mail como prioridade** e verificação de identidade própria (OPEN-010) |
 | Corrigir vendas (registrar, cancelar, trocar, ajustar), clientes, equipe, configurações, plano pelo Dono, acesso do suporte, LGPD e exportações | **Nunca** pelo suporte (RN37) |
 | Correções no acesso de emergência | **Nunca** (OPEN-009) |
 | Adiar o aviso ao Dono por sigilo judicial | Fora (OPEN-008): a equipe trata fora do produto, com orientação jurídica, e não usa o acesso de emergência |
 | Reenviar convite pelo painel | Fora (OPEN-013): o Dono reenvia pela Equipe; o e-mail depende do domínio |
 | Emergência e ações de plataforma em negócio encerrado (RN27) | Fora: sem membros a avisar; um pedido judicial é tratado fora do produto |
-| Encerrar negócio e liberar o CNPJ | Pendência 6 |
+| Encerrar negócio e liberar o CNPJ | Pendência do Mapa com esse nome |
 | Códigos de recuperação do 2º fator | Evolução: a API do Supabase ainda é experimental (OPEN-002) |
 | Chave de acesso (passkey) | Evolução (OPEN-001) |
 | 2º fator para os usuários dos negócios | Evolução |
@@ -275,7 +275,7 @@ A lista vive num único lugar do código (5.4 ↔ `CORRECOES_PERMITIDAS`). Uma a
 - Não vale para negócio encerrado. Vale para negócio suspenso, para investigar um incidente.
 - Com uma conta só de Administrador, não há como aprovar, e o acesso de emergência não existe (falha fechada).
 
-**Dono sem acesso** (OPEN-010): a emergência serve para diagnosticar, somente leitura, a pedido de um membro. Trocar o e-mail do Dono, recuperar a conta e transferir o negócio ficam para a Spec da pendência 6, com a troca do e-mail **como prioridade**.
+**Dono sem acesso** (OPEN-010): a emergência serve para diagnosticar, somente leitura, a pedido de um membro. Trocar o e-mail do Dono, recuperar a conta e transferir o negócio ficam para a Spec da pendência "Encerrar negócio e liberar o CNPJ", com a troca do e-mail **como prioridade**.
 
 ### 5.7 Suspender e reativar negócio (OPEN-011, OPEN-012, RN39)
 
@@ -561,7 +561,7 @@ Todas decididas pela equipe em 28/10/2026, em entrevista, pela opção recomenda
 | **OPEN-007** — Quem autoriza a emergência | **Duas pessoas** (recomendada): uma conta pede e outra aprova, ambas com o código reconfirmado; ninguém aprova o próprio pedido; com uma conta só, não há emergência. **Ajuste da equipe:** o pedido expira em **12 h** (a recomendação era 24 h). A equipe pediu para garantir o teste na homologação (seção 12, T17). Descartado: uma pessoa. |
 | **OPEN-008** — Aviso ao Dono | **Na hora, sempre** (recomendada): desde o pedido, em "Acessos do suporte"; faixa vermelha na aprovação; e-mail com domínio. Não existe acesso secreto: uma ordem com sigilo é tratada fora do produto, com orientação jurídica. Descartado: aviso adiável por sigilo judicial. |
 | **OPEN-009** — O que a emergência permite | **Só leitura, até 4 h** (recomendada): módulos escolhidos, máscara, sem exportação, sem renovação; o Dono pode encerrar. Para conter um incidente, o caminho é suspender. Descartado: leitura e correções. |
-| **OPEN-010** — Dono sem acesso | **Só a leitura emergencial** (recomendada). Trocar o e-mail do Dono, recuperar a conta e transferir o negócio ficam para a Spec da pendência 6. **A equipe pediu que a troca do e-mail seja prioridade nessa Spec.** Descartado: trocar o e-mail nesta Spec. |
+| **OPEN-010** — Dono sem acesso | **Só a leitura emergencial** (recomendada). Trocar o e-mail do Dono, recuperar a conta e transferir o negócio ficam para a Spec da pendência "Encerrar negócio e liberar o CNPJ". **A equipe pediu que a troca do e-mail seja prioridade nessa Spec.** Descartado: trocar o e-mail nesta Spec. |
 | **OPEN-011** — Efeito da suspensão | **Somente leitura** (recomendada): os membros veem tudo, nada grava, a exportação e a exclusão de conta continuam, a rotina pula o negócio e nada é apagado. Motivos de lista fechada e aviso na hora. Descartado: bloqueio total. |
 | **OPEN-012** — Quem suspende | **Um Administrador** (recomendada), com o código reconfirmado e o motivo; reativar segue a mesma regra. Descartado: duas pessoas, que atrasaria a contenção. |
 | **OPEN-013** — Ações de plataforma | **Suspender/reativar e trocar plano** (recomendada). Reenviar convite pelo painel fica fora. |
