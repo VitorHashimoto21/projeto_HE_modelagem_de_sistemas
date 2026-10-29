@@ -143,7 +143,7 @@
 | RF49 | Orientado a evento | **QUANDO** o usuário solicitar o cálculo de preço, o sistema deve calcular Desp. Fixas% dividindo o total de despesas fixas mensais pelo faturamento médio mensal (RBT12 ÷ meses com vendas, até 12). |
 | RF50 | Orientado a estado | **ENQUANTO** o negócio não possuir histórico de vendas, o sistema deve solicitar capacidade mensal e ticket médio, recomendar faturamento estimado = capacidade × ticket médio e permitir que o usuário edite esse valor. |
 | RF51 | Ubíquo | O sistema deve permitir que o usuário informe a taxa média de cartão/maquininha (%) do negócio para uso no cálculo de preço. |
-| RF52 | Feature opcional | **ONDE** o usuário informar um percentual de comissão para um produto/serviço, o sistema deve somá-lo às despesas variáveis no cálculo de preço desse item. |
+| RF52 | Feature opcional | **ONDE** o usuário informar um percentual de comissão para um produto/serviço, o sistema deve somá-lo às despesas variáveis no cálculo de preço desse item e mostrar a comissão separada da taxa de cartão, com o valor em reais no preço sugerido e no preço oficial. |
 | RF53 | Orientado a evento | **QUANDO** a Calculadora exibir a margem de lucro, o sistema deve informar que a Margem% é o ganho líquido do dono por venda, e não o lucro total do negócio. |
 | RF54 | Comportamento indesejado | **SE** o faturamento estimado for menor que o ponto de equilíbrio mensal, **ENTÃO** o sistema deve exibir um alerta na Calculadora. |
 | RN19 | Comportamento indesejado | **SE** a soma de Desp. Fixas% + Desp. Variáveis% + Imposto% + Margem% for maior ou igual a 100%, **ENTÃO** o sistema deve bloquear o cálculo e informar que o preço é inviável com os parâmetros atuais. |

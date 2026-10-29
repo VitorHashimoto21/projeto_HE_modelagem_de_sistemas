@@ -4,6 +4,7 @@
 > **Mapa:** [`MAPA_DE_SPECS.md`](../MAPA_DE_SPECS.md) · **Anterior:** [SPEC-005](SPEC-005.md) (papéis e permissões) · **Próximas que dependem desta:** SPEC-007 (estoque), SPEC-008 (vendas) e SPEC-010 (calculadora).
 > **Evolução prevista pela [SPEC-020](SPEC-020.md) (aprovada em 19/10/2026):** a lista fixa de categorias ganha **Acessórios** (logo depois de Vestuário), e o item ganha uma **subcategoria opcional** do negócio, escolhida ou criada no cadastro e gerenciada numa tela "Subcategorias" do Catálogo; a lista ganha o filtro de subcategoria e a busca passa a encontrar também pela subcategoria.
 > **Evolução prevista pela [SPEC-021](SPEC-021.md) (aprovada em 21/10/2026):** o produto físico ganha o campo opcional **NCM**, conferido na tabela oficial vigente, com busca por código ou por palavras e sugestão pela subcategoria; o detalhe mostra o NCM (com aviso quando o código sai da tabela), a busca encontra pelo código e a lista ganha o link "Produtos sem NCM" e o aviso de NCM a revisar; com a opção "Emito nota fiscal de produtos" ligada no negócio, o NCM é obrigatório no cadastro e na edição (RN35).
+> **Evolução prevista pela [SPEC-023](SPEC-023.md) (aprovada em 26/10/2026):** no detalhe do item, a linha "Comissão" mostra também o valor em reais no preço oficial, por exemplo "10% (R$ 9,52 no preço atual)"; sem preço oficial ou com comissão 0, continua só o percentual. A comissão continua só percentual e não entra no custo do item.
 
 ---
 
