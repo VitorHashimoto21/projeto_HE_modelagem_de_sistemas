@@ -1,6 +1,6 @@
 # SPEC-023 — Comissão em reais na Calculadora
 
-> **Status:** ✅ **Aprovada em 26/10/2026 e implementada em 29/10/2026**, verificada em build local: testes T01 a T05 automatizados e o roteiro no navegador (T06 e T07) com 41 verificações ([evidências](evidencias/SPEC-023/README.md)). Falta a homologação (T08). As notas da implementação estão depois da seção 9. Gerada como SPEC-024 e renumerada para SPEC-023 em 29/10/2026, por decisão da equipe (o 024 ficou para o código interno dos itens e o 025 para a proposta de fornecedores; os commits e a branch do PR #110 ainda usam o número antigo). As questões em aberto foram decididas pela equipe em entrevista (seção 13), todas pela opção recomendada:
+> **Status:** ✅ **Concluída em 29/10/2026** — implementada (PR #113), verificada em build local (testes T01 a T05 automatizados e o roteiro no navegador, T06 e T07, com 41 verificações) e homologada (T08), sem divergência ([evidências](evidencias/SPEC-023/README.md)). **Aprovada em 26/10/2026.** As notas da implementação e da homologação estão depois da seção 9. Gerada como SPEC-024 e renumerada para SPEC-023 em 29/10/2026, por decisão da equipe (o 024 ficou para o código interno dos itens e o 025 para a proposta de fornecedores; os commits e a branch do PR #110 ainda usam o número antigo). As questões em aberto foram decididas pela equipe em entrevista (seção 13), todas pela opção recomendada:
 > - a comissão **não é somada ao custo do item**: aparece como despesa variável própria, **separada da maquininha**;
 > - a barra "Para onde vai cada venda" ganha as partes **"Maquininha" e "Comissão"**, com uma 6ª cor na paleta;
 > - "Como o preço foi calculado" mostra o **valor em reais em todas as parcelas**, com maquininha e comissão em linhas próprias;
@@ -232,6 +232,11 @@ Custo do item   = preço sugerido − (despesas fixas + maquininha + comissão +
 - **Custo de poucos centavos:** a regra da 5.1 (cada parcela arredondada; o custo do item é o que sobra) pode, em tese, passar do preço por um ou dois centavos quando o custo é de poucos centavos. Nesse caso, a maior parcela devolve a diferença, e a soma continua sendo o preço sem nenhuma parte negativa (INV-002). Nos valores reais, nada muda.
 - **6ª cor:** escolhida com o validador da paleta e medida contra cada uma das outras cinco, porque as partes zeradas somem da barra e a Margem pode encostar em qualquer outra parte. Os números estão nas evidências e na identidade visual.
 
+**Homologação (T08, 29/10/2026):** a equipe percorreu o fluxo na homologação, depois do merge do PR #113, com o Dono do negócio **HE Testing** e dois anéis da categoria Acessórios. Fluxo aprovado: item sem comissão, simulação de 10%, item com comissão de 20% no celular e o detalhe do Catálogo ("20% (R$ 180,00 no preço atual)"); as partes da barra somam o preço em todos os casos ([evidências](evidencias/SPEC-023/README.md#homologação-t08--29102026)).
+
+- **Observação 1 — "Custo do item" de R$ 399,99** com o custo de R$ 400,00: é a diferença de arredondamento que a 5.1 põe no custo do item. Prevista, sem divergência.
+- **Observação 2 — percentuais inteiros na barra:** a maquininha de 3,50% aparece como 4% ou 3%, e o imposto de 6,50% como 6% ou 7%, conforme os centavos, porque a barra mostra a participação de cada parte em inteiros que somam 100% (SPEC-016). O percentual exato fica na memória. Comportamento anterior a esta Spec, sem divergência; uma casa decimal na barra da Calculadora fica a critério da equipe.
+
 ---
 
 ## 10. Requisitos não funcionais aplicáveis
@@ -306,7 +311,7 @@ A SPEC-023 estará concluída quando:
 
 - [x] todos os critérios de aceitação (CA-01 a CA-07) estiverem implementados — por testes e no navegador (build local, 29/10/2026);
 - [x] todos os invariantes (INV-001 a INV-006) estiverem preservados — testes T01 a T05;
-- [ ] os testes derivados (T01 a T08) estiverem aprovados, com o CI verde no PR — T01 a T07 aprovados; falta a homologação (T08);
+- [x] os testes derivados (T01 a T08) estiverem aprovados, com o CI verde no PR — T01 a T07 no PR #113 (CI verde) e T08 na homologação (29/10/2026);
 - [x] os RNFs aplicáveis (RNF01, RNF05, RNF06) tiverem sido verificados como descrito na seção 10 — capturas em 390, 768 e 1440 px nos dois temas, memória gravada sem mudança e nenhuma consulta nova;
 - [x] as questões OPEN-001 a OPEN-006 tiverem sido decididas e registradas (26/10/2026), com o RF52 e a regra de séries da identidade visual ajustados na baseline;
 - [x] não existir divergência conhecida entre a implementação e esta Spec — as decisões de implementação (seção 9) não mudam o comportamento;

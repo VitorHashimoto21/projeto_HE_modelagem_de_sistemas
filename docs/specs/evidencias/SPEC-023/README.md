@@ -40,6 +40,21 @@ Na barra, as partes zeradas somem: num negócio MEI sem imposto, por exemplo, a 
 | Catálogo, Brinco (R$ 79,90, 10%): "10% (R$ 7,99 no preço atual)"; Anel sem preço oficial: só "10%"; Lâmpada sem comissão: "0%" (CA-06) | ✅ | `s23_04_catalogo_comissao_1440_claro.png`, `s23_04_catalogo_comissao_390_escuro.png` |
 | Calculadora e Catálogo em 390, 768 e 1440 px, claro e escuro: sem rolagem horizontal; axe sem violações nos dois temas (CA-07) | ✅ | `s23_01_calculadora_comissao_768_claro.png`, `s23_01_calculadora_comissao_390_escuro.png` |
 
-## Pendente
+## Homologação (T08) — 29/10/2026
 
-- **T08 — homologação**, com um item da loja de semijoias, depois do merge na `DEVELOP`.
+Feita pela equipe na homologação (`DEVELOP`, depois do merge do PR #113), com o Dono do negócio **HE Testing** e dois anéis da categoria Acessórios (NCM 7117.19.00, bijuterias), como os da loja de semijoias. Nos parâmetros da homologação: faturamento médio de R$ 18.000,00, despesas fixas de R$ 2.040,00 por mês (11,33%), maquininha de 3,50% e imposto de 6,50%. Capturas em [`homologacao/`](homologacao/), no tema escuro. Não há dados pessoais nelas; o nome da conta de teste ficou visível, como nas homologações anteriores.
+
+| Passo | Resultado | Captura |
+|---|---|---|
+| Item sem comissão (Anel de Titânio, custo R$ 400,00, margem 40%): preço sugerido R$ 1.034,49; a barra não tem a parte "Comissão" e soma o preço (400,00 + 117,24 + 36,21 + 67,24 + 413,80); a memória mostra "0,00% · R$ 0,00" e "Este item não paga comissão." (CA-01, CA-04, INV-002) | ✅ | `homol_01_sem_comissao_escuro.png` |
+| Simulação de 10% no mesmo item: aviso "Simulação com comissão de 10,00%; a do item é 0,00%…", sem o botão de confirmar; preço R$ 1.395,35; barra com as seis partes, na ordem fixa, somando o preço (399,99 + 158,14 + 48,84 + 139,54 + 90,70 + 558,14); memória com "10,00% · R$ 139,54" e "Comissão simulada; a do item é 0,00%." (CA-01, CA-02, CA-05) | ✅ | `homol_02_simulacao_escuro.png` |
+| Celular: item com custo de R$ 300,00 e comissão de 20%: preço R$ 592,11; as seis partes somam o preço (300,00 + 67,11 + 20,72 + 118,42 + 38,49 + 47,37), a comissão é 20% do preço (R$ 118,42) e as parcelas visíveis da memória (despesas fixas e maquininha) mostram os mesmos reais da barra; sem rolagem horizontal (CA-01, CA-02, CA-03) | ✅ | `homol_03_comissao_celular_escuro.png` |
+| Catálogo, Anel do Lanterna Verde (preço oficial R$ 900,00, comissão de 20%): "20% (R$ 180,00 no preço atual)" (CA-06) | ✅ | `homol_04_catalogo_escuro.png` |
+| Os preços conferem com a fórmula de sempre, custo ÷ (1 − soma), arredondada para cima ao centavo: a comissão aumenta o preço, mas não o custo do item (CA-03, INV-001) | ✅ | — |
+| Seis cores distintas no tema escuro, inclusive o Imposto (lavanda) encostado na Margem (ameixa) | ✅ | todas |
+
+**Observação 1 — "Custo do item" de R$ 399,99 na simulação** (`homol_02`), com o custo de R$ 400,00: é a diferença de arredondamento que a 5.1 da Spec põe no "Custo do item", para a soma das partes ser o preço exato. Cada parcela é arredondada ao centavo (a comissão, 10% de R$ 1.395,35 = R$ 139,535, vira R$ 139,54), e o centavo a mais sai do custo. Comportamento previsto, sem divergência.
+
+**Observação 2 — percentuais inteiros na barra:** a coluna de percentuais da barra mostra a participação de cada parte no preço, em números inteiros que somam 100% (regra da SPEC-016). Com taxas "no meio", como a maquininha de 3,50% e o imposto de 6,50%, o arredondamento vai para cima ou para baixo conforme os centavos: a maquininha aparece como 4% nas capturas 1 e 2 e como 3% na 3, e o imposto como 6% e 7%. O percentual exato está sempre na memória ("3,50% · R$ 20,72"). Comportamento anterior a esta Spec, sem divergência. Se a equipe quiser, a barra da Calculadora pode passar a mostrar uma casa decimal (3,5%).
+
+**Resultado:** T08 aprovado. SPEC-023 concluída em 29/10/2026.
