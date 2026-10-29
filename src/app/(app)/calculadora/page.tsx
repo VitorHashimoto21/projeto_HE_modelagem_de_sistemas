@@ -14,7 +14,7 @@ import { exigirPermissao } from "@/lib/auth/servidor";
 import { dependenciasDaCalculadora } from "@/lib/calculadora/servidor";
 import { analisarNegocio, calcular, type BaseDoNegocio, type Fonte, type MotivoDoBloqueio } from "@/lib/calculadora/servicos";
 import { validarOpcoes } from "@/lib/calculadora/validacao";
-import { duasCasas } from "@/lib/dominio/precificacao";
+import { duasCasas, partesDoPrecoEmReais } from "@/lib/dominio/precificacao";
 import { pode } from "@/lib/dominio/permissoes";
 import { reaisDeCentavos as reais } from "@/lib/dominio/venda";
 import { cn } from "@/lib/utils";
@@ -23,6 +23,8 @@ export const metadata: Metadata = { title: "Calculadora" };
 
 const pct = (n: number) => `${duasCasas(n).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`;
 const dataBr = (dia: string) => dia.split("-").reverse().join("/");
+/** Parcela da memória com o percentual e os reais no preço sugerido (SPEC-023, 5.3). */
+const emReais = (percentual: number, centavos: number) => `${pct(percentual)} · ${reais(centavos)}`;
 const fonte = (f: Fonte | null) => (f ? `${f.fonteLegal}, vigente desde ${dataBr(f.vigenteDesde)}` : null);
 
 const ORIGEM_FATURAMENTO = {
@@ -102,24 +104,26 @@ export default async function Calculadora({ searchParams }: PageProps<"/calculad
   const podeConfirmar = pode(membro.permissoes, "calculadora", "criar");
   const base = analise.status === "ok" ? analise.base : null;
 
-  // Composição do preço sugerido (SPEC-016, 5.5): as mesmas parcelas do cálculo, em reais.
-  const composicao =
+  // As parcelas do cálculo em reais (SPEC-023, 5.1): a mesma conta na barra e na memória (INV-003).
+  const partes =
     resultado?.status === "ok"
-      ? (() => {
-          const parte = (percentual: number) => Math.round((resultado.precoCentavos * percentual) / 100);
-          const fixas = parte(resultado.despesasFixasPercentual);
-          const variaveis = parte(resultado.despesasVariaveis);
-          const imposto = parte(resultado.base.imposto.percentual);
-          const margem = parte(resultado.margem.percentual);
-          return [
-            { nome: "Custo do item", valorCentavos: Math.max(0, resultado.precoCentavos - fixas - variaveis - imposto - margem) },
-            { nome: "Despesas fixas", valorCentavos: fixas },
-            { nome: "Maquininha e comissão", valorCentavos: variaveis },
-            { nome: "Imposto", valorCentavos: imposto },
-            { nome: "Margem (fica para você)", valorCentavos: margem },
-          ];
-        })()
+      ? partesDoPrecoEmReais(resultado.precoCentavos, {
+          despesasFixas: resultado.despesasFixasPercentual,
+          taxaCartao: resultado.base.taxaCartao,
+          comissao: resultado.comissao.percentual,
+          imposto: resultado.base.imposto.percentual,
+          margem: resultado.margem.percentual,
+        })
       : null;
+  // Composição do preço sugerido (SPEC-016, 5.5; SPEC-023, 5.2): maquininha e comissão separadas.
+  const composicao = partes && [
+    { nome: "Custo do item", valorCentavos: partes.custoDoItem },
+    { nome: "Despesas fixas", valorCentavos: partes.despesasFixas },
+    { nome: "Maquininha", valorCentavos: partes.maquininha },
+    { nome: "Comissão", valorCentavos: partes.comissao },
+    { nome: "Imposto", valorCentavos: partes.imposto },
+    { nome: "Margem (fica para você)", valorCentavos: partes.margem },
+  ];
 
   return (
     <div className="space-y-6">
@@ -185,7 +189,7 @@ export default async function Calculadora({ searchParams }: PageProps<"/calculad
 
       {resultado?.status === "bloqueado" && <Bloqueio motivo={resultado.motivo} mensagem={resultado.mensagem} />}
 
-      {resultado?.status === "ok" && (
+      {resultado?.status === "ok" && partes && (
         <section aria-labelledby="titulo-resultado" className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] lg:items-start">
           <div className="flex flex-col gap-4">
             <Superficie tom="estrutura" as="div">
@@ -234,11 +238,26 @@ export default async function Calculadora({ searchParams }: PageProps<"/calculad
                 }
               />
               <LinhasDoNegocio base={resultado.base} />
-              <Linha rotulo="Despesas fixas" valor={pct(resultado.despesasFixasPercentual)} detalhe="Despesas fixas por mês ÷ faturamento médio mensal." />
-              <Linha rotulo="Despesas variáveis" valor={pct(resultado.despesasVariaveis)} detalhe={`Taxa da maquininha ${pct(resultado.base.taxaCartao)} + comissão ${pct(resultado.comissao.percentual)}.`} />
+              <Linha rotulo="Despesas fixas" valor={emReais(resultado.despesasFixasPercentual, partes.despesasFixas)} detalhe="Despesas fixas por mês ÷ faturamento médio mensal." />
+              <Linha
+                rotulo="Taxa da maquininha"
+                valor={emReais(resultado.base.taxaCartao, partes.maquininha)}
+                detalhe="Taxa média dos parâmetros de precificação; despesa variável, sobre o preço."
+              />
+              <Linha
+                rotulo="Comissão do item"
+                valor={emReais(resultado.comissao.percentual, partes.comissao)}
+                detalhe={
+                  resultado.comissao.simulada
+                    ? `Comissão simulada; a do item é ${pct(resultado.comissao.doItem)}.`
+                    : resultado.comissao.percentual > 0
+                      ? "Comissão cadastrada no item; despesa variável, sobre o preço."
+                      : "Este item não paga comissão."
+                }
+              />
               <Linha
                 rotulo="Imposto"
-                valor={pct(resultado.base.imposto.percentual)}
+                valor={emReais(resultado.base.imposto.percentual, partes.imposto)}
                 detalhe={
                   resultado.base.regime === "MEI"
                     ? "MEI: o DAS já está nas despesas fixas."
@@ -247,7 +266,7 @@ export default async function Calculadora({ searchParams }: PageProps<"/calculad
                       : `Alíquota efetiva do Anexo ${resultado.base.imposto.anexoEfetivo}, ${resultado.base.imposto.faixa}ª faixa${resultado.base.imposto.fatorR !== null ? `; Fator R ${pct(resultado.base.imposto.fatorR)}` : ""}. ${fonte(resultado.base.imposto.fonte)}.`
                 }
               />
-              <Linha rotulo="Margem" valor={pct(resultado.margem.percentual)} detalhe={`Sugerida para a categoria: ${pct(resultado.margem.sugerida)} (${fonte(resultado.margem.fonte)}).`} />
+              <Linha rotulo="Margem" valor={emReais(resultado.margem.percentual, partes.margem)} detalhe={`Sugerida para a categoria: ${pct(resultado.margem.sugerida)} (${fonte(resultado.margem.fonte)}).`} />
               <Linha rotulo="Soma dos percentuais" valor={pct(resultado.soma)} detalhe="Precisa ficar abaixo de 100%." />
               <Linha forte rotulo="Preço = custo ÷ (1 − soma)" valor={reais(resultado.precoCentavos)} detalhe="Arredondado para cima ao centavo." />
             </dl>

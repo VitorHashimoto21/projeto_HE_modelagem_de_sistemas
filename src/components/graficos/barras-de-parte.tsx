@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 // Barra empilhada e barras horizontais (SPEC-016, 5.5). Desenhadas no servidor, com os
 // rótulos escritos ao lado (obrigatórios a partir de 4 categorias) — sem depender de cor.
 
-const CORES = ["var(--chart-1)", "var(--chart-2)", "var(--chart-3)", "var(--chart-4)", "var(--chart-5)"];
+const CORES = ["var(--chart-1)", "var(--chart-2)", "var(--chart-3)", "var(--chart-4)", "var(--chart-5)", "var(--chart-6)"];
 
 /** Partes de um todo (ex.: formas de pagamento), cores na ordem fixa da paleta. */
 export function BarraEmpilhada({ itens, descricao }: { itens: { nome: string; valorCentavos: number }[]; descricao: string }) {
