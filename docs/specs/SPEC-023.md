@@ -1,6 +1,6 @@
-# SPEC-024 — Comissão em reais na Calculadora
+# SPEC-023 — Comissão em reais na Calculadora
 
-> **Status:** ✅ **Aprovada em 26/10/2026**, a implementar. As questões em aberto foram decididas pela equipe em entrevista (seção 13), todas pela opção recomendada:
+> **Status:** ✅ **Aprovada em 26/10/2026**, a implementar. Gerada como SPEC-024 e renumerada para SPEC-023 em 29/10/2026, por decisão da equipe (o número 024 passou à proposta de fornecedores; os commits e a branch do PR #110 ainda usam o número antigo). As questões em aberto foram decididas pela equipe em entrevista (seção 13), todas pela opção recomendada:
 > - a comissão **não é somada ao custo do item**: aparece como despesa variável própria, **separada da maquininha**;
 > - a barra "Para onde vai cada venda" ganha as partes **"Maquininha" e "Comissão"**, com uma 6ª cor na paleta;
 > - "Como o preço foi calculado" mostra o **valor em reais em todas as parcelas**, com maquininha e comissão em linhas próprias;
@@ -20,7 +20,7 @@
 
 | Campo | Valor |
 |---|---|
-| **ID** | SPEC-024 |
+| **ID** | SPEC-023 |
 | **Nome** | Comissão em reais na Calculadora |
 | **Objetivo** | Mostrar a comissão do item **separada da taxa da maquininha** e com o **valor em reais**, sem mudar a fórmula do preço: na barra "Para onde vai cada venda", em "Como o preço foi calculado" (com reais em todas as parcelas) e no detalhe do item do Catálogo. |
 | **Valor entregue** | Quem paga comissão (a vendedora da loja, a manicure, o cabeleireiro) vê quanto de cada venda vai para ela, sem confundir com o que fica com a maquininha, e confere em reais cada parte do preço sugerido. Hoje a comissão aparece só em percentual e somada à taxa da maquininha. |
@@ -289,7 +289,7 @@ Todas decididas pela equipe em 26/10/2026, em entrevista, pela opção recomenda
 
 ## 14. Definition of Done da Spec
 
-A SPEC-024 estará concluída quando:
+A SPEC-023 estará concluída quando:
 
 - [ ] todos os critérios de aceitação (CA-01 a CA-07) estiverem implementados;
 - [ ] todos os invariantes (INV-001 a INV-006) estiverem preservados;
