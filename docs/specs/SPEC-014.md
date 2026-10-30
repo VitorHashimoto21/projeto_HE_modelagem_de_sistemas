@@ -6,6 +6,7 @@
 > **Evolução prevista pela [SPEC-020](SPEC-020.md) (aprovada em 19/10/2026):** a exportação passa a incluir as subcategorias do negócio e a referência a elas nos itens.
 > **Evolução prevista pela [SPEC-021](SPEC-021.md) (aprovada em 21/10/2026):** os itens exportados trazem o NCM; a tabela NCM oficial não entra, por ser dado público de referência.
 > **Evolução prevista pela [SPEC-022](SPEC-022.md) (aprovada em 22/10/2026):** a exportação traz os campos novos dos clientes (tipo, documento, inscrição estadual, e-mail, telefone e endereço), e a exclusão de conta limpa todos eles. Um cliente também pode ser excluído sozinho: sem vendas, é apagado; com vendas, é anonimizado (RN27). A Política de Privacidade ganha nova versão, com novo aceite.
+> **Evolução prevista pela [SPEC-024](SPEC-024.md) (aprovada em 30/10/2026):** os itens exportados trazem o código interno.
 
 ---
 

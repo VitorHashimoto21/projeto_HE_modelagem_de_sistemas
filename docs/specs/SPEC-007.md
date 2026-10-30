@@ -4,6 +4,7 @@
 > **Mapa:** [`MAPA_DE_SPECS.md`](../MAPA_DE_SPECS.md) · **Anterior:** [SPEC-006](SPEC-006.md) (catálogo) · **Próximas que dependem desta:** SPEC-008 (venda, que baixa o estoque), SPEC-011 (cancelamento, que devolve o estoque) e SPEC-012 (dashboard, que mostra os alertas).
 > **Evolução prevista pela [SPEC-020](SPEC-020.md) (aprovada em 19/10/2026):** a lista do estoque mostra a subcategoria do produto, ganha o filtro de subcategoria (com a categoria escolhida) e a busca passa a encontrar também pela subcategoria.
 > **Evolução prevista pela [SPEC-021](SPEC-021.md) (aprovada em 21/10/2026):** a busca do estoque passa a encontrar também pelo começo do NCM do produto.
+> **Evolução prevista pela [SPEC-024](SPEC-024.md) (aprovada em 30/10/2026):** a lista e o detalhe do estoque mostram o código interno do produto, e a busca encontra também pelo código.
 
 ---
 
