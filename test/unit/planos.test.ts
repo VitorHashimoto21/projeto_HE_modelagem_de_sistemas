@@ -46,9 +46,9 @@ describe("T01 — funcionalidades por plano e histórico de 12 meses (RF45, RN18
 
 describe("T02 — rentabilidade (RF70)", () => {
   const linhas: LinhaVendida[] = [
-    { itemId: "e", nome: "Esmalte", arquivado: false, quantidade: 2, faturamentoCentavos: 3600, custoCentavos: 1600, linhasSemCusto: 0 },
-    { itemId: "m", nome: "Manicure", arquivado: false, quantidade: 3, faturamentoCentavos: 15000, custoCentavos: 3600, linhasSemCusto: 0 },
-    { itemId: "b", nome: "Brinde", arquivado: true, quantidade: 1, faturamentoCentavos: 0, custoCentavos: 500, linhasSemCusto: 0 },
+    { itemId: "e", nome: "Esmalte", codigo: "ESM-01", arquivado: false, quantidade: 2, faturamentoCentavos: 3600, custoCentavos: 1600, linhasSemCusto: 0 },
+    { itemId: "m", nome: "Manicure", codigo: null, arquivado: false, quantidade: 3, faturamentoCentavos: 15000, custoCentavos: 3600, linhasSemCusto: 0 },
+    { itemId: "b", nome: "Brinde", codigo: null, arquivado: true, quantidade: 1, faturamentoCentavos: 0, custoCentavos: 500, linhasSemCusto: 0 },
   ];
 
   it("CA-08: Manicure R$ 150, custo R$ 36, margem R$ 114 (76%); Esmalte R$ 36, custo R$ 16, margem R$ 20 (55,56%)", () => {
@@ -100,7 +100,7 @@ describe("T03 — CSV e PDF (OPEN-002, OPEN-006)", () => {
 
   it("PDF: arquivo válido, com várias páginas e caracteres fora da fonte trocados", async () => {
     const r = calcularRentabilidade(
-      Array.from({ length: 120 }, (_, i) => ({ itemId: String(i), nome: `Item ${i} − ção`, arquivado: false, quantidade: 1, faturamentoCentavos: 1000, custoCentavos: 400, linhasSemCusto: 0 })),
+      Array.from({ length: 120 }, (_, i) => ({ itemId: String(i), nome: `Item ${i} − ção`, codigo: `IT-${i}`, arquivado: false, quantidade: 1, faturamentoCentavos: 1000, custoCentavos: 400, linhasSemCusto: 0 })),
     );
     const bytes = await pdfDaTabela(tabelaDeRentabilidade(r), { negocio: "Studio Gisele", periodo: "01/10/2026 a 11/10/2026", geradoEm: "11/10/2026 10:00" });
     expect(Buffer.from(bytes.slice(0, 5)).toString()).toBe("%PDF-");

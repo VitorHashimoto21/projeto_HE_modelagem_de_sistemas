@@ -32,6 +32,7 @@ const produtos = (n: number) => `${n} ${n === 1 ? "produto" : "produtos"}`;
 
 // Lista do catálogo (SPEC-006, escopo 1): Catálogo — ver. Filtro e busca por subcategoria (SPEC-020, 5.4).
 // NCM (SPEC-021, 5.5): busca pelo começo do código, produtos sem NCM e com NCM fora da tabela vigente.
+// Código interno (SPEC-024, 5.3 a 5.5): na linha do item, na busca e no link "Itens sem código".
 export default async function Catalogo({ searchParams }: PageProps<"/catalogo">) {
   const membro = await exigirPermissao("catalogo", "ver");
   const p = await searchParams;
@@ -41,16 +42,20 @@ export default async function Catalogo({ searchParams }: PageProps<"/catalogo">)
   const subcategoria = categoria ? texto(p.subcategoria) || undefined : undefined;
   const arquivados = p.arquivados === "1";
   const ncm = arquivados ? undefined : FILTROS_DE_NCM.find((f) => f === p.ncm);
+  const codigo = !arquivados && p.codigo === "sem" ? ("sem" as const) : undefined;
   const c = catalogo(membro);
-  const [itens, subcategorias, contagens, emiteNota] = await Promise.all([
-    c.listar({ busca, tipo, categoria, subcategoria, arquivados, ncm }),
+  const [itens, subcategorias, contagens, contagensDoCodigo, emiteNota] = await Promise.all([
+    c.listar({ busca, tipo, categoria, subcategoria, arquivados, ncm, codigo }),
     c.subcategorias(),
     arquivados ? null : c.contagensDoNcm(),
+    arquivados ? null : c.contagensDoCodigo(),
     c.emiteNotaDeProduto(),
   ]);
-  const filtrando = !!(busca || tipo || categoria || ncm);
+  const filtrando = !!(busca || tipo || categoria || ncm || codigo);
+  // SPEC-024 (5.5): o lembrete só para quem já usa códigos e tem itens sem código.
+  const semCodigo = contagensDoCodigo && contagensDoCodigo.comCodigo > 0 ? contagensDoCodigo.semCodigo : 0;
 
-  const link = (mudanca: { tipo?: TipoItem | null; semNcm?: boolean }) => {
+  const link = (mudanca: { tipo?: TipoItem | null; semNcm?: boolean; semFiltroDeCodigo?: boolean }) => {
     const q = new URLSearchParams();
     if (busca) q.set("busca", busca);
     const t = mudanca.tipo === undefined ? tipo : mudanca.tipo;
@@ -59,6 +64,7 @@ export default async function Catalogo({ searchParams }: PageProps<"/catalogo">)
     if (subcategoria) q.set("subcategoria", subcategoria);
     if (arquivados) q.set("arquivados", "1");
     if (ncm && !mudanca.semNcm) q.set("ncm", ncm);
+    if (codigo && !mudanca.semFiltroDeCodigo) q.set("codigo", codigo);
     const texto = q.toString();
     return texto ? `/catalogo?${texto}` : "/catalogo";
   };
@@ -96,6 +102,11 @@ export default async function Catalogo({ searchParams }: PageProps<"/catalogo">)
           <Link href={link({ semNcm: true })}>Ver todos os itens</Link>
         </AvisoDaPagina>
       )}
+      {codigo && (
+        <AvisoDaPagina tom="info">
+          Mostrando itens sem código. <Link href={link({ semFiltroDeCodigo: true })}>Ver todos os itens</Link>
+        </AvisoDaPagina>
+      )}
       {!ncm && contagens && contagens.foraDaTabela > 0 && (
         <AvisoDaPagina tom="atencao">
           {produtos(contagens.foraDaTabela)} {contagens.foraDaTabela === 1 ? "tem" : "têm"} NCM fora da tabela vigente.{" "}
@@ -123,8 +134,9 @@ export default async function Catalogo({ searchParams }: PageProps<"/catalogo">)
           {arquivados && <input type="hidden" name="arquivados" value="1" />}
           {tipo && <input type="hidden" name="tipo" value={tipo} />}
           {ncm && <input type="hidden" name="ncm" value={ncm} />}
+          {codigo && <input type="hidden" name="codigo" value={codigo} />}
           <label className="sr-only" htmlFor="busca">
-            Buscar por nome, subcategoria ou NCM
+            Buscar por nome, código, subcategoria ou NCM
           </label>
           <div className="relative min-w-0 flex-1 basis-52">
             <Search aria-hidden="true" className="pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -182,6 +194,7 @@ export default async function Catalogo({ searchParams }: PageProps<"/catalogo">)
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-[15px] font-bold text-foreground">{i.nome}</p>
                       <p className="truncate text-xs text-muted-foreground">
+                        {i.codigo && `${i.codigo} · `}
                         {ROTULO_TIPO[i.tipo]}, {categoriaDoItem(i)}, {rotuloUnidade(i.unidadeMedida).toLowerCase()}
                         {i.tipo === "SERVICO" && i.materiais > 0 && `, ${i.materiais} ${i.materiais === 1 ? "material" : "materiais"}`}
                       </p>
@@ -212,6 +225,11 @@ export default async function Catalogo({ searchParams }: PageProps<"/catalogo">)
           {!ncm && !emiteNota && contagens && contagens.semNcm > 0 && (
             <Link href="/catalogo?ncm=sem" className={classeDoLink()}>
               Produtos sem NCM ({contagens.semNcm})
+            </Link>
+          )}
+          {!codigo && semCodigo > 0 && (
+            <Link href="/catalogo?codigo=sem" className={classeDoLink()}>
+              Itens sem código ({semCodigo})
             </Link>
           )}
         </p>

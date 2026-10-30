@@ -61,7 +61,12 @@ describe("T02 — subcategoria no item (5.5, INV-002)", () => {
     expect(condicaoDaSubcategoria(undefined)).toEqual({});
     expect(condicaoDaBusca("  ")).toEqual({});
     expect(condicaoDaBusca(" brinc ")).toEqual({
-      OR: [{ nome: { contains: "brinc", mode: "insensitive" } }, { subcategoria: { nome: { contains: "brinc", mode: "insensitive" } } }],
+      OR: [
+        { nome: { contains: "brinc", mode: "insensitive" } },
+        { subcategoria: { nome: { contains: "brinc", mode: "insensitive" } } },
+        // SPEC-024 (5.4): também pelo código interno.
+        { codigo: { contains: "brinc", mode: "insensitive" } },
+      ],
     });
   });
 });

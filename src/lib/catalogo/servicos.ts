@@ -1,6 +1,8 @@
 import type { CategoriaItem } from "@/generated/prisma/enums";
 import type { ErrosDeCampo } from "@/lib/auth/validacao";
 import {
+  CodigoEmUso,
+  CodigoEmUsoAoReativar,
   ItemNaoEncontrado,
   MaterialInvalido,
   NcmForaDaTabela,
@@ -17,6 +19,7 @@ import {
 import { formatarReais, precoAbaixoDoCusto } from "@/lib/dominio/catalogo";
 import { lerNcm } from "@/lib/dominio/ncm";
 import {
+  codigoEmUso,
   MENSAGENS_CATALOGO,
   ROTULO_CATEGORIA,
   subcategoriaDeOutraCategoria,
@@ -61,6 +64,7 @@ export type DependenciasDoCatalogo = { catalogo: ConsultasDoCatalogo; usuarioId:
 
 function traduzir(e: unknown): { mensagem?: string; erros?: ErrosDeCampo } {
   if (e instanceof NomeDuplicado) return { erros: { nome: MENSAGENS_FLUXO_CATALOGO.nomeDuplicado } };
+  if (e instanceof CodigoEmUso) return { erros: { codigo: codigoEmUso(e.codigo, e.nomeDoOutro) } };
   if (e instanceof MaterialInvalido) return { erros: { materiais: MENSAGENS_CATALOGO.materiaisInvalidos } };
   if (e instanceof ItemNaoEncontrado) return { mensagem: MENSAGENS_FLUXO_CATALOGO.naoEncontrado };
   if (e instanceof PrecoIgualAoAtual) return { erros: { preco: MENSAGENS_FLUXO_CATALOGO.precoIgual } };
@@ -124,19 +128,22 @@ export async function arquivarItem(
     return { ok: true, ...(await deps.catalogo.arquivar(id, arquivar)) };
   } catch (e) {
     if (e instanceof NomeDuplicado) return { ok: false, codigo: "nome-duplicado" };
+    if (e instanceof CodigoEmUsoAoReativar) return { ok: false, codigo: "codigo-em-uso" };
     if (e instanceof ItemNaoEncontrado) return { ok: false, codigo: "nao-encontrado" };
     traduzir(e);
     return { ok: false, codigo: "falha" };
   }
 }
 
-export type CodigoDoArquivamento = "nome-duplicado" | "nao-encontrado" | "falha";
+export type CodigoDoArquivamento = "nome-duplicado" | "codigo-em-uso" | "nao-encontrado" | "falha";
 
 /** Mensagens dos resultados de arquivar/reativar, pelo código da URL. */
 export const MENSAGENS_DO_ARQUIVAMENTO: Record<string, { tipo: "ok" | "erro"; texto: string }> = {
   arquivado: { tipo: "ok", texto: "Item arquivado. Ele não aparece mais na lista nem nas escolhas de material." },
   reativado: { tipo: "ok", texto: "Item reativado." },
   "nome-duplicado": { tipo: "erro", texto: MENSAGENS_FLUXO_CATALOGO.nomeDuplicadoAoReativar },
+  // SPEC-024 (5.2): o detalhe troca pelo texto com o código do item (`codigoEmUsoAoReativar`).
+  "codigo-em-uso": { tipo: "erro", texto: "Já existe um item ativo com o mesmo código. Troque o código de um deles antes de reativar." },
   "nao-encontrado": { tipo: "erro", texto: MENSAGENS_FLUXO_CATALOGO.naoEncontrado },
   falha: { tipo: "erro", texto: MENSAGENS_FLUXO_CATALOGO.falhaInterna },
 };

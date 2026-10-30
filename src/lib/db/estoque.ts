@@ -1,4 +1,5 @@
 import type { CategoriaItem, MotivoSaidaManual, TipoMovimentacao } from "@/generated/prisma/enums";
+import { codigoExatoPrimeiro } from "@/lib/dominio/catalogo";
 import { diaLocal, intervaloDoDia } from "@/lib/dominio/datas";
 import {
   emAlerta,
@@ -122,6 +123,8 @@ export type FiltroDoEstoque = { busca?: string; categoria?: CategoriaItem; subca
 export type ProdutoEmEstoque = {
   id: string;
   nome: string;
+  /** SPEC-024: código interno, ou null. */
+  codigo: string | null;
   categoria: CategoriaItem;
   subcategoria: SubcategoriaDoItem;
   unidadeMedida: string;
@@ -198,6 +201,7 @@ export function criarConsultasDoEstoque(cliente: ClienteDoNegocio, negocioId: st
     i: {
       id: string;
       nome: string;
+      codigo: string | null;
       categoria: CategoriaItem;
       subcategoria: SubcategoriaDoItem;
       unidadeMedida: string;
@@ -215,6 +219,7 @@ export function criarConsultasDoEstoque(cliente: ClienteDoNegocio, negocioId: st
     return {
       id: i.id,
       nome: i.nome,
+      codigo: i.codigo,
       categoria: i.categoria,
       subcategoria: i.subcategoria,
       unidadeMedida: i.unidadeMedida,
@@ -229,6 +234,7 @@ export function criarConsultasDoEstoque(cliente: ClienteDoNegocio, negocioId: st
   const camposDoProduto = {
     id: true,
     nome: true,
+    codigo: true,
     categoria: true,
     subcategoria: { select: { id: true, nome: true } },
     unidadeMedida: true,
@@ -263,7 +269,11 @@ export function criarConsultasDoEstoque(cliente: ClienteDoNegocio, negocioId: st
         resumos(hoje),
         diasCobertura(),
       ]);
-      const lista = itens.map((i) => montar(i, mapa.get(i.id) ?? VAZIO, dias, hoje));
+      // SPEC-024 (5.4): o produto com o código exato da busca vem primeiro.
+      const lista = codigoExatoPrimeiro(
+        itens.map((i) => montar(i, mapa.get(i.id) ?? VAZIO, dias, hoje)),
+        filtro.busca,
+      );
       if (filtro.situacao === "baixo") return lista.filter((p) => emAlerta(p.situacao));
       if (filtro.situacao === "sem-estoque") return lista.filter((p) => p.situacao === "SEM_ESTOQUE");
       return lista;

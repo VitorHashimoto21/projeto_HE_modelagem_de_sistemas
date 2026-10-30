@@ -13,6 +13,7 @@ import { Superficie, TituloDaSuperficie } from "@/components/ui/superficie";
 import { exigirPermissao } from "@/lib/auth/servidor";
 import { acaoArquivarItem } from "@/lib/catalogo/acoes";
 import { MENSAGENS_DO_ARQUIVAMENTO } from "@/lib/catalogo/servicos";
+import { codigoEmUsoAoReativar } from "@/lib/catalogo/validacao";
 import { catalogo, estoque } from "@/lib/db";
 import { ItemNaoEncontrado, type NcmDoItem } from "@/lib/db/catalogo";
 import { hoje } from "@/lib/dominio/datas";
@@ -70,7 +71,10 @@ export default async function DetalheDoItem({ params, searchParams }: PageProps<
   });
   const podeEditar = pode(membro.permissoes, "catalogo", "editar");
   const podeArquivar = pode(membro.permissoes, "catalogo", "excluir");
-  const resultado = typeof busca.resultado === "string" ? MENSAGENS_DO_ARQUIVAMENTO[busca.resultado] : undefined;
+  const doArquivamento = typeof busca.resultado === "string" ? MENSAGENS_DO_ARQUIVAMENTO[busca.resultado] : undefined;
+  // SPEC-024 (5.2): a reativação recusada pelo código mostra o código do item.
+  const resultado =
+    busca.resultado === "codigo-em-uso" && doArquivamento && item.codigo ? { ...doArquivamento, texto: codigoEmUsoAoReativar(item.codigo) } : doArquivamento;
   // Situação do estoque (SPEC-007, RF21) para quem também pode ver o Estoque.
   const verEstoque = pode(membro.permissoes, "estoque", "ver");
   const situacao = item.tipo === "PRODUTO_FISICO" && verEstoque ? await estoque(membro).situacaoDoProduto(item.id, hoje()) : null;
@@ -160,6 +164,7 @@ export default async function DetalheDoItem({ params, searchParams }: PageProps<
           <Superficie aria-labelledby="titulo-dados">
             <TituloDaSuperficie id="titulo-dados" titulo="Dados do item" />
             <dl>
+              <Linha rotulo="Código" valor={item.codigo ?? "—"} />
               <Linha rotulo="Categoria" valor={ROTULO_CATEGORIA[item.categoria]} />
               <Linha rotulo="Subcategoria" valor={item.subcategoria?.nome ?? "—"} />
               <Linha rotulo="Unidade de medida" valor={rotuloUnidade(item.unidadeMedida)} />

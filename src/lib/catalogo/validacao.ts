@@ -1,7 +1,7 @@
 import type { CategoriaItem, TipoItem } from "@/generated/prisma/enums";
 import type { ErrosDeCampo } from "@/lib/auth/validacao";
 import { pode, type Matriz } from "@/lib/dominio/permissoes";
-import { casasDecimais, ehUnidade, lerNumero, normalizarNome, type Unidade } from "@/lib/dominio/catalogo";
+import { casasDecimais, codigoValido, ehUnidade, lerNumero, normalizarCodigo, normalizarNome, type Unidade } from "@/lib/dominio/catalogo";
 import { lerNcm } from "@/lib/dominio/ncm";
 
 /**
@@ -65,7 +65,13 @@ export const MENSAGENS_CATALOGO = {
   ncmSoProduto: "NCM vale só para produto físico.",
   ncmObrigatorio: "Informe o NCM: o negócio emite nota fiscal de produtos.",
   ncmForaDaTabela: "Código não encontrado na tabela NCM vigente.",
+  codigoInvalido: "Use até 20 caracteres: letras sem acento, números, hífen (-), ponto (.), barra (/) ou sublinhado (_), sem espaços.",
 } as const;
+
+/** Código interno em uso por outro item ativo (SPEC-024, 5.2). */
+export const codigoEmUso = (codigo: string, nome: string) => `O código ${codigo} já é usado por “${nome}”. Use outro código.`;
+/** Reativar um item cujo código outro item ativo já usa (SPEC-024, 5.2). */
+export const codigoEmUsoAoReativar = (codigo: string) => `Já existe um item ativo com o código ${codigo}. Troque o código de um deles antes de reativar.`;
 
 /** Subcategoria da categoria do item (SPEC-020, 5.5). */
 export const subcategoriaDeOutraCategoria = (categoria: CategoriaItem) =>
@@ -77,6 +83,8 @@ export type DadosDoItem = {
   tipo: TipoItem;
   nome: string;
   nomeChave: string;
+  /** SPEC-024: opcional, já normalizado (em maiúsculas); o servidor confere a repetição entre os ativos. */
+  codigo: string | null;
   categoria: CategoriaItem;
   /** SPEC-020: opcional; o servidor confere que é da mesma categoria e do mesmo negócio. */
   subcategoriaId: string | null;
@@ -159,6 +167,10 @@ export function validarItem(
   if (!nome) erros.nome = MENSAGENS_CATALOGO.nomeObrigatorio;
   else if (nome.length > 120) erros.nome = MENSAGENS_CATALOGO.nomeLongo;
 
+  // SPEC-024 (5.2): opcional; espaços das pontas tirados e em maiúsculas.
+  const codigo = vazio(campos.codigo) ? null : normalizarCodigo(campos.codigo);
+  if (codigo !== null && !codigoValido(codigo)) erros.codigo = MENSAGENS_CATALOGO.codigoInvalido;
+
   const categoria = campos.categoria as CategoriaItem;
   if (!CATEGORIAS.includes(categoria)) erros.categoria = MENSAGENS_CATALOGO.categoriaObrigatoria;
 
@@ -215,6 +227,7 @@ export function validarItem(
       tipo,
       nome,
       nomeChave: normalizarNome(nome),
+      codigo,
       categoria,
       subcategoriaId,
       ncm,
