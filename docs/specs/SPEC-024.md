@@ -280,11 +280,11 @@ A loja de semijoias tem dezenas de brincos e colares com nomes parecidos e etiqu
 **Decisões de implementação (sem mudar o comportamento da Spec):**
 - **Unicidade por coluna de chave:** a garantia "só entre os ativos" usa a coluna `codigoChave` e um índice único comum, e não um índice parcial. Um índice parcial não é representado no schema do Prisma e quebraria a checagem de divergência do CI (`migrate diff`).
 - **Código sem item:** depois de um Enter sem item com o código, o texto fica **selecionado**, e a mensagem aparece. A leitura seguinte do leitor substitui o texto em vez de se juntar a ele. Encontrado no roteiro.
-- **Campo controlado:** o campo do código é controlado (como o custo). Assim, o código recusado pelo servidor continua no campo, porque o React 19 reinicia os campos não controlados depois de cada envio. Encontrado no roteiro.
+- **Campo controlado:** o campo do código é controlado (como o custo), para passar para maiúsculas enquanto a pessoa digita.
 - **Rentabilidade no celular:** o cartão do item não tem linha de baixo. O código aparece numa linha própria, "Código BR-015", abaixo do nome.
 - **Busca da Nova venda:** o exemplo do campo passou a "Nome ou código, ex.: manicure".
 
-**Observação encontrada no roteiro, fora desta Spec (SPEC-006):** o reinício dos campos depois de uma recusa do servidor também afeta o **nome** e os outros campos não controlados do formulário do item. Com o nome em uso, a edição volta ao nome original, e o cadastro perde o nome, a categoria e a unidade. Propostas: (1) corrigir a implementação; (2) manter. Registrada no Mapa para decisão da equipe ([evidências](evidencias/SPEC-024/README.md#encontrado-no-roteiro)).
+**Observação encontrada no roteiro, fora desta Spec (SPEC-006):** o formulário do item usava `<form action>`, e o React 19 volta os campos não controlados ao valor inicial depois de cada envio. Com o nome ou o código em uso, recusados pelo servidor, a edição voltava ao nome original e o cadastro perdia o nome, a categoria e a unidade. **Decisão da equipe (30/10/2026): opção 1, corrigir.** Corrigida no PR #117: o formulário do item e o "Definir o preço" passaram a enviar pela transição, como o formulário de clientes (SPEC-022), e o que foi digitado fica quando o servidor recusa ([evidências](evidencias/SPEC-024/README.md#encontrado-no-roteiro)).
 
 ---
 

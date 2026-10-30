@@ -2,9 +2,9 @@
 
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { useActionState, useRef, useState, type FormEvent } from "react";
+import { startTransition, useActionState, useEffect, useRef, useState, type FormEvent } from "react";
 import type { CategoriaItem, TipoItem } from "@/generated/prisma/enums";
-import { Aviso, BotaoEnviar, MensagemDeCampo } from "@/components/acesso/campos";
+import { Aviso, MensagemDeCampo } from "@/components/acesso/campos";
 import { avisar } from "@/components/ui/avisar";
 import { Package, Plus, Sparkles } from "lucide-react";
 import { classeDoCampo } from "@/components/ui/classes";
@@ -211,7 +211,7 @@ export function FormularioItem({
   const daCategoria = [...subcategorias, ...criadas.filter((c) => !subcategorias.some((s) => s.id === c.id))]
     .filter((s) => s.categoria === categoria)
     .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
-  const [estado, executar] = useActionState<EstadoDoItem, FormData>(editando ? acaoEditarItem : acaoCriarItem, ITEM_INICIAL);
+  const [estado, executar, enviando] = useActionState<EstadoDoItem, FormData>(editando ? acaoEditarItem : acaoCriarItem, ITEM_INICIAL);
   const [tipo, setTipo] = useState<TipoItem | null>(valores?.tipo ?? null);
   const [usaMateriais, setUsaMateriais] = useState((valores?.materiais?.length ?? 0) > 0);
   const [linhas, setLinhas] = useState<Linha[]>(
@@ -231,7 +231,7 @@ export function FormularioItem({
   );
   const porId = new Map(opcoes.map((o) => [o.id, o]));
   const [custoDigitado, setCustoDigitado] = useState(valores?.custoBase !== undefined ? numero(valores.custoBase) : "");
-  // SPEC-024: controlado, para o código digitado não sumir quando o servidor o recusa (em uso por outro item).
+  // SPEC-024: controlado, para passar para maiúsculas enquanto a pessoa digita (é como fica gravado).
   const [codigoDigitado, setCodigoDigitado] = useState(valores?.codigo ?? "");
   const custoDosMateriais = custoTotal(
     lerNumero(custoDigitado) ?? 0,
@@ -240,16 +240,18 @@ export function FormularioItem({
       : [],
   );
 
+  /**
+   * Envio pela transição, e não pelo `action` do formulário: assim o React não volta os campos ao valor
+   * inicial quando o servidor recusa (ex.: nome ou código em uso), e a pessoa não perde o que digitou.
+   * Mesmo padrão do formulário de clientes (SPEC-022).
+   */
   function aoEnviar(e: FormEvent<HTMLFormElement>) {
-    const v = validarItem(
-      camposDoFormulario(new FormData(e.currentTarget)),
-      editando ? { tipo: "editar", tipoDoItem: valores!.tipo! } : { tipo: "criar" },
-      { exigeNcm },
-    );
-    if (!v.ok) {
-      e.preventDefault();
-      setLocais(v.erros);
-    } else setLocais({});
+    e.preventDefault();
+    const dados = new FormData(e.currentTarget);
+    const v = validarItem(camposDoFormulario(dados), editando ? { tipo: "editar", tipoDoItem: valores!.tipo! } : { tipo: "criar" }, { exigeNcm });
+    if (!v.ok) return setLocais(v.erros);
+    setLocais({});
+    startTransition(() => executar(dados));
   }
 
   if (!tipo) {
@@ -284,7 +286,7 @@ export function FormularioItem({
     <div className="space-y-5">
       {estado.status === "erro" && estado.mensagem && <Aviso tipo="erro">{estado.mensagem}</Aviso>}
       <Superficie as="div">
-      <form action={executar} onSubmit={aoEnviar} noValidate className="space-y-5">
+      <form onSubmit={aoEnviar} noValidate className="space-y-5">
         {editando && <input type="hidden" name="itemId" value={valores!.id} />}
         <input type="hidden" name="tipo" value={tipo} />
         <input type="hidden" name="materiais" value={materiaisJson} />
@@ -504,7 +506,9 @@ export function FormularioItem({
         )}
 
         <div className="flex flex-wrap items-center gap-3 border-t pt-5">
-          <BotaoEnviar enviando="Salvando…" largura="automatica">{editando ? "Salvar alterações" : "Cadastrar item"}</BotaoEnviar>
+          <button type="submit" disabled={enviando} className={classeDoBotao("principal", "lg")}>
+            {enviando ? "Salvando…" : editando ? "Salvar alterações" : "Cadastrar item"}
+          </button>
           <Link href={editando ? comRetorno(`/catalogo/${valores!.id}`, voltar) : (voltar ?? "/catalogo")} className={classeDoBotao("fantasma")}>
             Cancelar
           </Link>
@@ -533,8 +537,13 @@ export function FormularioItem({
 
 /** Preço oficial manual (5.4). */
 export function FormularioPreco({ itemId }: { itemId: string }) {
-  const [estado, executar] = useActionState(acaoDefinirPreco, PRECO_INICIAL);
+  const [estado, executar, enviando] = useActionState(acaoDefinirPreco, PRECO_INICIAL);
   const [erroLocal, setErroLocal] = useState<string | null>(null);
+  const formulario = useRef<HTMLFormElement>(null);
+  // O campo só é limpo quando o preço foi gravado; recusado, o valor digitado fica (envio pela transição).
+  useEffect(() => {
+    if (estado.status === "salvo") formulario.current?.reset();
+  }, [estado]);
   const [visto, setVisto] = useState(estado);
   if (estado !== visto) {
     setVisto(estado);
@@ -551,13 +560,13 @@ export function FormularioPreco({ itemId }: { itemId: string }) {
         </p>
       )}
       <form
-        action={executar}
+        ref={formulario}
         onSubmit={(e) => {
-          const v = validarPreco(camposDoFormulario(new FormData(e.currentTarget)));
-          if (!v.ok) {
-            e.preventDefault();
-            setErroLocal(v.erros.preco ?? null);
-          }
+          e.preventDefault();
+          const dados = new FormData(e.currentTarget);
+          const v = validarPreco(camposDoFormulario(dados));
+          if (!v.ok) return setErroLocal(v.erros.preco ?? null);
+          startTransition(() => executar(dados));
         }}
         noValidate
         className="flex flex-wrap items-start gap-3"
@@ -579,8 +588,8 @@ export function FormularioPreco({ itemId }: { itemId: string }) {
           />
           <MensagemDeCampo id="preco-erro" erro={erro} />
         </div>
-        <button type="submit" className={classeDoBotao("principal")}>
-          Definir preço
+        <button type="submit" disabled={enviando} className={classeDoBotao("principal")}>
+          {enviando ? "Salvando…" : "Definir preço"}
         </button>
       </form>
     </div>
