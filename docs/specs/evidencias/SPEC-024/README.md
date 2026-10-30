@@ -42,6 +42,22 @@ Toda a suíte passou: 547 testes unitários e 283 de integração, além de lint
 - **Corrigido nesta implementação:** o código recusado pelo servidor (em uso) sumia do campo, porque o formulário usava `<form action>` e o React 19 volta os campos não controlados ao valor inicial depois de cada envio. O campo do código passou a ser controlado; a correção completa está no item abaixo.
 - **Observação, fora desta Spec (SPEC-006), corrigida no PR #117:** o mesmo acontecia com o **nome** e os outros campos não controlados quando o servidor recusava o envio. Na edição, o nome voltava ao original ao lado da mensagem "Já existe um item ativo com esse nome"; no cadastro, nome, categoria e unidade ficavam vazios. **Decisão da equipe (30/10/2026): opção 1, corrigir.** O formulário do item e o "Definir o preço" passaram a enviar pela transição (`startTransition`), como o formulário de clientes (SPEC-022). Conferido no navegador, com 16 verificações: na edição recusada (código e depois nome em uso), nome, código e comissão ficam; no cadastro recusado, nome, código, categoria, unidade, custo e comissão ficam; o "Definir o preço" mantém o valor recusado (preço igual ao atual) e limpa o campo depois de gravar; axe sem violações. Capturas: `s24_11_edicao_nome_em_uso_768_claro.png` e `s24_12_cadastro_nome_em_uso_390_escuro.png`.
 
-## Pendente
+## Homologação (T11) — 30/10/2026
 
-- **T11 — homologação**, com itens da loja de semijoias e, se a equipe tiver, um leitor de código de barras com etiqueta própria, depois do merge na `DEVELOP`.
+Feita pela equipe na homologação (`DEVELOP`, depois do merge dos PRs #116 e #117 e da migração pelo workflow Migrações), com o Dono do negócio **HE Testing** e as peças de semijoia do catálogo: Brincos de Ouro (BR-015), Colar Moissanite Azul (COM-01), Anel do Lanterna Verde (AN-01) e Anel de Titânio (AN-02). Capturas em [`homologacao/`](homologacao/). O nome do cliente da venda está coberto; o nome da conta de teste ficou visível, como nas homologações anteriores.
+
+| Passo | Resultado | Captura |
+|---|---|---|
+| Código BR-015 salvo nos Brincos de Ouro: "Alterações salvas." e a linha "Código BR-015" no detalhe (CA-01) | ✅ | `homol_01_codigo_salvo.png` |
+| BR-015 no Colar Moissanite Azul: "O código BR-015 já é usado por “Brincos de Ouro”. Use outro código." (CA-04) | ✅ | `homol_02_codigo_em_uso.png` |
+| Nome e código em uso no mesmo envio: a recusa mostra o código, e o nome e o código digitados continuam no formulário (correção do PR #117) | ✅ | `homol_03_campos_mantidos.png` |
+| Lista do Catálogo com "BR-015 · Produto físico, acessórios, par" e os outros códigos (CA-06) | ✅ | `homol_04_catalogo.png`, `homol_08_link_itens_sem_codigo.png` |
+| Busca por parte do código: "AN-" traz os dois anéis (AN-02 e AN-01); "br" traz os Brincos de Ouro (CA-06) | ✅ | `homol_05_busca_an.png`, `homol_06_busca_br.png` |
+| "Itens sem código (8)" no rodapé, ao lado de "Produtos sem NCM"; o filtro mostra "Mostrando itens sem código." e só os itens sem código (CA-09) | ✅ | `homol_07_filtro_sem_codigo.png`, `homol_08_link_itens_sem_codigo.png` |
+| Nova venda: os resultados da busca com o código ("AN-02 · Sem estoque", "BR-015 · Sem estoque") e o Colar Moissanite Azul na venda (CA-07) | ✅ | `homol_11_nova_venda.png` |
+| Venda nº 21 registrada (crédito em 4x): o detalhe mostra "COM-01 · Colar Moissanite Azul" (CA-10) | ✅ | `homol_10_venda_registrada.png` |
+| Rentabilidade por item com a coluna "Código": COM-01, AN-01 e BR-015, e "—" nos itens sem código, inclusive os arquivados (CA-10) | ✅ | `homol_09_rentabilidade.png` |
+
+Não houve registro de teste com leitor de código de barras. O Enter com o código exato, inclusive com a digitação rápida de um leitor, foi verificado no roteiro local (T09).
+
+**Resultado:** T11 aprovado, sem divergência. SPEC-024 concluída em 30/10/2026.
