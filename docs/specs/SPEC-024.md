@@ -1,6 +1,6 @@
 # SPEC-024 — Código interno dos itens
 
-> **Status:** ✅ **Aprovada e implementada em 30/10/2026**, verificada em build local: testes T01 a T08 automatizados e o roteiro no navegador (T09 e T10) com 111 verificações ([evidências](evidencias/SPEC-024/README.md)). Falta a homologação (T11). As notas da implementação estão depois da seção 9. As questões em aberto foram decididas pela equipe em entrevista (seção 13):
+> **Status:** ✅ **Concluída em 30/10/2026** — aprovada, implementada (PR #116), verificada em build local (testes T01 a T08 automatizados e o roteiro no navegador, T09 e T10, com 111 verificações) e homologada (T11), sem divergência ([evidências](evidencias/SPEC-024/README.md)). A observação da SPEC-006 encontrada no roteiro foi corrigida no PR #117. As notas da implementação e da homologação estão depois da seção 9. As questões em aberto foram decididas pela equipe em entrevista (seção 13):
 > - o código é **opcional**, em **produtos e serviços**, e o Catálogo mostra os **itens sem código** (OPEN-001 e OPEN-004, pela opção recomendada);
 > - o código é **digitado pelo negócio**: o sistema não gera nem sugere (OPEN-002; a equipe preferiu esta opção à recomendada, que sugeria o próximo código da subcategoria);
 > - tem até **20 caracteres**, fica em **maiúsculas** e é **único entre os itens ativos** do negócio (OPEN-003, pela opção recomendada);
@@ -286,6 +286,14 @@ A loja de semijoias tem dezenas de brincos e colares com nomes parecidos e etiqu
 
 **Observação encontrada no roteiro, fora desta Spec (SPEC-006):** o formulário do item usava `<form action>`, e o React 19 volta os campos não controlados ao valor inicial depois de cada envio. Com o nome ou o código em uso, recusados pelo servidor, a edição voltava ao nome original e o cadastro perdia o nome, a categoria e a unidade. **Decisão da equipe (30/10/2026): opção 1, corrigir.** Corrigida no PR #117: o formulário do item e o "Definir o preço" passaram a enviar pela transição, como o formulário de clientes (SPEC-022), e o que foi digitado fica quando o servidor recusa ([evidências](evidencias/SPEC-024/README.md#encontrado-no-roteiro)).
 
+**Homologação (T11, 30/10/2026):** a equipe percorreu o fluxo na homologação, depois do merge dos PRs #116 e #117, com o Dono do negócio **HE Testing** e as peças de semijoia do catálogo. Fluxo aprovado:
+- código salvo e mostrado no detalhe e na lista;
+- código em uso recusado com o nome do outro item, e o formulário mantendo o que foi digitado;
+- busca por parte do código e o link "Itens sem código";
+- os códigos nos resultados da Nova venda, no detalhe da venda registrada e na coluna "Código" da rentabilidade por item.
+
+Sem divergência. Não houve registro de teste com leitor de código de barras; o Enter foi verificado no roteiro local (T09) ([evidências](evidencias/SPEC-024/README.md#homologação-t11--30102026)).
+
 ---
 
 ## 10. Requisitos não funcionais aplicáveis
@@ -377,7 +385,7 @@ A SPEC-024 estará concluída quando:
 
 - [x] todos os critérios de aceitação (CA-01 a CA-13) estiverem implementados — por testes e no navegador (build local, 30/10/2026);
 - [x] todos os invariantes (INV-001 a INV-006) estiverem preservados — testes T01 a T08 e o roteiro;
-- [ ] os testes derivados (T01 a T11) estiverem aprovados, com o CI verde no PR — T01 a T10 aprovados; falta a homologação (T11);
+- [x] os testes derivados (T01 a T11) estiverem aprovados, com o CI verde no PR — T01 a T10 no PR #116 (CI verde) e T11 na homologação (30/10/2026);
 - [x] os RNFs aplicáveis (RNF01, RNF02, RNF04, RNF06, RNF10) tiverem sido verificados como descrito na seção 10 — capturas em 390, 768 e 1440 px nos dois temas, axe, isolamento (T03, T05) e exportação (T06);
 - [x] as questões OPEN-001 a OPEN-006 tiverem sido decididas e registradas (30/10/2026), com o RF87 e a RN40 incluídos na baseline;
 - [x] não existir divergência conhecida entre a implementação e esta Spec — as decisões de implementação (seção 9) não mudam o comportamento;
