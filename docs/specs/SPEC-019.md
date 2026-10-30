@@ -11,6 +11,8 @@
 > **Mapa:** [`MAPA_DE_SPECS.md`](../MAPA_DE_SPECS.md)
 > - **Altera:** [SPEC-018](SPEC-018.md) (autenticação do Administrador, liberação, modo suporte, registro e painel), [SPEC-013](SPEC-013.md) (troca de plano também pela plataforma), [SPEC-009](SPEC-009.md) (a rotina diária pula negócio suspenso) e [SPEC-014](SPEC-014.md) (exportação com os eventos novos).
 > - **Usa:** [SPEC-002](SPEC-002.md) (sessão e Supabase Auth), [SPEC-005](SPEC-005.md) (matriz e ações), [SPEC-006](SPEC-006.md), [SPEC-007](SPEC-007.md), [SPEC-009](SPEC-009.md), [SPEC-010](SPEC-010.md) e [SPEC-020](SPEC-020.md) (ações da lista de correções), [SPEC-016](SPEC-016.md) (componentes) e [SPEC-022](SPEC-022.md) (máscara dos clientes).
+>
+> **Ajuste pela [SPEC-024](SPEC-024.md) (aprovada em 30/10/2026):** a correção "Editar item" (5.4) inclui o código interno do item. O desfazer volta o código anterior e é recusado se ele estiver em uso por outro item ativo.
 
 ---
 
@@ -191,7 +193,7 @@ Os eventos `SEGUNDO_FATOR_CADASTRADO`, `SEGUNDO_FATOR_REMOVIDO` e `SEGUNDO_FATOR
 
 | Módulo | Ação permitida ao suporte | Como o Dono desfaz |
 |---|---|---|
-| Catálogo | Editar item: nome, custo, categoria, subcategoria, unidade, NCM, comissão e materiais | Volta os campos anteriores |
+| Catálogo | Editar item: nome, código interno (SPEC-024), custo, categoria, subcategoria, unidade, NCM, comissão e materiais | Volta os campos anteriores; se o código anterior estiver em uso por outro item ativo, o desfazer é recusado |
 | | Definir preço (manual) | Novo registro de preço com o valor anterior (o histórico mantém tudo) |
 | | Arquivar ou reativar item | A operação inversa |
 | | Criar subcategoria | Exclui a subcategoria, se nenhum item a usa |

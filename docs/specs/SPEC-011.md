@@ -2,6 +2,7 @@
 
 > **Status:** ✅ **Implementada e verificada na homologação em 11/10/2026** (PR #64) — questões em aberto decididas pela equipe (seção 13), todas pela opção recomendada; testes T01–T12 no CI, telas em build de produção com login (T13) e fluxo na homologação (T14) — [evidências](evidencias/SPEC-011/README.md). Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar).
 > **Mapa:** [`MAPA_DE_SPECS.md`](../MAPA_DE_SPECS.md) · **Anteriores:** [SPEC-007](SPEC-007.md) (primitiva de estoque), [SPEC-008](SPEC-008.md) (venda, pagamentos, parcelas e baixas ligadas à venda) e [SPEC-009](SPEC-009.md) (contas, recebimentos e lançamentos) · **Próximas que dependem desta:** SPEC-012 (dashboard sem vendas canceladas).
+> **Evolução prevista pela [SPEC-024](SPEC-024.md) (aprovada em 30/10/2026):** na troca, a busca dos itens novos encontra também pelo código interno, e o código exato seguido de Enter adiciona o item, como na Nova venda.
 
 ---
 

@@ -76,6 +76,7 @@
 | RF11 | Todo produto/serviço deve ter uma categoria obrigatória, escolhida de uma lista fixa do sistema: Serviços, Produtos, Alimentação, Vestuário, Acessórios, Beleza, Saúde, Casa, Tecnologia, Outros (Acessórios incluída pela SPEC-020). |
 | RF79 | O negócio deve poder criar **subcategorias livres** dentro de cada categoria fixa (ex.: Brincos, Colares e Anéis em Acessórios), com nome único na categoria, e associar no máximo uma, **opcional**, a cada produto/serviço da mesma categoria. As subcategorias são criadas no cadastro do item ou numa tela própria do Catálogo, onde também podem ser renomeadas e excluídas (os itens ficam sem subcategoria), e servem de filtro e busca no Catálogo e no Estoque (SPEC-020). |
 | RF80 | O Produto Físico deve poder ter um **NCM** (Nomenclatura Comum do Mercosul, 8 dígitos), **opcional**, conferido na tabela oficial vigente, carregada de arquivo versionado com fonte e vigência. O código é buscado por código ou por palavras. Quando o código deixa de estar vigente, ele é mantido no item com aviso de revisão. O Catálogo mostra os produtos sem NCM e os que precisam de revisão, a busca encontra pelo código, e o cadastro sugere o NCM já usado por outros itens da mesma subcategoria, com aviso de que a responsabilidade pela classificação é do negócio. O NCM é obrigatório quando o Dono liga a opção "Emito nota fiscal de produtos" nos Dados do negócio (RN35). Serviços não têm NCM (SPEC-021). |
+| RF87 | Todo produto/serviço deve poder ter um **código interno** do negócio, **opcional** e digitado pelo usuário (até 20 caracteres: letras sem acento, números, hífen, ponto, barra e sublinhado, guardado em maiúsculas), **único entre os itens ativos** do negócio. O código aparece no Catálogo, no Estoque, na Nova venda e na troca, no detalhe da venda, na rentabilidade por item e na exportação. A busca do Catálogo, do Estoque e da Nova venda encontra o item pelo código, e na Nova venda e na troca o código exato seguido de Enter adiciona o item, o que atende um leitor de código de barras que digita o código. O Catálogo mostra os itens sem código. O código de barras oficial (GTIN) fica para a Spec da nota fiscal (SPEC-024). |
 | RF12 | Um Serviço deve poder ter múltiplos materiais vinculados, sendo cada material um Produto Físico já cadastrado no Estoque. |
 | RF13 | Ao vincular um material a um Serviço, o sistema deve sugerir automaticamente a quantidade padrão de **1 unidade** por execução, permitindo edição posterior pelo usuário. |
 | RF14 | O cadastro do Produto Físico não deve incluir a quantidade em estoque no mesmo formulário de criação; a quantidade é definida em uma operação separada de entrada de estoque. |
@@ -89,6 +90,7 @@
 - **RN33** — A subcategoria só organiza o catálogo: não altera a margem padrão sugerida (que continua por categoria, RF36), o preço, o custo, o estoque nem as regras fiscais do item (SPEC-020).
 - **RN34** — O NCM é informado e conferido pelo negócio: o sistema só confere que o código existe na tabela vigente e sugere, sem nunca preencher sem a confirmação do usuário. O NCM não altera preço, margem, custo, estoque nem impostos calculados (SPEC-021).
 - **RN35** — Com a opção "Emito nota fiscal de produtos" ligada pelo Dono, o NCM é obrigatório no cadastro e na edição de produto físico, e produto físico sem NCM não pode ser vendido, nem em troca (como o item sem preço, RN23). Um NCM fora da tabela vigente não bloqueia a venda; os materiais consumidos por serviços não entram nessa regra (SPEC-021).
+- **RN40** — O código interno é do negócio: opcional, digitado pelo usuário (o sistema não gera nem sugere) e único entre os itens ativos do negócio, sem diferenciar maiúsculas. O item arquivado libera o código, e a reativação com o código em uso por outro item ativo é recusada. O código não altera preço, custo, margem, estoque, permissões nem regras fiscais (SPEC-024).
 
 ---
 
@@ -306,6 +308,7 @@
 | RN37 | Suporte só corrige a lista fechada, desfazível pelo Dono; nunca vendas, clientes, equipe, configurações, plano, acesso do suporte ou LGPD. |
 | RN38 | Emergência: duas contas de Administrador, só leitura, até 4 h, pedido expira em 12 h, visível ao Dono desde o pedido. |
 | RN39 | Negócio suspenso: somente leitura, exportação e exclusão mantidas, nada apagado. |
+| RN40 | Código interno do item: opcional, digitado pelo negócio, único entre os itens ativos; não entra em cálculo nem em regra fiscal. |
 
 ---
 

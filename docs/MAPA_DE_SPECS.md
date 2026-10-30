@@ -140,6 +140,7 @@ Também foram corrigidos, sem decisão nova: a ordem do cronograma da Visão (Ca
 | SPEC-021 | NCM nos produtos | 003, 004, 006, 007, 008, 011, 014, 016, 018, 020 |
 | SPEC-022 | Cliente com dados completos (CPF/CNPJ, endereço, e-mail e telefone) | 001, 004, 005, 008, 011, 014, 016, 018, 020, 021 |
 | SPEC-023 | Comissão em reais na Calculadora | 005, 006, 010, 016 |
+| SPEC-024 | Código interno dos itens | 005, 006, 007, 008, 011, 013, 014, 016, 018, 020, 021 |
 
 ```mermaid
 flowchart LR
@@ -189,11 +190,14 @@ flowchart LR
     S6 --> S23[SPEC-023 Comissão em reais]
     S10 --> S23
     S16 --> S23
+    S6 --> S24[SPEC-024 Código interno dos itens]
+    S13 --> S24
+    S21 --> S24
 ```
 
 **Ordem de execução combinada em 19/10/2026:** **N8 da SPEC-016** (menu lateral recolhível — concluída e homologada em 19/10/2026) → SPEC-020 (concluída em 20/10/2026) → SPEC-021 (concluída em 22/10/2026) → SPEC-022 (concluída em 26/10/2026) → SPEC-019 (antes de abrir a produção). A barra lateral recolhível, planejada como SPEC-021, já estava prevista na SPEC-016 e não tinha sido entregue: virou a nota N8 dela (divergência corrigida), e as Specs seguintes foram renumeradas (NCM → 021, Cliente completo → 022). Esses itens vêm da revisão de uma profissional da área financeira e contábil que está montando uma loja de semijoias; a SPEC-019 continua obrigatória antes da produção (2º fator do Administrador).
 
-**Acréscimo de 26/10/2026:** a mesma revisora pediu ver a comissão em reais na Calculadora, separada da maquininha → **SPEC-023** (aprovada em 26/10/2026 e **concluída em 29/10/2026**). Ela só muda a apresentação da Calculadora e do detalhe do item, sem banco nem permissões, e não depende da SPEC-019 (aprovada em 28/10/2026). Os próximos números ficam reservados: **SPEC-024** para o código interno dos itens e **SPEC-025** para a proposta de fornecedores e cliente nas contas a pagar e a receber, com busca pelo nome, da mesma revisão. As duas estão nas pendências abertas e ainda não foram geradas.
+**Acréscimo de 26/10/2026:** a mesma revisora pediu ver a comissão em reais na Calculadora, separada da maquininha → **SPEC-023** (aprovada em 26/10/2026 e **concluída em 29/10/2026**). Ela só muda a apresentação da Calculadora e do detalhe do item, sem banco nem permissões, e não depende da SPEC-019 (aprovada em 28/10/2026). Os próximos números ficam reservados: **SPEC-024** para o código interno dos itens (gerada e aprovada em 30/10/2026) e **SPEC-025** para a proposta de fornecedores e cliente nas contas a pagar e a receber, com busca pelo nome, da mesma revisão (ainda não gerada, nas pendências abertas).
 
 **Renumeração (29/10/2026, decisão da equipe):** para os números seguirem a ordem em que as Specs foram elaboradas, a Spec da comissão, aprovada como SPEC-024 (PR #110), passou a ser a **SPEC-023**, e a proposta de fornecedores passou a ser a **SPEC-024**. Os commits e a branch do PR #110 ainda usam o número antigo. **Nova ordem (29/10/2026):** o código interno dos itens, mais simples que a Spec do Financeiro, entra antes: fica com a **SPEC-024**, e a proposta de fornecedores passa à **SPEC-025**.
 
@@ -472,11 +476,25 @@ flowchart LR
 - **Dependências:** SPEC-005, SPEC-006, SPEC-010, SPEC-016
 - **Justificativa da ordem:** mudança pequena de apresentação, sem banco nem permissões; pode ser implementada em paralelo à SPEC-019.
 
+#### SPEC-024 — Código interno dos itens
+- **Spec:** [`specs/SPEC-024.md`](./specs/SPEC-024.md) (✅ aprovada em 30/10/2026, com as OPEN-001 a OPEN-006 decididas em entrevista; a OPEN-002 sem sugestão de código e a OPEN-005 com o detalhe da venda e a rentabilidade por item, por escolha da equipe; as demais pela opção recomendada; a implementar)
+- **Objetivo:** permitir que o negócio dê a cada produto ou serviço um **código próprio**, diferente do NCM, para encontrar o item pelo código:
+  - campo opcional, digitado pelo negócio, com até 20 caracteres, em maiúsculas e único entre os itens ativos;
+  - aparece e é buscado no Catálogo, no Estoque e na Nova venda e na troca, onde o código exato com Enter adiciona o item (o que atende um leitor de código de barras);
+  - aparece também no detalhe da venda, na rentabilidade por item e na exportação, e o Catálogo mostra os itens sem código.
+- **Valor entregue:** a loja que etiqueta as peças acha o item certo pelo código, sem rolar nomes parecidos, e vende mais rápido no balcão. O código fica pronto para o campo "código do produto" da futura nota fiscal.
+- **Origem:** ideia da equipe (29/10/2026), ligada à revisão da loja de semijoias.
+- **Decisões principais:** o sistema não gera nem sugere código; o item arquivado libera o código, como o nome; o código de barras oficial (GTIN) fica para a Spec da nota fiscal.
+- **RF:** RF87 (novo), RF07, RF08, RF09, RF23, RF70 · **RN:** RN40 (nova), RN23, RN35, RN37 · **RNF:** RNF01, RNF02, RNF04, RNF06, RNF10
+- **Entidades:** `Item` (campo novo `codigo`, único entre os ativos do negócio)
+- **Dependências:** SPEC-005, SPEC-006, SPEC-007, SPEC-008, SPEC-011, SPEC-013, SPEC-014, SPEC-016, SPEC-018, SPEC-020, SPEC-021
+- **Justificativa da ordem:** mais simples que a SPEC-025 (fornecedores), por isso vem antes (decisão da equipe, 29/10/2026); um campo no item, sem integração externa, e não depende da SPEC-019.
+
 ---
 
 ## 3. Cobertura da baseline
 
-Todos os 137 requisitos (RF01–RF86, RN01–RN39, RNF01–RNF12) estão associados a pelo menos uma Spec. Requisitos compartilhados aparecem em mais de uma Spec com escopos complementares:
+Todos os 139 requisitos (RF01–RF87, RN01–RN40, RNF01–RNF12) estão associados a pelo menos uma Spec. Requisitos compartilhados aparecem em mais de uma Spec com escopos complementares:
 
 | Requisito | Specs | Divisão |
 |---|---|---|
@@ -489,7 +507,8 @@ Todos os 137 requisitos (RF01–RF86, RN01–RN39, RNF01–RNF12) estão associa
 | RF47 | 005, 013 | Limite de convites (005); relatórios avançados (013) |
 | RF60 | 009, 010 | DAS como despesa fixa e conta mensal (009); Imposto% = 0 no markup (010) |
 | RF62 | 008, 010 | Gravação do custo unitário na venda (008); cálculo do CMV% (010) |
-| RF52 | 006, 010, 023 | Comissão percentual no item (006); despesa variável no preço (010); separada da maquininha e em reais (024) |
+| RF52 | 006, 010, 023 | Comissão percentual no item (006); despesa variável no preço (010); separada da maquininha e em reais (023) |
+| RF70 | 013, 024 | Relatório de rentabilidade por item (013); coluna do código interno (024) |
 | RN21 / RN25 | 010–012 | Regra aplicada nas agregações de cada Spec |
 | RN29 | 001, 008, 010, 012 | Utilitário de datas (001); aplicado nas vendas do dia, RBT12, competência e gráficos |
 | RF73 | 013, 015, 019 | Troca de plano simulada (013); troca pelo gateway de pagamento (015, opcional); troca pela plataforma, com duas pessoas (019, RF86) |
@@ -546,6 +565,7 @@ A conferência do seed fiscal foi concluída em 03/10/2026 (DAS do MEI atualizad
   Baseline ajustada (RF22, RF58, RF76 e RN27 alterados; RF81 e RN36 novos). **Implementada em 23/10/2026** (PR #106) e verificada em build local (testes T01–T12 e o roteiro T13 com 120 verificações), sem divergência conhecida. Política de Privacidade e Termos na versão 2026-10-23, com novo aceite. **Homologada em 26/10/2026** (T14), com a consulta real de CEP e CNPJ. O município sem acento vindo do CNPJ foi corrigido no PR #108 (o endereço é completado pelo CEP); uma rua com outra grafia na Receita e nos Correios fica a do CNPJ, por decisão da equipe. Na homologação apareceu também a pendência "Encerrar negócio e liberar o CNPJ". Concluída.
 - [SPEC-019](specs/SPEC-019.md) (suporte com edição, emergência, ações de plataforma e 2º fator): aprovada em 28/10/2026, com as OPEN-001 a OPEN-014 decididas em entrevista (pela opção recomendada, com os ajustes de 12 h e de duas pessoas na troca de plano). Baseline ajustada (RF73–RF77, RN30–RN32 e RNF12 alterados; RF82–RF86 e RN37–RN39 novos; ADR-008 ampliada). A implementar, antes de abrir a produção.
 - [SPEC-023](specs/SPEC-023.md) (comissão em reais na Calculadora): aprovada em 26/10/2026, com as OPEN-001 a OPEN-006 decididas em entrevista, todas pela opção recomendada. A comissão aparece separada da maquininha e em reais, não entra no custo e continua só percentual. Baseline ajustada (RF52 e, na identidade visual, até 6 séries nos gráficos). **Implementada em 29/10/2026** (PR #113) e verificada em build local (testes T01–T05 e o roteiro no navegador com 41 verificações), com a 6ª cor da paleta (ameixa) escolhida pelo validador. **Homologada em 29/10/2026** (T08), sem divergência: as observações (um centavo de arredondamento no custo do item e os percentuais inteiros da barra) são o comportamento previsto. Concluída.
+- [SPEC-024](specs/SPEC-024.md) (código interno dos itens): aprovada em 30/10/2026, com as OPEN-001 a OPEN-006 decididas em entrevista. O código é opcional, digitado pelo negócio (sem sugestão), em produtos e serviços, único entre os itens ativos; aparece e é buscado no Catálogo, no Estoque e na Nova venda (código exato + Enter), no detalhe da venda e na rentabilidade por item. O GTIN fica para a Spec da nota fiscal. Baseline ajustada (RF87 e RN40 novos). A implementar.
 - `main`: atualizada até a SPEC-020 (PR #105, 22/10/2026: homologação da SPEC-018, N8 da SPEC-016 e SPEC-020, até o PR #101 da `DEVELOP`), sem ambiente de produção ainda (a migração na `main` é pulada enquanto não houver o banco de produção). As SPEC-021, SPEC-022 e SPEC-023 vão na próxima release.
 - **E-mails e domínio:** domínio próprio `.com.br` (Registro.br) verificado no Resend, que também passa a ser o SMTP do Supabase Auth ([ADR-009](definicoes_arquitetura/adrs-he.md), 18/10/2026); aguarda a compra.
 
@@ -563,4 +583,4 @@ Lista mantida até cada item ser resolvido; quem retomar o projeto (em qualquer 
 | 6 | **Encerrar negócio e liberar o CNPJ** (encontrada em 26/10/2026, na homologação da SPEC-022): hoje não há como o Dono encerrar um negócio sem excluir a conta inteira (SPEC-014). Mesmo encerrado, o negócio continua com o CNPJ, que é único entre **todos** os negócios, e o cadastro recusa um CNPJ já usado. Também não há como transferir o negócio para outro Dono. Assim, um negócio cadastrado por engano ou fechado prende o CNPJ: ninguém mais consegue cadastrá-lo. Decidir se vira Spec, com as questões: (a) o Dono encerra um negócio sozinho, com confirmação; (b) o CNPJ fica livre ao encerrar, mantendo os registros fiscais por 5 anos (RN27); (c) transferir o negócio para outro membro como Dono. **Contorno na homologação (aplicado em 26/10/2026):** o negócio de teste foi encerrado e o CNPJ tirado dele direto no banco (SQL Editor do Supabase), e o negócio foi cadastrado na conta certa. Nunca usar na produção. **Acréscimo da SPEC-019 (OPEN-010, 28/10/2026):** a Spec desta pendência também cobre recuperar a conta do Dono sem acesso, e a **troca do e-mail do Dono é a funcionalidade prioritária**, com verificação de identidade própria (é o caminho clássico para roubar uma conta) | Aberta |
 | 7 | **Comissão gravada na venda** (evolução registrada pela SPEC-023, OPEN-005 e OPEN-006): gravar a comissão do momento em cada linha da venda, para descontá-la na **rentabilidade por item** (RF70) e considerar a comissão média no **ponto de equilíbrio** e na **meta** (RF55, RF56). Hoje a rentabilidade mostra margem = faturamento − custo, maior do que a real para quem paga comissão. Combina com uma futura Spec de comissões a pagar por vendedor (no MVP não há repasse, RN20) | Registrada; evolução futura |
 | 8 | **SPEC-025** (proposta da mesma revisão): cadastro de fornecedores no Financeiro (só o nome obrigatório; CPF/CNPJ pela consulta pública, telefone e e-mail opcionais), fornecedor ou cliente opcional nas contas a pagar e a receber e nas despesas fixas, e busca das contas pelo nome do cliente ou do fornecedor e pela descrição. A decidir na entrevista: LGPD do fornecedor pessoa física e quem vê o nome do cliente no Financeiro | Proposta; aguarda o pedido da equipe |
-| 9 | **SPEC-024** (código interno dos itens, ideia da equipe em 29/10/2026): um código próprio do negócio para cada produto ou serviço, diferente do NCM, para encontrar o item pelo código no Catálogo e no Estoque (a busca dos dois é a mesma função) e, se a equipe decidir, na Nova venda. Também serve ao campo "código do produto" (`cProd`) que a NF-e pede em cada item. A decidir na entrevista: obrigatório ou opcional; livre ou gerado; único no negócio e formato; serviços também; onde aparece; código de barras (GTIN) junto ou depois | A gerar (antes da SPEC-025) |
+| 9 | **SPEC-024** (código interno dos itens): implementar, testar e homologar. Aprovada em 30/10/2026: código opcional, digitado pelo negócio, em produtos e serviços, único entre os itens ativos; busca e Enter na Nova venda; detalhe da venda e rentabilidade por item | Aprovada; a implementar |
