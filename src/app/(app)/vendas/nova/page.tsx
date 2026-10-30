@@ -51,6 +51,7 @@ export default async function NovaVenda() {
         itens={itens.map((i) => ({
           id: i.id,
           nome: i.nome,
+          codigo: i.codigo,
           tipo: i.tipo,
           unidade: rotuloUnidade(i.unidadeMedida),
           preco: i.preco,

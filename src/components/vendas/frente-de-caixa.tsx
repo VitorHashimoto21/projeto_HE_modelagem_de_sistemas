@@ -8,7 +8,7 @@ import { Aviso, MensagemDeCampo } from "@/components/acesso/campos";
 import { classeDoCampo } from "@/components/ui/classes";
 import { classeDoBotao, classeDoLink } from "@/components/ui/estilos";
 import { Superficie, TituloDaSuperficie } from "@/components/ui/superficie";
-import { lerNumero } from "@/lib/dominio/catalogo";
+import { codigoExatoPrimeiro, itemPeloCodigo, lerNumero, normalizarCodigo } from "@/lib/dominio/catalogo";
 import { somarDias } from "@/lib/dominio/estoque";
 import {
   acertoDoCancelamento,
@@ -33,6 +33,8 @@ import { GavetaDeMateriais, GavetaDePreco, type MaterialDaLinha } from "./ajuste
 export type ItemDaFrente = {
   id: string;
   nome: string;
+  /** SPEC-024: código interno (busca e Enter com o código exato). */
+  codigo: string | null;
   tipo: "PRODUTO_FISICO" | "SERVICO";
   unidade: string;
   preco: number;
@@ -91,6 +93,8 @@ export function FrenteDeCaixa({
   // Identificador do carrinho = id da venda: reenviar o mesmo carrinho não cria outra venda (INV-009).
   const [carrinhoId] = useState(() => crypto.randomUUID());
   const [busca, setBusca] = useState("");
+  /** SPEC-024 (5.4): o código digitado com Enter que não é de nenhum item à venda. */
+  const [codigoSemItem, setCodigoSemItem] = useState<string | null>(null);
   const [linhas, setLinhas] = useState<Linha[]>([]);
   const [clientes, setClientes] = useState(clientesIniciais);
   const [clienteId, setClienteId] = useState(clienteInicial ?? "");
@@ -108,7 +112,13 @@ export function FrenteDeCaixa({
 
   const porId = useMemo(() => new Map(itens.map((i) => [i.id, i])), [itens]);
   const termo = busca.trim().toLowerCase();
-  const filtrados = termo ? itens.filter((i) => i.nome.toLowerCase().includes(termo)) : itens;
+  // SPEC-024 (5.4): pelo nome ou pelo código interno, com o código exato primeiro.
+  const filtrados = termo
+    ? codigoExatoPrimeiro(
+        itens.filter((i) => i.nome.toLowerCase().includes(termo) || !!i.codigo?.toLowerCase().includes(termo)),
+        busca,
+      )
+    : itens;
   const naLista = filtrados.slice(0, MAX_NA_LISTA);
 
   const linhasCalc = linhas.map((l) => {
@@ -176,6 +186,20 @@ export function FrenteDeCaixa({
         : [...ls, { itemId: id, quantidade: "1" }],
     );
     setBusca("");
+    setCodigoSemItem(null);
+  }
+  /**
+   * Enter na busca (SPEC-024, 5.4, INV-005): o código exato de um item à venda o adiciona, como o toque
+   * (também com o leitor de código de barras, que digita o código e o Enter). Nunca envia a venda.
+   * Sem item com o código, o texto fica selecionado: a próxima leitura o substitui, em vez de se juntar a ele.
+   */
+  function enterNaBusca(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key !== "Enter" || e.nativeEvent.isComposing) return;
+    e.preventDefault();
+    const item = itemPeloCodigo(busca, itens);
+    if (item) return adicionar(item.id);
+    setCodigoSemItem(normalizarCodigo(busca) || null);
+    e.currentTarget.select();
   }
   function mudarQuantidade(idx: number, passo: number) {
     const atual = lerNumero(linhas[idx].quantidade) ?? 0;
@@ -272,8 +296,12 @@ export function FrenteDeCaixa({
                 id="busca-item"
                 type="search"
                 value={busca}
-                onChange={(e) => setBusca(e.target.value)}
-                placeholder={itens.length ? "Ex.: manicure" : "Nenhum item com preço oficial no catálogo"}
+                onChange={(e) => {
+                  setBusca(e.target.value);
+                  setCodigoSemItem(null);
+                }}
+                onKeyDown={enterNaBusca}
+                placeholder={itens.length ? "Nome ou código, ex.: manicure" : "Nenhum item com preço oficial no catálogo"}
                 disabled={!itens.length}
                 autoComplete="off"
                 className={cn(classeDoCampo(), "h-12 rounded-full pl-11 text-base sm:text-sm")}
@@ -296,6 +324,7 @@ export function FrenteDeCaixa({
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-[15px] font-bold text-foreground">{i.nome}</span>
                         <span className={cn("block text-xs font-semibold", semSaldo ? "text-status-warn" : "text-muted-foreground")}>
+                          {i.codigo && `${i.codigo} · `}
                           {i.saldo === null ? "Serviço" : semSaldo ? "Sem estoque" : `${quantos(i.saldo)} em estoque`}
                         </span>
                       </span>
@@ -314,10 +343,17 @@ export function FrenteDeCaixa({
               })}
             </ul>
           )}
-          {termo && filtrados.length === 0 && <p className="border-t px-5 py-4 text-sm text-muted-foreground">Nenhum item encontrado. Só aparecem itens com preço oficial.</p>}
+          {codigoSemItem ? (
+            <p role="status" className="border-t px-5 py-4 text-sm text-muted-foreground">
+              Nenhum item à venda com o código {codigoSemItem}.
+            </p>
+          ) : (
+            termo &&
+            filtrados.length === 0 && <p className="border-t px-5 py-4 text-sm text-muted-foreground">Nenhum item encontrado. Só aparecem itens com preço oficial.</p>
+          )}
           {filtrados.length > MAX_NA_LISTA && (
             <p className="border-t px-5 py-3 text-xs text-muted-foreground">
-              Mostrando {MAX_NA_LISTA} de {filtrados.length}. Busque pelo nome para achar os outros.
+              Mostrando {MAX_NA_LISTA} de {filtrados.length}. Busque pelo nome ou pelo código para achar os outros.
             </p>
           )}
         </Superficie>

@@ -1,6 +1,6 @@
 import type { CategoriaItem, OrigemPreco, TipoItem } from "@/generated/prisma/enums";
 import type { DadosDaSubcategoria, DadosDoItem, MaterialInformado } from "@/lib/catalogo/validacao";
-import { custoTotal, normalizarNome } from "@/lib/dominio/catalogo";
+import { codigoExatoPrimeiro, custoTotal, normalizarNome } from "@/lib/dominio/catalogo";
 import { hoje } from "@/lib/dominio/datas";
 import { descricaoDoNcm, LIMITE_DA_BUSCA, prefixoDeNcmNaBusca, termosDaBusca } from "@/lib/dominio/ncm";
 import type { ClienteDoNegocio } from "./cliente-do-negocio";
@@ -61,6 +61,23 @@ export class NcmObrigatorio extends Error {
     this.name = "NcmObrigatorio";
   }
 }
+/** SPEC-024 (5.2): o código interno já é usado por outro item ativo do negócio. */
+export class CodigoEmUso extends Error {
+  constructor(
+    public readonly codigo: string,
+    public readonly nomeDoOutro: string,
+  ) {
+    super("Código interno em uso.");
+    this.name = "CodigoEmUso";
+  }
+}
+/** SPEC-024 (5.2): reativar um item cujo código outro item ativo já usa. */
+export class CodigoEmUsoAoReativar extends Error {
+  constructor(public readonly codigo: string) {
+    super("Código interno em uso ao reativar.");
+    this.name = "CodigoEmUsoAoReativar";
+  }
+}
 /** Nome já usado na mesma categoria do negócio (INV-003). */
 export class SubcategoriaRepetida extends Error {
   constructor(
@@ -74,7 +91,7 @@ export class SubcategoriaRepetida extends Error {
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const num = (d: { toString(): string } | null) => (d === null ? null : Number(d.toString()));
-const ehUnicidadeDoNome = (e: unknown) =>
+const ehUnicidade = (e: unknown) =>
   typeof e === "object" && e !== null && (e as { code?: string }).code === "P2002";
 const subcategoriaDoItem = { select: { id: true, nome: true } } as const;
 
@@ -85,6 +102,9 @@ export const SEM_SUBCATEGORIA = "sem";
 export type FiltroDeNcm = "sem" | "revisar";
 export const FILTROS_DE_NCM: FiltroDeNcm[] = ["sem", "revisar"];
 
+/** SPEC-024 (5.5): itens ativos sem código interno. */
+export type FiltroDeCodigo = "sem";
+
 export type FiltroDoCatalogo = {
   busca?: string;
   tipo?: TipoItem;
@@ -92,6 +112,8 @@ export type FiltroDoCatalogo = {
   subcategoria?: string;
   arquivados?: boolean;
   ncm?: FiltroDeNcm;
+  /** SPEC-024 (5.5): só os itens sem código interno. */
+  codigo?: FiltroDeCodigo;
 };
 
 /** Condição do filtro de subcategoria (5.4); valor inválido não filtra. */
@@ -103,13 +125,16 @@ export function condicaoDaSubcategoria(subcategoria?: string): { subcategoriaId?
 /**
  * Busca por texto no nome do item ou da subcategoria (SPEC-020, 5.4), sem diferenciar maiúsculas.
  * Só dígitos (com pontos ou espaços, ao menos 2): também pelo começo do NCM (SPEC-021, 5.5).
+ * Também pelo código interno que contém o texto (SPEC-024, 5.4); o exato vem primeiro (`codigoExatoPrimeiro`).
  */
 export function condicaoDaBusca(busca?: string) {
   const texto = busca?.trim();
   if (!texto) return {};
   const contem = { contains: texto, mode: "insensitive" as const };
   const prefixo = prefixoDeNcmNaBusca(texto);
-  return { OR: [{ nome: contem }, { subcategoria: { nome: contem } }, ...(prefixo ? [{ ncm: { startsWith: prefixo } }] : [])] };
+  return {
+    OR: [{ nome: contem }, { subcategoria: { nome: contem } }, { codigo: contem }, ...(prefixo ? [{ ncm: { startsWith: prefixo } }] : [])],
+  };
 }
 
 /** Linha da tabela NCM vigente no dia (AAAA-MM-DD). */
@@ -138,6 +163,8 @@ export type ItemResumido = {
   id: string;
   tipo: TipoItem;
   nome: string;
+  /** SPEC-024: código interno, ou null. */
+  codigo: string | null;
   categoria: CategoriaItem;
   subcategoria: SubcategoriaDoItem;
   unidadeMedida: string;
@@ -243,9 +270,23 @@ export function criarConsultasDoCatalogo(cliente: ClienteDoNegocio, negocioId: s
     return codigos.filter((c) => !ok.has(c));
   }
 
+  /** O item ativo (outro que não `excetoId`) que já usa o código (SPEC-024, 5.2), ou null. */
+  async function donoDoCodigo(tx: ClienteDoNegocio, codigo: string | null, excetoId?: string) {
+    if (codigo === null) return null;
+    return tx.item.findFirst({ where: { codigoChave: codigo, ...(excetoId ? { id: { not: excetoId } } : {}) }, select: { nome: true } });
+  }
+
+  /** Conflito de unicidade (P2002): o código, se outro item ativo o usa; senão, o nome (INV-001, OPEN-003 da SPEC-006). */
+  async function erroDeUnicidade(codigo: string | null, excetoId?: string): Promise<Error> {
+    const outro = await donoDoCodigo(cliente, codigo, excetoId);
+    return outro && codigo ? new CodigoEmUso(codigo, outro.nome) : new NomeDuplicado();
+  }
+
   const camposDoItem = (d: DadosDoItem) => ({
     nome: d.nome,
     nomeChave: d.nomeChave,
+    codigo: d.codigo,
+    codigoChave: d.codigo,
     categoria: d.categoria,
     subcategoriaId: d.subcategoriaId,
     ncm: d.tipo === "PRODUTO_FISICO" ? d.ncm : null,
@@ -279,12 +320,15 @@ export function criarConsultasDoCatalogo(cliente: ClienteDoNegocio, negocioId: s
           ...(filtro.ncm === "sem" ? { tipo: "PRODUTO_FISICO" as const, ncm: null } : {}),
           ...(filtro.ncm === "revisar" ? { tipo: "PRODUTO_FISICO" as const, ncm: { in: foraDaTabela } } : {}),
           ...(filtro.categoria ? { categoria: filtro.categoria, ...condicaoDaSubcategoria(filtro.subcategoria) } : {}),
+          // SPEC-024 (5.5): itens sem código interno.
+          ...(filtro.codigo === "sem" ? { codigo: null } : {}),
           ...condicaoDaBusca(filtro.busca),
         },
         select: {
           id: true,
           tipo: true,
           nome: true,
+          codigo: true,
           categoria: true,
           subcategoria: subcategoriaDoItem,
           unidadeMedida: true,
@@ -296,10 +340,11 @@ export function criarConsultasDoCatalogo(cliente: ClienteDoNegocio, negocioId: s
         orderBy: { nome: "asc" },
         take: 1000,
       });
-      return itens.map((i) => ({
+      const resumidos = itens.map((i) => ({
         id: i.id,
         tipo: i.tipo,
         nome: i.nome,
+        codigo: i.codigo,
         categoria: i.categoria,
         subcategoria: i.subcategoria,
         unidadeMedida: i.unidadeMedida,
@@ -312,6 +357,8 @@ export function criarConsultasDoCatalogo(cliente: ClienteDoNegocio, negocioId: s
         ),
         arquivado: i.arquivadoEm !== null,
       }));
+      // SPEC-024 (5.4): o item com o código exato da busca vem primeiro.
+      return codigoExatoPrimeiro(resumidos, filtro.busca);
     },
 
     async detalhar(id: string): Promise<DetalheDoItem> {
@@ -347,6 +394,7 @@ export function criarConsultasDoCatalogo(cliente: ClienteDoNegocio, negocioId: s
         id: i.id,
         tipo: i.tipo,
         nome: i.nome,
+        codigo: i.codigo,
         categoria: i.categoria,
         subcategoria: i.subcategoria,
         unidadeMedida: i.unidadeMedida,
@@ -382,6 +430,8 @@ export function criarConsultasDoCatalogo(cliente: ClienteDoNegocio, negocioId: s
           await conferirMateriais(tx as ClienteDoNegocio, dados.materiais);
           await conferirSubcategoria(tx as ClienteDoNegocio, dados);
           await conferirNcm(tx as ClienteDoNegocio, dados, null);
+          const outro = await donoDoCodigo(tx as ClienteDoNegocio, dados.codigo);
+          if (outro) throw new CodigoEmUso(dados.codigo!, outro.nome);
           const item = await tx.item.create({
             data: { ...camposDoItem(dados), negocioId, tipo: dados.tipo, quantidadeEstoque: 0 },
             select: { id: true },
@@ -397,7 +447,7 @@ export function criarConsultasDoCatalogo(cliente: ClienteDoNegocio, negocioId: s
           return item.id;
         });
       } catch (e) {
-        if (ehUnicidadeDoNome(e)) throw new NomeDuplicado();
+        if (ehUnicidade(e)) throw await erroDeUnicidade(dados.codigo);
         throw e;
       }
     },
@@ -412,11 +462,18 @@ export function criarConsultasDoCatalogo(cliente: ClienteDoNegocio, negocioId: s
           if (atual.tipo === "SERVICO") await conferirMateriais(tx as ClienteDoNegocio, dados.materiais, id);
           await conferirSubcategoria(tx as ClienteDoNegocio, dados);
           await conferirNcm(tx as ClienteDoNegocio, dados, atual.ncm);
+          // SPEC-024 (5.2): o arquivado não ocupa o código, então só o item ativo confere a repetição.
+          const outro = atual.arquivadoEm ? null : await donoDoCodigo(tx as ClienteDoNegocio, dados.codigo, id);
+          if (outro) throw new CodigoEmUso(dados.codigo!, outro.nome);
           await tx.item.update({
             where: { id },
-            // Arquivado não ocupa o nome (OPEN-003): a chave só volta ao reativar.
+            // Arquivado não ocupa o nome nem o código (OPEN-003; SPEC-024, RN40): as chaves só voltam ao reativar.
             // O mínimo manual não muda pela edição do Catálogo: depois do cadastro, só pelo Estoque (SPEC-007, OPEN-001).
-            data: { ...semMinimo(camposDoItem(dados)), nomeChave: atual.arquivadoEm ? null : dados.nomeChave },
+            data: {
+              ...semMinimo(camposDoItem(dados)),
+              nomeChave: atual.arquivadoEm ? null : dados.nomeChave,
+              codigoChave: atual.arquivadoEm ? null : dados.codigo,
+            },
           });
           if (atual.tipo === "SERVICO") {
             await tx.materialServico.deleteMany({ where: { servicoId: id } });
@@ -428,9 +485,18 @@ export function criarConsultasDoCatalogo(cliente: ClienteDoNegocio, negocioId: s
           }
         });
       } catch (e) {
-        if (ehUnicidadeDoNome(e)) throw new NomeDuplicado();
+        if (ehUnicidade(e)) throw await erroDeUnicidade(dados.codigo, id);
         throw e;
       }
+    },
+
+    /** Contagens do link "Itens sem código" (SPEC-024, 5.5): itens ativos com e sem código interno. */
+    async contagensDoCodigo(): Promise<{ comCodigo: number; semCodigo: number }> {
+      const [comCodigo, semCodigo] = await Promise.all([
+        cliente.item.count({ where: { arquivadoEm: null, codigo: { not: null } } }),
+        cliente.item.count({ where: { arquivadoEm: null, codigo: null } }),
+      ]);
+      return { comCodigo, semCodigo };
     },
 
     /** Contagens do Catálogo (5.5): produtos físicos ativos sem NCM e com NCM fora da tabela vigente. */
@@ -553,21 +619,34 @@ export function criarConsultasDoCatalogo(cliente: ClienteDoNegocio, negocioId: s
     /** Arquiva (some das listas e escolhas; libera o nome) ou reativa (OPEN-001). */
     async arquivar(id: string, arquivar: boolean): Promise<{ usadoEm: { id: string; nome: string }[] }> {
       if (!UUID.test(id)) throw new ItemNaoEncontrado();
+      let codigo: string | null = null;
       try {
         return await cliente.$transaction(async (tx) => {
           const i = await tx.item.findFirst({
             where: { id },
-            select: { nome: true, usadoEm: { where: { servico: { arquivadoEm: null } }, select: { servico: { select: { id: true, nome: true } } } } },
+            select: {
+              nome: true,
+              codigo: true,
+              usadoEm: { where: { servico: { arquivadoEm: null } }, select: { servico: { select: { id: true, nome: true } } } },
+            },
           });
           if (!i) throw new ItemNaoEncontrado();
+          codigo = i.codigo;
+          // SPEC-024 (5.2, INV-006): reativar com o código em uso por outro item ativo é recusado.
+          if (!arquivar && (await donoDoCodigo(tx as ClienteDoNegocio, i.codigo, id))) throw new CodigoEmUsoAoReativar(i.codigo!);
           await tx.item.update({
             where: { id },
-            data: arquivar ? { arquivadoEm: new Date(), nomeChave: null } : { arquivadoEm: null, nomeChave: normalizarNome(i.nome) },
+            data: arquivar
+              ? { arquivadoEm: new Date(), nomeChave: null, codigoChave: null }
+              : { arquivadoEm: null, nomeChave: normalizarNome(i.nome), codigoChave: i.codigo },
           });
           return { usadoEm: arquivar ? i.usadoEm.map((u) => u.servico) : [] };
         });
       } catch (e) {
-        if (ehUnicidadeDoNome(e)) throw new NomeDuplicado();
+        if (ehUnicidade(e)) {
+          const erro = await erroDeUnicidade(codigo, id);
+          throw erro instanceof CodigoEmUso ? new CodigoEmUsoAoReativar(erro.codigo) : erro;
+        }
         throw e;
       }
     },
@@ -601,7 +680,7 @@ export function criarConsultasDoCatalogo(cliente: ClienteDoNegocio, negocioId: s
           select: { id: true, categoria: true, nome: true },
         });
       } catch (e) {
-        if (ehUnicidadeDoNome(e)) throw new SubcategoriaRepetida(d.nome, d.categoria);
+        if (ehUnicidade(e)) throw new SubcategoriaRepetida(d.nome, d.categoria);
         throw e;
       }
     },
@@ -618,7 +697,7 @@ export function criarConsultasDoCatalogo(cliente: ClienteDoNegocio, negocioId: s
           select: { id: true, categoria: true, nome: true },
         });
       } catch (e) {
-        if (ehUnicidadeDoNome(e)) throw new SubcategoriaRepetida(nome.nome, atual.categoria);
+        if (ehUnicidade(e)) throw new SubcategoriaRepetida(nome.nome, atual.categoria);
         throw e;
       }
     },

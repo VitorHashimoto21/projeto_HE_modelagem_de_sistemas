@@ -1,6 +1,6 @@
 # SPEC-024 — Código interno dos itens
 
-> **Status:** ✅ **Aprovada em 30/10/2026**, a implementar. As questões em aberto foram decididas pela equipe em entrevista (seção 13):
+> **Status:** ✅ **Aprovada e implementada em 30/10/2026**, verificada em build local: testes T01 a T08 automatizados e o roteiro no navegador (T09 e T10) com 111 verificações ([evidências](evidencias/SPEC-024/README.md)). Falta a homologação (T11). As notas da implementação estão depois da seção 9. As questões em aberto foram decididas pela equipe em entrevista (seção 13):
 > - o código é **opcional**, em **produtos e serviços**, e o Catálogo mostra os **itens sem código** (OPEN-001 e OPEN-004, pela opção recomendada);
 > - o código é **digitado pelo negócio**: o sistema não gera nem sugere (OPEN-002; a equipe preferiu esta opção à recomendada, que sugeria o próximo código da subcategoria);
 > - tem até **20 caracteres**, fica em **maiúsculas** e é **único entre os itens ativos** do negócio (OPEN-003, pela opção recomendada);
@@ -258,6 +258,34 @@ A loja de semijoias tem dezenas de brincos e colares com nomes parecidos e etiqu
 | **Rentabilidade por item** (SPEC-013) | Sem mudança | + código atual de cada item; coluna "Código" no CSV e no PDF | — |
 | **Exportação** (SPEC-014) | Sem mudança | + `codigo` nos itens | — |
 
+**Implementação (30/10/2026):**
+- **Banco** (migração `20261030160000_codigo_interno`):
+  - `Item.codigo` e `Item.codigoChave`, de até 20 caracteres, com a unicidade em `(negocioId, codigoChave)`. A chave é o próprio código enquanto o item está ativo e fica nula quando ele é arquivado, como o `nomeChave` (SPEC-006);
+  - CHECKs do formato (`Item_codigo_formato`) e da chave coerente com o arquivamento (`Item_codigo_chave`).
+- **Domínio** (`src/lib/dominio/catalogo.ts`): `normalizarCodigo`, `codigoValido`, `itemPeloCodigo` (o Enter, INV-005) e `codigoExatoPrimeiro`.
+- **Validação e dados:**
+  - `validarItem` lê e confere o código;
+  - o Catálogo grava, confere o código em uso (com o nome do outro item) e recusa a reativação com o código em uso;
+  - `condicaoDaBusca` (Catálogo e Estoque) encontra pelo código, o filtro "sem código" e a contagem do link;
+  - itens vendáveis, detalhe da venda e rentabilidade trazem o código.
+- **Telas:**
+  - campo no formulário do item;
+  - código nas listas e nos detalhes do Catálogo e do Estoque, nos resultados da busca e no detalhe da venda;
+  - link "Itens sem código";
+  - Enter na Nova venda e na troca (`FrenteDeCaixa`);
+  - coluna "Código" na rentabilidade (tela, CSV e PDF).
+- **Testes:** `test/unit/codigo-interno.test.ts` (T01, T02 e T07) e `test/integracao/codigo-interno.test.ts` (T03 a T06 e T08).
+- Sem ação nova, permissão nova ou integração externa. A exportação traz o código sem mudança no código dela, porque exporta todos os campos do item. Ela traz também a coluna interna `codigoChave`, como já trazia o `nomeChave`.
+
+**Decisões de implementação (sem mudar o comportamento da Spec):**
+- **Unicidade por coluna de chave:** a garantia "só entre os ativos" usa a coluna `codigoChave` e um índice único comum, e não um índice parcial. Um índice parcial não é representado no schema do Prisma e quebraria a checagem de divergência do CI (`migrate diff`).
+- **Código sem item:** depois de um Enter sem item com o código, o texto fica **selecionado**, e a mensagem aparece. A leitura seguinte do leitor substitui o texto em vez de se juntar a ele. Encontrado no roteiro.
+- **Campo controlado:** o campo do código é controlado (como o custo). Assim, o código recusado pelo servidor continua no campo, porque o React 19 reinicia os campos não controlados depois de cada envio. Encontrado no roteiro.
+- **Rentabilidade no celular:** o cartão do item não tem linha de baixo. O código aparece numa linha própria, "Código BR-015", abaixo do nome.
+- **Busca da Nova venda:** o exemplo do campo passou a "Nome ou código, ex.: manicure".
+
+**Observação encontrada no roteiro, fora desta Spec (SPEC-006):** o reinício dos campos depois de uma recusa do servidor também afeta o **nome** e os outros campos não controlados do formulário do item. Com o nome em uso, a edição volta ao nome original, e o cadastro perde o nome, a categoria e a unidade. Propostas: (1) corrigir a implementação; (2) manter. Registrada no Mapa para decisão da equipe ([evidências](evidencias/SPEC-024/README.md#encontrado-no-roteiro)).
+
 ---
 
 ## 10. Requisitos não funcionais aplicáveis
@@ -347,12 +375,12 @@ Todas decididas pela equipe em 30/10/2026, em entrevista:
 
 A SPEC-024 estará concluída quando:
 
-- [ ] todos os critérios de aceitação (CA-01 a CA-13) estiverem implementados;
-- [ ] todos os invariantes (INV-001 a INV-006) estiverem preservados;
-- [ ] os testes derivados (T01 a T11) estiverem aprovados, com o CI verde no PR;
-- [ ] os RNFs aplicáveis (RNF01, RNF02, RNF04, RNF06, RNF10) tiverem sido verificados como descrito na seção 10;
+- [x] todos os critérios de aceitação (CA-01 a CA-13) estiverem implementados — por testes e no navegador (build local, 30/10/2026);
+- [x] todos os invariantes (INV-001 a INV-006) estiverem preservados — testes T01 a T08 e o roteiro;
+- [ ] os testes derivados (T01 a T11) estiverem aprovados, com o CI verde no PR — T01 a T10 aprovados; falta a homologação (T11);
+- [x] os RNFs aplicáveis (RNF01, RNF02, RNF04, RNF06, RNF10) tiverem sido verificados como descrito na seção 10 — capturas em 390, 768 e 1440 px nos dois temas, axe, isolamento (T03, T05) e exportação (T06);
 - [x] as questões OPEN-001 a OPEN-006 tiverem sido decididas e registradas (30/10/2026), com o RF87 e a RN40 incluídos na baseline;
-- [ ] não existir divergência conhecida entre a implementação e esta Spec;
-- [ ] toda divergência em relação à baseline tiver sido explicitamente analisada e registrada nos documentos.
+- [x] não existir divergência conhecida entre a implementação e esta Spec — as decisões de implementação (seção 9) não mudam o comportamento;
+- [x] toda divergência em relação à baseline tiver sido explicitamente analisada e registrada nos documentos — a observação da SPEC-006, encontrada no roteiro, está no Mapa.
 
 **Regra fundamental:** a implementação obedece a esta Spec aprovada. Se surgir conflito entre código, Spec e documentos de modelagem, o comportamento não é alterado em silêncio: a divergência é registrada com a proposta de (1) corrigir a implementação ou (2) alterar a baseline, e a decisão é da equipe.

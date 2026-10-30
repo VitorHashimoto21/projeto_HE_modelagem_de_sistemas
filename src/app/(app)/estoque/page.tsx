@@ -79,7 +79,7 @@ export default async function Estoque({ searchParams }: PageProps<"/estoque">) {
         <form method="get" className="flex flex-wrap gap-2" role="search">
           {situacao && <input type="hidden" name="situacao" value={situacao} />}
           <label className="sr-only" htmlFor="busca">
-            Buscar por nome, subcategoria ou NCM
+            Buscar por nome, código, subcategoria ou NCM
           </label>
           <div className="relative min-w-0 flex-1 basis-52">
             <Search aria-hidden="true" className="pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -128,6 +128,7 @@ export default async function Estoque({ searchParams }: PageProps<"/estoque">) {
                   <div className="min-w-0 flex-1 basis-48">
                     <p className="truncate text-[15px] font-bold text-foreground">{pr.nome}</p>
                     <p className="text-xs text-muted-foreground">
+                      {pr.codigo && `${pr.codigo} · `}
                       {ROTULO_CATEGORIA[pr.categoria]}
                       {pr.subcategoria && ` › ${pr.subcategoria.nome}`}, mínimo {pr.minimo ? `${quantidade(pr.minimo.valor)} (${pr.minimo.origem})` : "não definido"}
                     </p>

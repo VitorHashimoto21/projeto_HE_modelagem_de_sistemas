@@ -98,7 +98,11 @@ export default async function DetalheDaVenda({ params, searchParams }: PageProps
               {v.itensVenda.map((i, idx) => (
                 <li key={`${i.itemId}-${idx}`} className="py-3 text-sm">
                   <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-                    <span className="min-w-0 font-semibold text-foreground">{i.nome}</span>
+                    <span className="min-w-0 font-semibold text-foreground">
+                      {/* SPEC-024 (5.3): o código atual do item, no mesmo tom do nome. */}
+                      {i.codigo && `${i.codigo} · `}
+                      {i.nome}
+                    </span>
                     <span className="text-muted-foreground tabular-nums">
                       {qtd(i.quantidade)} {rotuloUnidade(i.unidadeMedida).toLowerCase()} × {brl(i.precoUnitario)} = <span className="font-bold text-foreground">{brl(i.subtotal)}</span>
                     </span>

@@ -107,16 +107,19 @@ export function tabelaDeRentabilidade(r: Rentabilidade): Tabela {
   const pct = (p: number | null) => (p === null ? "" : `${String(p).replace(".", ",")}%`);
   return {
     titulo: "Rentabilidade por item",
+    // SPEC-024 (5.3): o código interno atual do item, em coluna própria.
     colunas: [
-      { titulo: "Item", largura: 0.3 },
-      { titulo: "Quantidade", largura: 0.11, numero: true },
-      { titulo: "Faturamento", largura: 0.13, numero: true },
-      { titulo: "Custo", largura: 0.13, numero: true },
-      { titulo: "Margem", largura: 0.13, numero: true },
+      { titulo: "Código", largura: 0.1 },
+      { titulo: "Item", largura: 0.24 },
+      { titulo: "Quantidade", largura: 0.1, numero: true },
+      { titulo: "Faturamento", largura: 0.12, numero: true },
+      { titulo: "Custo", largura: 0.12, numero: true },
+      { titulo: "Margem", largura: 0.12, numero: true },
       { titulo: "Margem %", largura: 0.1, numero: true },
       { titulo: "Observação", largura: 0.1 },
     ],
     linhas: r.itens.map((i) => [
+      i.codigo ?? "",
       i.nome + (i.arquivado ? " (arquivado)" : ""),
       qtd(i.quantidade),
       valor(i.faturamentoCentavos),
@@ -125,6 +128,6 @@ export function tabelaDeRentabilidade(r: Rentabilidade): Tabela {
       pct(i.margemPercentual),
       i.linhasSemCusto ? "sem custo" : "",
     ]),
-    totais: ["Total", qtd(r.totais.quantidade), valor(r.totais.faturamentoCentavos), valor(r.totais.custoCentavos), valor(r.totais.margemCentavos), pct(r.totais.margemPercentual), ""],
+    totais: ["Total", "", qtd(r.totais.quantidade), valor(r.totais.faturamentoCentavos), valor(r.totais.custoCentavos), valor(r.totais.margemCentavos), pct(r.totais.margemPercentual), ""],
   };
 }

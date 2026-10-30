@@ -44,6 +44,7 @@ export default async function EditarItem({ params, searchParams }: PageProps<"/c
           id: item.id,
           tipo: item.tipo,
           nome: item.nome,
+          codigo: item.codigo,
           categoria: item.categoria,
           subcategoriaId: item.subcategoria?.id ?? null,
           ncm: item.ncm,

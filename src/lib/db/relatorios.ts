@@ -50,8 +50,10 @@ export function criarConsultasDeRelatorios(cliente: ClienteDoNegocio, negocioId:
     /** Itens vendidos no período, só vendas concluídas (RF70, RN25). */
     async rentabilidade(de: string, ate: string): Promise<LinhaVendida[]> {
       const p = periodo(de, ate);
-      const linhas = await cliente.$queryRaw<{ itemId: string; nome: string; arquivado: boolean; quantidade: unknown; faturamento: unknown; custo: unknown; semCusto: bigint }[]>`
-        SELECT i.id AS "itemId", i.nome, (i."arquivadoEm" IS NOT NULL) AS arquivado,
+      const linhas = await cliente.$queryRaw<
+        { itemId: string; nome: string; codigo: string | null; arquivado: boolean; quantidade: unknown; faturamento: unknown; custo: unknown; semCusto: bigint }[]
+      >`
+        SELECT i.id AS "itemId", i.nome, i.codigo, (i."arquivadoEm" IS NOT NULL) AS arquivado,
                SUM(iv.quantidade) AS quantidade,
                SUM(ROUND(iv."precoUnitario" * iv.quantidade, 2)) AS faturamento,
                SUM(ROUND(iv."custoUnitario" * iv.quantidade, 2)) AS custo,
@@ -60,10 +62,11 @@ export function criarConsultasDeRelatorios(cliente: ClienteDoNegocio, negocioId:
         JOIN "Venda" v ON v.id = iv."vendaId"
         JOIN "Item" i ON i.id = iv."itemId"
         WHERE v."negocioId" = ${negocioId}::uuid AND v.status = 'CONCLUIDA' AND v."data" >= ${p.gte} AND v."data" < ${p.lt}
-        GROUP BY i.id, i.nome, i."arquivadoEm"`;
+        GROUP BY i.id, i.nome, i.codigo, i."arquivadoEm"`;
       return linhas.map((l) => ({
         itemId: l.itemId,
         nome: l.nome,
+        codigo: l.codigo,
         arquivado: l.arquivado,
         quantidade: num(l.quantidade),
         faturamentoCentavos: centavosDe(l.faturamento),

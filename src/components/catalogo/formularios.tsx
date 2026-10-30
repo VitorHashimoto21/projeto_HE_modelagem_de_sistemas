@@ -14,8 +14,9 @@ import { acaoCriarItem, acaoDefinirPreco, acaoEditarItem } from "@/lib/catalogo/
 import { ITEM_INICIAL, PRECO_INICIAL, type EstadoDoItem } from "@/lib/catalogo/servicos";
 import { CATEGORIAS, validarItem, validarPreco } from "@/lib/catalogo/validacao";
 import { camposDoFormulario, type ErrosDeCampo } from "@/lib/auth/validacao";
-import { custoTotal, lerNumero, UNIDADES } from "@/lib/dominio/catalogo";
+import { custoTotal, lerNumero, MAX_CODIGO, UNIDADES } from "@/lib/dominio/catalogo";
 import { comRetorno } from "@/lib/estrutura/retorno";
+import { cn } from "@/lib/utils";
 import { CampoNcm, type NcmConhecido } from "./campo-ncm";
 import { numero, reais, ROTULO_CATEGORIA, ROTULO_TIPO, rotuloUnidade } from "./rotulos";
 import type { OpcaoDeSubcategoria } from "./subcategorias";
@@ -30,6 +31,8 @@ export type ValoresDoItem = {
   id?: string;
   tipo?: TipoItem;
   nome?: string;
+  /** SPEC-024: o código interno gravado. */
+  codigo?: string | null;
   categoria?: string;
   subcategoriaId?: string | null;
   /** SPEC-021: o NCM gravado, com a descrição e se ainda está na tabela vigente. */
@@ -228,6 +231,8 @@ export function FormularioItem({
   );
   const porId = new Map(opcoes.map((o) => [o.id, o]));
   const [custoDigitado, setCustoDigitado] = useState(valores?.custoBase !== undefined ? numero(valores.custoBase) : "");
+  // SPEC-024: controlado, para o código digitado não sumir quando o servidor o recusa (em uso por outro item).
+  const [codigoDigitado, setCodigoDigitado] = useState(valores?.codigo ?? "");
   const custoDosMateriais = custoTotal(
     lerNumero(custoDigitado) ?? 0,
     tipo === "SERVICO" && usaMateriais
@@ -300,6 +305,29 @@ export function FormularioItem({
         <MensagemDeCampo id="tipo-erro" erro={erros.tipo} />
 
         <CampoTexto nome="nome" rotulo="Nome" defaultValue={valores?.nome} maxLength={120} erro={erros.nome} limpar={limpar} />
+
+        {/* SPEC-024 (5.1): opcional, digitado pelo negócio; aparece em maiúsculas, como é gravado (5.2). */}
+        <CampoTexto
+          nome="codigo"
+          rotulo="Código (opcional)"
+          ajuda={`Um código seu para achar o item, como o da etiqueta. Até ${MAX_CODIGO} caracteres.`}
+          value={codigoDigitado}
+          maxLength={MAX_CODIGO}
+          autoComplete="off"
+          autoCapitalize="characters"
+          spellCheck={false}
+          onChange={(e) => {
+            const campo = e.currentTarget;
+            const posicao = campo.selectionStart;
+            setCodigoDigitado(campo.value.toUpperCase());
+            limpar("codigo");
+            // Mantém o cursor onde estava ao passar para maiúsculas.
+            requestAnimationFrame(() => posicao !== null && campo.setSelectionRange(posicao, posicao));
+          }}
+          className={cn(classeDoCampo(erros.codigo), "sm:max-w-64")}
+          erro={erros.codigo}
+          limpar={limpar}
+        />
 
         <div className="grid gap-5 sm:grid-cols-2">
           <div>

@@ -47,10 +47,11 @@ describe("T01 — ler, formatar e buscar o NCM (5.2, INV-001)", () => {
       OR: [
         { nome: { contains: "7117.19", mode: "insensitive" } },
         { subcategoria: { nome: { contains: "7117.19", mode: "insensitive" } } },
+        { codigo: { contains: "7117.19", mode: "insensitive" } },
         { ncm: { startsWith: "711719" } },
       ],
     });
-    expect(condicaoDaBusca("brinc").OR).toHaveLength(2);
+    expect(condicaoDaBusca("brinc").OR).toHaveLength(3); // nome, subcategoria e código interno (SPEC-024)
   });
 
   it("descrição para mostrar: sem os traços, sem o capítulo; vigência inclusive nas pontas", () => {

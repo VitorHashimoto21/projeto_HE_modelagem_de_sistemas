@@ -382,6 +382,10 @@ model Item {
   categoria      CategoriaItem // RF11
   subcategoriaId String?       @db.Uuid // SPEC-020 (RF79): opcional, da mesma categoria; excluir a subcategoria deixa nulo (OPEN-004)
   ncm            String?       @db.VarChar(8) // SPEC-021 (RF80): 8 dígitos, só produto físico; não é FK, o código fica mesmo fora da tabela (OPEN-002)
+  // SPEC-024 (RF87, RN40): código interno do negócio, opcional, em maiúsculas (até 20: A-Z, 0-9, - . / _).
+  // Único entre os itens ativos, como o nome: codigoChave = codigo enquanto ativo, nulo quando arquivado.
+  codigo         String?       @db.VarChar(20)
+  codigoChave    String?       @db.VarChar(20)
   unidadeMedida  String // RF10
   custoBase      Decimal       @db.Decimal(10, 2)
   precoAtual     Decimal?      @db.Decimal(10, 2) // RF64/RN15: último preço confirmado; null = não vendável (RN23)
@@ -408,6 +412,7 @@ model Item {
   itensVenda      ItemVenda[]
 
   @@unique([negocioId, nomeChave])
+  @@unique([negocioId, codigoChave])
   @@index([negocioId])
   @@index([subcategoriaId])
 }

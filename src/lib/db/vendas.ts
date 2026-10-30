@@ -131,6 +131,8 @@ export type OpcoesDaVenda = { podeAjustarPreco?: boolean };
 export type ItemVendavel = {
   id: string;
   nome: string;
+  /** SPEC-024: código interno (busca e Enter na Nova venda e na troca), ou null. */
+  codigo: string | null;
   tipo: TipoItem;
   unidadeMedida: string;
   preco: number;
@@ -159,6 +161,8 @@ export type DetalheDaVenda = VendaResumida & {
   itensVenda: {
     itemId: string;
     nome: string;
+    /** SPEC-024 (5.3): o código atual do item (a venda não guarda cópia, como o nome). */
+    codigo: string | null;
     unidadeMedida: string;
     quantidade: number;
     precoUnitario: number;
@@ -444,6 +448,7 @@ export function criarConsultasDeVendas(cliente: ClienteDoNegocio, negocioId: str
         select: {
           id: true,
           nome: true,
+          codigo: true,
           tipo: true,
           unidadeMedida: true,
           precoAtual: true,
@@ -457,6 +462,7 @@ export function criarConsultasDeVendas(cliente: ClienteDoNegocio, negocioId: str
       return itens.map((i) => ({
         id: i.id,
         nome: i.nome,
+        codigo: i.codigo,
         tipo: i.tipo,
         unidadeMedida: i.unidadeMedida,
         preco: num(i.precoAtual)!,
@@ -720,7 +726,7 @@ export function criarConsultasDeVendas(cliente: ClienteDoNegocio, negocioId: str
           vendaOrigem: { select: { id: true, numero: true } },
           vendaTroca: { select: { id: true, numero: true } },
           lancamentos: { where: { estorno: true }, select: { valor: true, descricao: true } },
-          itens: { include: { item: { select: { nome: true, unidadeMedida: true } } } },
+          itens: { include: { item: { select: { nome: true, codigo: true, unidadeMedida: true } } } },
           pagamentos: { include: { detalheParcelas: { include: { conta: { select: { status: true, valorPago: true } } }, orderBy: { numero: "asc" } } } },
           movimentacoes: { include: { item: { select: { nome: true } } }, orderBy: { registradoEm: "asc" } },
         },
@@ -741,6 +747,7 @@ export function criarConsultasDeVendas(cliente: ClienteDoNegocio, negocioId: str
         itensVenda: v.itens.map((i) => ({
           itemId: i.itemId,
           nome: i.item.nome,
+          codigo: i.item.codigo,
           unidadeMedida: i.item.unidadeMedida,
           quantidade: num(i.quantidade)!,
           precoUnitario: num(i.precoUnitario)!,
