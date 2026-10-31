@@ -3,6 +3,7 @@
 > **Status:** ✅ **Aprovada e implementada em 07/10/2026** — questões em aberto decididas pela equipe (seção 13), todas pela opção recomendada; testes T01–T17, T20 e T21 no CI e fluxo completo verificado no navegador, em build de produção local ([evidências](evidencias/SPEC-005/README.md)). T19 (e-mail real na homologação) concluído em 16/10/2026, com o Resend configurado. Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar). Nenhum código foi escrito.
 > **Mapa:** [`MAPA_DE_SPECS.md`](../MAPA_DE_SPECS.md) · **Anterior:** [SPEC-004](SPEC-004.md) (negócio e Dono) · **Próximas que dependem desta:** SPEC-006 a SPEC-013 (todas usam as guardas de papel e a matriz módulo × ação).
 > **Evolução prevista pela [SPEC-018](SPEC-018.md) (aprovada em 17/10/2026):** além do contexto de membro, passa a existir o **contexto de suporte** (Administrador com liberação do Dono), só de leitura nos módulos liberados; as guardas desta Spec recusam qualquer escrita nesse contexto (RN30, RN31).
+> **Correção (31/10/2026, PR #119, revisão dos formulários depois do PR #117):** A troca do papel do membro envia pela transição, e não pelo `action` do formulário. Assim, quando o servidor recusa o envio, o que foi digitado continua nos campos ([evidências](evidencias/formularios/README.md)).
 
 ---
 

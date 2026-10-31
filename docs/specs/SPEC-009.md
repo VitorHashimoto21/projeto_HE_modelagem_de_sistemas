@@ -2,6 +2,7 @@
 
 > **Status:** ✅ **Implementada em 09/10/2026 e verificada na homologação em 11/10/2026** (PR #60) — questões em aberto decididas pela equipe (seção 13), todas pela opção recomendada; testes T01–T13 no CI, telas em build de produção com login (T14) e fluxo na homologação, com a rotina agendada (T15) — [evidências](evidencias/SPEC-009/README.md). Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar).
 > **Mapa:** [`MAPA_DE_SPECS.md`](../MAPA_DE_SPECS.md) · **Anteriores:** [SPEC-005](SPEC-005.md) (permissões) e [SPEC-008](SPEC-008.md) (vendas, que já geram lançamentos e contas a receber) · **Próximas que dependem desta:** SPEC-010 (despesas fixas na calculadora), SPEC-011 (estorno de recebidos) e SPEC-012 (saldo e projeção no dashboard).
+> **Correção (31/10/2026, PR #119, revisão dos formulários depois do PR #117):** O lançamento avulso, o saldo inicial, a conta a pagar ou a receber, o pagamento ou recebimento e a despesa fixa enviam pela transição, e não pelo `action` do formulário. Assim, quando o servidor recusa o envio, o que foi digitado continua nos campos ([evidências](evidencias/formularios/README.md)).
 
 ---
 

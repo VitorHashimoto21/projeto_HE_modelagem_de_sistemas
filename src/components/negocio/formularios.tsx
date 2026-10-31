@@ -10,6 +10,7 @@ import { CONSULTA_INICIAL, FORMULARIO_INICIAL, type EstadoDoFormularioDeNegocio 
 import { validarNegocio } from "@/lib/negocio/validacao";
 import { cnpjValido } from "@/lib/dominio/cnpj";
 import { classeDoCampo } from "@/components/ui/classes";
+import { enviarSemReiniciar } from "@/components/ui/envio";
 import { CamposFiscais, type ValoresFiscais } from "./campos-fiscais";
 import { ChevronLeft } from "lucide-react";
 import { classeDoBotao } from "@/components/ui/estilos";
@@ -18,7 +19,7 @@ type AcaoDoFormulario = (anterior: EstadoDoFormularioDeNegocio, form: FormData) 
 
 /** Validação dupla (navegador + servidor), como nas telas de acesso (SPEC-002, CA-03). */
 function useFormularioDeNegocio(acao: AcaoDoFormulario) {
-  const [estado, executar] = useActionState(acao, FORMULARIO_INICIAL);
+  const [estado, executar, enviando] = useActionState(acao, FORMULARIO_INICIAL);
   const [locais, setLocais] = useState<ErrosDeCampo | null>(null);
   const [visto, setVisto] = useState(estado);
   if (estado !== visto) {
@@ -27,15 +28,16 @@ function useFormularioDeNegocio(acao: AcaoDoFormulario) {
   }
   const erros = locais ?? (estado.status === "erro" ? (estado.erros ?? {}) : {});
 
+  /** Envio pela transição, para não perder o que foi digitado quando o servidor recusa. */
   function aoEnviar(e: FormEvent<HTMLFormElement>) {
-    const v = validarNegocio(camposDoFormulario(new FormData(e.currentTarget)));
-    if (!v.ok) {
-      e.preventDefault();
-      setLocais(v.erros);
-    } else setLocais({});
+    enviarSemReiniciar(e, executar, (dados) => {
+      const v = validarNegocio(camposDoFormulario(dados));
+      setLocais(v.ok ? {} : v.erros);
+      return v.ok;
+    });
   }
   const limparErro = (campo: string) => erros[campo] && setLocais({ ...erros, [campo]: undefined });
-  return { estado, executar, erros, aoEnviar, limparErro };
+  return { estado, enviando, erros, aoEnviar, limparErro };
 }
 
 function Confirmacao({
@@ -49,7 +51,7 @@ function Confirmacao({
   avisos?: string[];
   aoVoltar: () => void;
 }) {
-  const { estado, executar, erros, aoEnviar, limparErro } = useFormularioDeNegocio(acaoCadastrarNegocio);
+  const { estado, enviando, erros, aoEnviar, limparErro } = useFormularioDeNegocio(acaoCadastrarNegocio);
   return (
     <div className="space-y-5">
       {avisos.map((a) => (
@@ -58,9 +60,11 @@ function Confirmacao({
         </p>
       ))}
       {estado.status === "erro" && estado.mensagem && <Aviso tipo="erro">{estado.mensagem}</Aviso>}
-      <form action={executar} onSubmit={aoEnviar} noValidate className="space-y-5">
+      <form onSubmit={aoEnviar} noValidate className="space-y-5">
         <CamposFiscais valores={valores} erros={erros} regimes={regimes} limparErro={limparErro} />
-        <BotaoEnviar enviando="Cadastrando…">Cadastrar negócio</BotaoEnviar>
+        <BotaoEnviar enviando="Cadastrando…" pendente={enviando}>
+          Cadastrar negócio
+        </BotaoEnviar>
       </form>
       <button type="button" onClick={aoVoltar} className={classeDoBotao("fantasma", "sm", "-ml-4")}>
         <ChevronLeft aria-hidden="true" />
@@ -104,17 +108,21 @@ function EtapaCnpj({ aoVoltar }: { aoVoltar: () => void }) {
     <div className="space-y-5">
       {consulta.status === "bloqueado" && tentativa === 0 && <Aviso tipo="erro">{consulta.mensagem}</Aviso>}
       <form
-        action={(f) => {
-          setTentativa(0);
-          return consultar(f);
-        }}
-        onSubmit={(e) => {
-          const valor = String(new FormData(e.currentTarget).get("cnpj") ?? "");
-          if (!cnpjValido(valor)) {
-            e.preventDefault();
-            setErroLocal(valor.trim() ? "CNPJ inválido" : "Informe o CNPJ");
-          } else setErroLocal(null);
-        }}
+        onSubmit={(e) =>
+          enviarSemReiniciar(
+            e,
+            (dados) => {
+              setTentativa(0);
+              consultar(dados);
+            },
+            (dados) => {
+              const valor = String(dados.get("cnpj") ?? "");
+              const ok = cnpjValido(valor);
+              setErroLocal(ok ? null : valor.trim() ? "CNPJ inválido" : "Informe o CNPJ");
+              return ok;
+            },
+          )
+        }
         noValidate
         className="space-y-5"
       >
@@ -185,14 +193,16 @@ export function FormularioNovoNegocio() {
 
 /** "Dados do negócio" (5.5): edição pelo Dono. */
 export function FormularioDadosDoNegocio({ valores }: { valores: ValoresFiscais }) {
-  const { estado, executar, erros, aoEnviar, limparErro } = useFormularioDeNegocio(acaoEditarNegocio);
+  const { estado, enviando, erros, aoEnviar, limparErro } = useFormularioDeNegocio(acaoEditarNegocio);
   const regimes: RegimeTributario[] = valores.cnpj ? ["MEI", "SIMPLES_NACIONAL"] : ["MEI", "SIMPLES_NACIONAL", "AUTONOMO"];
   return (
     <div className="space-y-5">
       {estado.status === "erro" && estado.mensagem && <Aviso tipo="erro">{estado.mensagem}</Aviso>}
-      <form action={executar} onSubmit={aoEnviar} noValidate className="space-y-5">
+      <form onSubmit={aoEnviar} noValidate className="space-y-5">
         <CamposFiscais valores={valores} erros={erros} regimes={regimes} limparErro={limparErro} cnpjEditavel={!valores.cnpj} />
-        <BotaoEnviar enviando="Salvando…">Salvar</BotaoEnviar>
+        <BotaoEnviar enviando="Salvando…" pendente={enviando}>
+          Salvar
+        </BotaoEnviar>
       </form>
       <Link href="/painel" className={classeDoBotao("fantasma")}>
         Cancelar

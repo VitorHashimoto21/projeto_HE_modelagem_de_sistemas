@@ -5,6 +5,7 @@ import { useActionState, useEffect, useState, type FormEvent } from "react";
 import { MensagemDeCampo } from "@/components/acesso/campos";
 import { avisar } from "@/components/ui/avisar";
 import { classeDoCampo } from "@/components/ui/classes";
+import { enviarSemReiniciar } from "@/components/ui/envio";
 import { classeDoBotao } from "@/components/ui/estilos";
 import { Gaveta } from "@/components/ui/gaveta";
 import { camposDoFormulario } from "@/lib/auth/validacao";
@@ -35,12 +36,13 @@ export function LiberarAcesso({ substitui }: { substitui: boolean }) {
     if (estado.status === "ok") avisar(estado.mensagem);
   }, [estado]);
 
+  /** Envio pela transição, para não perder o motivo e os módulos quando o servidor recusa. */
   function aoEnviar(e: FormEvent<HTMLFormElement>) {
-    const v = validarLiberacao(camposDoFormulario(new FormData(e.currentTarget)));
-    if (!v.ok) {
-      e.preventDefault();
-      setLocais(v.erros);
-    } else setLocais({});
+    enviarSemReiniciar(e, executar, (dados) => {
+      const v = validarLiberacao(camposDoFormulario(dados));
+      setLocais(v.ok ? {} : v.erros);
+      return v.ok;
+    });
   }
 
   return (
@@ -56,7 +58,7 @@ export function LiberarAcesso({ substitui }: { substitui: boolean }) {
         </button>
       }
     >
-      <form action={executar} onSubmit={aoEnviar} onChange={() => Object.keys(erros).length > 0 && setLocais({})} noValidate className="space-y-5">
+      <form onSubmit={aoEnviar} onChange={() => Object.keys(erros).length > 0 && setLocais({})} noValidate className="space-y-5">
         {estado.status === "erro" && estado.mensagem && (
           <p role="alert" className="rounded-lg bg-status-danger-bg px-4 py-3 text-sm text-status-danger">
             {estado.mensagem}

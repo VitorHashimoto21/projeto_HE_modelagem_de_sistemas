@@ -115,11 +115,23 @@ export function CampoSenha({ nome, rotulo, erro, extra, ...props }: PropsDoCampo
   );
 }
 
-export function BotaoEnviar({ children, enviando, largura = "total" }: { children: React.ReactNode; enviando: string; largura?: "total" | "automatica" }) {
+export function BotaoEnviar({
+  children,
+  enviando,
+  largura = "total",
+  pendente,
+}: {
+  children: React.ReactNode;
+  enviando: string;
+  largura?: "total" | "automatica";
+  /** Formulário enviado pela transição (`enviarSemReiniciar`): o `useFormStatus` não vê esse envio. */
+  pendente?: boolean;
+}) {
   const { pending } = useFormStatus();
+  const ocupado = pendente ?? pending;
   return (
-    <button type="submit" disabled={pending} className={classeDoBotao("principal", "lg", largura === "total" ? "mt-2 w-full" : undefined)}>
-      {pending ? enviando : children}
+    <button type="submit" disabled={ocupado} className={classeDoBotao("principal", "lg", largura === "total" ? "mt-2 w-full" : undefined)}>
+      {ocupado ? enviando : children}
     </button>
   );
 }
