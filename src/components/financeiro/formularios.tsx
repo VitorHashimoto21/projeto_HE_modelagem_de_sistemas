@@ -4,6 +4,7 @@ import { useActionState, useEffect, useState, type FormEvent } from "react";
 import { Aviso, MensagemDeCampo } from "@/components/acesso/campos";
 import { classeDoCampo } from "@/components/ui/classes";
 import { DialogoDeConfirmacao, useConfirmacaoDoEnvio } from "@/components/ui/confirmacao";
+import { enviarSemReiniciar } from "@/components/ui/envio";
 import { camposDoFormulario, type ErrosDeCampo } from "@/lib/auth/validacao";
 import { somarDias } from "@/lib/dominio/estoque";
 import { CATEGORIAS, DIAS_RETROATIVOS_FINANCEIRO } from "@/lib/dominio/financeiro";
@@ -38,13 +39,13 @@ function useFormulario(acao: Acao, validar?: Validador, limparAoSalvar = false) 
     if (limparAoSalvar && estado.status === "salvo") setChave((k) => k + 1);
   }
   const erros = locais ?? (estado.status === "erro" ? (estado.erros ?? {}) : {});
+  /** Envio pela transição, para não perder o que foi digitado quando o servidor recusa. */
   function aoEnviar(e: FormEvent<HTMLFormElement>) {
-    if (!validar) return;
-    const v = validar(camposDoFormulario(new FormData(e.currentTarget)));
-    if (!v.ok) {
-      e.preventDefault();
-      setLocais(v.erros ?? {});
-    } else setLocais({});
+    enviarSemReiniciar(e, executar, (dados) => {
+      const v: ReturnType<Validador> = validar ? validar(camposDoFormulario(dados)) : { ok: true };
+      setLocais(v.ok ? {} : (v.erros ?? {}));
+      return v.ok;
+    });
   }
   const limpar = (campo: string) => erros[campo] && setLocais({ ...erros, [campo]: undefined });
   return { estado, executar, enviando, erros, aoEnviar, limpar, chave };
@@ -155,7 +156,7 @@ export function FormularioLancamento({ hoje, aoSalvar }: { hoje: string; aoSalva
   return (
     <div className="space-y-4">
       {!(aoSalvar && f.estado.status === "salvo") && <Avisos estado={f.estado} />}
-      <form key={f.chave} action={f.executar} onSubmit={f.aoEnviar} noValidate className="space-y-4">
+      <form key={f.chave} onSubmit={f.aoEnviar} noValidate className="space-y-4">
         <Alternativa nome="tipo" rotulo="Tipo" padrao="SAIDA" erro={f.erros.tipo} opcoes={[["SAIDA", "Saída (despesa)"], ["ENTRADA", "Entrada"]]} />
         <div className="grid gap-4 sm:grid-cols-2">
           <CampoValor id="lanc-valor" erro={f.erros.valor} limpar={f.limpar} />
@@ -180,7 +181,7 @@ export function FormularioSaldoInicial({ hoje }: { hoje: string }) {
   return (
     <div className="space-y-3">
       <Avisos estado={f.estado} />
-      <form action={f.executar} onSubmit={f.aoEnviar} noValidate className="grid gap-4 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
+      <form onSubmit={f.aoEnviar} noValidate className="grid gap-4 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
         <CampoValor id="saldo-valor" rotulo="Dinheiro em caixa (R$)" erro={f.erros.valor} limpar={f.limpar} />
         <CampoData id="saldo-data" hoje={hoje} erro={f.erros.data} limpar={f.limpar} />
         <button type="submit" disabled={f.enviando} className={`${botaoPrimario} sm:mb-[1px]`}>
@@ -219,11 +220,11 @@ export type ContaEditavel = { id: string; tipo: "PAGAR" | "RECEBER"; descricao: 
 
 /** Nova conta manual ou edição de conta manual sem pagamento (5.3, OPEN-003). */
 export function FormularioConta({ hoje, conta, tipoPadrao = "PAGAR" }: { hoje: string; conta?: ContaEditavel; tipoPadrao?: "PAGAR" | "RECEBER" }) {
-  const f = useFormulario(conta ? acaoEditarConta : acaoCriarConta, (c) => validarConta(c, hoje));
+  const f = useFormulario(conta ? acaoEditarConta : acaoCriarConta, (c) => validarConta(c, hoje), !conta);
   return (
     <div className="space-y-4">
       <Avisos estado={f.estado} />
-      <form action={f.executar} onSubmit={f.aoEnviar} noValidate className="space-y-4">
+      <form key={f.chave} onSubmit={f.aoEnviar} noValidate className="space-y-4">
         {conta && <input type="hidden" name="contaId" value={conta.id} />}
         <Alternativa nome="tipo" rotulo="Tipo" padrao={conta?.tipo ?? tipoPadrao} erro={f.erros.tipo} opcoes={[["PAGAR", "A pagar"], ["RECEBER", "A receber"]]} />
         <CampoDescricao id="conta-descricao" erro={f.erros.descricao} limpar={f.limpar} padrao={conta?.descricao} exemplo="Ex.: Fornecedor de cosméticos" />
@@ -280,7 +281,7 @@ export function FormularioPagamento({ contaId, tipo, restanteCentavos, hoje }: {
   return (
     <div className="space-y-3">
       <Avisos estado={f.estado} />
-      <form key={f.chave} action={f.executar} onSubmit={f.aoEnviar} noValidate className="grid gap-4 sm:grid-cols-2 sm:items-start">
+      <form key={f.chave} onSubmit={f.aoEnviar} noValidate className="grid gap-4 sm:grid-cols-2 sm:items-start">
         <input type="hidden" name="contaId" value={contaId} />
         <CampoValor id="pag-valor" rotulo={`Valor ${receber ? "recebido" : "pago"} (R$)`} erro={f.erros.valor} limpar={f.limpar} padrao={valorBr(restanteCentavos)} />
         <CampoData id="pag-data" hoje={hoje} erro={f.erros.data} limpar={f.limpar} />
@@ -301,7 +302,7 @@ export function FormularioDespesa({ despesa }: { despesa?: DespesaEditavel }) {
   return (
     <div className="space-y-4">
       <Avisos estado={f.estado} />
-      <form key={f.chave} action={f.executar} onSubmit={f.aoEnviar} noValidate className="space-y-4">
+      <form key={f.chave} onSubmit={f.aoEnviar} noValidate className="space-y-4">
         {despesa && <input type="hidden" name="despesaId" value={despesa.id} />}
         {!das && <CampoDescricao id="desp-descricao" erro={f.erros.descricao} limpar={f.limpar} padrao={despesa?.descricao} exemplo="Ex.: Aluguel" />}
         <div className={das ? "sm:max-w-xs" : "grid gap-4 sm:grid-cols-2"}>

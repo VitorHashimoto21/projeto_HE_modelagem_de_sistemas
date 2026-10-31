@@ -5,6 +5,7 @@
 > **Evolução prevista pela [SPEC-020](SPEC-020.md) (aprovada em 19/10/2026):** a lista do estoque mostra a subcategoria do produto, ganha o filtro de subcategoria (com a categoria escolhida) e a busca passa a encontrar também pela subcategoria.
 > **Evolução prevista pela [SPEC-021](SPEC-021.md) (aprovada em 21/10/2026):** a busca do estoque passa a encontrar também pelo começo do NCM do produto.
 > **Evolução prevista pela [SPEC-024](SPEC-024.md) (aprovada em 30/10/2026):** a lista e o detalhe do estoque mostram o código interno do produto, e a busca encontra também pelo código.
+> **Correção (31/10/2026, PR #119, revisão dos formulários depois do PR #117):** A entrada e a saída de estoque, o mínimo manual e os dias de cobertura enviam pela transição, e não pelo `action` do formulário. Assim, quando o servidor recusa o envio, o que foi digitado continua nos campos ([evidências](evidencias/formularios/README.md)).
 
 ---
 

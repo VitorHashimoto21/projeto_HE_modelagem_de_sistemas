@@ -4,6 +4,7 @@
 > **Mapa:** [`MAPA_DE_SPECS.md`](../MAPA_DE_SPECS.md) · **Anteriores:** [SPEC-002](SPEC-002.md) (acesso) e [SPEC-003](SPEC-003.md) (parâmetros fiscais) · **Próximas que dependem desta:** SPEC-005 (equipe) e todas as specs operacionais (o negócio é o tenant).
 > **Evolução prevista pela [SPEC-021](SPEC-021.md) (aprovada em 21/10/2026):** os Dados do negócio ganham a opção **"Emito nota fiscal de produtos (NF-e ou NFC-e)"**, só do Dono e desligada por padrão. Ligada, o NCM passa a ser obrigatório nos produtos físicos e produto sem NCM sai da venda (RN35); ligar com produtos sem NCM pede confirmação.
 > **Evolução prevista pela [SPEC-022](SPEC-022.md) (aprovada em 22/10/2026):** o CNPJ do negócio, no cadastro e nos Dados do negócio, passa a aceitar o formato com letras (IN RFB nº 2.229/2024), com o campo de texto no celular; os CNPJs numéricos continuam válidos. A consulta pública de CNPJ (ADR-006) também passa a ser usada para os clientes empresa, e a de CEP para o endereço dos clientes.
+> **Correção (31/10/2026, PR #119, revisão dos formulários depois do PR #117):** A consulta do CNPJ, a confirmação do cadastro e os "Dados do negócio" enviam pela transição, e não pelo `action` do formulário. Assim, quando o servidor recusa o envio, o que foi digitado continua nos campos ([evidências](evidencias/formularios/README.md)).
 
 ---
 
