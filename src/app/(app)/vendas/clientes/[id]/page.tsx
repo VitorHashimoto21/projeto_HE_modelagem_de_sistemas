@@ -48,6 +48,8 @@ export default async function DetalheDoCliente({ params, searchParams }: PagePro
       throw e;
     });
   const suporte = membro.modoSuporte === true;
+  // SPEC-026: contas a receber ligadas também fazem a exclusão anonimizar.
+  const contas = await clientes(membro).quantidadeDeContas(id);
   const podeEditar = !suporte && pode(membro.permissoes, "vendas", "editar");
   const podeExcluir = !suporte && pode(membro.permissoes, "vendas", "excluir");
   const empresa = c.tipo === "PESSOA_JURIDICA";
@@ -118,9 +120,11 @@ export default async function DetalheDoCliente({ params, searchParams }: PagePro
           </Superficie>
           {podeExcluir && (
             <div className="px-1 text-sm">
-              <ExcluirCliente clienteId={c.id} nome={nome} compras={quantidadeDeCompras} />
+              <ExcluirCliente clienteId={c.id} nome={nome} compras={quantidadeDeCompras} contas={contas} />
               <p className="mt-1 text-muted-foreground">
-                {quantidadeDeCompras === 0 ? "Sem compras: o cadastro é apagado." : "Com compras: os dados pessoais são apagados e as vendas continuam registradas."}
+                {quantidadeDeCompras + contas === 0
+                  ? "Sem compras nem contas: o cadastro é apagado."
+                  : "Com compras ou contas a receber: os dados pessoais são apagados e os registros continuam."}
               </p>
             </div>
           )}

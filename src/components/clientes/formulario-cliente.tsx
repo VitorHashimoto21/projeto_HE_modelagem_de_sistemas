@@ -9,7 +9,8 @@ import { classeDoBotao } from "@/components/ui/estilos";
 import type { ErrosDeCampo } from "@/lib/auth/validacao";
 import { acaoCadastrarCliente, acaoConsultarCep, acaoConsultarEmpresa, acaoEditarCliente } from "@/lib/clientes/acoes";
 import { CLIENTE_INICIAL, type EstadoDoCliente } from "@/lib/clientes/servicos";
-import { MAX_NOME_PF, MAX_NOME_PJ, validarCliente, type DadosDoCliente } from "@/lib/clientes/validacao";
+import { MAX_NOME_PF, MAX_NOME_PJ, validarCliente, type DadosDoCliente, type Pessoa } from "@/lib/clientes/validacao";
+import { acaoCadastrarFornecedor, acaoConsultarCepDoFornecedor, acaoConsultarEmpresaDoFornecedor, acaoEditarFornecedor } from "@/lib/fornecedores/acoes";
 import { formatarCnpj, normalizarCnpj } from "@/lib/dominio/cnpj";
 import {
   formatarCep,
@@ -76,20 +77,31 @@ function camposIniciais(v: DadosDoCliente | undefined): Campos {
 /** Preenchimento vindo do CEP ou do CNPJ que trocaria o que já foi digitado: só com confirmação (5.2). */
 type Pendente = { texto: string; valores: Partial<Campos> };
 
+/** As ações de cada cadastro: o fornecedor (SPEC-026) usa as do Financeiro. */
+const ACOES = {
+  cliente: { cadastrar: acaoCadastrarCliente, editar: acaoEditarCliente, cep: acaoConsultarCep, empresa: acaoConsultarEmpresa },
+  fornecedor: { cadastrar: acaoCadastrarFornecedor, editar: acaoEditarFornecedor, cep: acaoConsultarCepDoFornecedor, empresa: acaoConsultarEmpresaDoFornecedor },
+} as const;
+
 /**
  * Cadastro e edição do cliente (SPEC-022, 5.2): pessoa física ou empresa, só o nome obrigatório.
  * Na tela de Clientes o endereço fica aberto; no "Novo cliente" da Nova venda (5.10), num bloco que
  * abre sob demanda. Envia pela transição, para um erro do servidor não apagar o que foi digitado.
+ * O fornecedor (SPEC-026, OPEN-002) usa o mesmo formulário, com `pessoa="fornecedor"`; o modo
+ * "gaveta" é o compacto da conta e da despesa fixa (5.4, item 7).
  */
 export function FormularioCliente({
   modo,
+  pessoa = "cliente",
   clienteId,
   valores,
   cancelarHref,
   aoCriar,
   aoCancelar,
 }: {
-  modo: "tela" | "venda";
+  modo: "tela" | "venda" | "gaveta";
+  pessoa?: Pessoa;
+  /** O id do cadastro em edição (cliente ou fornecedor). */
   clienteId?: string;
   valores?: DadosDoCliente;
   cancelarHref?: string;
@@ -97,8 +109,9 @@ export function FormularioCliente({
   aoCancelar?: () => void;
 }) {
   const editando = Boolean(clienteId);
-  const [estado, executar, enviando] = useActionState<EstadoDoCliente, FormData>(editando ? acaoEditarCliente : acaoCadastrarCliente, CLIENTE_INICIAL);
-  const [tipo, setTipo] = useState<TipoCliente>(valores?.tipo ?? "PESSOA_FISICA");
+  const acoes = ACOES[pessoa];
+  const [estado, executar, enviando] = useActionState<EstadoDoCliente, FormData>(editando ? acoes.editar : acoes.cadastrar, CLIENTE_INICIAL);
+  const [tipo, setTipo] = useState<TipoCliente>(valores?.tipo ?? (pessoa === "fornecedor" ? "PESSOA_JURIDICA" : "PESSOA_FISICA"));
   const [v, setV] = useState<Campos>(() => camposIniciais(valores));
   const [errosLocais, setErrosLocais] = useState<ErrosDeCampo>({});
   const [enderecoAberto, setEnderecoAberto] = useState(modo === "tela" || ENDERECO.some((c) => valores?.[c]));
@@ -113,7 +126,8 @@ export function FormularioCliente({
     atual.current = v;
   }, [v]);
   const empresa = tipo === "PESSOA_JURIDICA";
-  const p = (campo: string) => `cliente-${campo}`;
+  const p = (campo: string) => `${pessoa}-${campo}`;
+  const compacto = modo !== "tela";
 
   useEffect(() => {
     if (estado.status === "salvo" && aoCriar) aoCriar(estado.cliente);
@@ -158,7 +172,7 @@ export function FormularioCliente({
     ultimoCep.current = cep;
     setSituacaoCep("Buscando o endereço…");
     iniciarConsulta(async () => {
-      const r = await acaoConsultarCep(cep);
+      const r = await acoes.cep(cep);
       if (r.status === "erro") return setSituacaoCep(r.mensagem);
       setSituacaoCep("Endereço do CEP preenchido. Confira e complete o número.");
       const e = r.endereco;
@@ -169,7 +183,7 @@ export function FormularioCliente({
   function consultarCnpj() {
     setSituacaoCnpj("Buscando os dados da empresa…");
     iniciarConsulta(async () => {
-      const r = await acaoConsultarEmpresa(v.documento);
+      const r = await acoes.empresa(v.documento);
       if (r.status === "erro") return setSituacaoCnpj(r.mensagem);
       const d = r.dados;
       setSituacaoCnpj("Dados da empresa preenchidos. Confira e informe a inscrição estadual.");
@@ -199,7 +213,7 @@ export function FormularioCliente({
     e.preventDefault();
     const dados = new FormData(e.currentTarget);
     const campos = Object.fromEntries([...dados].map(([k, valor]) => [k, String(valor)]));
-    const r = validarCliente(campos, valores ? { email: valores.email, telefone: valores.telefone } : null);
+    const r = validarCliente(campos, valores ? { email: valores.email, telefone: valores.telefone } : null, pessoa);
     if (!r.ok) {
       setErrosLocais(r.erros);
       return;
@@ -241,12 +255,12 @@ export function FormularioCliente({
   return (
     <form onSubmit={(e) => enviar(e)} noValidate className="space-y-6">
       {estado.status === "erro" && estado.mensagem && <Aviso tipo="erro">{estado.mensagem}</Aviso>}
-      {clienteId && <input type="hidden" name="clienteId" value={clienteId} />}
+      {clienteId && <input type="hidden" name={pessoa === "cliente" ? "clienteId" : "fornecedorId"} value={clienteId} />}
       {!editando && modo === "tela" && <input type="hidden" name="destino" value="detalhe" />}
 
       <fieldset className="space-y-4">
-        <legend className={cn(rotulo, modo === "tela" && "text-base font-bold")}>{modo === "tela" ? "Identificação" : "Tipo de cliente"}</legend>
-        <div role="radiogroup" aria-label="Tipo de cliente" className="inline-flex flex-wrap gap-1 rounded-[22px] bg-muted p-1">
+        <legend className={cn(rotulo, modo === "tela" && "text-base font-bold")}>{modo === "tela" ? "Identificação" : `Tipo de ${pessoa}`}</legend>
+        <div role="radiogroup" aria-label={`Tipo de ${pessoa}`} className="inline-flex flex-wrap gap-1 rounded-[22px] bg-muted p-1">
           {TIPOS_CLIENTE.map((t) => (
             <label
               key={t}
@@ -264,7 +278,7 @@ export function FormularioCliente({
           <p className="rounded-xl bg-status-warn-bg px-4 py-3 text-sm text-status-warn">
             {valores?.tipo === "PESSOA_FISICA"
               ? "Ao salvar, o CPF será removido."
-              : "Ao salvar, o CNPJ, o nome fantasia, as inscrições e o nome de quem compra serão removidos."}
+              : `Ao salvar, o CNPJ, o nome fantasia, as inscrições e o ${pessoa === "cliente" ? "nome de quem compra" : "nome do contato"} serão removidos.`}
           </p>
         )}
 
@@ -338,7 +352,7 @@ export function FormularioCliente({
                 <div className="hidden sm:block" aria-hidden="true" />
               )}
               {campo("inscricaoMunicipal", { rotuloTexto: "Inscrição municipal (opcional)", maxLength: 25, autoCapitalize: "characters", spellCheck: false, autoComplete: "off" })}
-              {campo("nomeContato", { rotuloTexto: "Nome de quem compra (opcional)", maxLength: 120, autoComplete: "off" })}
+              {campo("nomeContato", { rotuloTexto: pessoa === "cliente" ? "Nome de quem compra (opcional)" : "Nome do contato (opcional)", maxLength: 120, autoComplete: "off" })}
             </>
           )}
         </div>
@@ -363,7 +377,7 @@ export function FormularioCliente({
       </fieldset>
 
       <fieldset className="space-y-4">
-        {modo === "venda" ? (
+        {compacto ? (
           <button
             type="button"
             onClick={() => setEnderecoAberto((a) => !a)}
@@ -461,7 +475,7 @@ export function FormularioCliente({
 
       <div className="flex flex-wrap items-center gap-3 border-t pt-5">
         <button type="submit" disabled={enviando} className={classeDoBotao("principal", modo === "tela" ? "lg" : "md")}>
-          {editando ? "Salvar alterações" : "Cadastrar cliente"}
+          {editando ? "Salvar alterações" : `Cadastrar ${pessoa}`}
         </button>
         {cancelarHref ? (
           <Link href={cancelarHref} className={classeDoBotao("fantasma")}>

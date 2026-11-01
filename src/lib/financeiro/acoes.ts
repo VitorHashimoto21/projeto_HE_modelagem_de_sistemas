@@ -61,6 +61,11 @@ export const acaoEditarConta = acaoComPermissao("financeiro", "editar", async (m
   atualizar(servicos.editarConta(texto(form, "contaId"), camposDoFormulario(form), deps(membro))),
 );
 
+/** SPEC-026 (5.4, item 5): corrigir o fornecedor ou cliente e o nº do documento pede Financeiro — editar. */
+export const acaoCorrigirVinculo = acaoComPermissao("financeiro", "editar", async (membro, _: EstadoDoFinanceiro, form: FormData) =>
+  atualizar(servicos.corrigirVinculo(texto(form, "contaId"), camposDoFormulario(form), deps(membro))),
+);
+
 export const acaoCancelarConta = acaoComPermissao("financeiro", "excluir", async (membro, _: EstadoDoFinanceiro, form: FormData) =>
   atualizar(servicos.cancelarConta(texto(form, "contaId"), deps(membro))),
 );

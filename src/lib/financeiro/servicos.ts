@@ -12,9 +12,11 @@ import {
   ValorAcimaDoRestante,
   type ConsultasFinanceiras,
 } from "@/lib/db/financeiro";
+import { ClienteNaoEncontrado } from "@/lib/db/clientes";
 import { instanteDaOcorrencia } from "@/lib/db/estoque";
+import { FornecedorNaoEncontrado } from "@/lib/db/fornecedores";
 import { reaisDeCentavos } from "@/lib/dominio/venda";
-import { validarConta, validarDespesa, validarDiaVencimento, validarLancamento, validarPagamento, validarSaldoInicial } from "./validacao";
+import { validarConta, validarDespesa, validarDiaVencimento, validarLancamento, validarPagamento, validarSaldoInicial, validarVinculo } from "./validacao";
 
 /**
  * Fluxos do Financeiro (SPEC-009, seção 5), independentes do Next.js: as Server Actions (com
@@ -49,6 +51,10 @@ export const MENSAGENS_FLUXO_FINANCEIRO = {
   despesaDesativada: "Despesa fixa desativada: não gera mais contas. As já geradas continuam.",
   despesaNaoEncontrada: "Despesa fixa não encontrada.",
   dasNaoEditavel: "O DAS do MEI só permite alterar o dia de vencimento.",
+  // SPEC-026
+  vinculoCorrigido: "Dados da conta atualizados.",
+  fornecedorNaoEncontrado: "Fornecedor não encontrado. Escolha outro da lista.",
+  clienteNaoEncontrado: "Cliente não encontrado. Escolha outro da lista.",
   falhaInterna: "Não foi possível concluir agora. Tente novamente.",
 } as const;
 
@@ -69,7 +75,9 @@ export type DependenciasDoFinanceiro = {
 
 const M = MENSAGENS_FLUXO_FINANCEIRO;
 
-function traduzir(e: unknown): { mensagem?: string; erros?: ErrosDeCampo } {
+function traduzir(e: unknown, campoDaPessoa = "pessoa"): { mensagem?: string; erros?: ErrosDeCampo } {
+  if (e instanceof FornecedorNaoEncontrado) return { erros: { [campoDaPessoa]: M.fornecedorNaoEncontrado } };
+  if (e instanceof ClienteNaoEncontrado) return { erros: { [campoDaPessoa]: M.clienteNaoEncontrado } };
   if (e instanceof ValorAcimaDoRestante) return { erros: { valor: M.acimaDoRestante(e.restanteCentavos) } };
   if (e instanceof ContaEncerrada) return { mensagem: M.contaEncerrada };
   if (e instanceof ContaNaoEncontrada) return { mensagem: M.contaNaoEncontrada };
@@ -84,11 +92,11 @@ function traduzir(e: unknown): { mensagem?: string; erros?: ErrosDeCampo } {
   return { mensagem: M.falhaInterna };
 }
 
-async function executar(fluxo: () => Promise<EstadoDoFinanceiro>): Promise<EstadoDoFinanceiro> {
+async function executar(fluxo: () => Promise<EstadoDoFinanceiro>, campoDaPessoa?: string): Promise<EstadoDoFinanceiro> {
   try {
     return await fluxo();
   } catch (e) {
-    return { status: "erro", ...traduzir(e) };
+    return { status: "erro", ...traduzir(e, campoDaPessoa) };
   }
 }
 
@@ -140,6 +148,19 @@ export async function editarConta(contaId: string, campos: Record<string, string
   });
 }
 
+/**
+ * Correção do fornecedor ou cliente e do nº do documento (SPEC-026, 5.4, item 5): em qualquer
+ * conta, mesmo paga, sem mudar valores.
+ */
+export async function corrigirVinculo(contaId: string, campos: Record<string, string>, deps: DependenciasDoFinanceiro): Promise<EstadoDoFinanceiro> {
+  const v = validarVinculo(campos);
+  if (!v.ok) return { status: "erro", erros: v.erros };
+  return executar(async () => {
+    await deps.financeiro.corrigirVinculo(contaId, v.dados);
+    return { status: "salvo", mensagem: M.vinculoCorrigido, id: contaId };
+  });
+}
+
 /** Cancelar conta manual sem pagamento (OPEN-003). */
 export async function cancelarConta(contaId: string, deps: DependenciasDoFinanceiro): Promise<EstadoDoFinanceiro> {
   return executar(async () => {
@@ -158,6 +179,7 @@ export async function registrarPagamento(contaId: string, campos: Record<string,
       valorCentavos: v.dados.valorCentavos,
       data: instanteDaOcorrencia(v.dados.dia, deps.agora),
       usuarioId: deps.usuarioId,
+      forma: v.dados.forma,
     });
     return { status: "salvo", mensagem: M.pago(r.tipo === "RECEBER", r.status === "QUITADA", r.restanteCentavos), id: contaId };
   });
@@ -171,7 +193,7 @@ export async function criarDespesa(campos: Record<string, string>, deps: Depende
     const { id } = await deps.financeiro.criarDespesa(v.dados, deps.hoje);
     await deps.financeiro.conferir(deps.hoje);
     return { status: "salvo", mensagem: M.despesaCriada, id };
-  });
+  }, "fornecedor");
 }
 
 /** Editar despesa fixa: a manual, todos os campos; o DAS do MEI, só o dia (5.6). */
@@ -188,7 +210,7 @@ export async function editarDespesa(despesaId: string, campos: Record<string, st
     if (!v.ok) return { status: "erro", erros: v.erros };
     await deps.financeiro.editarDespesa(despesaId, v.dados);
     return { status: "salvo", mensagem: M.despesaEditada, id: despesaId };
-  });
+  }, "fornecedor");
 }
 
 /** Ativar/desativar despesa fixa manual (5.5). */

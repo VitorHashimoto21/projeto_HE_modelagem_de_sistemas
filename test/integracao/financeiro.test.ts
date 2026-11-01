@@ -153,33 +153,33 @@ describe("caixa", () => {
 describe("contas", () => {
   it("T05 — pagamento parcial, total, acima do restante e conta encerrada (CA-05, INV-002 a INV-004)", async () => {
     const contaId = salvo(await contaManual());
-    expect(await servicos.registrarPagamento(contaId, { valor: "100", data: HOJE }, deps())).toEqual({ status: "salvo", mensagem: F.pago(false, false, 20000), id: contaId });
+    expect(await servicos.registrarPagamento(contaId, { valor: "100", data: HOJE, forma: "PIX" }, deps())).toEqual({ status: "salvo", mensagem: F.pago(false, false, 20000), id: contaId });
     let c = await fin().detalharConta(contaId, HOJE);
     expect(c).toMatchObject({ status: "PARCIAL", pagoCentavos: 10000, restanteCentavos: 20000, origem: "manual", criadaPor: "Gisele" });
     expect(await saldoAtual()).toBe(-10000);
     const [l] = await base.lancamentoFinanceiro.findMany({ where: { contaId } });
     expect(l).toMatchObject({ tipo: "SAIDA", categoria: "FORNECEDORES", origem: "CONTA", descricao: "Fornecedor X", usuarioId: usuario });
 
-    expect(await servicos.registrarPagamento(contaId, { valor: "250", data: HOJE }, deps())).toEqual({ status: "erro", erros: { valor: F.acimaDoRestante(20000) } });
-    salvo(await servicos.registrarPagamento(contaId, { valor: "200", data: HOJE }, deps()));
+    expect(await servicos.registrarPagamento(contaId, { valor: "250", data: HOJE, forma: "PIX" }, deps())).toEqual({ status: "erro", erros: { valor: F.acimaDoRestante(20000) } });
+    salvo(await servicos.registrarPagamento(contaId, { valor: "200", data: HOJE, forma: "PIX" }, deps()));
     c = await fin().detalharConta(contaId, HOJE);
     expect(c).toMatchObject({ status: "QUITADA", restanteCentavos: 0 });
     expect(c.lancamentos.reduce((s, x) => s + x.valorCentavos, 0)).toBe(c.pagoCentavos); // INV-004
-    expect(await servicos.registrarPagamento(contaId, { valor: "1", data: HOJE }, deps())).toEqual({ status: "erro", mensagem: F.contaEncerrada });
+    expect(await servicos.registrarPagamento(contaId, { valor: "1", data: HOJE, forma: "PIX" }, deps())).toEqual({ status: "erro", mensagem: F.contaEncerrada });
 
     const cancelada = salvo(await contaManual({ tipo: "RECEBER", categoria: "OUTROS" }));
     salvo(await servicos.cancelarConta(cancelada, deps()));
-    expect(await servicos.registrarPagamento(cancelada, { valor: "1", data: HOJE }, deps())).toEqual({ status: "erro", mensagem: F.contaEncerrada });
+    expect(await servicos.registrarPagamento(cancelada, { valor: "1", data: HOJE, forma: "PIX" }, deps())).toEqual({ status: "erro", mensagem: F.contaEncerrada });
     await expect(base.contaPagarReceber.update({ where: { id: cancelada }, data: { valorPago: 301 } })).rejects.toThrow(/valores_validos/);
 
     // Isolamento: o outro negócio não enxerga nem paga a conta.
-    expect(await servicos.registrarPagamento(contaId, { valor: "1", data: HOJE }, deps({}, negocioB))).toEqual({ status: "erro", mensagem: F.contaNaoEncontrada });
+    expect(await servicos.registrarPagamento(contaId, { valor: "1", data: HOJE, forma: "PIX" }, deps({}, negocioB))).toEqual({ status: "erro", mensagem: F.contaNaoEncontrada });
     expect((await fin(negocioB).listarContas({ tipo: "PAGAR", situacao: "todas" }, HOJE)).contas).toEqual([]);
   });
 
   it("T06 — pagamentos simultâneos nunca ultrapassam o total (CA-06, INV-003)", async () => {
     const contaId = salvo(await contaManual());
-    const rs = await Promise.all([1, 2].map(() => servicos.registrarPagamento(contaId, { valor: "200", data: HOJE }, deps())));
+    const rs = await Promise.all([1, 2].map(() => servicos.registrarPagamento(contaId, { valor: "200", data: HOJE, forma: "PIX" }, deps())));
     expect(rs.filter((r) => r.status === "salvo")).toHaveLength(1);
     const c = await fin().detalharConta(contaId, HOJE);
     expect([c.pagoCentavos, c.status, c.lancamentos.length]).toEqual([20000, "PARCIAL", 1]);
@@ -190,7 +190,7 @@ describe("contas", () => {
     const contaId = salvo(await contaManual({ vencimento: ontem }));
     let lista = await fin().listarContas({ tipo: "PAGAR", situacao: "atrasadas" }, HOJE);
     expect([lista.atrasadas, lista.contas[0]?.atrasada]).toEqual([1, true]);
-    salvo(await servicos.registrarPagamento(contaId, { valor: "300", data: HOJE }, deps()));
+    salvo(await servicos.registrarPagamento(contaId, { valor: "300", data: HOJE, forma: "PIX" }, deps()));
     lista = await fin().listarContas({ tipo: "PAGAR", situacao: "atrasadas" }, HOJE);
     expect([lista.atrasadas, lista.contas.length]).toEqual([0, 0]);
     expect((await fin().detalharConta(contaId, HOJE)).atrasada).toBe(false);
@@ -212,7 +212,7 @@ describe("contas", () => {
     const manual = salvo(await contaManual());
     salvo(await servicos.editarConta(manual, { ...campos, descricao: "Fornecedor Y", valor: "350" }, deps()));
     expect(await fin().detalharConta(manual, HOJE)).toMatchObject({ descricao: "Fornecedor Y", totalCentavos: 35000, tipo: "PAGAR" });
-    salvo(await servicos.registrarPagamento(manual, { valor: "1", data: HOJE }, deps()));
+    salvo(await servicos.registrarPagamento(manual, { valor: "1", data: HOJE, forma: "PIX" }, deps()));
     expect(await servicos.editarConta(manual, campos, deps())).toEqual({ status: "erro", mensagem: F.contaNaoEditavel["com-pagamento"] });
     expect(await servicos.cancelarConta(manual, deps())).toEqual({ status: "erro", mensagem: F.contaNaoEditavel["com-pagamento"] });
   });

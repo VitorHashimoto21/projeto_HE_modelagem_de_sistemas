@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { reais, ROTULO_CATEGORIA, SeloDaConta } from "@/components/financeiro/exibicao";
-import { BotaoCancelarConta, FormularioConta, FormularioPagamento } from "@/components/financeiro/formularios";
+import { BotaoCancelarConta, FormularioConta, FormularioPagamento, FormularioVinculo } from "@/components/financeiro/formularios";
 import { AvisoDaPagina } from "@/components/ui/aviso";
 import { CabecalhoDePagina } from "@/components/ui/cabecalho-de-pagina";
 import { classeDoLink } from "@/components/ui/estilos";
@@ -11,9 +11,11 @@ import { Superficie, TituloDaSuperficie } from "@/components/ui/superficie";
 import { exigirPermissao } from "@/lib/auth/servidor";
 import { financeiro } from "@/lib/db";
 import { ContaNaoEncontrada } from "@/lib/db/financeiro";
+import { rotuloDaForma, SEM_OPCOES } from "@/lib/dominio/contas";
 import { dataBrasileira, hoje } from "@/lib/dominio/datas";
 import { pode } from "@/lib/dominio/permissoes";
 import { conferirFinanceiro } from "@/lib/financeiro/conferencia";
+import { opcoesDoVinculo } from "@/lib/financeiro/opcoes";
 
 export const metadata: Metadata = { title: "Conta" };
 
@@ -29,7 +31,8 @@ function Linha({ rotulo, children }: { rotulo: string; children: React.ReactNode
 }
 
 // Detalhe da conta (SPEC-009, 5.3): Financeiro — ver; pagamento com "criar"; edição da conta
-// manual sem pagamento com "editar"; cancelamento com "excluir" (OPEN-003, OPEN-006).
+// manual sem pagamento com "editar"; cancelamento com "excluir" (OPEN-003, OPEN-006). SPEC-026:
+// fornecedor ou cliente, nº do documento, forma de cada pagamento e a correção do vínculo (5.4).
 export default async function Conta({ params, searchParams }: PageProps<"/financeiro/contas/[id]">) {
   const membro = await exigirPermissao("financeiro", "ver");
   const [{ id }, { nova }] = await Promise.all([params, searchParams]);
@@ -46,6 +49,12 @@ export default async function Conta({ params, searchParams }: PageProps<"/financ
   const receber = c.tipo === "RECEBER";
 
   const podeRegistrar = aberta && pode(membro.permissoes, "financeiro", "criar");
+  const podeEditar = !membro.modoSuporte && pode(membro.permissoes, "financeiro", "editar");
+  const opcoes = podeEditar ? await opcoesDoVinculo(membro) : SEM_OPCOES;
+  const pessoa = c.pessoa;
+  // O link para o cadastro: fornecedor com Financeiro — ver (já exigido aqui); cliente só com Vendas — ver (5.2, item 3).
+  const linkDaPessoa =
+    pessoa && !membro.modoSuporte && (pessoa.papel === "fornecedor" ? `/financeiro/fornecedores/${pessoa.id}` : pode(membro.permissoes, "vendas", "ver") ? `/vendas/clientes/${pessoa.id}` : null);
   const quitado = c.totalCentavos > 0 ? Math.min(100, Math.round((c.pagoCentavos / c.totalCentavos) * 100)) : 0;
 
   return (
@@ -88,6 +97,21 @@ export default async function Conta({ params, searchParams }: PageProps<"/financ
             <TituloDaSuperficie id="titulo-dados" titulo="Dados da conta" />
             <dl>
               <Linha rotulo="Tipo">{receber ? "A receber" : "A pagar"}</Linha>
+              <Linha rotulo={receber ? "Cliente" : "Fornecedor"}>
+                {pessoa ? (
+                  linkDaPessoa ? (
+                    <Link href={linkDaPessoa} className={classeDoLink()}>
+                      {pessoa.nome}
+                    </Link>
+                  ) : (
+                    pessoa.nome
+                  )
+                ) : (
+                  "—"
+                )}
+                {pessoa?.daVenda && <span className="block text-xs font-normal text-muted-foreground">Cliente da venda</span>}
+              </Linha>
+              <Linha rotulo="Nº do documento">{c.numeroDocumento ?? "—"}</Linha>
               <Linha rotulo="Vencimento">{dataBr(c.vencimento)}</Linha>
               <Linha rotulo="Categoria">{ROTULO_CATEGORIA[c.categoria]}</Linha>
               <Linha rotulo="Origem">
@@ -115,7 +139,7 @@ export default async function Conta({ params, searchParams }: PageProps<"/financ
                 {c.lancamentos.map((l) => (
                   <li key={l.id} className="flex flex-wrap justify-between gap-2 py-3 text-sm">
                     <span className="text-foreground">
-                      {dataBrasileira(l.data)}, {l.registradoPor ?? "automático no vencimento"}
+                      {dataBrasileira(l.data)} · {rotuloDaForma(l.forma)} · {l.registradoPor ?? "automático no vencimento"}
                     </span>
                     <span className="font-bold text-foreground tabular-nums">{reais(l.valorCentavos)}</span>
                   </li>
@@ -131,11 +155,35 @@ export default async function Conta({ params, searchParams }: PageProps<"/financ
                 {pode(membro.permissoes, "financeiro", "editar") && (
                   <FormularioConta
                     hoje={dia}
-                    conta={{ id: c.id, tipo: c.tipo, descricao: c.descricao ?? "", categoria: c.categoria, totalCentavos: c.totalCentavos, vencimento: c.vencimento }}
+                    opcoes={opcoes}
+                    conta={{
+                      id: c.id,
+                      tipo: c.tipo,
+                      descricao: c.descricao ?? "",
+                      categoria: c.categoria,
+                      totalCentavos: c.totalCentavos,
+                      vencimento: c.vencimento,
+                      pessoa: pessoa && { id: pessoa.id, nome: pessoa.nome },
+                      numeroDocumento: c.numeroDocumento,
+                    }}
                   />
                 )}
                 {pode(membro.permissoes, "financeiro", "excluir") && <BotaoCancelarConta contaId={c.id} />}
               </div>
+            </Superficie>
+          )}
+
+          {!alteravel && podeEditar && (
+            <Superficie aria-labelledby="titulo-vinculo">
+              <TituloDaSuperficie
+                id="titulo-vinculo"
+                titulo={c.origem === "venda" ? "Corrigir o documento" : `Corrigir o ${receber ? "cliente" : "fornecedor"} e o documento`}
+                descricao="Não muda valores, vencimento nem pagamentos."
+              />
+              <FormularioVinculo
+                conta={{ id: c.id, tipo: c.tipo, pessoa: pessoa && { id: pessoa.id, nome: pessoa.nome }, daVenda: c.origem === "venda", numeroDocumento: c.numeroDocumento }}
+                opcoes={opcoes}
+              />
             </Superficie>
           )}
         </div>

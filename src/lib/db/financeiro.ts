@@ -13,7 +13,12 @@ import {
   tipoDoPagamento,
   vencimentoNaCompetencia,
 } from "@/lib/dominio/financeiro";
+import { filtraPagamentos, SEM_FILTROS, type FiltrosDasContas, type FormaDoPagamento } from "@/lib/dominio/contas";
+import { nomeDeExibicao, type TipoCliente } from "@/lib/dominio/cliente";
+import { mascararNome } from "@/lib/dominio/suporte";
+import { ClienteNaoEncontrado } from "./clientes";
 import type { ClienteDoNegocio } from "./cliente-do-negocio";
+import { FornecedorNaoEncontrado } from "./fornecedores";
 
 /**
  * Financeiro do negócio ativo (SPEC-009). Leituras e escritas pelo cliente do negócio; as
@@ -100,6 +105,8 @@ export type Pagamento = {
   data: Date;
   /** Nulo só no recebimento automático das parcelas (OPEN-008). */
   usuarioId: string | null;
+  /** SPEC-026 (OPEN-008): obrigatória nos pagamentos pela tela; cartão de crédito no recebimento automático. */
+  forma: FormaDoPagamento;
 };
 
 /**
@@ -138,6 +145,7 @@ export async function pagarConta(tx: Tx, negocioId: string, p: Pagamento): Promi
       descricao: c.descricao ? c.descricao.slice(0, 120) : null,
       data: p.data,
       usuarioId: p.usuarioId,
+      formaPagamento: p.forma,
     },
     select: { id: true },
   });
@@ -176,7 +184,13 @@ export type FiltroDoFluxo = { mes: string; categoria?: CategoriaLancamento; tipo
 
 export type SituacaoFiltrada = "abertas" | "atrasadas" | "quitadas" | "canceladas" | "todas";
 /** `desde`: limite do histórico do plano gratuito (SPEC-013, OPEN-005) — quitadas e canceladas antes dele ficam fora. */
-export type FiltroDasContas = { tipo: TipoConta; situacao: SituacaoFiltrada; pagina?: number; desde?: string | null };
+export type FiltroDasContas = { tipo: TipoConta; situacao: SituacaoFiltrada; pagina?: number; desde?: string | null; filtros?: FiltrosDasContas };
+
+/** SPEC-026 (5.4): fornecedor (conta a pagar) ou cliente (conta a receber; na de venda, o da venda). */
+export type PessoaDaConta = { id: string; nome: string; papel: "fornecedor" | "cliente"; daVenda: boolean };
+
+/** SPEC-026 (5.6, item 4): totais de todas as contas filtradas, sem as canceladas nos valores. */
+export type TotaisDasContas = { quantidade: number; totalCentavos: number; pagoCentavos: number; emAbertoCentavos: number };
 
 export type ContaExibida = {
   id: string;
@@ -190,13 +204,15 @@ export type ContaExibida = {
   status: StatusConta;
   atrasada: boolean;
   origem: "venda" | "despesa" | "manual";
+  pessoa: PessoaDaConta | null;
+  numeroDocumento: string | null;
 };
 
 export type DetalheDaConta = ContaExibida & {
   criadaPor: string | null;
   venda: { id: string; numero: number } | null;
   despesa: { id: string; descricao: string } | null;
-  lancamentos: { id: string; valorCentavos: number; data: Date; registradoPor: string | null }[];
+  lancamentos: { id: string; valorCentavos: number; data: Date; registradoPor: string | null; forma: FormaDoPagamento | null }[];
 };
 
 export type DespesaExibida = {
@@ -208,23 +224,56 @@ export type DespesaExibida = {
   categoria: CategoriaLancamento;
   origem: OrigemDespesaFixa;
   ativo: boolean;
+  /** SPEC-026 (5.4, item 4): repassado às contas que a despesa gerar. */
+  fornecedor: { id: string; nome: string } | null;
 };
 
 export const LANCAMENTOS_POR_PAGINA = 100;
 export const CONTAS_POR_PAGINA = 100;
 
 export type DadosDeLancamento = { tipo: TipoLancamento; valorCentavos: number; categoria: CategoriaLancamento; descricao: string; data: Date; usuarioId: string };
-export type DadosDeConta = { tipo: TipoConta; descricao: string; categoria: CategoriaLancamento; valorCentavos: number; vencimento: string };
-export type DadosDeDespesa = { descricao: string; valorCentavos: number; diaVencimento: number; categoria: CategoriaLancamento };
+/** SPEC-026: `pessoaId` é o fornecedor na conta a pagar e o cliente na conta a receber. */
+export type DadosDoVinculo = { pessoaId: string | null; numeroDocumento: string | null };
+export type DadosDeConta = { tipo: TipoConta; descricao: string; categoria: CategoriaLancamento; valorCentavos: number; vencimento: string } & Partial<DadosDoVinculo>;
+export type DadosDeDespesa = { descricao: string; valorCentavos: number; diaVencimento: number; categoria: CategoriaLancamento; fornecedorId: string | null };
 
-export function criarConsultasFinanceiras(cliente: ClienteDoNegocio, negocioId: string) {
+export function criarConsultasFinanceiras(cliente: ClienteDoNegocio, negocioId: string, opcoes: { mascararNomes?: boolean } = {}) {
+  /** SPEC-026 (OPEN-011): no modo suporte, o nome do fornecedor e do cliente sai mascarado. */
+  const nomeVisto = (p: { tipo: TipoCliente; nome: string; nomeFantasia: string | null }) => {
+    const nome = nomeDeExibicao(p);
+    return opcoes.mascararNomes ? mascararNome(nome) : nome;
+  };
+
   const origemDaConta = (c: { parcelaId: string | null; despesaFixaId: string | null }) =>
     c.parcelaId ? ("venda" as const) : c.despesaFixaId ? ("despesa" as const) : ("manual" as const);
 
-  function exibirConta(
-    c: { id: string; tipo: TipoConta; categoria: CategoriaLancamento; descricao: string | null; valorTotal: unknown; valorPago: unknown; vencimento: Date; status: StatusConta; parcelaId: string | null; despesaFixaId: string | null },
-    hoje: string,
-  ): ContaExibida {
+  type PessoaLida = { id: string; tipo: TipoCliente; nome: string; nomeFantasia: string | null } | null;
+  type ContaLida = {
+    id: string;
+    tipo: TipoConta;
+    categoria: CategoriaLancamento;
+    descricao: string | null;
+    valorTotal: unknown;
+    valorPago: unknown;
+    vencimento: Date;
+    status: StatusConta;
+    parcelaId: string | null;
+    despesaFixaId: string | null;
+    numeroDocumento: string | null;
+    fornecedor: PessoaLida;
+    cliente: PessoaLida;
+    parcela: { pagamento: { venda: { cliente: PessoaLida } } } | null;
+  };
+
+  function pessoaDaConta(c: ContaLida): PessoaDaConta | null {
+    if (c.fornecedor) return { id: c.fornecedor.id, nome: nomeVisto(c.fornecedor), papel: "fornecedor", daVenda: false };
+    if (c.cliente) return { id: c.cliente.id, nome: nomeVisto(c.cliente), papel: "cliente", daVenda: false };
+    const daVenda = c.parcela?.pagamento.venda.cliente;
+    if (daVenda) return { id: daVenda.id, nome: nomeVisto(daVenda), papel: "cliente", daVenda: true };
+    return null;
+  }
+
+  function exibirConta(c: ContaLida, hoje: string): ContaExibida {
     const totalCentavos = centavosDe(c.valorTotal);
     const pagoCentavos = centavosDe(c.valorPago);
     const vencimento = diaLocalDe(c.vencimento);
@@ -240,6 +289,8 @@ export function criarConsultasFinanceiras(cliente: ClienteDoNegocio, negocioId: 
       status: c.status,
       atrasada: estaAtrasada({ vencimento, status: c.status, totalCentavos, pagoCentavos }, hoje),
       origem: origemDaConta(c),
+      pessoa: pessoaDaConta(c),
+      numeroDocumento: c.numeroDocumento,
     };
   }
 
@@ -254,7 +305,44 @@ export function criarConsultasFinanceiras(cliente: ClienteDoNegocio, negocioId: 
     status: true,
     parcelaId: true,
     despesaFixaId: true,
+    numeroDocumento: true,
+    fornecedor: { select: { id: true, tipo: true, nome: true, nomeFantasia: true } },
+    cliente: { select: { id: true, tipo: true, nome: true, nomeFantasia: true } },
+    parcela: { select: { pagamento: { select: { venda: { select: { cliente: { select: { id: true, tipo: true, nome: true, nomeFantasia: true } } } } } } } },
   } as const;
+
+  const camposDaDespesa = {
+    id: true,
+    descricao: true,
+    valorMensal: true,
+    diaVencimento: true,
+    categoria: true,
+    origem: true,
+    ativo: true,
+    fornecedor: { select: { id: true, tipo: true, nome: true, nomeFantasia: true } },
+  } as const;
+
+  function exibirDespesa(d: {
+    id: string;
+    descricao: string;
+    valorMensal: unknown;
+    diaVencimento: number;
+    categoria: CategoriaLancamento;
+    origem: OrigemDespesaFixa;
+    ativo: boolean;
+    fornecedor: { id: string; tipo: TipoCliente; nome: string; nomeFantasia: string | null } | null;
+  }): DespesaExibida {
+    return {
+      id: d.id,
+      descricao: d.descricao,
+      valorCentavos: d.valorMensal === null ? null : centavosDe(d.valorMensal),
+      diaVencimento: d.diaVencimento,
+      categoria: d.categoria,
+      origem: d.origem,
+      ativo: d.ativo,
+      fornecedor: d.fornecedor && { id: d.fornecedor.id, nome: nomeVisto(d.fornecedor) },
+    };
+  }
 
   /** Saldo inicial vigente: informado e não estornado (OPEN-001). */
   const saldoInicialVigente = () => cliente.lancamentoFinanceiro.count({ where: { origem: "SALDO_INICIAL", estornadoPor: { is: null } } });
@@ -299,7 +387,7 @@ export function criarConsultasFinanceiras(cliente: ClienteDoNegocio, negocioId: 
     const atual = competenciaDoDia(hoje);
     const despesas = await cliente.despesaFixa.findMany({
       where: { ativo: true },
-      select: { id: true, descricao: true, valorMensal: true, diaVencimento: true, categoria: true, origem: true, geraDesde: true },
+      select: { id: true, descricao: true, valorMensal: true, diaVencimento: true, categoria: true, origem: true, geraDesde: true, fornecedorId: true },
     });
     if (despesas.length === 0) return 0;
 
@@ -339,6 +427,7 @@ export function criarConsultasFinanceiras(cliente: ClienteDoNegocio, negocioId: 
       descricao: string;
       valorTotal: string;
       vencimento: Date;
+      fornecedorId: string | null;
     }[] = [];
     for (const { d, comps } of devidas) {
       for (const comp of comps) {
@@ -358,6 +447,8 @@ export function criarConsultasFinanceiras(cliente: ClienteDoNegocio, negocioId: 
           descricao: descricaoDaContaFixa(d.descricao, comp),
           valorTotal: reaisTexto(valor),
           vencimento: meioDia(vencimento),
+          // SPEC-026 (5.4, item 4): a conta nasce com o fornecedor da despesa.
+          fornecedorId: d.fornecedorId,
         });
       }
     }
@@ -383,6 +474,8 @@ export function criarConsultasFinanceiras(cliente: ClienteDoNegocio, negocioId: 
             valorCentavos: centavosDe(c.valorTotal) - centavosDe(c.valorPago),
             data: c.vencimento,
             usuarioId: null,
+            // SPEC-026 (5.5, item 4): a forma da venda.
+            forma: "CREDITO",
           }),
         );
         recebidas++;
@@ -392,6 +485,68 @@ export function criarConsultasFinanceiras(cliente: ClienteDoNegocio, negocioId: 
       }
     }
     return recebidas;
+  }
+
+  /** Condição sobre os pagamentos (lançamentos da conta) para os filtros de data e de forma (5.6). */
+  function condicaoDoPagamento(filtros: FiltrosDasContas) {
+    if (!filtraPagamentos(filtros)) return null;
+    return {
+      ...(filtros.pagamentoDe || filtros.pagamentoAte
+        ? {
+            data: {
+              ...(filtros.pagamentoDe ? { gte: intervaloDoDia(filtros.pagamentoDe).inicio } : {}),
+              ...(filtros.pagamentoAte ? { lt: intervaloDoDia(filtros.pagamentoAte).fim } : {}),
+            },
+          }
+        : {}),
+      ...(filtros.forma ? { formaPagamento: filtros.forma === "NAO_INFORMADA" ? null : filtros.forma } : {}),
+    };
+  }
+
+  /** As condições dos filtros novos (5.6, item 2), uma por entrada do AND. */
+  function condicoesDosFiltros(tipo: TipoConta, filtros: FiltrosDasContas, pagamento: ReturnType<typeof condicaoDoPagamento>): object[] {
+    const e: object[] = [];
+    if (filtros.busca) {
+      e.push({ OR: [{ descricao: { contains: filtros.busca, mode: "insensitive" as const } }, { numeroDocumento: { contains: filtros.busca, mode: "insensitive" as const } }] });
+    }
+    if (filtros.vencimentoDe || filtros.vencimentoAte) {
+      e.push({
+        vencimento: {
+          ...(filtros.vencimentoDe ? { gte: intervaloDoDia(filtros.vencimentoDe).inicio } : {}),
+          ...(filtros.vencimentoAte ? { lt: intervaloDoDia(filtros.vencimentoAte).fim } : {}),
+        },
+      });
+    }
+    if (pagamento) e.push({ lancamentos: { some: pagamento } });
+    if (filtros.pessoaId) {
+      e.push(
+        tipo === "PAGAR"
+          ? { fornecedorId: filtros.pessoaId }
+          : { OR: [{ clienteId: filtros.pessoaId }, { parcela: { is: { pagamento: { is: { venda: { is: { clienteId: filtros.pessoaId } } } } } } }] },
+      );
+    }
+    if (filtros.categoria) e.push({ categoria: filtros.categoria });
+    if (filtros.origem === "manual") e.push({ parcelaId: null, despesaFixaId: null });
+    else if (filtros.origem === "despesa") e.push({ despesaFixaId: { not: null } });
+    else if (filtros.origem === "venda") e.push({ parcelaId: { not: null } });
+    return e;
+  }
+
+  /**
+   * Confere o fornecedor ou o cliente escolhido (5.4): ativo e do negócio. O que já está na conta
+   * vale mesmo se tiver sido anonimizado depois (a correção só do nº do documento não o perde).
+   */
+  async function conferirPessoa(tipo: TipoConta, pessoaId: string | null, atual: string | null = null): Promise<{ fornecedorId: string | null; clienteId: string | null }> {
+    if (!pessoaId) return { fornecedorId: null, clienteId: null };
+    if (pessoaId !== atual) {
+      if (!UUID.test(pessoaId)) throw tipo === "PAGAR" ? new FornecedorNaoEncontrado() : new ClienteNaoEncontrado();
+      const existe =
+        tipo === "PAGAR"
+          ? await cliente.fornecedor.count({ where: { id: pessoaId, anonimizadoEm: null } })
+          : await cliente.cliente.count({ where: { id: pessoaId, anonimizadoEm: null } });
+      if (!existe) throw tipo === "PAGAR" ? new FornecedorNaoEncontrado() : new ClienteNaoEncontrado();
+    }
+    return tipo === "PAGAR" ? { fornecedorId: pessoaId, clienteId: null } : { fornecedorId: null, clienteId: pessoaId };
   }
 
   return {
@@ -567,7 +722,10 @@ export function criarConsultasFinanceiras(cliente: ClienteDoNegocio, negocioId: 
 
     // ---------- Contas (5.3) ----------
 
-    async listarContas(f: FiltroDasContas, hoje: string): Promise<{ contas: ContaExibida[]; pagina: number; paginas: number; atrasadas: number; ocultasPeloPlano: number }> {
+    async listarContas(
+      f: FiltroDasContas,
+      hoje: string,
+    ): Promise<{ contas: ContaExibida[]; pagina: number; paginas: number; atrasadas: number; ocultasPeloPlano: number; totais: TotaisDasContas }> {
       const inicioDeHoje = intervaloDoDia(hoje).inicio;
       const situacao =
         f.situacao === "abertas"
@@ -582,8 +740,13 @@ export function criarConsultasFinanceiras(cliente: ClienteDoNegocio, negocioId: 
       // Contas em aberto aparecem sempre; quitadas e canceladas, só dentro do histórico do plano.
       const desde = f.desde ? intervaloDoDia(f.desde).inicio : null;
       const limite = desde ? { OR: [{ status: { in: ["ABERTA", "PARCIAL"] as StatusConta[] } }, { vencimento: { gte: desde } }] } : {};
-      const where = { tipo: f.tipo, ...situacao, ...limite };
-      const [total, atrasadas, ocultasPeloPlano] = await Promise.all([
+      // SPEC-026 (5.6): os filtros novos se somam; cada condição numa entrada do AND, sem colidir.
+      const filtros = f.filtros ?? SEM_FILTROS;
+      const pagamento = condicaoDoPagamento(filtros);
+      const where = { tipo: f.tipo, AND: [situacao, limite, ...condicoesDosFiltros(f.tipo, filtros, pagamento)] };
+      const semCanceladas = { AND: [where, { status: { not: "CANCELADA" as const } }] };
+      const emAberto = { AND: [where, { status: { in: ["ABERTA", "PARCIAL"] as StatusConta[] } }] };
+      const [total, atrasadas, ocultasPeloPlano, somaGeral, somaEmAberto, pagoFiltrado] = await Promise.all([
         cliente.contaPagarReceber.count({ where }),
         cliente.contaPagarReceber.count({ where: { tipo: f.tipo, status: { in: ["ABERTA", "PARCIAL"] }, vencimento: { lt: inicioDeHoje } } }),
         desde
@@ -591,17 +754,35 @@ export function criarConsultasFinanceiras(cliente: ClienteDoNegocio, negocioId: 
               where: { tipo: f.tipo, status: { in: (f.situacao === "quitadas" ? ["QUITADA"] : f.situacao === "canceladas" ? ["CANCELADA"] : ["QUITADA", "CANCELADA"]) as StatusConta[] }, vencimento: { lt: desde } },
             })
           : Promise.resolve(0),
+        cliente.contaPagarReceber.aggregate({ where: semCanceladas, _sum: { valorTotal: true, valorPago: true } }),
+        cliente.contaPagarReceber.aggregate({ where: emAberto, _sum: { valorTotal: true, valorPago: true } }),
+        // Com filtro de data do pagamento ou de forma, "Pago" soma só os pagamentos que atendem (5.6, item 4).
+        filtraPagamentos(filtros) ? cliente.lancamentoFinanceiro.aggregate({ where: { ...pagamento, conta: { is: semCanceladas } }, _sum: { valor: true } }) : Promise.resolve(null),
       ]);
       const paginas = Math.max(1, Math.ceil(total / CONTAS_POR_PAGINA));
       const pagina = Math.min(Math.max(1, Math.floor(f.pagina ?? 1) || 1), paginas);
+      const decrescente = f.situacao === "quitadas" || f.situacao === "canceladas" || (f.situacao === "todas" && filtraPagamentos(filtros));
       const contas = await cliente.contaPagarReceber.findMany({
         where,
-        orderBy: [{ vencimento: f.situacao === "quitadas" || f.situacao === "canceladas" ? "desc" : "asc" }, { id: "asc" }],
+        orderBy: [{ vencimento: decrescente ? "desc" : "asc" }, { id: "asc" }],
         skip: (pagina - 1) * CONTAS_POR_PAGINA,
         take: CONTAS_POR_PAGINA,
         select: camposDaConta,
       });
-      return { contas: contas.map((c) => exibirConta(c, hoje)), pagina, paginas, atrasadas, ocultasPeloPlano: f.situacao === "abertas" || f.situacao === "atrasadas" ? 0 : ocultasPeloPlano };
+      const totais: TotaisDasContas = {
+        quantidade: total,
+        totalCentavos: centavosDe(somaGeral._sum.valorTotal ?? 0),
+        pagoCentavos: pagoFiltrado ? centavosDe(pagoFiltrado._sum.valor ?? 0) : centavosDe(somaGeral._sum.valorPago ?? 0),
+        emAbertoCentavos: centavosDe(somaEmAberto._sum.valorTotal ?? 0) - centavosDe(somaEmAberto._sum.valorPago ?? 0),
+      };
+      return {
+        contas: contas.map((c) => exibirConta(c, hoje)),
+        pagina,
+        paginas,
+        atrasadas,
+        ocultasPeloPlano: f.situacao === "abertas" || f.situacao === "atrasadas" ? 0 : ocultasPeloPlano,
+        totais,
+      };
     },
 
     async detalharConta(id: string, hoje: string): Promise<DetalheDaConta> {
@@ -611,9 +792,13 @@ export function criarConsultasFinanceiras(cliente: ClienteDoNegocio, negocioId: 
           select: {
             ...camposDaConta,
             criadaPorId: true,
-            parcela: { select: { pagamento: { select: { venda: { select: { id: true, numero: true } } } } } },
+            parcela: {
+              select: {
+                pagamento: { select: { venda: { select: { id: true, numero: true, cliente: { select: { id: true, tipo: true, nome: true, nomeFantasia: true } } } } } },
+              },
+            },
             despesaFixa: { select: { id: true, descricao: true } },
-            lancamentos: { orderBy: { data: "asc" }, select: { id: true, valor: true, data: true, usuario: { select: { nome: true } } } },
+            lancamentos: { orderBy: { data: "asc" }, select: { id: true, valor: true, data: true, formaPagamento: true, usuario: { select: { nome: true } } } },
           },
         });
       if (!c) throw new ContaNaoEncontrada();
@@ -623,25 +808,72 @@ export function criarConsultasFinanceiras(cliente: ClienteDoNegocio, negocioId: 
         criadaPor: autor?.usuario.nome ?? null,
         venda: c.parcela?.pagamento.venda ?? null,
         despesa: c.despesaFixa,
-        lancamentos: c.lancamentos.map((l) => ({ id: l.id, valorCentavos: centavosDe(l.valor), data: l.data, registradoPor: l.usuario?.nome ?? null })),
+        lancamentos: c.lancamentos.map((l) => ({ id: l.id, valorCentavos: centavosDe(l.valor), data: l.data, registradoPor: l.usuario?.nome ?? null, forma: l.formaPagamento })),
       };
     },
 
     async criarConta(d: DadosDeConta, usuarioId: string): Promise<{ id: string }> {
+      const vinculo = await conferirPessoa(d.tipo, d.pessoaId ?? null);
       return cliente.contaPagarReceber.create({
-        data: { negocioId, tipo: d.tipo, descricao: d.descricao, categoria: d.categoria, valorTotal: reaisTexto(d.valorCentavos), vencimento: meioDia(d.vencimento), criadaPorId: usuarioId },
+        data: {
+          negocioId,
+          tipo: d.tipo,
+          descricao: d.descricao,
+          categoria: d.categoria,
+          valorTotal: reaisTexto(d.valorCentavos),
+          vencimento: meioDia(d.vencimento),
+          criadaPorId: usuarioId,
+          ...vinculo,
+          numeroDocumento: d.numeroDocumento ?? null,
+        },
         select: { id: true },
       });
     },
 
-    /** Editar conta manual sem pagamento (OPEN-003, INV-008). */
+    /** Editar conta manual sem pagamento (OPEN-003, INV-008), com o vínculo e o documento (SPEC-026). */
     async editarConta(id: string, d: DadosDeConta): Promise<void> {
       if (!UUID.test(id)) throw new ContaNaoEncontrada();
+      const atual = await cliente.contaPagarReceber.findFirst({ where: { id }, select: { fornecedorId: true, clienteId: true } });
+      if (!atual) throw new ContaNaoEncontrada();
+      const vinculo = await conferirPessoa(d.tipo, d.pessoaId ?? null, d.tipo === "PAGAR" ? atual.fornecedorId : atual.clienteId);
       const { count } = await cliente.contaPagarReceber.updateMany({
         where: { id, parcelaId: null, despesaFixaId: null, status: "ABERTA", valorPago: 0 },
-        data: { tipo: d.tipo, descricao: d.descricao, categoria: d.categoria, valorTotal: reaisTexto(d.valorCentavos), vencimento: meioDia(d.vencimento) },
+        data: {
+          tipo: d.tipo,
+          descricao: d.descricao,
+          categoria: d.categoria,
+          valorTotal: reaisTexto(d.valorCentavos),
+          vencimento: meioDia(d.vencimento),
+          ...vinculo,
+          numeroDocumento: d.numeroDocumento ?? null,
+        },
       });
       if (count === 0) await explicarRecusa(id);
+    },
+
+    /**
+     * Correção do fornecedor ou cliente e do nº do documento (SPEC-026, 5.4, item 5): em qualquer
+     * conta e situação, sem mexer em valor, vencimento, situação nem pagamentos (INV-002). Na conta
+     * de venda no cartão, o cliente é o da venda: só o documento muda.
+     */
+    async corrigirVinculo(id: string, d: DadosDoVinculo): Promise<void> {
+      if (!UUID.test(id)) throw new ContaNaoEncontrada();
+      const c = await cliente.contaPagarReceber.findFirst({ where: { id }, select: { tipo: true, parcelaId: true, fornecedorId: true, clienteId: true } });
+      if (!c) throw new ContaNaoEncontrada();
+      const vinculo = c.parcelaId ? { fornecedorId: null, clienteId: null } : await conferirPessoa(c.tipo, d.pessoaId, c.tipo === "PAGAR" ? c.fornecedorId : c.clienteId);
+      const { count } = await cliente.contaPagarReceber.updateMany({ where: { id }, data: { ...vinculo, numeroDocumento: d.numeroDocumento } });
+      if (count === 0) throw new ContaNaoEncontrada();
+    },
+
+    /** Clientes para o seletor da conta a receber (SPEC-026, OPEN-006): só o nome, dos ativos. */
+    async opcoesDeClientes(): Promise<{ id: string; nome: string }[]> {
+      const lista = await cliente.cliente.findMany({
+        where: { anonimizadoEm: null },
+        select: { id: true, tipo: true, nome: true, nomeFantasia: true },
+        orderBy: { nome: "asc" },
+        take: 1000,
+      });
+      return lista.map((c) => ({ id: c.id, nome: nomeVisto(c) })).sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
     },
 
     /** Cancelar conta manual sem pagamento (OPEN-003): só muda o status; nada é apagado. */
@@ -663,23 +895,21 @@ export function criarConsultasFinanceiras(cliente: ClienteDoNegocio, negocioId: 
     async listarDespesas(): Promise<DespesaExibida[]> {
       const lista = await cliente.despesaFixa.findMany({
         orderBy: [{ ativo: "desc" }, { origem: "desc" }, { descricao: "asc" }],
-        select: { id: true, descricao: true, valorMensal: true, diaVencimento: true, categoria: true, origem: true, ativo: true },
+        select: camposDaDespesa,
         take: 500,
       });
-      return lista.map((d) => ({ ...d, valorCentavos: d.valorMensal === null ? null : centavosDe(d.valorMensal) }));
+      return lista.map(exibirDespesa);
     },
 
     async detalharDespesa(id: string): Promise<DespesaExibida> {
       if (!UUID.test(id)) throw new DespesaNaoEncontrada();
-      const d = await cliente.despesaFixa.findFirst({
-        where: { id },
-        select: { id: true, descricao: true, valorMensal: true, diaVencimento: true, categoria: true, origem: true, ativo: true },
-      });
+      const d = await cliente.despesaFixa.findFirst({ where: { id }, select: camposDaDespesa });
       if (!d) throw new DespesaNaoEncontrada();
-      return { ...d, valorCentavos: d.valorMensal === null ? null : centavosDe(d.valorMensal) };
+      return exibirDespesa(d);
     },
 
     async criarDespesa(d: DadosDeDespesa, hoje: string): Promise<{ id: string }> {
+      const { fornecedorId } = await conferirPessoa("PAGAR", d.fornecedorId);
       return cliente.despesaFixa.create({
         data: {
           negocioId,
@@ -689,6 +919,7 @@ export function criarConsultasFinanceiras(cliente: ClienteDoNegocio, negocioId: 
           categoria: d.categoria,
           origem: "MANUAL",
           geraDesde: dataDaCompetencia(primeiraCompetencia(hoje, d.diaVencimento)),
+          fornecedorId,
         },
         select: { id: true },
       });
@@ -698,9 +929,11 @@ export function criarConsultasFinanceiras(cliente: ClienteDoNegocio, negocioId: 
     async editarDespesa(id: string, d: DadosDeDespesa): Promise<void> {
       const atual = await this.detalharDespesa(id);
       if (atual.origem === "DAS_MEI") throw new DasNaoEditavel();
+      // SPEC-026 (5.4, item 4): vale para as próximas contas; as já geradas ficam como estão.
+      const { fornecedorId } = await conferirPessoa("PAGAR", d.fornecedorId, atual.fornecedor?.id ?? null);
       await cliente.despesaFixa.updateMany({
         where: { id, origem: "MANUAL" },
-        data: { descricao: d.descricao, valorMensal: reaisTexto(d.valorCentavos), diaVencimento: d.diaVencimento, categoria: d.categoria },
+        data: { descricao: d.descricao, valorMensal: reaisTexto(d.valorCentavos), diaVencimento: d.diaVencimento, categoria: d.categoria, fornecedorId },
       });
     },
 

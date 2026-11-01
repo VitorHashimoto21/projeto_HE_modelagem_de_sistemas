@@ -6,6 +6,7 @@ import { Superficie } from "@/components/ui/superficie";
 import { exigirPermissao } from "@/lib/auth/servidor";
 import { hoje } from "@/lib/dominio/datas";
 import { pode } from "@/lib/dominio/permissoes";
+import { opcoesDoVinculo } from "@/lib/financeiro/opcoes";
 
 export const metadata: Metadata = { title: "Nova conta" };
 
@@ -13,12 +14,13 @@ export const metadata: Metadata = { title: "Nova conta" };
 export default async function NovaConta({ searchParams }: PageProps<"/financeiro/contas/nova">) {
   const membro = await exigirPermissao("financeiro", "criar");
   const { tipo } = await searchParams;
+  const opcoes = await opcoesDoVinculo(membro);
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       <CabecalhoDePagina voltar={pode(membro.permissoes, "financeiro", "ver") ? { href: "/financeiro/contas", rotulo: "Contas" } : undefined} titulo="Nova conta" descricao={TEXTO_DA_CONTA} />
       <Superficie>
-        <FormularioConta hoje={hoje()} tipoPadrao={tipo === "RECEBER" ? "RECEBER" : "PAGAR"} />
+        <FormularioConta hoje={hoje()} tipoPadrao={tipo === "RECEBER" ? "RECEBER" : "PAGAR"} opcoes={opcoes} />
       </Superficie>
     </div>
   );

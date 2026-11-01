@@ -2,6 +2,8 @@ import type { CategoriaLancamento, FormaPagamento, OrigemLancamento, StatusConta
 import { intervaloDoDia } from "@/lib/dominio/datas";
 import { centavosDe } from "@/lib/dominio/financeiro";
 import type { LinhaVendida } from "@/lib/dominio/relatorios";
+import { nomeDeExibicao } from "@/lib/dominio/cliente";
+import type { FormaDoPagamento } from "@/lib/dominio/contas";
 import type { ClienteDoNegocio } from "./cliente-do-negocio";
 
 /**
@@ -39,7 +41,13 @@ export type ContaExportada = {
   status: StatusConta;
   totalCentavos: number;
   pagoCentavos: number;
+  /** SPEC-026 (5.7): fornecedor ou cliente (o da venda, nas contas do cartão), nº do documento e pagamentos. */
+  pessoa: string | null;
+  numeroDocumento: string | null;
+  pagamentos: { data: Date; forma: FormaDoPagamento | null; valorCentavos: number }[];
 };
+
+const PESSOA = { select: { tipo: true, nome: true, nomeFantasia: true } } as const;
 
 const num = (v: unknown) => Number(String(v));
 
@@ -136,17 +144,36 @@ export function criarConsultasDeRelatorios(cliente: ClienteDoNegocio, negocioId:
       const lista = await cliente.contaPagarReceber.findMany({
         where: { vencimento: periodo(de, ate) },
         orderBy: [{ vencimento: "asc" }, { id: "asc" }],
-        select: { tipo: true, descricao: true, categoria: true, vencimento: true, status: true, valorTotal: true, valorPago: true },
+        select: {
+          tipo: true,
+          descricao: true,
+          categoria: true,
+          vencimento: true,
+          status: true,
+          valorTotal: true,
+          valorPago: true,
+          numeroDocumento: true,
+          fornecedor: PESSOA,
+          cliente: PESSOA,
+          parcela: { select: { pagamento: { select: { venda: { select: { cliente: PESSOA } } } } } },
+          lancamentos: { orderBy: { data: "asc" }, select: { data: true, formaPagamento: true, valor: true } },
+        },
       });
-      return lista.map((c) => ({
-        tipo: c.tipo,
-        descricao: c.descricao,
-        categoria: c.categoria,
-        vencimento: c.vencimento,
-        status: c.status,
-        totalCentavos: centavosDe(c.valorTotal),
-        pagoCentavos: centavosDe(c.valorPago),
-      }));
+      return lista.map((c) => {
+        const pessoa = c.fornecedor ?? c.cliente ?? c.parcela?.pagamento.venda.cliente ?? null;
+        return {
+          tipo: c.tipo,
+          descricao: c.descricao,
+          categoria: c.categoria,
+          vencimento: c.vencimento,
+          status: c.status,
+          totalCentavos: centavosDe(c.valorTotal),
+          pagoCentavos: centavosDe(c.valorPago),
+          pessoa: pessoa && nomeDeExibicao(pessoa),
+          numeroDocumento: c.numeroDocumento,
+          pagamentos: c.lancamentos.map((l) => ({ data: l.data, forma: l.formaPagamento, valorCentavos: centavosDe(l.valor) })),
+        };
+      });
     },
   };
 }

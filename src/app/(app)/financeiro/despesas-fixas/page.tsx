@@ -11,6 +11,7 @@ import { financeiro } from "@/lib/db";
 import { hoje } from "@/lib/dominio/datas";
 import { pode } from "@/lib/dominio/permissoes";
 import { conferirFinanceiro } from "@/lib/financeiro/conferencia";
+import { opcoesDoVinculo } from "@/lib/financeiro/opcoes";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Despesas fixas" };
@@ -26,6 +27,8 @@ export default async function DespesasFixas() {
   const ativas = despesas.filter((d) => d.ativo);
   const totalMensal = ativas.reduce((s, d) => s + (d.valorCentavos ?? (d.origem === "DAS_MEI" ? (das ?? 0) : 0)), 0);
   const podeEditar = pode(membro.permissoes, "financeiro", "editar");
+  const podeCriar = !membro.modoSuporte && pode(membro.permissoes, "financeiro", "criar");
+  const opcoes = podeCriar ? await opcoesDoVinculo(membro) : undefined;
 
   const valorDe = (d: (typeof despesas)[number]) => d.valorCentavos ?? (d.origem === "DAS_MEI" ? (das ?? 0) : 0);
 
@@ -60,6 +63,7 @@ export default async function DespesasFixas() {
                       <p className="text-xs text-muted-foreground">
                         Todo dia {d.diaVencimento}, {ROTULO_CATEGORIA[d.categoria].toLowerCase()}
                         {d.origem === "DAS_MEI" && ", automático (MEI)"}
+                        {d.fornecedor && `, ${d.fornecedor.nome}`}
                         {!d.ativo && ", desativada"}
                       </p>
                       {d.ativo && (
@@ -96,11 +100,11 @@ export default async function DespesasFixas() {
           )}
         </Superficie>
 
-        {pode(membro.permissoes, "financeiro", "criar") && (
+        {podeCriar && (
           <aside className="w-full lg:sticky lg:top-6 lg:w-96">
             <Superficie aria-labelledby="titulo-nova">
               <TituloDaSuperficie id="titulo-nova" titulo="Nova despesa fixa" />
-              <FormularioDespesa />
+              <FormularioDespesa opcoes={opcoes} />
             </Superficie>
           </aside>
         )}

@@ -96,7 +96,7 @@ export type DetalheDoCliente = {
 /** Valores para preencher o formulário de edição (só para quem edita: sempre completos). */
 export type ValoresDoCliente = { [K in keyof DadosDoCliente]: DadosDoCliente[K] };
 
-const CAMPOS_DO_FORMULARIO = {
+export const CAMPOS_DO_FORMULARIO = {
   tipo: true,
   nome: true,
   nomeFantasia: true,
@@ -116,16 +116,16 @@ const CAMPOS_DO_FORMULARIO = {
   uf: true,
 } as const;
 
-const CAMPOS = { id: true, ...CAMPOS_DO_FORMULARIO } as const;
+export const CAMPOS = { id: true, ...CAMPOS_DO_FORMULARIO } as const;
 
 type Linha = { id: string } & DadosDoCliente;
 
-const ehUnicidade = (e: unknown) => typeof e === "object" && e !== null && (e as { code?: string }).code === "P2002";
+export const ehUnicidade = (e: unknown) => typeof e === "object" && e !== null && (e as { code?: string }).code === "P2002";
 const municipioUf = (c: { municipio: string | null; uf: string | null }) =>
   c.municipio && c.uf ? `${c.municipio}/${c.uf}` : (c.municipio ?? c.uf ?? null);
 
 /** Termo da busca (5.1, item 2): o texto como veio e, se houver, só os dígitos e letras (documento e telefone). */
-function condicaoDaBusca(busca: string) {
+export function condicaoDaBusca(busca: string) {
   const termo = busca.trim();
   if (!termo) return {};
   const compacto = termo.replace(/[\s./()-]/g, "").toUpperCase();
@@ -139,7 +139,11 @@ function condicaoDaBusca(busca: string) {
   return { OR: ou };
 }
 
-export function criarConsultasDeClientes(cliente: ClienteDoNegocio, negocioId: string, visao: Visao) {
+/**
+ * Exibição do cadastro com a máscara de quem vê (SPEC-022, 5.5). A mesma do fornecedor (SPEC-026,
+ * 5.2), que tem os mesmos campos.
+ */
+export function exibicaoDoCadastro(visao: Visao) {
   const nomeVisto = (nome: string) => (visao === "suporte" ? mascararNome(nome) : nome);
 
   function paraLista(c: Linha): ClienteDaLista {
@@ -192,6 +196,12 @@ export function criarConsultasDeClientes(cliente: ClienteDoNegocio, negocioId: s
       visao,
     };
   }
+
+  return { nomeVisto, paraLista, paraDetalhe };
+}
+
+export function criarConsultasDeClientes(cliente: ClienteDoNegocio, negocioId: string, visao: Visao) {
+  const { nomeVisto, paraLista, paraDetalhe } = exibicaoDoCadastro(visao);
 
   /** O outro cliente com o mesmo documento, para a mensagem de repetido. */
   async function conferirDocumento(tx: ClienteDoNegocio, dados: DadosDoCliente, exceto?: string) {
@@ -294,13 +304,15 @@ export function criarConsultasDeClientes(cliente: ClienteDoNegocio, negocioId: s
     /**
      * Exclusão (OPEN-005, 5.6): sem vendas, apaga; com vendas, anonimiza — as vendas, pagamentos,
      * contas e lançamentos não mudam. A linha do cliente fica travada até o fim da transação.
+     * SPEC-026: com contas a receber ligadas, também anonimiza (as contas continuam ligadas a ele).
      */
     async excluir(id: string): Promise<"apagado" | "anonimizado"> {
       return cliente.$transaction(async (tx) => {
         const travado = await tx.$queryRaw<{ id: string }[]>`
           SELECT "id" FROM "Cliente" WHERE "id" = ${id}::uuid AND "negocioId" = ${negocioId}::uuid AND "anonimizadoEm" IS NULL FOR UPDATE`;
         if (!travado.length) throw new ClienteNaoEncontrado();
-        if ((await tx.venda.count({ where: { clienteId: id } })) === 0) {
+        const [vendas, contas] = await Promise.all([tx.venda.count({ where: { clienteId: id } }), tx.contaPagarReceber.count({ where: { clienteId: id } })]);
+        if (vendas + contas === 0) {
           await tx.cliente.delete({ where: { id } });
           return "apagado";
         }
@@ -312,6 +324,11 @@ export function criarConsultasDeClientes(cliente: ClienteDoNegocio, negocioId: s
     /** Quantas compras tem (para o texto da confirmação de exclusão, 5.6). */
     async quantidadeDeCompras(id: string) {
       return cliente.venda.count({ where: { clienteId: id } });
+    },
+
+    /** Quantas contas a receber estão ligadas a ele (SPEC-026): com elas, a exclusão anonimiza. */
+    async quantidadeDeContas(id: string) {
+      return cliente.contaPagarReceber.count({ where: { clienteId: id } });
     },
   };
 }

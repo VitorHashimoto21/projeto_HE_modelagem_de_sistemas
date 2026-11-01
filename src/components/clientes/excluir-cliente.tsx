@@ -15,13 +15,16 @@ const DialogoDeConfirmacao = dynamic(() => import("@/components/ui/confirmacao")
  * Exclusão do cliente (SPEC-022, 5.6; OPEN-005): sem compras, apaga; com compras, anonimiza.
  * O texto da confirmação diz qual dos dois vai acontecer; o servidor decide de novo ao gravar.
  */
-export function ExcluirCliente({ clienteId, nome, compras }: { clienteId: string; nome: string; compras: number }) {
+export function ExcluirCliente({ clienteId, nome, compras, contas = 0 }: { clienteId: string; nome: string; compras: number; contas?: number }) {
   const [estado, executar, enviando] = useActionState(acaoExcluirCliente, undefined);
   const confirmacao = useConfirmacaoDoEnvio();
+  // SPEC-026: com contas a receber ligadas, também anonimiza (as contas continuam).
+  const ligados = [compras > 0 && `${compras} ${compras === 1 ? "compra" : "compras"}`, contas > 0 && `${contas} ${contas === 1 ? "conta a receber" : "contas a receber"}`].filter(Boolean);
+  const registros = compras > 0 && contas > 0 ? "as vendas e as contas continuarão registradas" : compras > 0 ? "as vendas continuarão registradas" : "as contas continuarão registradas";
   const descricao =
-    compras === 0
+    ligados.length === 0
       ? `Excluir ${nome}? O cadastro será apagado.`
-      : `${nome} tem ${compras} ${compras === 1 ? "compra" : "compras"}. Os dados pessoais serão apagados, e as vendas continuarão registradas, sem identificação e com os mesmos valores. Isso não pode ser desfeito.`;
+      : `${nome} tem ${ligados.join(" e ")}. Os dados pessoais serão apagados, e ${registros}, sem identificação e com os mesmos valores. Isso não pode ser desfeito.`;
   return (
     <form action={executar} onSubmit={confirmacao.aoEnviar} className="space-y-3">
       {estado?.status === "erro" && <Aviso tipo="erro">{estado.mensagem}</Aviso>}
@@ -34,7 +37,7 @@ export function ExcluirCliente({ clienteId, nome, compras }: { clienteId: string
         <DialogoDeConfirmacao
           aberto
           aoMudar={confirmacao.setAberto}
-          titulo={compras === 0 ? "Excluir o cliente?" : "Excluir os dados do cliente?"}
+          titulo={ligados.length === 0 ? "Excluir o cliente?" : "Excluir os dados do cliente?"}
           descricao={descricao}
           confirmar="Excluir cliente"
           aoConfirmar={confirmacao.confirmar}

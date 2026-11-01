@@ -12,6 +12,7 @@ import {
   type Valor,
 } from "@/lib/dominio/lgpd";
 import { DADOS_ANONIMOS } from "./clientes";
+import { FORNECEDOR_SEM_DADOS } from "./fornecedores";
 
 /**
  * LGPD (SPEC-014). Fora do cliente do negócio, como as consultas de acesso: a exportação e
@@ -95,7 +96,7 @@ export function criarConsultasDaLgpd(cliente: PrismaClient) {
       const negociosComoDono = await Promise.all(
         donos.map(async (negocioId) => {
           const f = { where: { negocioId } };
-          const [negocio, membros, convites, itens, subcategorias, materiais, movimentacoes, historicoPrecos, historicoCustos, vendas, itensVenda, pagamentos, parcelas, clientes, lancamentos, contas, despesasFixas, historicoPlano, acessosSuporte, registrosSuporte] =
+          const [negocio, membros, convites, itens, subcategorias, materiais, movimentacoes, historicoPrecos, historicoCustos, vendas, itensVenda, pagamentos, parcelas, clientes, fornecedores, lancamentos, contas, despesasFixas, historicoPlano, acessosSuporte, registrosSuporte] =
             await Promise.all([
               cliente.negocio.findUniqueOrThrow({ where: { id: negocioId } }),
               cliente.membroNegocio.findMany({ ...f, select: { id: true, papel: true, permissoesCustom: true, suspensoEm: true, usuarioId: true, usuario: { select: { nome: true, email: true } } } }),
@@ -113,6 +114,8 @@ export function criarConsultasDaLgpd(cliente: PrismaClient) {
               cliente.pagamento.findMany(f),
               cliente.parcela.findMany(f),
               cliente.cliente.findMany(f),
+              // SPEC-026 (RNF04): fornecedores; as contas e as despesas trazem a referência (fornecedorId).
+              cliente.fornecedor.findMany(f),
               cliente.lancamentoFinanceiro.findMany(f),
               cliente.contaPagarReceber.findMany(f),
               cliente.despesaFixa.findMany(f),
@@ -135,6 +138,7 @@ export function criarConsultasDaLgpd(cliente: PrismaClient) {
             pagamentos: linhas(pagamentos),
             parcelas: linhas(parcelas),
             clientes: linhas(clientes),
+            fornecedores: linhas(fornecedores),
             lancamentosFinanceiros: linhas(lancamentos),
             contasPagarReceber: linhas(contas),
             despesasFixas: linhas(despesasFixas),
@@ -197,6 +201,8 @@ export function criarConsultasDaLgpd(cliente: PrismaClient) {
           });
           // SPEC-022 (INV-006): todos os dados pessoais dos clientes, não só nome e contato.
           await tx.cliente.updateMany({ where: { negocioId: { in: donos }, anonimizadoEm: null }, data: { ...DADOS_ANONIMOS, anonimizadoEm: agora } });
+          // SPEC-026 (RN27 alterada): os fornecedores também, com as contas mantidas sem identificação.
+          await tx.fornecedor.updateMany({ where: { negocioId: { in: donos }, anonimizadoEm: null }, data: { ...FORNECEDOR_SEM_DADOS, anonimizadoEm: agora } });
           // SPEC-018 (5.4.6): negócio encerrado não fica com acesso de suporte liberado; o registro fica (RN32).
           const liberacoes = await tx.acessoSuporte.findMany({ where: { negocioId: { in: donos }, revogadoEm: null, expiraEm: { gt: agora } }, select: { id: true, negocioId: true } });
           if (liberacoes.length) {

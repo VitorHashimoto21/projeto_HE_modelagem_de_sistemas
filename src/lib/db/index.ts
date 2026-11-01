@@ -8,6 +8,7 @@ import { criarConsultasFinanceiras } from "./financeiro";
 import { criarConsultasDePrecificacao } from "./precificacao";
 import { criarConsultasDeVendas } from "./vendas";
 import { criarConsultasDeClientes, visaoDoCliente } from "./clientes";
+import { criarConsultasDeFornecedores, visaoDoFornecedor } from "./fornecedores";
 import { criarConsultasDeEquipe } from "./equipe";
 import { criarConsultasDeNegocios } from "./negocios";
 import { criarConsultasDaLgpd } from "./lgpd";
@@ -23,6 +24,8 @@ export type { ConsultasDoDashboard, VendasDoDia } from "./dashboard";
 export type { ClienteDaVenda, ConsultasDeVendas, DetalheDaVenda, ItemVendavel, VendaResumida } from "./vendas";
 export { ClienteNaoEncontrado, DocumentoRepetido, FILTRO_INCOMPLETOS, LIMITE_DA_LISTA, LIMITE_DE_COMPRAS } from "./clientes";
 export type { ClienteDaLista, CompraDoCliente, ConsultasDeClientes, DetalheDoCliente, ValoresDoCliente, Visao } from "./clientes";
+export { DocumentoDoFornecedorRepetido, FornecedorNaoEncontrado, LIMITE_DE_CONTAS_DO_FORNECEDOR, LIMITE_DE_FORNECEDORES } from "./fornecedores";
+export type { ConsultasDeFornecedores, ContaDoFornecedor, DetalheDoFornecedor, FornecedorDaLista, OpcaoDePessoa, ValoresDoFornecedor } from "./fornecedores";
 export type { ConsultasDePrecificacao, ItemCalculavel, ParametrosDePrecificacao } from "./precificacao";
 export type { ConsultasFinanceiras, ContaExibida, DespesaExibida, DetalheDaConta, FluxoDeCaixa, LancamentoExibido } from "./financeiro";
 export type { ConsultasDoEstoque, DetalheDoEstoque, ProdutoEmEstoque } from "./estoque";
@@ -72,9 +75,20 @@ export function clientes(contexto: ContextoDeNegocio & { permissoes: Matriz }) {
   return criarConsultasDeClientes(clienteDoNegocio(contexto), contexto.negocioId, visaoDoCliente(contexto));
 }
 
-/** Financeiro do negócio ativo (SPEC-009): sempre pelo cliente do negócio. */
+/**
+ * Financeiro do negócio ativo (SPEC-009): sempre pelo cliente do negócio. No modo suporte, o nome
+ * do fornecedor e do cliente das contas sai mascarado (SPEC-026, OPEN-011).
+ */
 export function financeiro(contexto: ContextoDeNegocio) {
-  return criarConsultasFinanceiras(clienteDoNegocio(contexto), contexto.negocioId);
+  return criarConsultasFinanceiras(clienteDoNegocio(contexto), contexto.negocioId, { mascararNomes: contexto.modoSuporte === true });
+}
+
+/**
+ * Fornecedores do negócio ativo (SPEC-026): a visão sai das permissões do Financeiro (OPEN-005).
+ * Quem pode editar vê tudo; quem só vê recebe os dados mascarados; o suporte, inclusive o nome.
+ */
+export function fornecedores(contexto: ContextoDeNegocio & { permissoes: Matriz }) {
+  return criarConsultasDeFornecedores(clienteDoNegocio(contexto), contexto.negocioId, visaoDoFornecedor(contexto));
 }
 
 /** Dados da Calculadora de precificação (SPEC-010): sempre pelo cliente do negócio. */

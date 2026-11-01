@@ -17,6 +17,7 @@ import {
 /**
  * Cadastro e edição do cliente (SPEC-022, 5.2 e 5.8). Só o nome (razão social, na empresa) é
  * obrigatório; os campos do outro tipo são descartados. Usada no navegador e de novo no servidor.
+ * O fornecedor (SPEC-026, OPEN-002) tem os mesmos campos e usa a mesma validação.
  */
 
 export const MAX_NOME_PF = 120;
@@ -26,6 +27,7 @@ export const MAX_INSCRICAO_MUNICIPAL = 20;
 
 export const MENSAGENS_CLIENTE = {
   nomeObrigatorio: "Informe o nome do cliente.",
+  nomeDoFornecedorObrigatorio: "Informe o nome do fornecedor.",
   razaoSocialObrigatoria: "Informe a razão social.",
   nomeLongo: (max: number) => `Use no máximo ${max} caracteres.`,
   tipoInvalido: "Escolha pessoa física ou empresa.",
@@ -62,6 +64,9 @@ export type DadosDoCliente = {
   uf: string | null;
 };
 
+/** Cliente (SPEC-022) ou fornecedor (SPEC-026): o mesmo cadastro, com textos próprios. */
+export type Pessoa = "cliente" | "fornecedor";
+
 /** Valores já gravados: e-mail e telefone antigos fora do formato são mantidos se não mudarem (5.2, item 10). */
 export type ValoresAtuais = { email: string | null; telefone: string | null };
 
@@ -71,7 +76,7 @@ const opcional = (v: string | undefined) => texto(v) || null;
 /** Limites dos campos de endereço (5.8). */
 const LIMITES = { logradouro: 120, numero: 30, complemento: 30, bairro: 120, municipio: 120, nomeFantasia: 150, nomeContato: 120 } as const;
 
-export function validarCliente(campos: Record<string, string>, atuais: ValoresAtuais | null = null): Validacao<DadosDoCliente> {
+export function validarCliente(campos: Record<string, string>, atuais: ValoresAtuais | null = null, pessoa: Pessoa = "cliente"): Validacao<DadosDoCliente> {
   const erros: ErrosDeCampo = {};
   const tipo = (campos.tipo || "PESSOA_FISICA") as TipoCliente;
   if (!(TIPOS_CLIENTE as readonly string[]).includes(tipo)) erros.tipo = MENSAGENS_CLIENTE.tipoInvalido;
@@ -79,7 +84,8 @@ export function validarCliente(campos: Record<string, string>, atuais: ValoresAt
 
   const nome = texto(campos.nome);
   const maxNome = empresa ? MAX_NOME_PJ : MAX_NOME_PF;
-  if (!nome) erros.nome = empresa ? MENSAGENS_CLIENTE.razaoSocialObrigatoria : MENSAGENS_CLIENTE.nomeObrigatorio;
+  if (!nome)
+    erros.nome = empresa ? MENSAGENS_CLIENTE.razaoSocialObrigatoria : pessoa === "fornecedor" ? MENSAGENS_CLIENTE.nomeDoFornecedorObrigatorio : MENSAGENS_CLIENTE.nomeObrigatorio;
   else if (nome.length > maxNome) erros.nome = MENSAGENS_CLIENTE.nomeLongo(maxNome);
 
   let documento: string | null = null;

@@ -78,7 +78,7 @@ export async function excluirCliente(id: string, deps: DependenciasDoCliente): P
 }
 
 /** Endereço pelo CEP (5.2, item 6): só o CEP sai do sistema. */
-export async function consultarCep(texto: string, deps: DependenciasDoCliente): Promise<EstadoDoCep> {
+export async function consultarCep(texto: string, deps: Pick<DependenciasDoCliente, "consultaCep">): Promise<EstadoDoCep> {
   const cep = normalizarCep(texto);
   if (!cep) return { status: "erro", mensagem: MENSAGENS_CLIENTE.cepInvalido };
   const r = await deps.consultaCep.consultar(cep);
@@ -86,7 +86,7 @@ export async function consultarCep(texto: string, deps: DependenciasDoCliente): 
 }
 
 /** Dados da empresa pelo CNPJ (5.2, item 7; OPEN-009). Nunca há consulta de CPF (INV-004). */
-export async function consultarEmpresa(texto: string, deps: DependenciasDoCliente): Promise<EstadoDaEmpresa> {
+export async function consultarEmpresa(texto: string, deps: Pick<DependenciasDoCliente, "consultaCep" | "consultaCnpj">): Promise<EstadoDaEmpresa> {
   const cnpj = normalizarCnpj(texto);
   if (!cnpj || !cnpjValido(cnpj)) return { status: "erro", mensagem: MENSAGENS_CLIENTE.cnpjInvalido };
   const r = await deps.consultaCnpj.consultarEmpresa(cnpj);
