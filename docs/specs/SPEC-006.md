@@ -7,6 +7,7 @@
 > **Evolução prevista pela [SPEC-023](SPEC-023.md) (aprovada em 26/10/2026):** no detalhe do item, a linha "Comissão" mostra também o valor em reais no preço oficial, por exemplo "10% (R$ 9,52 no preço atual)"; sem preço oficial ou com comissão 0, continua só o percentual. A comissão continua só percentual e não entra no custo do item.
 > **Evolução prevista pela [SPEC-024](SPEC-024.md) (aprovada em 30/10/2026):** produtos e serviços ganham o campo opcional **código interno**, digitado pelo negócio (até 20 caracteres, em maiúsculas) e único entre os itens ativos, como o nome. A lista e o detalhe mostram o código, a busca encontra o item pelo código, o link "Itens sem código" mostra os que faltam, e a reativação com o código em uso por outro item ativo é recusada.
 > **Correção (30/10/2026, PR #117, encontrada no roteiro da SPEC-024):** o formulário do item e o "Definir o preço" enviam pela transição, e não pelo `action` do formulário. Assim, quando o servidor recusa o envio (nome ou código em uso, preço igual ao atual), o que foi digitado continua nos campos.
+> **Evolução prevista pela [SPEC-025](SPEC-025.md) (aprovada em 01/11/2026):** o custo do item passa a ter **histórico**. O cadastro grava o primeiro custo, e toda edição que muda o custo grava um registro novo, com o autor e desde quando vale. O histórico nunca é alterado nem apagado e serve ao inventário do estoque numa data.
 
 ---
 
