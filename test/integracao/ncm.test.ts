@@ -273,7 +273,7 @@ describe("T07 — Catálogo e Estoque: contagens, filtros e busca pelo código (
     expect(await doSuporte.contagensDoNcm()).toEqual({ semNcm: 0, foraDaTabela: 0 });
     const r = await servicos.editarItem(id, produto("Argola", { ncm: "71132000" }), { catalogo: doSuporte, usuarioId: usuario });
     expect(r.status).toBe("erro");
-    await expect(doSuporte.editar(id, { ...(await validados("Argola", "71132000")) })).rejects.toBeInstanceOf(SomenteLeituraNoSuporte);
+    await expect(doSuporte.editar(id, { ...(await validados("Argola", "71132000")) }, usuario)).rejects.toBeInstanceOf(SomenteLeituraNoSuporte);
     expect(await ncmDe(id)).toBe("71171900");
   });
 });

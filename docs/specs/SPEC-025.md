@@ -1,6 +1,6 @@
 # SPEC-025 — Inventário do estoque numa data
 
-> **Status:** ✅ **Aprovada em 01/11/2026**, a implementar. As questões em aberto foram decididas pela equipe em entrevista, todas pela opção recomendada (seção 13):
+> **Status:** ✅ **Aprovada e implementada em 01/11/2026**, verificada em build local: testes T01 a T08 automatizados e o roteiro no navegador (T09 e T10) com 39 verificações ([evidências](evidencias/SPEC-025/README.md)). Falta a homologação (T11). As notas da implementação estão depois da seção 9. As questões em aberto foram decididas pela equipe em entrevista, todas pela opção recomendada (seção 13):
 > - para datas anteriores ao **histórico de custo**, que começa com esta Spec, vale o custo do início do histórico, com aviso no arquivo (OPEN-001);
 > - entram os **produtos com quantidade diferente de zero** na data, inclusive os arquivados; serviços nunca (OPEN-002);
 > - arquivo em **CSV e PDF**, com cabeçalho e linha de total (OPEN-003);
@@ -254,6 +254,32 @@ A linha de total soma os valores totais. O código, a descrição, a unidade e o
 | **Quantidade numa data** (domínio, função pura) | saldo atual, movimentações posteriores, data | quantidade | — |
 | **Exportação dos dados** (SPEC-014) | Sem mudança | + histórico de custo no `dados.json` | — |
 
+**Implementação (01/11/2026):**
+- **Banco** (migração `20261101120000_historico_custo`):
+  - tabela `HistoricoCusto` (`negocioId`, `itemId`, `custo`, `vigenteDesde`, `usuarioId` opcional), com índice por item e data;
+  - somente inserção (`he_somente_insercao`), CHECK do custo não negativo, gatilho de mesmo negócio e RLS, como as outras tabelas;
+  - início do histórico: um registro por item que já existia, com o custo atual e sem autor.
+- **Domínio** (`src/lib/dominio/inventario.ts`): `quantidadeNaData`, `custoNaData`, `dataPadraoDoInventario`, `lerDataDoInventario`, `montarInventario` (linhas, total e avisos), a sigla da unidade, as observações das linhas e as notas do PDF.
+- **Dados:**
+  - o Catálogo grava o histórico no cadastro e na edição que muda o custo, na mesma transação. A edição passou a receber quem editou;
+  - `estoque.inventario(data)` soma no banco as movimentações posteriores ao fim do dia e lê o histórico de custo;
+  - a exportação dos dados traz o `historicoCustos`.
+- **Serviço e arquivos** (`src/lib/estoque/inventario.ts`): permissão (Estoque e Catálogo — ver), a carga do inventário, o CSV e o PDF. A tabela fica em `src/lib/relatorios/tabelas.ts`, e o gerador de PDF dos Relatórios ganhou o rótulo "Posição", o texto de lista vazia e as notas depois do total.
+- **Telas e rotas:**
+  - botão "Inventário" no Estoque;
+  - tela `/estoque/inventario` com a data, o resumo, os avisos, a tabela (cartões no celular) e os botões de baixar;
+  - rota `/estoque/inventario/exportar`;
+  - a tela e a rota recusam o modo suporte e quem não tem as duas permissões, no servidor.
+- **Testes:** `test/unit/inventario.test.ts` (T01 a T04 e a parte estática do T07) e `test/integracao/inventario.test.ts` (T05 a T08).
+- Sem permissão nova, sem ação de gravação nova e sem integração externa.
+
+**Decisões de implementação (sem mudar o comportamento da Spec):**
+- **Unidade:** a coluna mostra a sigla em maiúsculas (UN, PAR, KG), como nas notas fiscais e na contabilidade.
+- **Observação:** além das duas marcas da seção 5.5, a linha sem custo leva "Sem custo". Quando há duas marcas, elas são separadas por " · ", e não por ";", que é o separador do CSV. Encontrado no roteiro.
+- **Aviso do custo do início:** o aviso diz em quantos produtos o custo é o do início do histórico, sem uma data. Os produtos cadastrados depois da implantação têm o próprio início, então não existe uma data única.
+- **Colunas do PDF:** as larguras foram reequilibradas para a observação mais longa caber inteira. Encontrado no roteiro.
+- **Celular:** os cartões mostram o código, o NCM, a quantidade × o custo e o valor da linha.
+
 ---
 
 ## 10. Requisitos não funcionais aplicáveis
@@ -349,12 +375,12 @@ Todas decididas pela equipe em 01/11/2026, em entrevista, pela opção recomenda
 
 A SPEC-025 estará concluída quando:
 
-- [ ] todos os critérios de aceitação (CA-01 a CA-15) estiverem implementados;
-- [ ] todos os invariantes (INV-001 a INV-008) estiverem preservados;
-- [ ] os testes derivados (T01 a T11) estiverem aprovados, com o CI verde no PR;
-- [ ] os RNFs aplicáveis (RNF01, RNF02, RNF04, RNF05, RNF06) tiverem sido verificados como descrito na seção 10;
+- [x] todos os critérios de aceitação (CA-01 a CA-15) estiverem implementados — por testes e no navegador (build local, 01/11/2026); a recusa do modo suporte, pela guarda das rotas (T07);
+- [x] todos os invariantes (INV-001 a INV-008) estiverem preservados — testes T01 a T08 e o roteiro;
+- [ ] os testes derivados (T01 a T11) estiverem aprovados, com o CI verde no PR — T01 a T10 aprovados; falta a homologação (T11);
+- [x] os RNFs aplicáveis (RNF01, RNF02, RNF04, RNF05, RNF06) tiverem sido verificados como descrito na seção 10 — capturas em 390, 768 e 1440 px nos dois temas, axe, isolamento (T05, T06), exportação (T08), histórico imutável (T05) e 1.000 produtos com 50.000 movimentações em menos de 300 ms;
 - [x] as questões OPEN-001 a OPEN-008 tiverem sido decididas e registradas (01/11/2026), com o RF88 e a RN41 incluídos e o RF47 e o RNF05 alterados na baseline;
-- [ ] não existir divergência conhecida entre a implementação e esta Spec;
-- [ ] toda divergência em relação à baseline tiver sido explicitamente analisada e registrada nos documentos.
+- [x] não existir divergência conhecida entre a implementação e esta Spec — as decisões de implementação (seção 9) não mudam o comportamento;
+- [x] toda divergência em relação à baseline tiver sido explicitamente analisada e registrada nos documentos — nenhuma encontrada.
 
 **Regra fundamental:** a implementação obedece a esta Spec aprovada. Se surgir conflito entre código, Spec e documentos de modelagem, o comportamento não é alterado em silêncio: a divergência é registrada com a proposta de (1) corrigir a implementação ou (2) alterar a baseline, e a decisão é da equipe.

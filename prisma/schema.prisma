@@ -218,6 +218,7 @@ model Usuario {
   membroEm          MembroNegocio[]
   movimentacoes     MovimentacaoEstoque[] // RNF05: auditoria (quem fez a alteração)
   historicoPrecos   HistoricoPreco[] // RNF05: auditoria (quem confirmou o preço)
+  historicoCustos   HistoricoCusto[] // SPEC-025 (RNF05): quem alterou o custo
   vendasCanceladas  Venda[]                @relation("VendaCanceladaPor") // RF65: auditoria do cancelamento
   vendasRegistradas Venda[]                @relation("VendaRegistradaPor") // SPEC-008 (OPEN-006)
   lancamentos       LancamentoFinanceiro[] @relation("LancamentoRegistradoPor") // SPEC-009 (RNF05)
@@ -280,6 +281,7 @@ model Negocio {
   materiaisServico MaterialServico[]
   movimentacoes    MovimentacaoEstoque[]
   historicoPrecos  HistoricoPreco[]
+  historicoCustos  HistoricoCusto[]
   vendas           Venda[]
   itensVenda       ItemVenda[]
   pagamentos       Pagamento[]
@@ -407,6 +409,7 @@ model Item {
   subcategoria    Subcategoria?         @relation(fields: [subcategoriaId], references: [id], onDelete: SetNull)
   movimentacoes   MovimentacaoEstoque[]
   historicoPrecos HistoricoPreco[]
+  historicoCustos HistoricoCusto[]
   materiais       MaterialServico[]     @relation("ServicoParaMaterial")
   usadoEm         MaterialServico[]     @relation("MaterialParaServico")
   itensVenda      ItemVenda[]
@@ -510,6 +513,25 @@ model HistoricoPreco {
 
   @@index([negocioId])
   @@index([itemId])
+}
+
+// SPEC-025 (RN41, RNF05): cada custo do item e desde quando vale, para o inventário numa data.
+// Somente INSERT. O primeiro registro de cada item que já existia é o início do histórico, gravado
+// pela migração sem autor; depois, o cadastro e toda edição que muda o custo gravam um registro novo.
+model HistoricoCusto {
+  id           String   @id @default(uuid()) @db.Uuid
+  negocioId    String   @db.Uuid // ADR-002
+  itemId       String   @db.Uuid
+  custo        Decimal  @db.Decimal(10, 2)
+  vigenteDesde DateTime @default(now())
+  usuarioId    String?  @db.Uuid // RNF05: quem definiu; nulo no início do histórico
+
+  negocio Negocio  @relation(fields: [negocioId], references: [id])
+  item    Item     @relation(fields: [itemId], references: [id])
+  usuario Usuario? @relation(fields: [usuarioId], references: [id])
+
+  @@index([negocioId])
+  @@index([itemId, vigenteDesde]) // SPEC-025: custo vigente numa data
 }
 
 // ==========================================================

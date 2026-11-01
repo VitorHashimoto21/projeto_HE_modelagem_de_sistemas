@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ChevronRight, Package, Plus, Search } from "lucide-react";
+import { ChevronRight, ClipboardList, Package, Plus, Search } from "lucide-react";
 import { FiltroDeCategoria } from "@/components/catalogo/filtro-de-categoria";
 import { ROTULO_CATEGORIA, rotuloUnidade } from "@/components/catalogo/rotulos";
 import { quantidade, SeloDeSituacao } from "@/components/estoque/situacao";
@@ -17,6 +17,7 @@ import { CATEGORIAS } from "@/lib/catalogo/validacao";
 import { estoque } from "@/lib/db";
 import { hoje } from "@/lib/dominio/datas";
 import { emAlerta } from "@/lib/dominio/estoque";
+import { podeVerInventario } from "@/lib/estoque/inventario";
 import { comRetorno } from "@/lib/estrutura/retorno";
 import { cn } from "@/lib/utils";
 
@@ -58,7 +59,19 @@ export default async function Estoque({ searchParams }: PageProps<"/estoque">) {
 
   return (
     <div className="space-y-6">
-      <CabecalhoDePagina titulo="Estoque" descricao="Os produtos físicos do catálogo, com o saldo e o mínimo de cada um." />
+      <CabecalhoDePagina
+        titulo="Estoque"
+        descricao="Os produtos físicos do catálogo, com o saldo e o mínimo de cada um."
+        acoes={
+          // SPEC-025 (5.2, 5.6): quem vê o Estoque e o Catálogo; nunca no modo suporte.
+          !membro.modoSuporte && podeVerInventario(membro.permissoes) ? (
+            <Link href="/estoque/inventario" className={classeDoBotao("secundario")}>
+              <ClipboardList aria-hidden="true" />
+              Inventário
+            </Link>
+          ) : undefined
+        }
+      />
 
       {totalAlertas > 0 && situacao !== "baixo" && (
         <AvisoDaPagina tom="atencao">
