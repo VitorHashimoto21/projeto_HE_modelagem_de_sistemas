@@ -16,6 +16,8 @@
 > **Mapa:** [`MAPA_DE_SPECS.md`](../MAPA_DE_SPECS.md)
 > - **Altera:** [SPEC-008](SPEC-008.md) (cliente na Nova venda), [SPEC-004](SPEC-004.md) (CNPJ com letras no cadastro e nos Dados do negócio), [SPEC-014](SPEC-014.md) (exportação e anonimização) e [SPEC-018](SPEC-018.md) (máscara do modo suporte).
 > - **Usa:** [SPEC-001](SPEC-001.md) (isolamento), [SPEC-005](SPEC-005.md) (permissões), [SPEC-011](SPEC-011.md) (a troca mantém o cliente), [SPEC-016](SPEC-016.md) (componentes), [SPEC-020](SPEC-020.md) (padrão de tela própria dentro de um módulo e o "voltar") e [SPEC-021](SPEC-021.md) (opção "Emito nota fiscal de produtos").
+>
+> **Ajuste pela [SPEC-026](SPEC-026.md) (aprovada em 01/11/2026):** a conta a receber pode ser ligada a um cliente, e o **nome** dele aparece nas contas e no filtro para quem vê o Financeiro (RN36 alterada); o documento, o contato e o endereço continuam só na tela de Clientes, com as permissões de Vendas. O "Novo cliente" na conta exige *Vendas: criar*. O formulário, a máscara, a exclusão e as consultas de CEP e CNPJ do cliente são reaproveitados no novo cadastro de **fornecedores**, no Financeiro.
 
 ---
 

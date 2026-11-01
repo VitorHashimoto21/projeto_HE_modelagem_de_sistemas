@@ -5,6 +5,7 @@
 > **Evolução prevista pela [SPEC-019](SPEC-019.md) (aprovada em 28/10/2026):** o plano também pode ser trocado **pela plataforma**, nos dois sentidos, com motivo (cortesia, correção ou teste), pedido por uma conta de Administrador e aprovado por outra, com as mesmas regras da troca pelo Dono (RF73, RF86); o histórico de planos marca a troca como "pela plataforma". Num negócio suspenso pela plataforma, o Dono não troca o plano (RN39).
 > **Evolução prevista pela [SPEC-024](SPEC-024.md) (aprovada em 30/10/2026):** a rentabilidade por item ganha a coluna "Código", com o código interno do item, na tela, no CSV e no PDF.
 > **Ajuste pela [SPEC-025](SPEC-025.md) (aprovada em 01/11/2026):** o inventário do estoque, com os arquivos CSV e PDF, vale **nos dois planos** e em qualquer data, sem o limite de 12 meses do histórico do plano gratuito (RF47 alterado). Os relatórios avançados continuam só no plano pago.
+> **Ajuste pela [SPEC-026](SPEC-026.md) (aprovada em 01/11/2026):** o relatório de Contas ganha as colunas **Fornecedor/Cliente**, **Nº do documento** e **Pagamentos** (data, forma e valor de cada pagamento). Os filtros novos da lista de contas valem nos dois planos, com o limite de 12 meses do plano gratuito.
 
 ---
 
