@@ -95,7 +95,7 @@ export function criarConsultasDaLgpd(cliente: PrismaClient) {
       const negociosComoDono = await Promise.all(
         donos.map(async (negocioId) => {
           const f = { where: { negocioId } };
-          const [negocio, membros, convites, itens, subcategorias, materiais, movimentacoes, historicoPrecos, vendas, itensVenda, pagamentos, parcelas, clientes, lancamentos, contas, despesasFixas, historicoPlano, acessosSuporte, registrosSuporte] =
+          const [negocio, membros, convites, itens, subcategorias, materiais, movimentacoes, historicoPrecos, historicoCustos, vendas, itensVenda, pagamentos, parcelas, clientes, lancamentos, contas, despesasFixas, historicoPlano, acessosSuporte, registrosSuporte] =
             await Promise.all([
               cliente.negocio.findUniqueOrThrow({ where: { id: negocioId } }),
               cliente.membroNegocio.findMany({ ...f, select: { id: true, papel: true, permissoesCustom: true, suspensoEm: true, usuarioId: true, usuario: { select: { nome: true, email: true } } } }),
@@ -106,6 +106,8 @@ export function criarConsultasDaLgpd(cliente: PrismaClient) {
               cliente.materialServico.findMany(f),
               cliente.movimentacaoEstoque.findMany(f),
               cliente.historicoPreco.findMany(f),
+              // SPEC-025 (RNF04): histórico de custo dos itens.
+              cliente.historicoCusto.findMany(f),
               cliente.venda.findMany(f),
               cliente.itemVenda.findMany(f),
               cliente.pagamento.findMany(f),
@@ -127,6 +129,7 @@ export function criarConsultasDaLgpd(cliente: PrismaClient) {
             materiaisServico: linhas(materiais),
             movimentacoesEstoque: linhas(movimentacoes),
             historicoPrecos: linhas(historicoPrecos),
+            historicoCustos: linhas(historicoCustos),
             vendas: linhas(vendas),
             itensVenda: linhas(itensVenda),
             pagamentos: linhas(pagamentos),

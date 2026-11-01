@@ -444,6 +444,8 @@ export function criarConsultasDoCatalogo(cliente: ClienteDoNegocio, negocioId: s
           if (dados.precoInicial !== null) {
             await gravarPreco(tx as ClienteDoNegocio, item.id, dados.precoInicial, usuarioId, "MANUAL");
           }
+          // SPEC-025 (5.1): o primeiro registro do histórico de custo.
+          await tx.historicoCusto.create({ data: { negocioId, itemId: item.id, custo: dados.custoBase, usuarioId } });
           return item.id;
         });
       } catch (e) {
@@ -452,12 +454,15 @@ export function criarConsultasDoCatalogo(cliente: ClienteDoNegocio, negocioId: s
       }
     },
 
-    /** Edita os campos (nunca o tipo, o estoque ou o preço) e substitui os materiais. */
-    async editar(id: string, dados: DadosDoItem): Promise<void> {
+    /**
+     * Edita os campos (nunca o tipo, o estoque ou o preço) e substitui os materiais. Quando o custo
+     * muda, grava o novo custo no histórico na mesma transação (SPEC-025, 5.1 e INV-004).
+     */
+    async editar(id: string, dados: DadosDoItem, usuarioId: string): Promise<void> {
       if (!UUID.test(id)) throw new ItemNaoEncontrado();
       try {
         await cliente.$transaction(async (tx) => {
-          const atual = await tx.item.findFirst({ where: { id }, select: { tipo: true, arquivadoEm: true, ncm: true } });
+          const atual = await tx.item.findFirst({ where: { id }, select: { tipo: true, arquivadoEm: true, ncm: true, custoBase: true } });
           if (!atual) throw new ItemNaoEncontrado();
           if (atual.tipo === "SERVICO") await conferirMateriais(tx as ClienteDoNegocio, dados.materiais, id);
           await conferirSubcategoria(tx as ClienteDoNegocio, dados);
@@ -475,6 +480,9 @@ export function criarConsultasDoCatalogo(cliente: ClienteDoNegocio, negocioId: s
               codigoChave: atual.arquivadoEm ? null : dados.codigo,
             },
           });
+          if (Math.round(num(atual.custoBase)! * 100) !== Math.round(dados.custoBase * 100)) {
+            await tx.historicoCusto.create({ data: { negocioId, itemId: id, custo: dados.custoBase, usuarioId } });
+          }
           if (atual.tipo === "SERVICO") {
             await tx.materialServico.deleteMany({ where: { servicoId: id } });
             if (dados.materiais.length) {

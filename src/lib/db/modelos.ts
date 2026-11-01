@@ -37,6 +37,7 @@ export const MODELOS = {
       materiaisServico: { modelo: "MaterialServico" },
       movimentacoes: { modelo: "MovimentacaoEstoque" },
       historicoPrecos: { modelo: "HistoricoPreco" },
+      historicoCustos: { modelo: "HistoricoCusto" },
       vendas: { modelo: "Venda" },
       itensVenda: { modelo: "ItemVenda" },
       pagamentos: { modelo: "Pagamento" },
@@ -84,6 +85,7 @@ export const MODELOS = {
       subcategoria: { modelo: "Subcategoria", fk: "subcategoriaId" },
       movimentacoes: { modelo: "MovimentacaoEstoque" },
       historicoPrecos: { modelo: "HistoricoPreco" },
+      historicoCustos: { modelo: "HistoricoCusto" },
       materiais: { modelo: "MaterialServico" },
       usadoEm: { modelo: "MaterialServico" },
       itensVenda: { modelo: "ItemVenda" },
@@ -115,6 +117,15 @@ export const MODELOS = {
     },
   },
   HistoricoPreco: {
+    classe: "operacional",
+    relacoes: {
+      negocio: { modelo: "Negocio", fk: "negocioId" },
+      item: { modelo: "Item", fk: "itemId" },
+      usuario: { modelo: "Usuario", fk: "usuarioId" },
+    },
+  },
+  // SPEC-025 (RN41): custo do item ao longo do tempo, para o inventário numa data.
+  HistoricoCusto: {
     classe: "operacional",
     relacoes: {
       negocio: { modelo: "Negocio", fk: "negocioId" },
@@ -216,6 +227,7 @@ export const MODELOS = {
       membroEm: { modelo: "MembroNegocio" },
       movimentacoes: { modelo: "MovimentacaoEstoque" },
       historicoPrecos: { modelo: "HistoricoPreco" },
+      historicoCustos: { modelo: "HistoricoCusto" },
       vendasCanceladas: { modelo: "Venda" },
       vendasRegistradas: { modelo: "Venda" },
       lancamentos: { modelo: "LancamentoFinanceiro" },

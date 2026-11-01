@@ -1,6 +1,7 @@
 import type { ContaExportada, LancamentoExportado, VendaExportada } from "@/lib/db/relatorios";
 import { diaLocal } from "@/lib/dominio/datas";
 import { CATEGORIAS } from "@/lib/dominio/financeiro";
+import { observacaoDaLinha, siglaDaUnidade, type Inventario } from "@/lib/dominio/inventario";
 import { diaBrasileiro, quantidadeParaPlanilha as qtd, valorParaPlanilha as valor, type Rentabilidade } from "@/lib/dominio/relatorios";
 import { FORMAS_DE_PAGAMENTO } from "@/lib/dominio/venda";
 
@@ -129,5 +130,37 @@ export function tabelaDeRentabilidade(r: Rentabilidade): Tabela {
       i.linhasSemCusto ? "sem custo" : "",
     ]),
     totais: ["Total", "", qtd(r.totais.quantidade), valor(r.totais.faturamentoCentavos), valor(r.totais.custoCentavos), valor(r.totais.margemCentavos), pct(r.totais.margemPercentual), ""],
+  };
+}
+
+/**
+ * Inventário do estoque numa data (SPEC-025, 5.3 e 5.5): as colunas pedidas pela contabilidade e
+ * a observação de cada linha. Custo e valor ficam vazios sem custo (OPEN-006).
+ */
+export function tabelaDoInventario(inv: Inventario): Tabela {
+  return {
+    titulo: "Inventário do estoque",
+    colunas: [
+      // A observação cabe inteira no PDF mesmo com as duas marcas juntas (quantidade negativa e custo do início).
+      { titulo: "Código", largura: 0.08 },
+      { titulo: "Descrição", largura: 0.23 },
+      { titulo: "Unidade", largura: 0.06 },
+      { titulo: "NCM", largura: 0.08 },
+      { titulo: "Quantidade", largura: 0.08, numero: true },
+      { titulo: "Custo unitário", largura: 0.09, numero: true },
+      { titulo: "Valor total", largura: 0.08, numero: true },
+      { titulo: "Observação", largura: 0.3 },
+    ],
+    linhas: inv.linhas.map((l) => [
+      l.codigo ?? "",
+      l.nome + (l.arquivado ? " (arquivado)" : ""),
+      siglaDaUnidade(l.unidade),
+      l.ncm ?? "",
+      qtd(l.quantidade),
+      l.valorCentavos === null ? "" : valor(l.custoCentavos),
+      l.valorCentavos === null ? "" : valor(l.valorCentavos),
+      observacaoDaLinha(l),
+    ]),
+    totais: ["Total", "", "", "", "", "", valor(inv.totalCentavos), ""],
   };
 }

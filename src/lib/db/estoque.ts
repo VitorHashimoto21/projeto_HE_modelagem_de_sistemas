@@ -11,6 +11,7 @@ import {
   type ResumoDoConsumo,
   type Situacao,
 } from "@/lib/dominio/estoque";
+import { custoNaData, quantidadeNaData, type ProdutoNaData, type RegistroDeCusto } from "@/lib/dominio/inventario";
 import { condicaoDaBusca, condicaoDaSubcategoria, ItemNaoEncontrado, type SubcategoriaDoItem } from "./catalogo";
 import type { ClienteDoNegocio } from "./cliente-do-negocio";
 
@@ -355,6 +356,51 @@ export function criarConsultasDoEstoque(cliente: ClienteDoNegocio, negocioId: st
       if (!item) return null;
       const [mapa, dias] = await Promise.all([resumos(hoje, id), diasCobertura()]);
       return montar(item, mapa.get(id) ?? VAZIO, dias, hoje);
+    },
+
+    /**
+     * Produtos físicos (ativos e arquivados) na data do inventário (SPEC-025, 5.4): a quantidade sai
+     * do saldo atual e das movimentações com ocorrência depois do fim do dia, somadas no banco
+     * (RNF06); o custo, do histórico de custo vigente até o fim do dia (5.1). Os dados de
+     * identificação (código, nome, unidade, NCM) são os atuais do item.
+     */
+    async inventario(data: string): Promise<ProdutoNaData[]> {
+      const fim = intervaloDoDia(data).fim;
+      const [itens, posteriores, historico] = await Promise.all([
+        cliente.item.findMany({
+          where: { tipo: "PRODUTO_FISICO" },
+          select: { id: true, codigo: true, nome: true, arquivadoEm: true, unidadeMedida: true, ncm: true, quantidadeEstoque: true, custoBase: true },
+        }),
+        cliente.$queryRaw<{ itemId: string; entradas: unknown; saidas: unknown }[]>`
+          SELECT "itemId",
+                 COALESCE(SUM(quantidade) FILTER (WHERE tipo IN ('ENTRADA', 'ENTRADA_ESTORNO')), 0) AS entradas,
+                 COALESCE(SUM(quantidade) FILTER (WHERE tipo IN ('SAIDA_VENDA', 'SAIDA_MANUAL')), 0) AS saidas
+          FROM "MovimentacaoEstoque"
+          WHERE "negocioId" = ${negocioId}::uuid AND "data" >= ${fim}
+          GROUP BY "itemId"`,
+        cliente.historicoCusto.findMany({ select: { itemId: true, custo: true, vigenteDesde: true } }),
+      ]);
+      const depois = new Map(posteriores.map((l) => [l.itemId, { entradas: num(l.entradas)!, saidas: num(l.saidas)! }]));
+      const custos = new Map<string, RegistroDeCusto[]>();
+      for (const h of historico) {
+        const lista = custos.get(h.itemId) ?? [];
+        lista.push({ custoCentavos: Math.round(num(h.custo)! * 100), vigenteDesde: h.vigenteDesde });
+        custos.set(h.itemId, lista);
+      }
+      return itens.map((i) => {
+        const custo = custoNaData(custos.get(i.id) ?? [], fim, Math.round(num(i.custoBase)! * 100));
+        return {
+          itemId: i.id,
+          codigo: i.codigo,
+          nome: i.nome,
+          arquivado: i.arquivadoEm !== null,
+          unidade: i.unidadeMedida,
+          ncm: i.ncm,
+          quantidade: quantidadeNaData(num(i.quantidadeEstoque)!, depois.get(i.id) ?? { entradas: 0, saidas: 0 }),
+          custoCentavos: custo.custoCentavos,
+          custoDoInicio: custo.doInicio,
+        };
+      });
     },
   };
 }

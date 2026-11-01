@@ -97,7 +97,7 @@ export async function editarItem(id: string, campos: Record<string, string>, dep
     }
     const v = validarItem(campos, { tipo: "editar", tipoDoItem });
     if (!v.ok) return { status: "erro", erros: v.erros };
-    await deps.catalogo.editar(id, v.dados);
+    await deps.catalogo.editar(id, v.dados, deps.usuarioId);
     return { status: "salvo", itemId: id };
   } catch (e) {
     return { status: "erro", ...traduzir(e) };
