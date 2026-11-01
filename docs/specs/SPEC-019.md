@@ -15,6 +15,8 @@
 > **Ajuste pela [SPEC-024](SPEC-024.md) (aprovada em 30/10/2026):** a correção "Editar item" (5.4) inclui o código interno do item. O desfazer volta o código anterior e é recusado se ele estiver em uso por outro item ativo.
 >
 > **Ajuste pela [SPEC-025](SPEC-025.md) (aprovada em 01/11/2026):** a correção "Editar item" que muda o custo grava no **histórico de custo**, com o Administrador como autor, e o desfazer grava o custo anterior como um registro novo. O inventário do estoque fica fora do modo suporte, como os Relatórios.
+>
+> **Ajuste pela [SPEC-026](SPEC-026.md) (aprovada em 01/11/2026):** os **fornecedores** ficam como os clientes: o Administrador os vê mascarados, inclusive o nome, em qualquer modo, e nunca os cadastra, edita, exclui nem consulta CEP ou CNPJ (fora da lista de correções, RN37). Nas correções "Criar conta", "Editar conta", "Criar despesa fixa" e "Editar despesa fixa", o fornecedor ou cliente e o nº do documento ficam como estão (vazios na criação), e o nome do cliente ou fornecedor aparece mascarado.
 
 ---
 

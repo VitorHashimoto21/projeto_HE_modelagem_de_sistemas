@@ -142,7 +142,7 @@
 - **RN11** — O valor de cada parcela é o valor pago no crédito dividido igualmente pelo número de parcelas, arredondado em centavos, com a diferença de arredondamento somada à **1ª parcela** (ex.: R$ 100,00 em 3x = R$ 33,34 + R$ 33,33 + R$ 33,33), sem desconto de taxa de maquininha no MVP.
 - **RN12** — Toda venda registrada dispara automaticamente: (1) baixa de estoque dos itens/materiais envolvidos e (2) lançamento(s) no Financeiro, conforme a(s) forma(s) de pagamento.
 - **RN25** — O cancelamento de venda ocorre em uma única transação: (1) a venda passa a Cancelada; (2) o estoque dos produtos e materiais é devolvido por movimentação de entrada de estorno; (3) as contas a receber ainda abertas da venda são canceladas (estorno feito na maquininha); (4) os valores já recebidos no caixa são estornados por lançamento de saída — exceto a parte usada como crédito de troca (RN26). Vendas canceladas não entram no RBT12, no faturamento nem no CMV%.
-- **RN36** — Os dados do cliente pertencem ao negócio, e só o nome é obrigatório. O CPF ou CNPJ é validado pelos dígitos verificadores, aceita o CNPJ com letras e é único entre os clientes ativos do negócio. O documento, o e-mail, o telefone e o endereço completos só chegam a quem pode editar clientes (*Vendas: editar*); os demais veem esses dados mascarados, e o suporte vê inclusive o nome mascarado. O CPF nunca é enviado a serviço externo. O selo "completo para nota" é calculado pelos dados e nunca bloqueia a venda (SPEC-022).
+- **RN36** — Os dados do cliente pertencem ao negócio, e só o nome é obrigatório. O CPF ou CNPJ é validado pelos dígitos verificadores, aceita o CNPJ com letras e é único entre os clientes ativos do negócio. O documento, o e-mail, o telefone e o endereço completos só chegam a quem pode editar clientes (*Vendas: editar*); os demais veem esses dados mascarados, e o suporte vê inclusive o nome mascarado. O CPF nunca é enviado a serviço externo. O selo "completo para nota" é calculado pelos dados e nunca bloqueia a venda (SPEC-022). O **nome** do cliente também aparece nas contas a receber, para quem vê o Financeiro (SPEC-026).
 - **RN26** — O crédito de troca é limitado ao valor da venda original que já entrou no caixa. Ele é registrado como forma de pagamento "Crédito de troca" da nova venda e não gera novo lançamento (o dinheiro já está no caixa). O reembolso ao cliente é o valor recebido menos o crédito usado. Se o crédito não cobrir a nova venda (ex.: original no cartão ainda não recebido), o restante é pago normalmente.
 
 ---
@@ -154,17 +154,20 @@
 | ID | Descrição |
 |---|---|
 | RF29 | O sistema deve manter um fluxo de caixa com entradas, saídas e saldo atualizado. |
-| RF30 | O sistema deve permitir o cadastro de contas a pagar e contas a receber, com data de vencimento e categoria (RF32). Contas a receber geradas por vendas usam a categoria Vendas. |
-| RF31 | Contas a pagar/receber devem poder ser marcadas como pagas/recebidas parcialmente, mantendo o valor restante em aberto. |
+| RF30 | O sistema deve permitir o cadastro de contas a pagar e contas a receber, com data de vencimento e categoria (RF32). Contas a receber geradas por vendas usam a categoria Vendas. A conta a pagar pode ter um **fornecedor** (RF89), a conta a receber pode ter um **cliente** (RF81; na conta de venda no cartão, o da venda), e qualquer conta pode ter o **nº do documento** (nota ou boleto). Esses campos são opcionais e podem ser corrigidos a qualquer momento, sem mudar valores (SPEC-026). |
+| RF31 | Contas a pagar/receber devem poder ser marcadas como pagas/recebidas parcialmente, mantendo o valor restante em aberto. Cada pagamento ou recebimento registra a **forma** (Dinheiro, Pix, Cartão de débito, Cartão de crédito, Boleto, Transferência ou Outra), obrigatória; os anteriores à SPEC-026 ficam "Não informada", e o recebimento automático das parcelas do cartão usa Cartão de crédito. |
 | RF32 | Lançamentos financeiros devem ser classificados em categorias fixas do sistema: Vendas, Fornecedores, Impostos, Salário, Outros. |
 | RF33 | Toda venda registrada deve gerar lançamento automático no Financeiro, sem necessidade de lançamento manual duplicado. |
-| RF67 | Cada despesa fixa ativa (RF48), incluindo o DAS para MEI (RF60), deve gerar automaticamente uma conta a pagar por mês, com o dia de vencimento e a categoria definidos na despesa, sem duplicar a conta de um mesmo mês. A geração ocorre por rotina agendada diária e é conferida novamente ao acessar o Financeiro ou o Dashboard. O usuário apenas registra o pagamento (RN22). |
+| RF67 | Cada despesa fixa ativa (RF48), incluindo o DAS para MEI (RF60), deve gerar automaticamente uma conta a pagar por mês, com o dia de vencimento e a categoria definidos na despesa, sem duplicar a conta de um mesmo mês. A geração ocorre por rotina agendada diária e é conferida novamente ao acessar o Financeiro ou o Dashboard. O usuário apenas registra o pagamento (RN22). A despesa fixa pode ter um fornecedor (RF89), repassado às contas que ela gerar; o DAS não tem fornecedor (SPEC-026). |
+| RF89 | O negócio deve poder manter um **cadastro de fornecedores**, com os mesmos campos do cadastro de clientes (RF81): pessoa física ou empresa, documento, inscrições, nome do contato, e-mail, telefone e endereço, todos **opcionais** além do nome, com o endereço pelo CEP e os dados da empresa pelo CNPJ, e o selo "completo para nota". A seção "Fornecedores" fica no Financeiro, com as permissões do Financeiro, e tem busca, o detalhe com as contas do fornecedor, a edição e a exclusão (RN42, SPEC-026). |
+| RF90 | A lista de contas a pagar e a receber deve ter **busca** (descrição ou nº do documento) e **filtros** por vencimento, data do pagamento, fornecedor ou cliente, forma do pagamento, categoria e origem (manual, despesa fixa ou venda no cartão), somados aos de tipo e situação, com os **totais da lista filtrada** (quantidade, total, pago e em aberto), nos dois planos e respeitando o histórico do plano gratuito (SPEC-026). |
 
 ### Regras de Negócio
 
 - **RN13** — Lançamentos gerados automaticamente por vendas usam a categoria "Vendas" por padrão.
 - **RN14** — O saldo do fluxo de caixa deve refletir apenas valores efetivamente recebidos/pagos (contas a receber futuras de cartão de crédito não entram no saldo até a data de vencimento/recebimento).
-- **RN22** — Todo pagamento ou recebimento registrado em uma conta (total ou parcial) gera um lançamento no fluxo de caixa (Entrada para conta a receber, Saída para conta a pagar), vinculado à conta e com a categoria dela. O status da conta (Aberta, Parcial, Quitada) é a única fonte de verdade sobre a situação de pagamento das parcelas de cartão.
+- **RN22** — Todo pagamento ou recebimento registrado em uma conta (total ou parcial) gera um lançamento no fluxo de caixa (Entrada para conta a receber, Saída para conta a pagar), vinculado à conta e com a categoria dela. O status da conta (Aberta, Parcial, Quitada) é a única fonte de verdade sobre a situação de pagamento das parcelas de cartão. O lançamento guarda também a forma do pagamento (RF31, SPEC-026).
+- **RN42** — Os dados do fornecedor pertencem ao negócio, e só o nome é obrigatório. O CPF ou CNPJ é validado pelos dígitos verificadores, aceita o CNPJ com letras e é único entre os fornecedores ativos do negócio (pode repetir o de um cliente). O documento, o e-mail, o telefone e o endereço completos só chegam a quem pode editar no Financeiro (*Financeiro: editar*); os demais veem esses dados mascarados, e o suporte vê inclusive o nome mascarado e nunca altera fornecedores. O CPF nunca é enviado a serviço externo. Excluir um fornecedor sem contas nem despesas fixas apaga o cadastro; com elas, anonimiza, mantendo as contas com os mesmos valores (SPEC-026).
 
 ---
 
@@ -233,7 +236,7 @@
 | RF73 | O Dono deve poder trocar o plano do negócio (gratuito ↔ pago), com registro de quem trocou e quando. No MVP a troca é **simulada**, sem cobrança; a cobrança real (gateway de pagamento) é uma evolução planejada (SPEC-015, ADR-007) que substitui apenas o ponto de troca de plano. Ao voltar para o gratuito, nenhum dado é apagado (RN18) e os colaboradores além do limite perdem o acesso até um novo upgrade. O plano também pode ser trocado pela plataforma (RF86). |
 | RF86 | O plano de um negócio também deve poder ser trocado **pela plataforma** (gratuito ↔ pago), com motivo (cortesia, correção ou teste), pedido por uma conta de Administrador e **aprovado por outra** em até 12 h, com as mesmas regras do RF73, registro no histórico de planos como "pela plataforma" e aviso ao Dono (SPEC-019). |
 | RF70 | No plano pago, o sistema deve oferecer o relatório de **rentabilidade por item**: para cada produto/serviço, faturamento, custo (custo unitário gravado nas vendas) e margem real no período. |
-| RF71 | No plano pago, o sistema deve permitir **exportar relatórios** de vendas, fluxo de caixa e contas por período, em CSV e PDF. |
+| RF71 | No plano pago, o sistema deve permitir **exportar relatórios** de vendas, fluxo de caixa e contas por período, em CSV e PDF. O relatório de contas traz também o fornecedor ou cliente, o nº do documento e os pagamentos (data, forma e valor) (SPEC-026). |
 
 ### Regras de Negócio
 
@@ -263,7 +266,7 @@
 ### Regras de Negócio
 
 - **RN29** — Datas são armazenadas em UTC; "dia", "mês" e "competência" (vendas do dia, RBT12, faturamento do mês, semáforo, contas mensais, gráficos) são sempre calculados no fuso **America/Sao_Paulo**.
-- **RN27** — A exclusão de conta (LGPD) bloqueia o acesso e **anonimiza** os dados pessoais (nome, e-mail e senha do usuário; todos os dados pessoais dos clientes dos negócios em que ele é o único Dono: nome, documento, e-mail, telefone e endereço). Os registros fiscais e financeiros desses negócios (vendas, lançamentos, contas, movimentações) são mantidos por 5 anos, sem identificação pessoal, para cumprimento de obrigações legais, e os negócios ficam encerrados. Um cliente também pode ser excluído sozinho, a pedido: sem vendas, o cadastro é apagado; com vendas, é anonimizado, e as vendas são mantidas sem identificação e com os mesmos valores (SPEC-022).
+- **RN27** — A exclusão de conta (LGPD) bloqueia o acesso e **anonimiza** os dados pessoais (nome, e-mail e senha do usuário; todos os dados pessoais dos clientes dos negócios em que ele é o único Dono: nome, documento, e-mail, telefone e endereço). Os registros fiscais e financeiros desses negócios (vendas, lançamentos, contas, movimentações) são mantidos por 5 anos, sem identificação pessoal, para cumprimento de obrigações legais, e os negócios ficam encerrados. Um cliente também pode ser excluído sozinho, a pedido: sem vendas, o cadastro é apagado; com vendas, é anonimizado, e as vendas são mantidas sem identificação e com os mesmos valores (SPEC-022). Os **fornecedores** dos negócios em que ele é o único Dono também são anonimizados, e um fornecedor pode ser excluído sozinho (RN42, SPEC-026).
 
 ---
 
@@ -292,12 +295,12 @@
 | RN19 | Soma de Desp. Fixas% + Desp. Variáveis% + Imposto% + Margem% deve ser < 100%; senão o cálculo é bloqueado. |
 | RN20 | Taxa de cartão e comissão entram só na formação do preço; não descontam lançamentos nem geram repasse no MVP. |
 | RN21 | RBT12 e faturamento bruto somam todas as vendas registradas no período (competência), inclusive as ainda não recebidas. RBT12 = 12 meses anteriores ao mês do cálculo; proporcional (média × 12 ou estimado × 12) com histórico menor. |
-| RN22 | Todo pagamento/recebimento de conta (total ou parcial) gera lançamento no caixa; o status da conta é a fonte única de verdade. |
+| RN22 | Todo pagamento/recebimento de conta (total ou parcial) gera lançamento no caixa, com a forma do pagamento; o status da conta é a fonte única de verdade. |
 | RN23 | Item sem preço oficial confirmado não pode ser vendido. |
 | RN24 | O Anexo do Simples é definido por negócio e aplicado a todo o faturamento; separação por atividade fora do MVP. |
 | RN25 | Cancelamento de venda em transação única: estoque devolvido, contas abertas canceladas, recebidos estornados (exceto crédito de troca); venda cancelada sai do RBT12, faturamento e CMV%. |
 | RN26 | Crédito de troca limitado ao já recebido; não gera novo lançamento; reembolso = recebido − crédito usado. |
-| RN27 | Exclusão de conta anonimiza dados pessoais e mantém registros fiscais/financeiros por 5 anos sem identificação. Um cliente também pode ser excluído sozinho: sem vendas, é apagado; com vendas, é anonimizado. |
+| RN27 | Exclusão de conta anonimiza dados pessoais e mantém registros fiscais/financeiros por 5 anos sem identificação. Um cliente também pode ser excluído sozinho: sem vendas, é apagado; com vendas, é anonimizado. Os fornecedores seguem a mesma regra (RN42). |
 | RN28 | Anexo efetivo sujeito ao Fator R recalculado a cada cálculo; sem RBT12, usa o Anexo V. |
 | RN29 | Datas em UTC; dia, mês e competência calculados em America/Sao_Paulo. |
 | RN30 | Administrador sem liberação ativa do Dono não acessa dados operacionais, exceto pela emergência (RN38); com ela, só os módulos liberados, para leitura e as correções permitidas pelo Dono, em nome próprio. |
@@ -306,12 +309,13 @@
 | RN33 | Subcategoria só organiza: não altera margem, preço, custo, estoque nem regras fiscais. |
 | RN34 | NCM é responsabilidade do negócio: o sistema confere na tabela vigente e sugere, sem preencher sozinho; não entra em cálculo. |
 | RN35 | Negócio que emite nota fiscal de produtos: NCM obrigatório no produto físico e produto sem NCM fora da venda. |
-| RN36 | Dados do cliente: só o nome obrigatório; documento validado e único no negócio; dados completos só para quem edita clientes; CPF nunca enviado a serviço externo; selo "completo para nota" não bloqueia a venda. |
+| RN36 | Dados do cliente: só o nome obrigatório; documento validado e único no negócio; dados completos só para quem edita clientes; CPF nunca enviado a serviço externo; selo "completo para nota" não bloqueia a venda; nome do cliente visível nas contas a receber para quem vê o Financeiro. |
 | RN37 | Suporte só corrige a lista fechada, desfazível pelo Dono; nunca vendas, clientes, equipe, configurações, plano, acesso do suporte ou LGPD. |
 | RN38 | Emergência: duas contas de Administrador, só leitura, até 4 h, pedido expira em 12 h, visível ao Dono desde o pedido. |
 | RN39 | Negócio suspenso: somente leitura, exportação e exclusão mantidas, nada apagado. |
 | RN40 | Código interno do item: opcional, digitado pelo negócio, único entre os itens ativos; não entra em cálculo nem em regra fiscal. |
 | RN41 | Inventário numa data: saldo ao fim do dia pelas movimentações e custo pelo histórico de custo (antes dele, o primeiro custo, marcado); não altera nada. |
+| RN42 | Dados do fornecedor: só o nome obrigatório; documento validado e único entre os fornecedores do negócio; dados completos só para quem edita no Financeiro; CPF nunca enviado a serviço externo; exclusão apaga ou anonimiza, como o cliente. |
 
 ---
 

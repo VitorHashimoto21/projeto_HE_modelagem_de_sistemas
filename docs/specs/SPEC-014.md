@@ -8,6 +8,7 @@
 > **Evolução prevista pela [SPEC-022](SPEC-022.md) (aprovada em 22/10/2026):** a exportação traz os campos novos dos clientes (tipo, documento, inscrição estadual, e-mail, telefone e endereço), e a exclusão de conta limpa todos eles. Um cliente também pode ser excluído sozinho: sem vendas, é apagado; com vendas, é anonimizado (RN27). A Política de Privacidade ganha nova versão, com novo aceite.
 > **Evolução prevista pela [SPEC-024](SPEC-024.md) (aprovada em 30/10/2026):** os itens exportados trazem o código interno.
 > **Ajuste pela [SPEC-025](SPEC-025.md) (aprovada em 01/11/2026):** a exportação dos dados inclui o **histórico de custo** dos itens.
+> **Ajuste pela [SPEC-026](SPEC-026.md) (aprovada em 01/11/2026):** a exportação inclui os **fornecedores**, o fornecedor ou cliente e o nº do documento das contas, o fornecedor das despesas fixas e a forma de cada pagamento. A exclusão de conta anonimiza também os fornecedores dos negócios em que o titular é o único Dono.
 
 ---
 
