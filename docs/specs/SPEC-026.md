@@ -1,6 +1,6 @@
 # SPEC-026 — Fornecedores, vínculo nas contas e filtros
 
-> **Status:** ✅ **Aprovada e implementada em 01/11/2026**, verificada em build local: testes T01 a T10 automatizados e o roteiro no navegador (T11 e T12) com 71 verificações ([evidências](evidencias/SPEC-026/README.md)). Falta a homologação (T13). As notas da implementação, com a divergência resolvida pela equipe, estão depois da seção 9. As questões em aberto foram decididas pela equipe em entrevista (seção 13):
+> **Status:** ✅ **Concluída em 01/11/2026** — aprovada, implementada (PR #124), verificada em build local (testes T01 a T10 automatizados e o roteiro no navegador, T11 e T12, com 71 verificações) e homologada (T13) ([evidências](evidencias/SPEC-026/README.md)). A homologação encontrou campos cortados na gaveta da nova conta, um problema de tela que vem da SPEC-009, corrigido logo em seguida. As notas da implementação, com a divergência resolvida pela equipe, e as da homologação estão depois da seção 9. As questões em aberto foram decididas pela equipe em entrevista (seção 13):
 > - **cadastro de fornecedores separado**, numa seção "Fornecedores" do Financeiro; os clientes continuam em Vendas (OPEN-001);
 > - o fornecedor tem **os mesmos campos do cliente**, inclusive endereço pelo CEP e inscrições, por escolha da equipe (OPEN-002), e o selo **"Completo para nota"**, como o cliente (OPEN-003);
 > - **excluir** um fornecedor apaga o cadastro quando ele não tem contas e o anonimiza quando tem, como os clientes (OPEN-004);
@@ -414,6 +414,27 @@ Uma loja compra embalagens todo mês da fornecedora "Embalagens Exemplo Ltda" e 
 - **Relatório de Contas no PDF:** as larguras foram medidas na fonte do PDF, e a linha de total tem "A receber" e "A pagar" em células separadas. Descrições longas e mais de um pagamento podem ser cortados no PDF; no CSV, ficam inteiros. Encontrado no roteiro.
 - **Telas:** os filtros usam seis colunas no computador, para as datas caberem inteiras, e o fornecedor e o documento ficam empilhados na conta. Encontrado no roteiro.
 
+**Homologação (T13, 01/11/2026):** a equipe conferiu a Spec na homologação, depois do merge do PR #124 e da migração `20261101200000_fornecedores`, aplicada pelo workflow Migrações. O teste foi feito com o Dono do negócio **HE Testing**. Fluxo aprovado:
+- **Aceite dos termos:** o aceite da versão 2026-11-01 apareceu, com o resumo do que mudou (CA-17).
+- **Fornecedor pelo CNPJ:** um fornecedor empresa foi cadastrado pela consulta do CNPJ, que preencheu a razão social, o nome fantasia, o telefone e o endereço. Ficou "Completo para nota" depois que a inscrição estadual foi escolhida (CA-01).
+- **Conta com fornecedor:** a conta a pagar foi criada com o fornecedor e o nº do documento, e o nome leva ao fornecedor (CA-06).
+- **Pagamento em duas partes:** um em Pix e outro no cartão de débito. O histórico mostra a forma de cada um (CA-10).
+- **Conta quitada:** aparece o bloco "Corrigir o fornecedor e o documento" (CA-08).
+- **Lista e filtro:** a lista mostra o fornecedor e o documento em cada conta. O filtro "Quitadas" soma 3 contas, com o total igual ao pago e nada em aberto (CA-11, CA-12).
+- **Relatório de Contas:** o CSV e o PDF trazem as colunas novas, e um pagamento anterior a esta Spec aparece como "Não informada" (CA-15).
+- **Fluxo de caixa:** os pagamentos das contas aparecem com a origem "Conta", e o saldo fecha com eles.
+
+**Encontrado na homologação:**
+- **Campos cortados na gaveta "Nova conta".** Valor, Categoria e Vencimento ficavam em três colunas, que não cabiam na gaveta. A categoria "Fornecedores" aparecia como "Fornecedo", e a data também era cortada. O problema vem da SPEC-009 e já aparecia na captura do roteiro (`s26_04`), mas passou despercebido. **Corrigido no mesmo PR que registra esta homologação:** Valor e Categoria ficam lado a lado e o Vencimento embaixo, como no Novo lançamento. O roteiro foi refeito, com as 71 verificações aprovadas.
+
+**Observações, sem divergência:**
+- **Novo lançamento × Nova conta (dúvida da equipe).** É o comportamento previsto pela SPEC-009:
+  - o lançamento registra o dinheiro que **já** entrou ou saiu, e o saldo muda na hora;
+  - a conta é um compromisso **com vencimento**, e o saldo só muda a cada pagamento registrado.
+
+  O lançamento avulso não tem fornecedor nem forma (OPEN-008). A compra à vista com fornecedor fica com a SPEC-027.
+- **Campos de data no padrão americano:** seguem o idioma do navegador, que estava em inglês. A equipe decidiu manter o campo do navegador na homologação da SPEC-025.
+
 ---
 
 ## 10. Requisitos não funcionais aplicáveis
@@ -524,7 +545,7 @@ A SPEC-026 estará concluída quando:
 
 - [x] todos os critérios de aceitação (CA-01 a CA-18) estiverem implementados — por testes e no navegador (build local, 01/11/2026). O modo suporte (CA-16) foi conferido pelo T08;
 - [x] todos os invariantes (INV-001 a INV-009) estiverem preservados — testes T01 a T10 e o roteiro;
-- [ ] os testes derivados (T01 a T13) estiverem aprovados, com o CI verde no PR — T01 a T12 aprovados; falta a homologação (T13);
+- [x] os testes derivados (T01 a T13) estiverem aprovados, com o CI verde no PR — T01 a T12 no PR #124 (CI verde) e T13 na homologação (01/11/2026);
 - [x] os RNFs aplicáveis (RNF01, RNF02, RNF04, RNF06) tiverem sido verificados como descrito na seção 10:
   - capturas em 390, 768 e 1440 px nos dois temas, com o axe;
   - isolamento (T03, T06) e exportação (T10);

@@ -374,7 +374,8 @@ export function FormularioConta({
             }}
           />
           <CampoDescricao id="conta-descricao" erro={f.erros.descricao} limpar={f.limpar} padrao={conta?.descricao} exemplo="Ex.: Compra de embalagens" />
-          <div className="grid gap-4 sm:grid-cols-3">
+          {/* Duas colunas, como no lançamento: em três, a gaveta cortava a categoria e a data. */}
+          <div className="grid gap-4 sm:grid-cols-2">
             <CampoValor id="conta-valor" erro={f.erros.valor} limpar={f.limpar} padrao={conta ? valorBr(conta.totalCentavos) : undefined} />
             <CampoCategoria id="conta-categoria" erro={f.erros.categoria} limpar={f.limpar} padrao={conta?.categoria} />
             <Campo id="conta-vencimento" rotulo="Vencimento" erro={f.erros.vencimento}>
