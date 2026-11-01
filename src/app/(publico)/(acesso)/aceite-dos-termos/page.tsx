@@ -27,14 +27,19 @@ export default async function AceiteDosTermos({ searchParams }: PageProps<"/acei
         <div className="rounded-lg bg-muted px-4 py-4 text-sm text-foreground">
           <p className="font-semibold">O que mudou nesta versão ({VERSAO_TERMOS})</p>
           <ul className="mt-2 list-disc space-y-1.5 pl-5 text-muted-foreground">
+            {/* SPEC-026 (OPEN-012): a versão 2026-11-01 inclui o cadastro de fornecedores. */}
             <li>
-              <strong className="text-foreground">Cadastro de clientes:</strong> além do nome, o cliente pode ter CPF ou CNPJ, endereço, e-mail e telefone, para
-              identificar a venda e preparar a nota fiscal. O negócio é o responsável por esses dados e registra só o que precisar.
+              <strong className="text-foreground">Cadastro de fornecedores:</strong> o negócio pode guardar, no Financeiro, os dados de quem lhe vende (nome ou razão
+              social, CPF ou CNPJ, contato e endereço), para ligar as contas a pagar a cada fornecedor. O negócio é o responsável por esses dados e registra só o que
+              precisar.
             </li>
-            <li>O endereço pode ser completado pelo CEP e os dados de uma empresa pelo CNPJ, numa base pública. O CPF nunca é enviado a outro serviço.</li>
             <li>
-              Só quem pode editar as vendas vê o cadastro completo; o restante da equipe e o suporte veem os dados em parte. Excluir um cliente apaga os dados pessoais
-              dele, e as vendas continuam registradas sem identificação.
+              Só quem pode editar no Financeiro vê o cadastro completo dos fornecedores; o restante da equipe e o suporte veem os dados em parte. Excluir um fornecedor
+              apaga os dados dele, e as contas continuam registradas sem identificação.
+            </li>
+            <li>
+              Quem vê o Financeiro passa a ver o nome do cliente ligado a uma conta a receber. Os demais dados do cliente continuam com as regras de Vendas. O CPF nunca
+              é enviado a outro serviço.
             </li>
           </ul>
           <p className="mt-3">

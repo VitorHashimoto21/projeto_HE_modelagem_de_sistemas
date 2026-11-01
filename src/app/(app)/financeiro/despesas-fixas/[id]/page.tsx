@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { reais, ROTULO_CATEGORIA } from "@/components/financeiro/exibicao";
 import { BotaoAtivo, FormularioDespesa } from "@/components/financeiro/formularios";
 import { AvisoDaPagina } from "@/components/ui/aviso";
 import { CabecalhoDePagina } from "@/components/ui/cabecalho-de-pagina";
+import { classeDoLink } from "@/components/ui/estilos";
 import { Selo } from "@/components/ui/selo";
 import { Superficie, TituloDaSuperficie } from "@/components/ui/superficie";
 import { exigirPermissao } from "@/lib/auth/servidor";
@@ -11,6 +13,7 @@ import { financeiro } from "@/lib/db";
 import { DespesaNaoEncontrada } from "@/lib/db/financeiro";
 import { hoje } from "@/lib/dominio/datas";
 import { pode } from "@/lib/dominio/permissoes";
+import { opcoesDoVinculo } from "@/lib/financeiro/opcoes";
 
 export const metadata: Metadata = { title: "Despesa fixa" };
 
@@ -29,6 +32,7 @@ export default async function DespesaFixa({ params }: PageProps<"/financeiro/des
   ]);
   const ehDas = d.origem === "DAS_MEI";
   const podeEditar = pode(membro.permissoes, "financeiro", "editar");
+  const opcoes = podeEditar && !ehDas ? await opcoesDoVinculo(membro) : undefined;
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
@@ -43,6 +47,20 @@ export default async function DespesaFixa({ params }: PageProps<"/financeiro/des
         descricao={`${d.valorCentavos !== null ? reais(d.valorCentavos) : das !== null ? `${reais(das)} (valor oficial vigente)` : "Valor oficial"}, todo dia ${d.diaVencimento}, ${ROTULO_CATEGORIA[d.categoria].toLowerCase()}`}
       />
 
+      {/* SPEC-026 (5.4, item 4): o fornecedor que as próximas contas recebem. */}
+      {d.fornecedor && (
+        <p className="text-sm text-muted-foreground">
+          Fornecedor:{" "}
+          {membro.modoSuporte ? (
+            d.fornecedor.nome
+          ) : (
+            <Link href={`/financeiro/fornecedores/${d.fornecedor.id}`} className={classeDoLink()}>
+              {d.fornecedor.nome}
+            </Link>
+          )}
+        </p>
+      )}
+
       {ehDas && (
         <AvisoDaPagina tom="info">
           O DAS do MEI é criado sozinho para negócios MEI. Cada mês usa o valor oficial vigente para a atividade do negócio; só o dia de vencimento pode ser alterado.
@@ -55,7 +73,8 @@ export default async function DespesaFixa({ params }: PageProps<"/financeiro/des
           <Superficie aria-labelledby="titulo-alterar">
             <TituloDaSuperficie id="titulo-alterar" titulo={ehDas ? "Dia de vencimento" : "Alterar"} />
             <FormularioDespesa
-              despesa={{ id: d.id, descricao: d.descricao, valorCentavos: d.valorCentavos, diaVencimento: d.diaVencimento, categoria: d.categoria, das: ehDas }}
+              opcoes={opcoes}
+              despesa={{ id: d.id, descricao: d.descricao, valorCentavos: d.valorCentavos, diaVencimento: d.diaVencimento, categoria: d.categoria, das: ehDas, fornecedor: d.fornecedor }}
             />
           </Superficie>
           {!ehDas && (

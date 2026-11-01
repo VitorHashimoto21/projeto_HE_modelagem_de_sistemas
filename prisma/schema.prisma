@@ -89,6 +89,18 @@ enum FormaPagamento {
   CREDITO_TROCA // RN26: crédito da venda original cancelada; não gera lançamento
 }
 
+// SPEC-026 (OPEN-008): forma do pagamento ou recebimento de uma conta. Nula nos pagamentos
+// anteriores à SPEC-026 ("Não informada") e nos lançamentos que não são de conta.
+enum FormaPagamentoConta {
+  DINHEIRO
+  PIX
+  DEBITO
+  CREDITO
+  BOLETO
+  TRANSFERENCIA
+  OUTRA
+}
+
 // RF65: status da venda (nunca é apagada)
 enum StatusVenda {
   CONCLUIDA
@@ -289,6 +301,7 @@ model Negocio {
   lancamentos      LancamentoFinanceiro[]
   contas           ContaPagarReceber[]
   clientes         Cliente[]
+  fornecedores     Fornecedor[] // SPEC-026
   despesasFixas    DespesaFixa[]
 
   @@index([id])
@@ -364,10 +377,49 @@ model Cliente {
   /// RN27 e SPEC-022 (OPEN-005): anonimizado, com todos os dados pessoais vazios.
   anonimizadoEm      DateTime?
 
-  negocio Negocio @relation(fields: [negocioId], references: [id])
+  negocio Negocio             @relation(fields: [negocioId], references: [id])
   vendas  Venda[]
+  contas  ContaPagarReceber[] // SPEC-026: contas a receber manuais ligadas ao cliente
 
   // O documento fica vazio ao anonimizar, e o Postgres aceita vários nulos: a unicidade vale entre os ativos.
+  @@unique([negocioId, documento])
+  @@index([negocioId])
+}
+
+// SPEC-026 (RF89, RN42): fornecedores do negócio, com os mesmos campos do cliente (OPEN-002).
+model Fornecedor {
+  id                 String      @id @default(uuid()) @db.Uuid
+  negocioId          String      @db.Uuid
+  tipo               TipoCliente @default(PESSOA_JURIDICA)
+  /// Pessoa física: nome. Empresa: razão social.
+  nome               String
+  nomeFantasia       String?
+  /// CPF (11 dígitos) ou CNPJ (14 posições, com letras), sem pontuação. Único entre os fornecedores ativos do negócio.
+  documento          String?     @db.VarChar(14)
+  situacaoIe         SituacaoIe?
+  inscricaoEstadual  String?     @db.VarChar(14)
+  inscricaoMunicipal String?     @db.VarChar(20)
+  /// Empresa: nome de quem atende.
+  nomeContato        String?
+  email              String?
+  telefone           String?
+  cep                String?     @db.VarChar(8)
+  logradouro         String?
+  numero             String?
+  complemento        String?
+  bairro             String?
+  municipio          String?
+  uf                 String?     @db.VarChar(2)
+  criadoEm           DateTime    @default(now())
+  atualizadoEm       DateTime    @default(now()) @updatedAt
+  /// RN42 (OPEN-004): anonimizado, com todos os dados pessoais vazios.
+  anonimizadoEm      DateTime?
+
+  negocio       Negocio             @relation(fields: [negocioId], references: [id])
+  contas        ContaPagarReceber[]
+  despesasFixas DespesaFixa[]
+
+  // Como no cliente: o documento fica vazio ao anonimizar, e a unicidade vale entre os ativos.
   @@unique([negocioId, documento])
   @@index([negocioId])
 }
@@ -549,11 +601,14 @@ model DespesaFixa {
   ativo         Boolean             @default(true)
   geraDesde     DateTime            @db.Date // SPEC-009 (OPEN-004): 1º dia da primeira competência a gerar; redefinida ao reativar
   createdAt     DateTime            @default(now())
+  fornecedorId  String?             @db.Uuid // SPEC-026 (OPEN-007): repassado às contas que gerar; nulo no DAS
 
-  negocio Negocio             @relation(fields: [negocioId], references: [id])
-  contas  ContaPagarReceber[] // RF67: uma conta a pagar por mês
+  negocio    Negocio             @relation(fields: [negocioId], references: [id])
+  contas     ContaPagarReceber[] // RF67: uma conta a pagar por mês
+  fornecedor Fornecedor?         @relation(fields: [fornecedorId], references: [id], onDelete: Restrict)
 
   @@index([negocioId])
+  @@index([fornecedorId])
 }
 
 // ==========================================================
@@ -746,20 +801,22 @@ model Parcela {
 }
 
 model LancamentoFinanceiro {
-  id          String              @id @default(uuid()) @db.Uuid
-  negocioId   String              @db.Uuid
-  vendaId     String?             @db.Uuid // RN09: lançamento imediato de venda
-  contaId     String?             @db.Uuid // RN22: pagamento/recebimento de conta
-  tipo        TipoLancamento
-  categoria   CategoriaLancamento // RF32
-  valor       Decimal             @db.Decimal(10, 2)
-  estorno     Boolean             @default(false) // RN25: saída que estorna valor recebido de venda cancelada
+  id             String               @id @default(uuid()) @db.Uuid
+  negocioId      String               @db.Uuid
+  vendaId        String?              @db.Uuid // RN09: lançamento imediato de venda
+  contaId        String?              @db.Uuid // RN22: pagamento/recebimento de conta
+  tipo           TipoLancamento
+  categoria      CategoriaLancamento // RF32
+  valor          Decimal              @db.Decimal(10, 2)
+  estorno        Boolean              @default(false) // RN25: saída que estorna valor recebido de venda cancelada
   // SPEC-009: origem, descrição e quem registrou (RNF05); estorno ligado ao original (OPEN-003)
-  origem      OrigemLancamento
-  descricao   String?             @db.VarChar(120)
-  usuarioId   String?             @db.Uuid // nulo só nos automáticos da rotina diária
-  estornoDeId String?             @unique @db.Uuid
-  data        DateTime            @default(now())
+  origem         OrigemLancamento
+  descricao      String?              @db.VarChar(120)
+  usuarioId      String?              @db.Uuid // nulo só nos automáticos da rotina diária
+  estornoDeId    String?              @unique @db.Uuid
+  data           DateTime             @default(now())
+  // SPEC-026 (OPEN-008): forma do pagamento de conta; nula nos anteriores e nos que não são de conta.
+  formaPagamento FormaPagamentoConta?
 
   negocio Negocio            @relation(fields: [negocioId], references: [id])
   venda   Venda?             @relation(fields: [vendaId], references: [id])
@@ -778,28 +835,36 @@ model LancamentoFinanceiro {
 // RF30/RF31: contas a pagar/receber com vencimento e quitação parcial.
 // "Atrasada" não é persistida: é derivada (vencimento < hoje E valorPago < valorTotal).
 model ContaPagarReceber {
-  id            String              @id @default(uuid()) @db.Uuid
-  negocioId     String              @db.Uuid
-  parcelaId     String?             @unique @db.Uuid // preenchido quando originada de uma Parcela de cartão (RN10)
-  despesaFixaId String?             @db.Uuid // RF67: conta gerada a partir de despesa fixa (ou DAS)
-  competencia   DateTime? // RF67: 1º dia do mês de referência
-  tipo          TipoConta
-  categoria     CategoriaLancamento // RF30/RN13: contas de venda usam VENDAS
-  descricao     String?
-  valorTotal    Decimal             @db.Decimal(10, 2)
-  valorPago     Decimal             @default(0) @db.Decimal(10, 2) // RF31
-  vencimento    DateTime
-  status        StatusConta         @default(ABERTA)
-  criadaPorId   String?             @db.Uuid // SPEC-009: quem criou a conta manual
+  id              String              @id @default(uuid()) @db.Uuid
+  negocioId       String              @db.Uuid
+  parcelaId       String?             @unique @db.Uuid // preenchido quando originada de uma Parcela de cartão (RN10)
+  despesaFixaId   String?             @db.Uuid // RF67: conta gerada a partir de despesa fixa (ou DAS)
+  competencia     DateTime? // RF67: 1º dia do mês de referência
+  tipo            TipoConta
+  categoria       CategoriaLancamento // RF30/RN13: contas de venda usam VENDAS
+  descricao       String?
+  valorTotal      Decimal             @db.Decimal(10, 2)
+  valorPago       Decimal             @default(0) @db.Decimal(10, 2) // RF31
+  vencimento      DateTime
+  status          StatusConta         @default(ABERTA)
+  criadaPorId     String?             @db.Uuid // SPEC-009: quem criou a conta manual
+  // SPEC-026 (OPEN-007): opcionais e corrigíveis a qualquer momento, sem mudar valores.
+  fornecedorId    String?             @db.Uuid // só na conta a pagar
+  clienteId       String?             @db.Uuid // só na conta a receber manual (a de venda usa o cliente da venda)
+  numeroDocumento String?             @db.VarChar(40) // nota, boleto…
 
   negocio     Negocio                @relation(fields: [negocioId], references: [id])
   parcela     Parcela?               @relation(fields: [parcelaId], references: [id])
   despesaFixa DespesaFixa?           @relation(fields: [despesaFixaId], references: [id])
+  fornecedor  Fornecedor?            @relation(fields: [fornecedorId], references: [id], onDelete: Restrict)
+  cliente     Cliente?               @relation(fields: [clienteId], references: [id], onDelete: Restrict)
   lancamentos LancamentoFinanceiro[] // RN22: cada pagamento parcial/total gera um lançamento
 
   @@unique([despesaFixaId, competencia]) // RF67: não duplicar a conta do mesmo mês
   @@index([negocioId])
   @@index([negocioId, vencimento, status]) // SPEC-009: contas a vencer e atrasadas
+  @@index([fornecedorId]) // SPEC-026: filtro e detalhe do fornecedor
+  @@index([clienteId])
 }
 
 // SPEC-013 (RF73, OPEN-007): toda troca de plano, somente inserção (gatilho he_somente_insercao).

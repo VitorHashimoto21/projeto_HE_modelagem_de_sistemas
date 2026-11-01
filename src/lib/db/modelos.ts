@@ -45,6 +45,7 @@ export const MODELOS = {
       lancamentos: { modelo: "LancamentoFinanceiro" },
       contas: { modelo: "ContaPagarReceber" },
       clientes: { modelo: "Cliente" },
+      fornecedores: { modelo: "Fornecedor" },
       despesasFixas: { modelo: "DespesaFixa" },
     },
   },
@@ -76,6 +77,16 @@ export const MODELOS = {
     relacoes: {
       negocio: { modelo: "Negocio", fk: "negocioId" },
       vendas: { modelo: "Venda" },
+      contas: { modelo: "ContaPagarReceber" },
+    },
+  },
+  // SPEC-026: fornecedores do negócio.
+  Fornecedor: {
+    classe: "operacional",
+    relacoes: {
+      negocio: { modelo: "Negocio", fk: "negocioId" },
+      contas: { modelo: "ContaPagarReceber" },
+      despesasFixas: { modelo: "DespesaFixa" },
     },
   },
   Item: {
@@ -138,6 +149,7 @@ export const MODELOS = {
     relacoes: {
       negocio: { modelo: "Negocio", fk: "negocioId" },
       contas: { modelo: "ContaPagarReceber" },
+      fornecedor: { modelo: "Fornecedor", fk: "fornecedorId" },
     },
   },
   Venda: {
@@ -196,6 +208,8 @@ export const MODELOS = {
       negocio: { modelo: "Negocio", fk: "negocioId" },
       parcela: { modelo: "Parcela", fk: "parcelaId" },
       despesaFixa: { modelo: "DespesaFixa", fk: "despesaFixaId" },
+      fornecedor: { modelo: "Fornecedor", fk: "fornecedorId" },
+      cliente: { modelo: "Cliente", fk: "clienteId" },
       lancamentos: { modelo: "LancamentoFinanceiro" },
     },
   },

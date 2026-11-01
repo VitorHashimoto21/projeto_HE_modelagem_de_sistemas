@@ -6,6 +6,8 @@ import { gerarCsv } from "./relatorios";
 
 export const NOME_ANONIMO = "Usuário excluído";
 export const CLIENTE_ANONIMO = "Cliente anonimizado";
+/** SPEC-026 (RN42): nome do fornecedor anonimizado. */
+export const FORNECEDOR_ANONIMO = "Fornecedor anonimizado";
 export const DOMINIO_ANONIMO = "anonimo.invalid";
 /** E-mail único e não entregável (RFC 2606) que substitui o do titular. */
 export const emailAnonimo = (id: string) => `excluido-${id}@${DOMINIO_ANONIMO}`;

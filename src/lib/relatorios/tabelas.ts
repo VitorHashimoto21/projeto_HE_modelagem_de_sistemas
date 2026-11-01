@@ -1,6 +1,7 @@
 import type { ContaExportada, LancamentoExportado, VendaExportada } from "@/lib/db/relatorios";
 import { diaLocal } from "@/lib/dominio/datas";
 import { CATEGORIAS } from "@/lib/dominio/financeiro";
+import { rotuloDaForma } from "@/lib/dominio/contas";
 import { observacaoDaLinha, siglaDaUnidade, type Inventario } from "@/lib/dominio/inventario";
 import { diaBrasileiro, quantidadeParaPlanilha as qtd, valorParaPlanilha as valor, type Rentabilidade } from "@/lib/dominio/relatorios";
 import { FORMAS_DE_PAGAMENTO } from "@/lib/dominio/venda";
@@ -80,27 +81,37 @@ export function tabelaDeContas(contas: ContaExportada[]): Tabela {
   const somar = (tipo: "PAGAR" | "RECEBER") => contas.filter((c) => c.tipo === tipo).reduce((s, c) => s + restante(c), 0);
   return {
     titulo: "Contas a pagar e a receber",
+    // SPEC-026 (5.7): fornecedor ou cliente, nº do documento e os pagamentos (data, forma e valor).
+    // Larguras medidas na fonte do PDF: os títulos, "Recebida em parte" e um pagamento cabem inteiros;
+    // descrições longas e mais de um pagamento são cortados no PDF e ficam completos no CSV.
     colunas: [
-      { titulo: "Tipo", largura: 0.09 },
-      { titulo: "Descrição", largura: 0.3 },
-      { titulo: "Categoria", largura: 0.13 },
-      { titulo: "Vencimento", largura: 0.1 },
-      { titulo: "Situação", largura: 0.13 },
-      { titulo: "Total", largura: 0.08, numero: true },
-      { titulo: "Pago", largura: 0.08, numero: true },
-      { titulo: "Restante", largura: 0.09, numero: true },
+      { titulo: "Tipo", largura: 0.06 },
+      { titulo: "Descrição", largura: 0.11 },
+      { titulo: "Fornecedor/Cliente", largura: 0.11 },
+      { titulo: "Nº do documento", largura: 0.1 },
+      { titulo: "Categoria", largura: 0.08 },
+      { titulo: "Vencimento", largura: 0.07 },
+      { titulo: "Situação", largura: 0.1 },
+      { titulo: "Total", largura: 0.065, numero: true },
+      { titulo: "Pago", largura: 0.065, numero: true },
+      { titulo: "Restante", largura: 0.07, numero: true },
+      { titulo: "Pagamentos", largura: 0.17 },
     ],
     linhas: contas.map((c) => [
       c.tipo === "PAGAR" ? "A pagar" : "A receber",
       c.descricao ?? "",
+      c.pessoa ?? "",
+      c.numeroDocumento ?? "",
       CATEGORIAS[c.categoria],
       dia(c.vencimento),
       SITUACAO_CONTA[c.tipo][c.status],
       valor(c.totalCentavos),
       valor(c.pagoCentavos),
       valor(restante(c)),
+      c.pagamentos.map((p) => `${dia(p.data)} ${rotuloDaForma(p.forma)} ${valor(p.valorCentavos)}`).join(" + "),
     ]),
-    totais: ["", `A receber ${valor(somar("RECEBER"))} · A pagar ${valor(somar("PAGAR"))}`, "", "", "", "", "", ""],
+    // O que falta receber e pagar em células separadas, para caberem no PDF (SPEC-026).
+    totais: ["Total", `A receber ${valor(somar("RECEBER"))}`, `A pagar ${valor(somar("PAGAR"))}`, "", "", "", "", "", "", "", ""],
   };
 }
 

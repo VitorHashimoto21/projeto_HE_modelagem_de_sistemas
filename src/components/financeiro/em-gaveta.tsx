@@ -2,6 +2,7 @@ import { ContaNaGaveta, LancamentoNaGaveta } from "@/components/financeiro/formu
 import { exigirPermissao } from "@/lib/auth/servidor";
 import { hoje } from "@/lib/dominio/datas";
 import { pode } from "@/lib/dominio/permissoes";
+import { opcoesDoVinculo } from "@/lib/financeiro/opcoes";
 
 // Formulários curtos do Financeiro em gaveta (SPEC-016, OPEN-003). As mesmas guardas das
 // páginas (Financeiro — criar); pelo link direto, as páginas /financeiro/lancar e
@@ -17,6 +18,7 @@ export async function LancamentoEmGaveta() {
 }
 
 export async function ContaEmGaveta({ tipo }: { tipo?: string | string[] }) {
-  await exigirPermissao("financeiro", "criar");
-  return <ContaNaGaveta descricao={TEXTO_DA_CONTA} hoje={hoje()} tipoPadrao={tipo === "RECEBER" ? "RECEBER" : "PAGAR"} />;
+  const membro = await exigirPermissao("financeiro", "criar");
+  const opcoes = await opcoesDoVinculo(membro);
+  return <ContaNaGaveta descricao={TEXTO_DA_CONTA} hoje={hoje()} tipoPadrao={tipo === "RECEBER" ? "RECEBER" : "PAGAR"} opcoes={opcoes} />;
 }

@@ -118,7 +118,8 @@ describe("T02 — validação (5.7)", () => {
     expect(validarConta({ ...conta, tipo: "X" }, HOJE)).toMatchObject({ ok: false, erros: { tipo: M.tipoContaInvalido } });
     expect(validarDespesa({ descricao: "Aluguel", valor: "1200", diaVencimento: "5" })).toEqual({
       ok: true,
-      dados: { descricao: "Aluguel", valorCentavos: 120000, diaVencimento: 5, categoria: "OUTROS" },
+      // SPEC-026: sem fornecedor escolhido, fica nulo.
+      dados: { descricao: "Aluguel", valorCentavos: 120000, diaVencimento: 5, categoria: "OUTROS", fornecedorId: null },
     });
     for (const dia of ["0", "32", "1.5", "", "a"]) {
       expect(validarDespesa({ descricao: "A", valor: "1", diaVencimento: dia })).toMatchObject({ ok: false, erros: { diaVencimento: M.diaInvalido } });

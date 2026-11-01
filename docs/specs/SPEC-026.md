@@ -1,6 +1,6 @@
 # SPEC-026 — Fornecedores, vínculo nas contas e filtros
 
-> **Status:** ✅ **Aprovada em 01/11/2026**, a implementar. As questões em aberto foram decididas pela equipe em entrevista (seção 13):
+> **Status:** ✅ **Aprovada e implementada em 01/11/2026**, verificada em build local: testes T01 a T10 automatizados e o roteiro no navegador (T11 e T12) com 71 verificações ([evidências](evidencias/SPEC-026/README.md)). Falta a homologação (T13). As notas da implementação, com a divergência resolvida pela equipe, estão depois da seção 9. As questões em aberto foram decididas pela equipe em entrevista (seção 13):
 > - **cadastro de fornecedores separado**, numa seção "Fornecedores" do Financeiro; os clientes continuam em Vendas (OPEN-001);
 > - o fornecedor tem **os mesmos campos do cliente**, inclusive endereço pelo CEP e inscrições, por escolha da equipe (OPEN-002), e o selo **"Completo para nota"**, como o cliente (OPEN-003);
 > - **excluir** um fornecedor apaga o cadastro quando ele não tem contas e o anonimiza quando tem, como os clientes (OPEN-004);
@@ -217,7 +217,7 @@ Uma loja compra embalagens todo mês da fornecedora "Embalagens Exemplo Ltda" e 
    - a correção pede *Financeiro: editar* e nunca muda valor, vencimento, situação nem pagamentos (INV-002);
    - valor, vencimento, categoria e descrição seguem a regra de hoje (SPEC-009): só na conta manual sem pagamento.
 6. **Na lista e no detalhe:** a lista mostra o fornecedor ou cliente e o nº do documento na linha de cada conta. O detalhe mostra os dois e, quando houver permissão, o link para o fornecedor ou cliente.
-7. **Novo fornecedor ou cliente sem sair:** o seletor tem "Novo fornecedor" (ou "Novo cliente"). Ele abre o formulário numa gaveta, como o "Novo cliente" da Nova venda. Ao salvar, o novo cadastro já fica escolhido na conta (5.2, itens 5 e 6).
+7. **Novo fornecedor ou cliente sem sair:** o seletor tem "Novo fornecedor" (ou "Novo cliente"). O formulário do cadastro aparece **no lugar do formulário da conta**, que fica escondido com o que foi digitado, como o "Novo cliente" da Nova venda, que também abre no lugar. Ao salvar, a conta volta com o novo cadastro já escolhido (5.2, itens 5 e 6). Texto ajustado na implementação (divergência resolvida pela equipe, seção 9).
 
 ### 5.5 Forma do pagamento (OPEN-008)
 
@@ -364,6 +364,56 @@ Uma loja compra embalagens todo mês da fornecedora "Embalagens Exemplo Ltda" e 
 | **Relatório de Contas** (SPEC-013) | Sem mudança | + Fornecedor/Cliente, Nº do documento, Pagamentos | — |
 | **Exportação dos dados** (SPEC-014) | Sem mudança | + fornecedores, vínculos, nº do documento e forma | — |
 
+**Implementação (01/11/2026):**
+- **Banco** (migração `20261101200000_fornecedores`):
+  - tabela `Fornecedor` com os mesmos campos e CHECKs do cliente (documento, campos de empresa, inscrições, CEP, UF e anonimizado sem dados), documento único no negócio e RLS;
+  - enum `FormaPagamentoConta`; colunas `fornecedorId`, `clienteId` e `numeroDocumento` nas contas, `fornecedorId` na despesa fixa e `formaPagamento` no lançamento;
+  - CHECKs: fornecedor só na conta a pagar; cliente só na conta a receber manual; nº do documento não vazio; despesa com fornecedor só na manual; forma só em lançamento de conta;
+  - gatilho de mesmo negócio para o fornecedor e o cliente da conta e para o fornecedor da despesa;
+  - as chaves estrangeiras recusam apagar um fornecedor ou um cliente que tenha contas;
+  - nenhum dado é alterado: as contas antigas ficam sem vínculo, e os pagamentos antigos, sem forma.
+- **Domínio:**
+  - `src/lib/dominio/contas.ts`: formas e rótulos, origens, leitura e validação dos filtros, contagem dos filtros ativos e as listas dos seletores;
+  - a validação do cliente serve ao fornecedor, com a mensagem própria.
+- **Dados:**
+  - `src/lib/db/fornecedores.ts` (novo), com a exibição e a máscara do cliente reaproveitadas;
+  - `src/lib/db/financeiro.ts`:
+    - vínculo e nº do documento na criação, na edição e na correção;
+    - fornecedor na despesa fixa e nas contas que ela gera;
+    - forma no pagamento e no recebimento automático;
+    - filtros e totais calculados no banco;
+    - o nome mascarado no modo suporte;
+  - relatório de Contas com as colunas novas;
+  - LGPD: fornecedores na exportação e na exclusão de conta.
+- **Serviços e ações:**
+  - `src/lib/fornecedores/` (cadastro, edição, exclusão e as consultas de CEP e CNPJ, com as permissões do Financeiro);
+  - a correção do vínculo (Financeiro — editar);
+  - `src/lib/financeiro/opcoes.ts` com as listas dos seletores.
+- **Telas:**
+  - aba "Fornecedores" no Financeiro (lista, novo, detalhe e edição), com o formulário do cliente (`pessoa="fornecedor"`);
+  - seletor e nº do documento na conta, "Novo fornecedor/cliente" e a correção no detalhe;
+  - forma no "Registrar pagamento";
+  - fornecedor na despesa fixa;
+  - filtros e totais na lista de contas, com o painel recolhido no celular.
+- **Política e Termos:** versão 2026-11-01, com o resumo na página do novo aceite.
+- **Testes:** `test/unit/fornecedores.test.ts` (T01, T02, T07 e a parte unitária do T09) e `test/integracao/fornecedores.test.ts` (T03 a T06, T08 a T10).
+
+**Divergência encontrada na implementação (resolvida pela equipe, 01/11/2026):** o item 5.4.7 e o CA-07 diziam que o "Novo fornecedor" abria "numa gaveta, como o Novo cliente da Nova venda". Mas a Nova venda abre o formulário no próprio lugar, e a nova conta já fica dentro de uma gaveta. Propostas:
+1. manter o formulário no lugar da conta e ajustar o texto da Spec;
+2. abrir uma segunda gaveta por cima da primeira.
+
+**Decisão da equipe: opção 1.** O texto do 5.4.7 e do CA-07 foi ajustado, sem mudança de código.
+
+**Decisões de implementação (sem mudar o comportamento da Spec):**
+- **Cliente com contas a receber:** como a conta a receber pode ser ligada a um cliente, excluir um cliente que tenha contas (mesmo sem vendas) anonimiza, em vez de apagar, e a confirmação diz isso. A Política e os Termos dizem o mesmo.
+- **Tipo inicial:** o novo fornecedor começa como empresa, o caso mais comum.
+- **Correção no detalhe:** a conta manual sem pagamento tem o formulário completo, com o vínculo. As demais têm o bloco "Corrigir o fornecedor e o documento", ou só "Corrigir o documento" na conta de venda.
+- **Totais:** aparecem sempre, mesmo sem filtro. Com filtro, uma nota diz o que somam.
+- **Forma:** o seletor começa em "Selecione…", sem forma pré-escolhida.
+- **Detalhe do fornecedor:** com mais de 50 contas, um link leva às contas dele já filtradas.
+- **Relatório de Contas no PDF:** as larguras foram medidas na fonte do PDF, e a linha de total tem "A receber" e "A pagar" em células separadas. Descrições longas e mais de um pagamento podem ser cortados no PDF; no CSV, ficam inteiros. Encontrado no roteiro.
+- **Telas:** os filtros usam seis colunas no computador, para as datas caberem inteiras, e o fornecedor e o documento ficam empilhados na conta. Encontrado no roteiro.
+
 ---
 
 ## 10. Requisitos não funcionais aplicáveis
@@ -391,7 +441,7 @@ Uma loja compra embalagens todo mês da fornecedora "Embalagens Exemplo Ltda" e 
 
 **CA-06 — Conta com fornecedor e documento.** Quando alguém cria uma conta a pagar com fornecedor e nº do documento 1234, então a lista e o detalhe mostram os dois. Quando cria uma conta a receber, então escolhe um cliente, e o nome dele aparece para quem vê o Financeiro, mesmo sem *Vendas: ver*.
 
-**CA-07 — Novo fornecedor sem sair da conta.** Quando alguém escolhe "Novo fornecedor" na conta, então o formulário abre numa gaveta e, ao salvar, o fornecedor já fica escolhido. Sem *Vendas: criar*, o "Novo cliente" não aparece na conta a receber.
+**CA-07 — Novo fornecedor sem sair da conta.** Quando alguém escolhe "Novo fornecedor" na conta, então o formulário do fornecedor aparece no lugar da conta, que fica escondida com o que foi digitado, e, ao salvar, a conta volta com o fornecedor já escolhido. Sem *Vendas: criar*, o "Novo cliente" não aparece na conta a receber.
 
 **CA-08 — Correção a qualquer momento.** Dada uma conta quitada, quando alguém com *Financeiro: editar* troca o fornecedor e o nº do documento, então eles mudam, e valor, vencimento, situação e pagamentos ficam iguais.
 
@@ -472,14 +522,17 @@ Todas decididas pela equipe em 01/11/2026, em entrevista. A OPEN-002 foi decidid
 
 A SPEC-026 estará concluída quando:
 
-- [ ] todos os critérios de aceitação (CA-01 a CA-18) estiverem implementados;
-- [ ] todos os invariantes (INV-001 a INV-009) estiverem preservados;
-- [ ] os testes derivados (T01 a T13) estiverem aprovados, com o CI verde no PR;
-- [ ] os RNFs aplicáveis (RNF01, RNF02, RNF04, RNF06) tiverem sido verificados como descrito na seção 10;
+- [x] todos os critérios de aceitação (CA-01 a CA-18) estiverem implementados — por testes e no navegador (build local, 01/11/2026). O modo suporte (CA-16) foi conferido pelo T08;
+- [x] todos os invariantes (INV-001 a INV-009) estiverem preservados — testes T01 a T10 e o roteiro;
+- [ ] os testes derivados (T01 a T13) estiverem aprovados, com o CI verde no PR — T01 a T12 aprovados; falta a homologação (T13);
+- [x] os RNFs aplicáveis (RNF01, RNF02, RNF04, RNF06) tiverem sido verificados como descrito na seção 10:
+  - capturas em 390, 768 e 1440 px nos dois temas, com o axe;
+  - isolamento (T03, T06) e exportação (T10);
+  - 5.000 contas e 10.000 pagamentos filtrados em menos de 300 ms;
 - [x] as questões OPEN-001 a OPEN-012 tiverem sido decididas e registradas (01/11/2026):
   - na baseline, RF89, RF90 e RN42 incluídos;
   - RF30, RF31, RF67, RF71, RN22, RN27 e RN36 alterados;
-- [ ] não existir divergência conhecida entre a implementação e esta Spec;
-- [ ] toda divergência em relação à baseline tiver sido explicitamente analisada e registrada nos documentos.
+- [x] não existir divergência conhecida entre a implementação e esta Spec — a do "Novo fornecedor" foi resolvida pela equipe (seção 9);
+- [x] toda divergência em relação à baseline tiver sido explicitamente analisada e registrada nos documentos — nenhuma em relação à baseline.
 
 **Regra fundamental:** a implementação obedece a esta Spec aprovada. Se surgir conflito entre código, Spec e documentos de modelagem, o comportamento não é alterado em silêncio. A divergência é registrada com duas propostas, (1) corrigir a implementação ou (2) alterar a baseline, e a decisão é da equipe.

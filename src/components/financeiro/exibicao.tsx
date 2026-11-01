@@ -61,6 +61,8 @@ const ABAS = [
   { chave: "caixa", rotulo: "Caixa", href: "/financeiro" },
   { chave: "contas", rotulo: "Contas", href: "/financeiro/contas" },
   { chave: "despesas", rotulo: "Despesas fixas", href: "/financeiro/despesas-fixas" },
+  // SPEC-026 (OPEN-001): o cadastro de fornecedores fica no Financeiro, sem item novo no menu.
+  { chave: "fornecedores", rotulo: "Fornecedores", href: "/financeiro/fornecedores" },
 ] as const;
 
 /** Cabeçalho comum das telas do Financeiro, com as seções em segmentos (só para quem tem Financeiro — ver). */
