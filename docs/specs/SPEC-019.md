@@ -13,6 +13,8 @@
 > - **Usa:** [SPEC-002](SPEC-002.md) (sessão e Supabase Auth), [SPEC-005](SPEC-005.md) (matriz e ações), [SPEC-006](SPEC-006.md), [SPEC-007](SPEC-007.md), [SPEC-009](SPEC-009.md), [SPEC-010](SPEC-010.md) e [SPEC-020](SPEC-020.md) (ações da lista de correções), [SPEC-016](SPEC-016.md) (componentes) e [SPEC-022](SPEC-022.md) (máscara dos clientes).
 >
 > **Ajuste pela [SPEC-024](SPEC-024.md) (aprovada em 30/10/2026):** a correção "Editar item" (5.4) inclui o código interno do item. O desfazer volta o código anterior e é recusado se ele estiver em uso por outro item ativo.
+>
+> **Ajuste pela [SPEC-025](SPEC-025.md) (aprovada em 01/11/2026):** a correção "Editar item" que muda o custo grava no **histórico de custo**, com o Administrador como autor, e o desfazer grava o custo anterior como um registro novo. O inventário do estoque fica fora do modo suporte, como os Relatórios.
 
 ---
 

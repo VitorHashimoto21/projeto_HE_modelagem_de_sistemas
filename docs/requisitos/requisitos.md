@@ -107,12 +107,14 @@
 | RF19 | O sistema deve exibir um alerta visual quando o estoque atual de um produto estiver igual ou abaixo do estoque mínimo. |
 | RF20 | O sistema deve sugerir automaticamente o estoque mínimo de cada produto como **⌈consumo médio diário × dias de cobertura⌉**, em que o consumo médio diário = soma das saídas (por venda e manuais, exceto estornos) dos últimos 90 dias ÷ número de dias com histórico nessa janela, e os dias de cobertura são configuráveis por negócio (padrão 7). O usuário pode sobrescrever com um valor fixo. |
 | RF21 | O alerta de estoque baixo deve ser exibido tanto em notificação no sistema (dashboard/lista) quanto em indicador visual no cadastro do produto. |
+| RF88 | O sistema deve permitir ver e exportar (CSV e PDF) o **inventário do estoque numa data** escolhida (até hoje; por padrão, o último dia do mês anterior): os produtos com quantidade diferente de zero ao fim daquele dia, inclusive arquivados, com código, descrição, unidade, NCM, quantidade, custo unitário naquela data e valor total, e o total do estoque. Vale nos dois planos, para quem vê o Estoque e o Catálogo, e fica fora do modo suporte (SPEC-025). |
 
 ### Regras de Negócio
 
 - **RN06** — Vendas com estoque insuficiente são estritamente proibidas; o sistema bloqueia a operação e deve validar a disponibilidade de cada item no carrinho antes de processar a transação.
 - **RN07** — O alerta de estoque baixo **baseado no mínimo sugerido** permanece **desativado** para um produto até que ele complete pelo menos 1 ciclo — ao menos uma entrada e uma saída registradas no sistema; antes disso, não há histórico suficiente para comparação. Se o usuário informar um estoque mínimo manual, o alerta vale desde já (SPEC-007, OPEN-003).
 - **RN08** — Após o primeiro ciclo completo, o sistema passa a sugerir o estoque mínimo automaticamente; o valor sugerido pode ser sobrescrito manualmente pelo usuário a qualquer momento.
+- **RN41** — A quantidade do inventário numa data é o saldo ao fim daquele dia, no horário do negócio, refeito pelas movimentações registradas até a geração (vale a data da ocorrência de cada movimentação). O custo é o do **histórico de custo** vigente ao fim daquele dia; para datas anteriores ao início do histórico, vale o primeiro custo registrado, marcado no arquivo. Toda mudança de custo do item é registrada no histórico, que nunca é alterado nem apagado. O inventário não altera estoque, custo nem preço.
 
 ---
 
@@ -227,7 +229,7 @@
 |---|---|
 | RF45 | O sistema deve diferenciar funcionalidades disponíveis no plano gratuito das disponíveis apenas no plano pago. |
 | RF46 | O plano gratuito não deve impor limite de quantidade de produtos, vendas ou lançamentos financeiros. |
-| RF47 | Funcionalidades como relatórios avançados (RF70, RF71 e histórico acima de 12 meses) e gestão de múltiplos colaboradores devem ser exclusivas do plano pago. O plano gratuito permite o Dono e **1 colaborador** (membro ou convite pendente — RF72); a partir do segundo, é necessário o plano pago. Todos os demais módulos, inclusive a Calculadora completa, estão disponíveis no plano gratuito. |
+| RF47 | Funcionalidades como relatórios avançados (RF70, RF71 e histórico acima de 12 meses) e gestão de múltiplos colaboradores devem ser exclusivas do plano pago. O plano gratuito permite o Dono e **1 colaborador** (membro ou convite pendente — RF72); a partir do segundo, é necessário o plano pago. Todos os demais módulos, inclusive a Calculadora completa, estão disponíveis no plano gratuito. O inventário do estoque (RF88) vale nos dois planos e em qualquer data, mesmo além dos 12 meses do histórico do plano gratuito (SPEC-025). |
 | RF73 | O Dono deve poder trocar o plano do negócio (gratuito ↔ pago), com registro de quem trocou e quando. No MVP a troca é **simulada**, sem cobrança; a cobrança real (gateway de pagamento) é uma evolução planejada (SPEC-015, ADR-007) que substitui apenas o ponto de troca de plano. Ao voltar para o gratuito, nenhum dado é apagado (RN18) e os colaboradores além do limite perdem o acesso até um novo upgrade. O plano também pode ser trocado pela plataforma (RF86). |
 | RF86 | O plano de um negócio também deve poder ser trocado **pela plataforma** (gratuito ↔ pago), com motivo (cortesia, correção ou teste), pedido por uma conta de Administrador e **aprovado por outra** em até 12 h, com as mesmas regras do RF73, registro no histórico de planos como "pela plataforma" e aviso ao Dono (SPEC-019). |
 | RF70 | No plano pago, o sistema deve oferecer o relatório de **rentabilidade por item**: para cada produto/serviço, faturamento, custo (custo unitário gravado nas vendas) e margem real no período. |
@@ -247,7 +249,7 @@
 | RNF02 | Os dados de cada negócio devem ser isolados logicamente dos demais (arquitetura multi-tenant), impedindo acesso cruzado entre contas — inclusive por acesso direto à API pública do provedor do banco. As únicas exceções são o acesso de suporte liberado pelo Dono (RN30, RN31) e o acesso de emergência (RN38), ambos conferidos no servidor a cada requisição. |
 | RNF03 | Senhas de usuário devem ser armazenadas com hash seguro, nunca em texto plano. |
 | RNF04 | O sistema deve estar em conformidade com a LGPD, incluindo política de privacidade, consentimento explícito e mecanismos de exportação/exclusão de dados pessoais. A exportação gera um arquivo .zip com os dados do titular em JSON (completo) e CSV (por tabela). A exclusão de conta segue a RN27. |
-| RNF05 | Alterações em estoque (entrada, saída manual) e em preço devem manter registro auditável (data, usuário responsável, valor anterior e novo, motivo quando aplicável). Os próprios registros de movimentação de estoque e de histórico de preço são o log: nunca são alterados nem apagados. |
+| RNF05 | Alterações em estoque (entrada, saída manual), em preço e no custo dos itens (histórico de custo, SPEC-025) devem manter registro auditável (data, usuário responsável, valor anterior e novo, motivo quando aplicável). Os próprios registros de movimentação de estoque, de histórico de preço e de histórico de custo são o log: nunca são alterados nem apagados. |
 | RNF06 | O cálculo de precificação e do RBT12 deve responder de forma performática, mesmo com histórico extenso de vendas. |
 | RNF07 | A sessão do usuário deve persistir ao alternar entre negócios, sem exigir novo login. |
 | RNF08 | Os percentuais/faixas de alíquota de MEI e Simples Nacional devem ser mantidos de forma parametrizável (configuração, não código), para facilitar atualização conforme mudanças na legislação. |
@@ -309,6 +311,7 @@
 | RN38 | Emergência: duas contas de Administrador, só leitura, até 4 h, pedido expira em 12 h, visível ao Dono desde o pedido. |
 | RN39 | Negócio suspenso: somente leitura, exportação e exclusão mantidas, nada apagado. |
 | RN40 | Código interno do item: opcional, digitado pelo negócio, único entre os itens ativos; não entra em cálculo nem em regra fiscal. |
+| RN41 | Inventário numa data: saldo ao fim do dia pelas movimentações e custo pelo histórico de custo (antes dele, o primeiro custo, marcado); não altera nada. |
 
 ---
 

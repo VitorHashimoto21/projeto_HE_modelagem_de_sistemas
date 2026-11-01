@@ -6,6 +6,7 @@
 > **Evolução prevista pela [SPEC-021](SPEC-021.md) (aprovada em 21/10/2026):** a busca do estoque passa a encontrar também pelo começo do NCM do produto.
 > **Evolução prevista pela [SPEC-024](SPEC-024.md) (aprovada em 30/10/2026):** a lista e o detalhe do estoque mostram o código interno do produto, e a busca encontra também pelo código.
 > **Correção (31/10/2026, PR #119, revisão dos formulários depois do PR #117):** A entrada e a saída de estoque, o mínimo manual e os dias de cobertura enviam pela transição, e não pelo `action` do formulário. Assim, quando o servidor recusa o envio, o que foi digitado continua nos campos ([evidências](evidencias/formularios/README.md)).
+> **Evolução prevista pela [SPEC-025](SPEC-025.md) (aprovada em 01/11/2026):** a tela do Estoque ganha o botão **"Inventário"**, que mostra e exporta (CSV e PDF) a posição do estoque ao fim de uma data escolhida. A quantidade é refeita pelas movimentações, pela data da ocorrência, e o custo vem do novo histórico de custo.
 
 ---
 
