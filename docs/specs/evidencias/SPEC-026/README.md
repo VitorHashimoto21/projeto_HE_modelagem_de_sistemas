@@ -67,3 +67,40 @@ O banco recebeu todas as migrações, inclusive a `20261101200000_fornecedores`,
 - **Rótulo quebrado na gaveta:** o "Nº do documento (opcional)", ao lado do fornecedor, quebrava em duas linhas. Os dois campos ficaram um embaixo do outro.
 - **Escolha que ficava depois de salvar** (encontrado na revisão do código): depois de cadastrar uma despesa fixa, o fornecedor escolhido continuava no formulário vazio, e o mesmo acontecia com o tipo e o fornecedor da nova conta para quem não vê o Financeiro. A escolha passou a voltar ao início junto com o formulário, e o roteiro confere isso.
 - **Colunas cortadas no PDF do relatório:** o título "Nº do documento", a situação "Recebida em parte" e o pagamento "Não informada" não cabiam. As larguras foram medidas na fonte do PDF e reequilibradas. A linha de total passou a ter "A receber" e "A pagar" em células separadas. Descrições longas e mais de um pagamento ainda podem ser cortados no PDF; no CSV, ficam inteiros.
+
+## Homologação (T13) — 01/11/2026
+
+A equipe fez a homologação na `DEVELOP`, depois do merge do PR #124. A migração `20261101200000_fornecedores` foi aplicada pelo workflow Migrações. O teste foi feito com o Dono do negócio **HE Testing**. As capturas e os arquivos estão em [`homologacao/`](homologacao/).
+
+**Dados nas capturas:**
+- o nome da conta de teste ficou visível, como nas homologações anteriores;
+- o fornecedor é uma empresa cadastrada pela consulta pública do CNPJ. O CNPJ e o telefone foram cobertos nas capturas;
+- o nº do documento é fictício.
+
+| Passo | Resultado | Captura |
+|---|---|---|
+| Aceite da versão 2026-11-01, com o resumo do que mudou (CA-17) | ✅ | `homol_01_aceite_dos_termos.png` |
+| Fornecedor empresa pelo CNPJ: a razão social, o nome fantasia, o telefone e o endereço foram preenchidos pela consulta; "Fornecedor salvo." e "Completo para nota", depois de escolhida a inscrição estadual (CA-01) | ✅ | `homol_02_fornecedor_pelo_cnpj.png`, `homol_03_fornecedor_salvo.png` |
+| Nova conta a pagar na gaveta, com o fornecedor e o nº do documento; o detalhe mostra os dois, e o nome leva ao fornecedor (CA-06) | ✅ | `homol_04_nova_conta_gaveta.png`, `homol_05_conta_cadastrada.png` |
+| Pagamento em duas partes, uma no Pix e outra no cartão de débito: o histórico mostra a forma de cada uma, e o valor sugerido é o restante (CA-10) | ✅ | `homol_06_pagamento_parcial.png`, `homol_07_conta_paga_e_correcao.png` |
+| Conta quitada: aparece o bloco "Corrigir o fornecedor e o documento", que não muda valores (CA-08) | ✅ | `homol_07_conta_paga_e_correcao.png` |
+| Lista de contas a pagar com o fornecedor e o documento em cada conta e os totais; o filtro "Quitadas" mostra 3 contas, com o total igual ao pago e nada em aberto (CA-11, CA-12) | ✅ | `homol_08_contas_em_aberto.png`, `homol_09_contas_quitadas.png` |
+| Relatório de Contas: o CSV e o PDF trazem as colunas novas, com "Pix 100,00" e o pagamento anterior a esta Spec como "Não informada" (CA-15) | ✅ | `contas-2026-10-10-a-2026-11-01.csv`, `homol_11_pdf_contas.png` |
+| Fluxo de caixa: os quatro pagamentos de contas do dia aparecem com a origem "Conta", e o saldo fecha com eles | ✅ | `homol_12_pdf_fluxo.png` |
+
+**Encontrado na homologação:**
+- **Campos cortados na gaveta "Nova conta"** (`homol_04_nova_conta_gaveta.png`). Valor, Categoria e Vencimento ficavam em três colunas, que não cabiam na gaveta:
+  - a categoria "Fornecedores" aparecia como "Fornecedo";
+  - a data também era cortada.
+
+  O problema vem da SPEC-009 e já aparecia na captura `s26_04` do roteiro, mas passou despercebido. **Correção:** Valor e Categoria ficam lado a lado e o Vencimento embaixo, como no Novo lançamento. O roteiro foi refeito em build de produção, com as 71 verificações aprovadas, e a `s26_04` foi trocada pela nova captura.
+
+**Observações, sem divergência:**
+- **Novo lançamento × Nova conta (dúvida da equipe, `homol_10_novo_lancamento.png`).** É o comportamento previsto pela SPEC-009:
+  - o lançamento registra o dinheiro que **já** entrou ou saiu, e o saldo muda na hora. No fluxo de caixa, aparece com a origem "Avulso";
+  - a conta é um compromisso **com vencimento**, e o saldo só muda a cada pagamento registrado.
+
+  O lançamento avulso não tem fornecedor nem forma (OPEN-008). A compra à vista com fornecedor fica com a SPEC-027.
+- **Campos de data no padrão americano:** seguem o idioma do navegador, que estava em inglês. A equipe decidiu manter o campo do navegador na homologação da SPEC-025.
+
+**Resultado:** T13 aprovado. A correção da gaveta entra no mesmo PR que registra esta homologação. SPEC-026 concluída em 01/11/2026.
