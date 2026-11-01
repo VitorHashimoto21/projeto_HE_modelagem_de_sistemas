@@ -1,6 +1,6 @@
 # SPEC-025 — Inventário do estoque numa data
 
-> **Status:** ✅ **Aprovada e implementada em 01/11/2026**, verificada em build local: testes T01 a T08 automatizados e o roteiro no navegador (T09 e T10) com 39 verificações ([evidências](evidencias/SPEC-025/README.md)). Falta a homologação (T11). As notas da implementação estão depois da seção 9. As questões em aberto foram decididas pela equipe em entrevista, todas pela opção recomendada (seção 13):
+> **Status:** ✅ **Concluída em 01/11/2026** — aprovada, implementada (PR #121), verificada em build local (testes T01 a T08 automatizados e o roteiro no navegador, T09 e T10, com 39 verificações) e homologada (T11), sem divergência ([evidências](evidencias/SPEC-025/README.md)). As notas da implementação e da homologação estão depois da seção 9. As questões em aberto foram decididas pela equipe em entrevista, todas pela opção recomendada (seção 13):
 > - para datas anteriores ao **histórico de custo**, que começa com esta Spec, vale o custo do início do histórico, com aviso no arquivo (OPEN-001);
 > - entram os **produtos com quantidade diferente de zero** na data, inclusive os arquivados; serviços nunca (OPEN-002);
 > - arquivo em **CSV e PDF**, com cabeçalho e linha de total (OPEN-003);
@@ -280,6 +280,16 @@ A linha de total soma os valores totais. O código, a descrição, a unidade e o
 - **Colunas do PDF:** as larguras foram reequilibradas para a observação mais longa caber inteira. Encontrado no roteiro.
 - **Celular:** os cartões mostram o código, o NCM, a quantidade × o custo e o valor da linha.
 
+**Homologação (T11, 01/11/2026):** a equipe conferiu o inventário na homologação, depois do merge do PR #121 e da migração (31/10/2026, 23h26 em São Paulo), com o Dono do negócio **HE Testing**. Fluxo aprovado:
+- o inventário de 31/10/2026 (10 produtos, inclusive arquivados com quantidade) bate com a contagem do estoque;
+- o CSV e o PDF saem no formato esperado e iguais à tela;
+- numa data anterior à migração (22/10/2026), as quantidades são refeitas e os produtos usam o custo do início do histórico, com "*" e o aviso;
+- 31/10 não tem "*", porque o início do histórico foi gravado antes do fim desse dia.
+
+Sem divergência ([evidências](evidencias/SPEC-025/README.md#homologação-t11--01112026)). Duas observações são o comportamento previsto:
+- **Data padrão:** a tela abriu em 30/09 porque foi aberta antes da meia-noite de 31/10 (OPEN-007).
+- **Campo de data:** o campo de data mostrou o padrão americano porque segue o idioma do navegador, que estava em inglês. É o mesmo campo dos outros campos de data do HE. **Decisão da equipe (01/11/2026): manter o campo do navegador**, que mostra DD/MM/AAAA num navegador em português.
+
 ---
 
 ## 10. Requisitos não funcionais aplicáveis
@@ -377,7 +387,7 @@ A SPEC-025 estará concluída quando:
 
 - [x] todos os critérios de aceitação (CA-01 a CA-15) estiverem implementados — por testes e no navegador (build local, 01/11/2026); a recusa do modo suporte, pela guarda das rotas (T07);
 - [x] todos os invariantes (INV-001 a INV-008) estiverem preservados — testes T01 a T08 e o roteiro;
-- [ ] os testes derivados (T01 a T11) estiverem aprovados, com o CI verde no PR — T01 a T10 aprovados; falta a homologação (T11);
+- [x] os testes derivados (T01 a T11) estiverem aprovados, com o CI verde no PR — T01 a T10 no PR #121 (CI verde) e T11 na homologação (01/11/2026);
 - [x] os RNFs aplicáveis (RNF01, RNF02, RNF04, RNF05, RNF06) tiverem sido verificados como descrito na seção 10 — capturas em 390, 768 e 1440 px nos dois temas, axe, isolamento (T05, T06), exportação (T08), histórico imutável (T05) e 1.000 produtos com 50.000 movimentações em menos de 300 ms;
 - [x] as questões OPEN-001 a OPEN-008 tiverem sido decididas e registradas (01/11/2026), com o RF88 e a RN41 incluídos e o RF47 e o RNF05 alterados na baseline;
 - [x] não existir divergência conhecida entre a implementação e esta Spec — as decisões de implementação (seção 9) não mudam o comportamento;

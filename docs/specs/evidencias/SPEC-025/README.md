@@ -49,3 +49,22 @@ O nome no menu lateral e no PDF (Rafael Leader) é da conta fictícia do ambient
 
 - **Observação do CSV entre aspas:** quando uma linha tinha as duas marcas, a observação usava ";", o separador do CSV, e a célula saía entre aspas. Agora as marcas são separadas por " · ".
 - **Observação cortada no PDF:** com as duas marcas juntas, o texto não cabia na coluna. As larguras das colunas do PDF foram reequilibradas, e a observação mais longa cabe inteira.
+
+## Homologação (T11) — 01/11/2026
+
+Feita pela equipe na homologação (`DEVELOP`), depois do merge do PR #121 e da migração `20261101120000_historico_custo` pelo workflow Migrações (31/10/2026, 23h26 em São Paulo), com o Dono do negócio **HE Testing**. Capturas e arquivos em [`homologacao/`](homologacao/). O nome da conta de teste ficou visível, como nas homologações anteriores. O negócio de teste não tem CNPJ cadastrado, então o cabeçalho do PDF traz só o nome.
+
+| Passo | Resultado | Captura |
+|---|---|---|
+| Inventário de 31/10/2026: 10 produtos, valor total R$ 6.548,93, **conferido com a contagem do estoque**; os produtos arquivados que ainda têm quantidade entram, marcados "(arquivado)" (CA-02, CA-07) | ✅ | `homol_01_estoque_saldos.png`, `homol_02_inventario_31-10.png` |
+| Sem "*" em 31/10: a migração gravou o início do histórico às 23h26 de 31/10, antes do fim do dia, então o custo dessa data já é do histórico (CA-05) | ✅ | `homol_02_inventario_31-10.png` |
+| Aviso de dados faltando com os links para o Catálogo (8 sem código e 9 sem NCM) (CA-08) | ✅ | idem |
+| Inventário de 22/10/2026: as quantidades refeitas antes das movimentações seguintes (por exemplo, o Colar Moissanite Azul com 1, hoje zerado) e os 9 produtos com o custo do início do histórico, marcado com "*" e o aviso (CA-02, CA-06) | ✅ | `homol_03_inventario_22-10_custo_do_inicio.png` |
+| Inventário de 30/09/2026 vazio: as entradas do negócio de teste foram registradas em outubro, e um produto com quantidade zero na data não entra (CA-07) | ✅ | `homol_04_inventario_30-09_vazio.png` |
+| CSV e PDF de 31/10/2026 baixados, no formato esperado e iguais à tela; o PDF com "Posição: fim do dia 31/10/2026 · Gerado em 01/11/2026, 00:03" e as notas (CA-10) | ✅ | `inventario-2026-10-31.csv`, `homol_05_pdf_31-10.png` |
+
+**Observações, sem divergência:**
+- **A tela abriu em 30/09/2026.** Ela foi aberta por volta de 23h50 de 31/10 em São Paulo, quando o mês anterior ainda era setembro. Esse é o comportamento previsto (OPEN-007, CA-11): a partir de 00h00 de 01/11, a tela abre em 31/10.
+- **Datas no padrão americano (09/30/2026) e calendário em inglês.** O campo de data é o do próprio navegador, como nos outros campos de data do HE, e segue o idioma do navegador, que estava em inglês. Em um navegador em português, o campo mostra DD/MM/AAAA. **Decisão da equipe (01/11/2026): manter o campo do navegador.**
+
+**Resultado:** T11 aprovado, sem divergência. SPEC-025 concluída em 01/11/2026.
