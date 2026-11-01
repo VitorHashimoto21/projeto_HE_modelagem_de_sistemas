@@ -162,7 +162,7 @@ describe("T09 (unitário) — relatório de Contas com as colunas novas (CA-15)"
     expect(t.linhas[0][10]).toBe("05/10/2026 Pix 100,00 + 20/10/2026 Boleto 50,00");
     expect(t.linhas[1].slice(2, 4)).toEqual(["", ""]);
     expect(t.linhas[1][10]).toBe("30/09/2026 Não informada 0,00");
-    expect(t.totais).toHaveLength(11);
+    expect(t.totais).toEqual(["Total", "A receber 150,00", "A pagar 0,00", "", "", "", "", "", "", "", ""]);
     const csv = csvDaTabela(t).replace(/^﻿/, "").split("\r\n");
     expect(csv[0]).toBe("Tipo;Descrição;Fornecedor/Cliente;Nº do documento;Categoria;Vencimento;Situação;Total;Pago;Restante;Pagamentos");
   });

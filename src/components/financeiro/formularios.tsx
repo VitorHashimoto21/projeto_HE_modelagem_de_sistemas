@@ -271,7 +271,8 @@ function CamposDoVinculo({
   const lista = fornecedor ? listas.fornecedores : listas.clientes;
   const id = `${prefixo}-pessoa`;
   return (
-    <div className="grid gap-4 sm:grid-cols-[2fr_1fr]">
+    // Empilhado: cabe na gaveta da nova conta e no cartão da correção sem quebrar os rótulos.
+    <div className="space-y-4">
       <Campo id={id} rotulo={fornecedor ? "Fornecedor (opcional)" : "Cliente (opcional)"} erro={erros.pessoa}>
         <div className="flex flex-wrap gap-2">
           <select
@@ -309,7 +310,7 @@ function CamposDoVinculo({
           autoComplete="off"
           {...aria(`${prefixo}-documento`, erros.numeroDocumento)}
           onChange={() => limpar("numeroDocumento")}
-          className={classeDoCampo(erros.numeroDocumento)}
+          className={`${classeDoCampo(erros.numeroDocumento)} sm:max-w-xs`}
         />
       </Campo>
     </div>
@@ -346,6 +347,13 @@ export function FormularioConta({
     clientes: comAtual(opcoes.clientes, conta?.tipo === "RECEBER" ? conta.pessoa : null),
   }));
   const [novo, setNovo] = useState(false);
+  // Depois de salvar, o formulário é recriado (chave nova): a escolha volta ao início também.
+  const [chaveVista, setChaveVista] = useState(f.chave);
+  if (f.chave !== chaveVista) {
+    setChaveVista(f.chave);
+    setTipo(conta?.tipo ?? tipoPadrao);
+    setPessoaId(conta?.pessoa?.id ?? "");
+  }
   const fornecedor = tipo === "PAGAR";
   return (
     <div className="space-y-4">
@@ -540,6 +548,12 @@ export function FormularioDespesa({ despesa, opcoes = SEM_OPCOES }: { despesa?: 
   const [fornecedorId, setFornecedorId] = useState(despesa?.fornecedor?.id ?? "");
   const [fornecedores, setFornecedores] = useState(() => comAtual(opcoes.fornecedores, despesa?.fornecedor ?? null));
   const [novo, setNovo] = useState(false);
+  // Depois de salvar a nova despesa, o formulário é recriado: o fornecedor escolhido volta ao início.
+  const [chaveVista, setChaveVista] = useState(f.chave);
+  if (f.chave !== chaveVista) {
+    setChaveVista(f.chave);
+    setFornecedorId(despesa?.fornecedor?.id ?? "");
+  }
   return (
     <div className="space-y-4">
       <Avisos estado={f.estado} />

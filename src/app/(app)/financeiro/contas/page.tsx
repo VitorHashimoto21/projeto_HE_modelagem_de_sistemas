@@ -113,7 +113,8 @@ export default async function Contas({ searchParams }: PageProps<"/financeiro/co
           <form method="get" role="search" className="space-y-4">
             <input type="hidden" name="tipo" value={tipo} />
             <input type="hidden" name="situacao" value={situacao} />
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            {/* Seis colunas no computador: as datas ocupam duas, para caberem inteiras. */}
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
               <div className="md:col-span-2">
                 <label htmlFor="filtro-busca" className={rotulo}>
                   Buscar
@@ -131,7 +132,7 @@ export default async function Contas({ searchParams }: PageProps<"/financeiro/co
                   />
                 </div>
               </div>
-              <div>
+              <div className="xl:col-span-2">
                 <label htmlFor="filtro-pessoa" className={rotulo}>
                   {receber ? "Cliente" : "Fornecedor"}
                 </label>
@@ -144,7 +145,7 @@ export default async function Contas({ searchParams }: PageProps<"/financeiro/co
                   ))}
                 </select>
               </div>
-              <div>
+              <div className="xl:col-span-2">
                 <label htmlFor="filtro-forma" className={rotulo}>
                   Forma do {receber ? "recebimento" : "pagamento"}
                 </label>
@@ -158,7 +159,7 @@ export default async function Contas({ searchParams }: PageProps<"/financeiro/co
                   <option value={FILTRO_SEM_FORMA}>{FORMA_NAO_INFORMADA}</option>
                 </select>
               </div>
-              <fieldset className="min-w-0">
+              <fieldset className="min-w-0 xl:col-span-2">
                 <legend className={rotulo}>Vencimento</legend>
                 <div className="grid grid-cols-2 gap-2">
                   <input aria-label="Vencimento de" name="vencimentoDe" type="date" defaultValue={filtros.vencimentoDe ?? ""} aria-invalid={erros.vencimento ? true : undefined} className={classeDoCampo(erros.vencimento)} />
@@ -166,7 +167,7 @@ export default async function Contas({ searchParams }: PageProps<"/financeiro/co
                 </div>
                 {erros.vencimento && <p className="mt-1 text-xs font-medium text-status-danger">{erros.vencimento}</p>}
               </fieldset>
-              <fieldset className="min-w-0">
+              <fieldset className="min-w-0 xl:col-span-2">
                 <legend className={rotulo}>Data do {receber ? "recebimento" : "pagamento"}</legend>
                 <div className="grid grid-cols-2 gap-2">
                   <input aria-label={`${receber ? "Recebimento" : "Pagamento"} de`} name="pagamentoDe" type="date" defaultValue={filtros.pagamentoDe ?? ""} aria-invalid={erros.pagamento ? true : undefined} className={classeDoCampo(erros.pagamento)} />
