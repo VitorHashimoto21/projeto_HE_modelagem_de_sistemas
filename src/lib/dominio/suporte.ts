@@ -6,11 +6,14 @@
 
 import { FUSO_NEGOCIO } from "./datas";
 import { ACOES, MODULOS, ROTULO_MODULO, type Matriz, type Modulo } from "./permissoes";
+import { ehCorrigivel, MENSAGENS_DAS_CORRECOES, MODULOS_CORRIGIVEIS, PRAZOS_COM_CORRECAO } from "./correcoes";
 import { instantesDasClaims } from "./segundo-fator";
 
 /** OPEN-006: prazos que o Dono escolhe; 24 h é o padrão. */
 export const PRAZOS = {
   "1h": { rotulo: "1 hora", horas: 1 },
+  // SPEC-019 (OPEN-004): só na liberação com correção.
+  "12h": { rotulo: "12 horas", horas: 12 },
   "24h": { rotulo: "24 horas", horas: 24 },
   "3d": { rotulo: "3 dias", horas: 72 },
   "7d": { rotulo: "7 dias", horas: 168 },
@@ -36,13 +39,19 @@ export const MENSAGENS_SUPORTE = {
   somenteLeitura: "No modo suporte, nada pode ser alterado.",
 } as const;
 
-export type DadosDaLiberacao = { motivo: string; modulos: Modulo[]; prazo: Prazo };
+/** SPEC-019 (OPEN-004): `modulosComCorrecao` ⊆ `modulos`, só dos módulos com correções. */
+export type DadosDaLiberacao = { motivo: string; modulos: Modulo[]; modulosComCorrecao: Modulo[]; prazo: Prazo };
+
+/** Prazos só de leitura (SPEC-018) — o de 12 h vale só com correção (SPEC-019). */
+export const PRAZOS_DE_LEITURA = ["1h", "24h", "3d", "7d"] as const satisfies readonly Prazo[];
 export type ValidacaoDaLiberacao =
   | { ok: true; dados: DadosDaLiberacao }
   | { ok: false; erros: Partial<Record<"motivo" | "modulos" | "prazo", string>> };
 
 /** Campo de formulário de cada módulo liberado (ex.: "modulo.vendas"). */
 export const campoDoModulo = (m: Modulo) => `modulo.${m}`;
+/** SPEC-019 (5.2): "ver e corrigir" do módulo (ex.: "corrigir.catalogo"). */
+export const campoDaCorrecao = (m: Modulo) => `corrigir.${m}`;
 
 /** Valida a liberação pedida pelo Dono (RF75, 5.4). */
 export function validarLiberacao(campos: Record<string, string | undefined>): ValidacaoDaLiberacao {
@@ -52,10 +61,16 @@ export function validarLiberacao(campos: Record<string, string | undefined>): Va
   else if (motivo.length > MAX_MOTIVO_SUPORTE) erros.motivo = MENSAGENS_SUPORTE.motivoLongo;
   const modulos = MODULOS.filter((m) => campos[campoDoModulo(m)] === "on");
   if (modulos.length === 0) erros.modulos = MENSAGENS_SUPORTE.modulosObrigatorios;
+  // SPEC-019 (5.2, item 4): correção só nos módulos marcados que têm correções; com ela, 1 h ou 12 h.
+  const pedidas = MODULOS_CORRIGIVEIS.filter((m) => campos[campoDaCorrecao(m)] === "on");
+  const modulosComCorrecao = pedidas.filter((m) => modulos.includes(m));
+  if (modulosComCorrecao.length < pedidas.length) erros.modulos = MENSAGENS_DAS_CORRECOES.correcaoForaDosModulos;
   const prazo = campos.prazo ?? "";
+  const permitidos: readonly string[] = modulosComCorrecao.length > 0 ? PRAZOS_COM_CORRECAO : PRAZOS_DE_LEITURA;
   if (!(prazo in PRAZOS)) erros.prazo = MENSAGENS_SUPORTE.prazoInvalido;
+  else if (!permitidos.includes(prazo)) erros.prazo = modulosComCorrecao.length > 0 ? MENSAGENS_DAS_CORRECOES.prazoComCorrecao : MENSAGENS_SUPORTE.prazoInvalido;
   if (Object.keys(erros).length) return { ok: false, erros };
-  return { ok: true, dados: { motivo, modulos, prazo: prazo as Prazo } };
+  return { ok: true, dados: { motivo, modulos, modulosComCorrecao: modulosComCorrecao.filter(ehCorrigivel), prazo: prazo as Prazo } };
 }
 
 export function expiraEm(agora: Date, prazo: Prazo): Date {

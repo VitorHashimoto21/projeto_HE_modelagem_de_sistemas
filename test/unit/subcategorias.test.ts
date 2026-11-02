@@ -141,7 +141,8 @@ const formulario = (campos: Record<string, string>) => {
   for (const [k, v] of Object.entries(campos)) f.set(k, v);
   return f;
 };
-const pedido = (acao: Acao) => ({ tipo: "permissao", modulo: "catalogo", acao, origem: "acao" });
+// SPEC-019 (5.4): criar e renomear vão marcadas como correções da lista; excluir, não.
+const pedido = (acao: Acao, correcao?: string) => ({ tipo: "permissao", modulo: "catalogo", acao, origem: "acao", correcao });
 
 describe("T04 — permissões das Server Actions (OPEN-005, INV-005)", () => {
   beforeEach(() => {
@@ -154,7 +155,7 @@ describe("T04 — permissões das Server Actions (OPEN-005, INV-005)", () => {
 
     dubles.membro = membro(PREDEFINICOES.COLABORADOR);
     expect(await acaoCriarSubcategoria({ status: "ocioso" }, campos)).toEqual({ status: "erro", mensagem: F.semPermissaoSubcategoria });
-    expect(dubles.pedidos).toEqual([pedido("ver")]);
+    expect(dubles.pedidos).toEqual([pedido("ver", "catalogo.criarSubcategoria")]);
     expect(dubles.gravacoes).toEqual([]);
 
     for (const permissoes of [matrizCom("criar"), matrizCom("editar"), PREDEFINICOES.GERENTE, PREDEFINICOES.DONO]) {
@@ -168,7 +169,7 @@ describe("T04 — permissões das Server Actions (OPEN-005, INV-005)", () => {
     dubles.membro = membro(PREDEFINICOES.GERENTE);
     await acaoRenomearSubcategoria({ status: "ocioso" }, formulario({ subcategoriaId: ID, nome: "Anéis" }));
     await acaoExcluirSubcategoria({ status: "ocioso" }, formulario({ subcategoriaId: ID }));
-    expect(dubles.pedidos).toEqual([pedido("editar"), pedido("excluir")]);
+    expect(dubles.pedidos).toEqual([pedido("editar", "catalogo.renomearSubcategoria"), pedido("excluir")]);
     expect(dubles.gravacoes).toEqual(["renomear", "excluir"]);
   });
 

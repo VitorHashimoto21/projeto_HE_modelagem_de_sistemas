@@ -16,6 +16,7 @@ import { criarConsultasDePlanos } from "./planos";
 import { criarConsultasDeRelatorios } from "./relatorios";
 import { criarConsultasFiscais } from "./parametros-fiscais";
 import { criarConsultasDeSuporte } from "./suporte";
+import { criarConsultasDeCorrecoes, transacaoDaCorrecao } from "./correcoes";
 import { prismaBase } from "./prisma";
 import type { Matriz } from "@/lib/dominio/permissoes";
 
@@ -38,6 +39,8 @@ export type { ConsultasDaLgpd, ResumoDaExclusao } from "./lgpd";
 export type { ConsultasDePlanos, SituacaoDoPlano } from "./planos";
 export type { ConsultasDeRelatorios } from "./relatorios";
 export type { ConsultasDeSuporte, EventoDoRegistro, LiberacaoDoNegocio, NegocioNoPainel } from "./suporte";
+export { DesfazerRecusado } from "./correcoes";
+export type { ConsultasDeCorrecoes, CorrecaoDoNegocio, Estado } from "./correcoes";
 export { AcimaDoLimiteDoSimples, ParametroAusente } from "./parametros-fiscais";
 export type { ConsultasFiscais, Origem } from "./parametros-fiscais";
 export { ContextoDeNegocioAusente, NegocioDivergente, OperacaoForaDoContexto, SomenteLeituraNoSuporte } from "./erros";
@@ -49,6 +52,10 @@ export type { ClienteDoNegocio, ContextoDeNegocio } from "./cliente-do-negocio";
  * A partir da SPEC-002, o contexto vem da sessão autenticada.
  */
 export function clienteDoNegocio(contexto: ContextoDeNegocio | null | undefined) {
+  // SPEC-019 (5.3): durante uma correção do suporte, as funções do módulo usam a transação única da
+  // correção, que grava também o evento com o antes e o depois (INV-004). Só para o mesmo negócio.
+  const correcao = transacaoDaCorrecao.getStore();
+  if (correcao && contexto?.negocioId === correcao.negocioId) return correcao.cliente;
   return comNegocio(prismaBase(), contexto);
 }
 
@@ -144,6 +151,11 @@ export function equipe() {
 /** Acesso de suporte (SPEC-018): liberações do Dono, painel do Administrador e registro de auditoria. */
 export function suporte() {
   return criarConsultasDeSuporte(prismaBase());
+}
+
+/** Correções do suporte e o desfazer do Dono (SPEC-019, 5.3 a 5.5). */
+export function correcoes() {
+  return criarConsultasDeCorrecoes(prismaBase());
 }
 
 /** Parâmetros fiscais oficiais (SPEC-003): somente leitura, com a versão vigente na data. */

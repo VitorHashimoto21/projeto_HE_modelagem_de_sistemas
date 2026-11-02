@@ -232,6 +232,9 @@ export const MODELOS = {
       negocio: { modelo: "Negocio", fk: "negocioId" },
       acesso: { modelo: "AcessoSuporte", fk: "acessoId" },
       usuario: { modelo: "Usuario", fk: "usuarioId" },
+      // SPEC-019 (5.5): o desfazer aponta a correção desfeita.
+      correcao: { modelo: "RegistroSuporte", fk: "correcaoId" },
+      desfeitas: { modelo: "RegistroSuporte" },
     },
   },
 

@@ -41,7 +41,20 @@ export async function resolverContexto(
 export type Filiacao = { papel: Papel; permissoesCustom: unknown };
 
 /** Modo suporte ativo (SPEC-018, 5.5): liberação válida do Dono, lida do banco nesta requisição. */
-export type SuporteAtivo = { acessoId: string; negocioId: string; negocio: string; modulos: Modulo[]; expiraEm: Date };
+export type SuporteAtivo = {
+  acessoId: string;
+  negocioId: string;
+  negocio: string;
+  modulos: Modulo[];
+  /**
+   * SPEC-019 (5.3): módulos em "ver e corrigir"; vazio na liberação só de leitura e enquanto a entrada
+   * com o código reconfirmado não aconteceu nesta sessão.
+   */
+  modulosComCorrecao: Modulo[];
+  /** SPEC-019 (5.3): a liberação tem correção, mas falta entrar de novo com o código. */
+  correcaoPendente?: boolean;
+  expiraEm: Date;
+};
 
 /** Contexto com o papel e as permissões efetivas no negócio ativo (SPEC-005, 5.5). */
 export type ContextoComPapel = ContextoDaRequisicao & {
@@ -100,6 +113,10 @@ export type LiberacaoDoContexto = {
   negocio: string;
   negocioEncerrado: boolean;
   modulos: string[];
+  /** SPEC-019: subconjunto de `modulos` em "ver e corrigir". */
+  modulosComCorrecao?: string[];
+  /** SPEC-019 (5.3): a entrada deste Administrador com o código reconfirmado, se ainda não saiu. */
+  entradaComCorrecaoEm?: Date | null;
   expiraEm: Date;
   revogadoEm: Date | null;
 };
@@ -120,7 +137,7 @@ export type EntradaDoContexto = {
 export type DependenciasDoContexto = {
   filiacao: (usuarioId: string, negocioId: string) => Promise<Filiacao | null>;
   conta: (usuarioId: string) => Promise<EstadoDaConta | null>;
-  liberacao: (acessoId: string) => Promise<LiberacaoDoContexto | null>;
+  liberacao: (acessoId: string, administradorId: string) => Promise<LiberacaoDoContexto | null>;
 };
 
 /**
@@ -159,18 +176,31 @@ export async function resolverContextoDaRequisicao(e: EntradaDoContexto, deps: D
   };
   // Sem o código verificado, nem a liberação do suporte é lida: só as telas do 2º fator e "Sair".
   if (segundoFatorPendente) return { ...semNegocio, suporte: null, suporteEncerrado: null };
-  const lida = e.suporteDoCookie && UUID.test(e.suporteDoCookie) ? await deps.liberacao(e.suporteDoCookie) : null;
+  const lida = e.suporteDoCookie && UUID.test(e.suporteDoCookie) ? await deps.liberacao(e.suporteDoCookie, e.usuarioId) : null;
   if (!lida) return { ...semNegocio, suporte: null, suporteEncerrado: null };
 
   const situacao = lida.negocioEncerrado ? "REVOGADA" : situacaoDaLiberacao(lida, e.agora);
   if (situacao !== "ATIVA") return { ...semNegocio, suporte: null, suporteEncerrado: situacao === "EXPIRADA" ? "expirou" : "revogado" };
 
   const modulos = modulosValidos(lida.modulos);
+  // SPEC-019 (5.3, INV-003): a correção vale da entrada com o código reconfirmado, nesta sessão, até a
+  // saída, a expiração ou a revogação. Sem ela (cookie de outra sessão, ou antes de entrar), só leitura.
+  const comCorrecao = modulosValidos(lida.modulosComCorrecao ?? []).filter((m) => modulos.includes(m));
+  const entrada = lida.entradaComCorrecaoEm ?? null;
+  const correcaoLiberada = entrada !== null && e.autenticadoEm !== null && entrada.getTime() >= e.autenticadoEm.getTime();
   return {
     ...semNegocio,
     negocioId: lida.negocioId,
     permissoes: matrizDoSuporte(modulos),
-    suporte: { acessoId: lida.id, negocioId: lida.negocioId, negocio: lida.negocio, modulos, expiraEm: lida.expiraEm },
+    suporte: {
+      acessoId: lida.id,
+      negocioId: lida.negocioId,
+      negocio: lida.negocio,
+      modulos,
+      modulosComCorrecao: correcaoLiberada ? comCorrecao : [],
+      correcaoPendente: comCorrecao.length > 0 && !correcaoLiberada,
+      expiraEm: lida.expiraEm,
+    },
     suporteEncerrado: null,
   };
 }

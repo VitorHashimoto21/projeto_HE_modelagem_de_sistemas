@@ -2,10 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { acaoDaConta, acaoDoAdministrador, acaoDoDono } from "@/lib/auth/acao";
+import { acaoDaConta, acaoDoAdministrador, acaoDoDono, type ReconfirmacaoNecessaria } from "@/lib/auth/acao";
 import { ROTA_ADMIN, destinoSeguro } from "@/lib/auth/rotas";
 import { camposDoFormulario, VERSAO_TERMOS } from "@/lib/auth/validacao";
-import { consultasDeAcesso } from "@/lib/db";
+import { consultasDeAcesso, correcoes, DesfazerRecusado } from "@/lib/db";
+import { MENSAGENS_DAS_CORRECOES } from "@/lib/dominio/correcoes";
 import { dependenciasDoAdministrador, dependenciasDoDono, gravarModoSuporte, lerModoSuporte, limparModoSuporte } from "./servidor";
 import * as servicos from "./servicos";
 
@@ -31,10 +32,29 @@ export const acaoRevogarSuporte = acaoDoDono(async (membro, form: FormData) => {
   redirect(`/negocio/suporte?${r.status === "ok" ? "revogado=1" : "erro=1"}`);
 });
 
-/** Administrador: entrar em modo suporte num negócio com liberação ativa (5.5). */
-export const acaoEntrarEmModoSuporte = acaoDoAdministrador(async (contexto, form: FormData) => {
+/**
+ * Dono: desfazer uma correção do suporte (SPEC-019, 5.5). Até 30 dias, uma vez, e só se o registro
+ * continua como a correção deixou; a compensação é feita em nome do Dono. A recusa explica o motivo.
+ */
+export const acaoDesfazerCorrecao = acaoDoDono(async (membro, _: servicos.EstadoDoDesfazer, form: FormData): Promise<servicos.EstadoDoDesfazer> => {
+  try {
+    await correcoes().desfazer(texto(form, "correcaoId"), membro.negocioId, membro.usuarioId, new Date());
+  } catch (e) {
+    if (e instanceof DesfazerRecusado) return { status: "erro", mensagem: e.mensagem };
+    throw e;
+  }
+  revalidatePath("/", "layout");
+  return { status: "ok", mensagem: MENSAGENS_DAS_CORRECOES.desfeita };
+});
+
+/**
+ * Administrador: entrar em modo suporte num negócio com liberação ativa (5.5). Com correção (SPEC-019,
+ * 5.3), responde "reconfirmar" sem o código recente, e a tela pede o código e repete a entrada.
+ */
+export const acaoEntrarEmModoSuporte = acaoDoAdministrador(async (contexto, _: ReconfirmacaoNecessaria | undefined, form: FormData): Promise<ReconfirmacaoNecessaria | undefined> => {
   const negocioId = texto(form, "negocioId");
-  const r = await servicos.entrar(negocioId, await dependenciasDoAdministrador(contexto.usuarioId));
+  const r = await servicos.entrar(negocioId, await dependenciasDoAdministrador(contexto.usuarioId), contexto.codigoVerificadoEm ?? null);
+  if (!r.ok && r.reconfirmar) return { status: "reconfirmar", mensagem: r.mensagem };
   if (!r.ok) redirect(`${ROTA_ADMIN}/negocios/${encodeURIComponent(negocioId)}?erro=${encodeURIComponent(r.mensagem)}`);
   await gravarModoSuporte(r.acessoId, r.expiraEm);
   redirect(r.destino);

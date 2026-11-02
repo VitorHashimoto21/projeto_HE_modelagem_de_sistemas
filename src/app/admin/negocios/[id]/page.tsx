@@ -7,12 +7,12 @@ import { CabecalhoDePagina } from "@/components/ui/cabecalho-de-pagina";
 import { classeDoBotao } from "@/components/ui/estilos";
 import { Selo } from "@/components/ui/selo";
 import { Superficie, TituloDaSuperficie } from "@/components/ui/superficie";
-import { exigirAdministrador } from "@/lib/auth/servidor";
+import { EntrarEmModoSuporte } from "@/components/suporte/entrar-em-modo-suporte";
+import { adaptadorDoServidor, exigirAdministrador } from "@/lib/auth/servidor";
 import { suporte } from "@/lib/db";
 import { dataBrasileira } from "@/lib/dominio/datas";
 import { ROTULO_PLANO } from "@/lib/dominio/planos";
 import { dataHoraCompleta, listaDeModulos, MENSAGENS_SUPORTE } from "@/lib/dominio/suporte";
-import { acaoEntrarEmModoSuporte } from "@/lib/suporte/acoes";
 
 export const metadata: Metadata = { title: "Negócio — administração" };
 
@@ -26,6 +26,9 @@ export default async function NegocioNoPainel({ params, searchParams }: PageProp
   if (!UUID.test(id)) notFound();
   const n = await suporte().negocioNoPainel(id, new Date());
   if (!n) notFound();
+  // SPEC-019 (5.3): com correção, a entrada pede o código de novo; o diálogo lista os autenticadores.
+  const comCorrecao = (n.liberacao?.modulosComCorrecao.length ?? 0) > 0;
+  const autenticadores = comCorrecao ? (await (await adaptadorDoServidor()).fatores()).filter((f) => f.verificado).map(({ id: fator, nome }) => ({ id: fator, nome })) : [];
 
   const dados: [string, React.ReactNode][] = [
     ["Regime", ROTULO_REGIME[n.regime]],
@@ -64,16 +67,18 @@ export default async function NegocioNoPainel({ params, searchParams }: PageProp
                 <span className="font-semibold">Motivo:</span> {n.liberacao.motivo}
               </p>
               <p className="text-sm">
-                <span className="font-semibold">Módulos:</span> {listaDeModulos(n.liberacao.modulos)} — somente leitura.
+                <span className="font-semibold">Ver:</span> {listaDeModulos(n.liberacao.modulos)}.
               </p>
-              <p className="text-sm text-muted-foreground">Ao entrar, cada tela aberta fica registrada e o Dono acompanha tudo. Clientes e e-mails da equipe aparecem mascarados.</p>
-              <form action={acaoEntrarEmModoSuporte}>
-                <input type="hidden" name="negocioId" value={n.id} />
-                <button type="submit" className={classeDoBotao("principal")}>
-                  <Eye aria-hidden="true" />
-                  Entrar em modo suporte
-                </button>
-              </form>
+              {comCorrecao && (
+                <p className="text-sm">
+                  <span className="font-semibold">Corrigir:</span> {listaDeModulos(n.liberacao.modulosComCorrecao)}, só as ações da lista.
+                </p>
+              )}
+              <p className="text-sm text-muted-foreground">
+                Ao entrar, cada tela aberta fica registrada e o Dono acompanha tudo. Clientes e e-mails da equipe aparecem mascarados.
+                {comCorrecao && " Cada correção aparece para o Dono na hora, com o antes e o depois. Para entrar, o código do autenticador é pedido de novo."}
+              </p>
+              <EntrarEmModoSuporte negocioId={n.id} autenticadores={autenticadores} />
             </div>
           ) : (
             <div className="space-y-4">

@@ -13,6 +13,8 @@ import { podeCriarSubcategoria, podeUsarTabelaNcm } from "./validacao";
 
 // Server Actions do catálogo (SPEC-006). A fábrica exige a permissão do módulo Catálogo
 // (SPEC-005) antes do corpo; o negócio vem do contexto validado, nunca do formulário.
+// O último argumento marca as correções que o suporte pode fazer (SPEC-019, 5.4): no modo suporte,
+// só elas passam, e só com o Catálogo em "ver e corrigir"; as demais continuam recusadas.
 
 const deps = (m: ContextoDoMembro): servicos.DependenciasDoCatalogo => ({
   catalogo: catalogo({ negocioId: m.negocioId, usuarioId: m.usuarioId }),
@@ -44,7 +46,7 @@ export const acaoEditarItem = acaoComPermissao("catalogo", "editar", async (memb
     redirect(comRetorno(`/catalogo/${id}?salvo=1`, retornoDo(form)));
   }
   return estado;
-});
+}, "catalogo.editarItem");
 
 /** Preço manual (OPEN-004: Catálogo — editar). */
 export const acaoDefinirPreco = acaoComPermissao("catalogo", "editar", async (membro, _: EstadoDoPreco, form: FormData) => {
@@ -52,7 +54,7 @@ export const acaoDefinirPreco = acaoComPermissao("catalogo", "editar", async (me
   const estado = await servicos.definirPreco(id, camposDoFormulario(form), deps(membro));
   if (estado.status === "salvo") revalidatePath("/catalogo", "layout");
   return estado;
-});
+}, "catalogo.definirPreco");
 
 /** Arquivar e reativar (OPEN-001: "excluir" na matriz significa arquivar). */
 export const acaoArquivarItem = acaoComPermissao("catalogo", "excluir", async (membro, form: FormData) => {
@@ -63,9 +65,9 @@ export const acaoArquivarItem = acaoComPermissao("catalogo", "excluir", async (m
   // Só códigos na URL (nunca texto livre); a página lê do banco os serviços que usam o item.
   const resultado = r.ok ? (arquivar ? "arquivado" : "reativado") : r.codigo;
   redirect(comRetorno(`/catalogo/${encodeURIComponent(id)}?resultado=${resultado}`, retornoDo(form)));
-});
+}, "catalogo.arquivarItem");
 
-// Subcategorias (SPEC-020, OPEN-005). Nenhuma é aceita no modo suporte (a fábrica recusa).
+// Subcategorias (SPEC-020, OPEN-005). No modo suporte, só criar e renomear, como correção (SPEC-019).
 
 /**
  * Criar: quem cadastra ou edita itens (Catálogo — criar ou editar). A fábrica exige o mínimo
@@ -78,7 +80,7 @@ export const acaoCriarSubcategoria = acaoComPermissao("catalogo", "ver", async (
   const estado = await servicos.criarSubcategoria(camposDoFormulario(form), deps(membro));
   if (estado.status === "salvo") revalidatePath("/catalogo", "layout");
   return estado;
-});
+}, "catalogo.criarSubcategoria");
 
 export const acaoRenomearSubcategoria = acaoComPermissao("catalogo", "editar", async (membro, _: EstadoDaSubcategoria, form: FormData) => {
   const estado = await servicos.renomearSubcategoria(texto(form, "subcategoriaId"), camposDoFormulario(form), deps(membro));
@@ -87,7 +89,7 @@ export const acaoRenomearSubcategoria = acaoComPermissao("catalogo", "editar", a
     revalidatePath("/estoque", "layout");
   }
   return estado;
-});
+}, "catalogo.renomearSubcategoria");
 
 export const acaoExcluirSubcategoria = acaoComPermissao("catalogo", "excluir", async (membro, _: EstadoDaExclusao, form: FormData) => {
   const estado = await servicos.excluirSubcategoria(texto(form, "subcategoriaId"), deps(membro));
@@ -99,14 +101,15 @@ export const acaoExcluirSubcategoria = acaoComPermissao("catalogo", "excluir", a
 });
 
 // NCM (SPEC-021, 5.2 e 5.7): buscar e conferir na tabela exigem Catálogo — criar ou editar. A fábrica
-// exige o mínimo comum ("ver") e o corpo confere a combinação; no modo suporte, a fábrica recusa.
+// exige o mínimo comum ("ver") e o corpo confere a combinação; no modo suporte, só com o Catálogo em
+// correção, porque a correção "Editar item" depende delas (SPEC-019, 5.4).
 
 export const acaoBuscarNcm = acaoComPermissao("catalogo", "ver", async (membro, texto: string): Promise<EstadoDaBuscaNcm> => {
   if (!podeUsarTabelaNcm(membro.permissoes)) return { status: "erro", mensagem: servicos.MENSAGENS_FLUXO_CATALOGO.semPermissaoNcm };
   return servicos.buscarNcm(texto, deps(membro));
-});
+}, "consulta");
 
 export const acaoConferirNcm = acaoComPermissao("catalogo", "ver", async (membro, texto: string): Promise<EstadoDaConferenciaNcm> => {
   if (!podeUsarTabelaNcm(membro.permissoes)) return { status: "erro", mensagem: servicos.MENSAGENS_FLUXO_CATALOGO.semPermissaoNcm };
   return servicos.conferirNcm(texto, deps(membro));
-});
+}, "consulta");

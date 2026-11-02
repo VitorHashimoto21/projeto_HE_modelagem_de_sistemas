@@ -189,7 +189,8 @@ const { acaoDefinirNotaFiscal } = await import("@/lib/negocio/acoes");
 
 const matrizCom = (...acoes: Acao[]): Matriz => ({ ...MATRIZ_VAZIA, catalogo: { ...MATRIZ_VAZIA.catalogo, ver: true, ...Object.fromEntries(acoes.map((a) => [a, true])) } });
 const membro = (permissoes: Matriz): ContextoDoMembro => ({ usuarioId: "u1", negocioId: "n1", papel: "GERENTE", permissoes });
-const pedidoVer = { tipo: "permissao", modulo: "catalogo", acao: "ver", origem: "acao" };
+// SPEC-019 (5.4): as consultas do formulário vão marcadas, para o suporte com o Catálogo em correção.
+const pedidoVer = { tipo: "permissao", modulo: "catalogo", acao: "ver", origem: "acao", correcao: "consulta" };
 
 describe("T08/T12 — permissões das Server Actions (5.7, INV-007, INV-010)", () => {
   beforeEach(() => {
