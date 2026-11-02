@@ -1,6 +1,6 @@
 # SPEC-019 — Suporte com edição, emergência, ações de plataforma e 2º fator
 
-> **Status:** ✅ **Aprovada em 28/10/2026**, a implementar. As questões em aberto foram decididas pela equipe em entrevista (seção 13), pela opção recomendada, com quatro ajustes da equipe (prazos de 12 h e duas pessoas também na troca de plano):
+> **Status:** ✅ **Aprovada em 28/10/2026 e revisada em 01/11/2026** (OPEN-015 a OPEN-018, ver "Revisão antes da implementação" abaixo), a implementar. As questões em aberto foram decididas pela equipe em entrevista (seção 13), pela opção recomendada, com quatro ajustes da equipe (prazos de 12 h e duas pessoas também na troca de plano):
 > - **2º fator obrigatório** para o Administrador, pelo MFA TOTP do Supabase Auth, com dois autenticadores, redefinição pelo workflow e o código pedido de novo antes das ações críticas;
 > - **correções em modo suporte** só nos módulos que o Dono marcar como "ver e corrigir", por até **12 h**, e só das ações de uma **lista fechada** que o Dono consegue **desfazer** em até 30 dias;
 > - **acesso de emergência** sem liberação do Dono só com **duas pessoas** (o pedido expira em **12 h**), somente leitura, por até 4 h, com **aviso na hora ao Dono**: não existe acesso secreto no HE;
@@ -17,6 +17,16 @@
 > **Ajuste pela [SPEC-025](SPEC-025.md) (aprovada em 01/11/2026):** a correção "Editar item" que muda o custo grava no **histórico de custo**, com o Administrador como autor, e o desfazer grava o custo anterior como um registro novo. O inventário do estoque fica fora do modo suporte, como os Relatórios.
 >
 > **Ajuste pela [SPEC-026](SPEC-026.md) (aprovada em 01/11/2026):** os **fornecedores** ficam como os clientes: o Administrador os vê mascarados, inclusive o nome, em qualquer modo, e nunca os cadastra, edita, exclui nem consulta CEP ou CNPJ (fora da lista de correções, RN37). Nas correções "Criar conta", "Editar conta", "Criar despesa fixa" e "Editar despesa fixa", o fornecedor ou cliente e o nº do documento ficam como estão (vazios na criação), e o nome do cliente ou fornecedor aparece mascarado.
+>
+> **Revisão antes da implementação (01/11/2026, pedida pela equipe):**
+> - **Conferência:** o que entrou depois da aprovação (SPEC-023 a SPEC-026 e a revisão dos formulários) foi conferido com a Spec e com o código. As OPEN-001 a OPEN-014 continuam válidas; os códigos de recuperação do Supabase ainda são experimentais na versão instalada (OPEN-002).
+> - **Quatro questões novas, decididas em entrevista pela opção recomendada:**
+>   - o desfazer de "Criar despesa fixa" e de uma ativação cancela as contas geradas ainda sem pagamento (OPEN-015);
+>   - o suporte não troca o tipo de uma conta com fornecedor ou cliente (OPEN-016);
+>   - a "Nova senha" de uma conta com 2º fator pede o código do autenticador (OPEN-017);
+>   - o desfazer fica recusado durante a suspensão, e o prazo de 30 dias continua contando (OPEN-018).
+> - **Ajustes derivados:** registrados nas seções 4, 5, 6 e 8, sem mudar o comportamento decidido. São eles: a busca de NCM na correção do item, o negócio suspenso fora da conferência do Financeiro e dos convites, os fornecedores no INV-009 e na RN37, o nome do emissor por ambiente e os dois nomes do método do código no `amr`.
+> - **Ordem:** a SPEC-019 passa a ser implementada antes da SPEC-027 (decisão da equipe, 01/11/2026).
 
 ---
 
@@ -37,7 +47,7 @@
 4. **Nada sem rastro.** Cada correção grava o antes e o depois **na mesma transação**. Se o registro falhar, a correção não acontece.
 5. **Sem acesso secreto.** Todo acesso de emergência aparece para o Dono desde o pedido. Uma conta de Administrador roubada ou mal-intencionada não tem como ler um negócio sem que o Dono veja.
 6. **Duas pessoas para o que o Dono não autorizou.** O acesso de emergência e a troca de plano exigem uma segunda conta de Administrador que aprove. Com uma conta só, essas ações não existem (falha fechada).
-7. **Dados pessoais dos clientes ficam fora.** Em nenhum modo o Administrador vê sem máscara ou altera os dados dos clientes (SPEC-022).
+7. **Dados pessoais dos clientes e dos fornecedores ficam fora.** Em nenhum modo o Administrador vê sem máscara ou altera os dados dos clientes (SPEC-022) e dos fornecedores (SPEC-026).
 
 ---
 
@@ -134,7 +144,8 @@
 - **Decisões arquiteturais:** ADR-003 (Supabase Auth e autorização no servidor) e ADR-008 (ampliada).
 - **Pré-requisitos externos:**
   - **MFA TOTP habilitado** no Supabase Auth de cada ambiente (*Authentication → Multi-Factor*). Conferir no painel de homologação antes de implementar.
-  - **Chave secreta do Supabase** de cada ambiente como segredo do ambiente no GitHub, só para a ação "redefinir 2º fator" do workflow.
+  - **Chave secreta e URL do Supabase** de cada ambiente (`SUPABASE_SECRET_KEY` e `SUPABASE_URL`) como segredos do ambiente no GitHub, só para a ação "redefinir 2º fator" do workflow.
+  - *(Opcional)* o **nome do ambiente** numa variável da Vercel, para o emissor no aplicativo autenticador ("HE Homologação"). Sem ela, o emissor é "Health Enterprise" (revisão de 01/11/2026).
   - **Pelo menos duas contas de Administrador, de pessoas diferentes**, para o acesso de emergência e a troca de plano. Na homologação, basta criar e conceder duas contas exclusivas (seção 12, T17).
   - **Domínio próprio** (ADR-009): só para os e-mails. Sem ele, os avisos no sistema cobrem tudo. O 2º fator **não** depende de domínio.
 
@@ -168,6 +179,7 @@ O HE não guarda o segredo.
 | **Reconfirmação** nas ações críticas (OPEN-003) | O servidor exige um código verificado nos **últimos 10 min** (o método `totp` do `amr`). Sem isso, um diálogo pede o código e a ação continua. Valem como críticas: pedir, aprovar ou recusar emergência; suspender ou reativar; pedir, aprovar ou recusar troca de plano; entrar em modo suporte numa liberação com correção; remover um autenticador. |
 | Muitas tentativas erradas | O limite do Supabase Auth vale; a tela mostra "Muitas tentativas. Aguarde alguns minutos." |
 | Autenticadores | Em Minha conta: lista (nome e data), cadastrar outro e remover (com reconfirmação). Não é possível remover o último. |
+| **Nova senha** ("Esqueci a senha", OPEN-017) | O Supabase só troca a senha de uma conta com 2º fator numa sessão `aal2`. Na tela "Nova senha", essa conta digita o código do autenticador antes de gravar. Depois, a tela pede uma nova entrada com a senha nova, porque a sessão da recuperação não tem o horário do login com senha. Quem perdeu o autenticador pede antes a redefinição do 2º fator. |
 | **Perdeu todos os autenticadores** (OPEN-002) | Outra pessoa da equipe roda o workflow "Administradores" com a ação **`redefinir-2fator`**. Ela apaga os fatores pela API de administração do Supabase Auth, grava `Usuario.segundoFatorRedefinidoEm` e registra `SEGUNDO_FATOR_REDEFINIDO`. Sessões abertas antes disso deixam de valer, e o próximo login pede o cadastro de novo. |
 
 Os eventos `SEGUNDO_FATOR_CADASTRADO`, `SEGUNDO_FATOR_REMOVIDO` e `SEGUNDO_FATOR_REDEFINIDO` entram no registro, sem negócio associado, como os eventos de papel.
@@ -209,20 +221,26 @@ Os eventos `SEGUNDO_FATOR_CADASTRADO`, `SEGUNDO_FATOR_REMOVIDO` e `SEGUNDO_FATOR
 | | Confirmar preço | Novo registro de preço com o valor anterior |
 | Financeiro | Lançamento avulso | Estorno do lançamento |
 | | Criar conta a pagar ou a receber | Cancela a conta, se não tiver pagamento |
-| | Editar conta | Volta os campos anteriores, se não houve pagamento depois |
-| | Criar despesa fixa | Desativa a despesa |
+| | Editar conta. O tipo só muda se a conta não tiver fornecedor nem cliente (OPEN-016) | Volta os campos anteriores, se não houve pagamento depois |
+| | Criar despesa fixa | Desativa a despesa e cancela as contas geradas por ela que ainda não têm pagamento. Se alguma já tiver pagamento, o desfazer é recusado (OPEN-015) |
 | | Editar despesa fixa | Volta os campos anteriores |
-| | Ativar ou desativar despesa fixa | A operação inversa |
+| | Ativar ou desativar despesa fixa | A operação inversa. Desfazer uma ativação também cancela as contas geradas a partir dela ainda sem pagamento, com a mesma recusa (OPEN-015) |
 
 **O suporte nunca faz (RN37), em nenhum modo:**
 - **Vendas:** registrar, cancelar, trocar e ajustar.
-- **Clientes:** cadastrar, editar, excluir, anonimizar e consultar CEP ou CNPJ.
+- **Clientes e fornecedores:** cadastrar, editar, excluir, anonimizar e consultar CEP ou CNPJ, inclusive o "Novo fornecedor" e o "Novo cliente" de dentro da conta, e "Corrigir o fornecedor e o documento" (SPEC-026).
 - **Equipe e permissões:** convites, papéis, permissões e remoção.
 - **Configurações:** Dados do negócio, CNPJ e regime, "Emito nota fiscal de produtos", dias de cobertura, plano pelo Dono e o próprio acesso do suporte.
 - **LGPD:** exportar dados e excluir conta. Também não usa Relatórios nem exportações.
 - **Ações sem compensação segura:** criar item, excluir subcategoria, estorno, pagamento de conta, cancelar conta e saldo inicial.
 
 A lista vive num único lugar do código (5.4 ↔ `CORRECOES_PERMITIDAS`). Uma ação fora dela é recusada no contexto de suporte (`ForaDaListaDeCorrecoes`), mesmo com o módulo em correção.
+
+**Detalhes das correções (revisão de 01/11/2026):**
+- **Consultas dos formulários:** buscar e conferir o NCM (SPEC-021) não gravam nada e são aceitas nos módulos em correção, porque a correção "Editar item" depende delas. Elas continuam recusadas no modo só de leitura e na emergência, onde não há formulário.
+- **Vínculo como está (SPEC-026):** o servidor mantém o fornecedor ou cliente e o nº do documento atuais da conta e da despesa fixa e ignora esses campos vindos do formulário no contexto de suporte.
+- **Tipo da conta (OPEN-016):** numa conta com fornecedor ou cliente, a troca entre "a pagar" e "a receber" é recusada: "Esta conta tem {fornecedor ou cliente}. Só o Dono troca o tipo dela."
+- **Contas geradas na correção (OPEN-015):** criar ou ativar uma despesa fixa gera a conta do mês na hora (SPEC-009). Essa geração faz parte da correção, e o antes e o depois registram as contas geradas.
 
 ### 5.5 Desfazer uma correção (Dono — OPEN-006)
 
@@ -235,7 +253,9 @@ A lista vive num único lugar do código (5.4 ↔ `CORRECOES_PERMITIDAS`). Uma a
    |---|---|
    | O registro mudou depois da correção (o estado atual difere do "depois" gravado) | "{Item} mudou depois da correção. Ajuste direto em {módulo}." |
    | Saldo de estoque insuficiente para a compensação | "O estoque atual não permite desfazer: saldo {x}." |
-   | A regra atual não aceita o valor anterior (ex.: NCM fora da tabela vigente) | A mensagem da validação do módulo. |
+   | A regra atual não aceita o valor anterior (ex.: NCM fora da tabela vigente, código interno em uso ao reativar o item) | A mensagem da validação do módulo. |
+   | Conta gerada pela despesa fixa já tem pagamento (OPEN-015) | "A conta de {mês} desta despesa já tem pagamento. Ajuste direto no Financeiro." |
+   | Negócio suspenso (OPEN-018) | "O negócio está suspenso. O desfazer volta quando ele for reativado, dentro dos 30 dias." |
    | Passou de 30 dias ou já foi desfeita | "Esta correção não pode mais ser desfeita." |
 
 5. Só o Dono desfaz. Cada correção é desfeita no máximo uma vez, e não existe "refazer".
@@ -265,7 +285,8 @@ A lista vive num único lugar do código (5.4 ↔ `CORRECOES_PERMITIDAS`). Uma a
 
 **Durante o acesso (só o Administrador A entra):**
 - Começa na aprovação e dura o prazo pedido, **sem renovação**. Para continuar, é preciso um novo pedido.
-- É **somente leitura**, nos módulos pedidos, com a **máscara** dos dados pessoais (SPEC-018 e SPEC-022), **sem exportação** e com cada tela registrada, como o modo suporte. Nenhuma correção é aceita (OPEN-009).
+- É **somente leitura**, nos módulos pedidos, com a **máscara** dos dados pessoais (SPEC-018, SPEC-022 e SPEC-026), **sem exportação** e com cada tela registrada, como o modo suporte. Nenhuma correção é aceita (OPEN-009).
+- O contexto de emergência usa o mesmo sinal de suporte que todas as telas já respeitam. Por isso as regras das Specs seguintes valem sem código novo: fornecedores mascarados, Inventário e Relatórios fora.
 - **Faixas:**
   - para o Administrador, uma faixa vermelha: "Emergência · {negócio} · somente leitura · até {hora} · {motivo}";
   - para todos os membros do negócio, uma faixa vermelha: "Acesso de emergência do suporte do HE até {hora}: {motivo}". Para o Dono, a faixa traz "Ver detalhes" e **"Encerrar acesso"**.
@@ -297,7 +318,9 @@ A lista vive num único lugar do código (5.4 ↔ `CORRECOES_PERMITIDAS`). Uma a
 | Membros | Entram e **veem tudo**. Uma faixa diz "Negócio suspenso pelo HE desde {data}: {motivo}. Fale com o suporte." Toda escrita nos módulos e em Configurações é recusada (`NegocioSuspenso`). |
 | Direitos do titular | Exportar os dados e excluir a conta continuam disponíveis (SPEC-014). A exclusão mantém os registros do negócio, como a RN27 já prevê. |
 | Acesso do suporte | O Dono continua podendo liberar e revogar, para pedir ajuda. Correções são recusadas enquanto durar a suspensão. A emergência continua possível. |
-| Rotina diária (SPEC-009) | Pula o negócio. Ao reativar, a conferência ao abrir o Financeiro gera as contas do período. |
+| Desfazer correção (OPEN-018) | Recusado durante a suspensão, como as demais gravações. O prazo de 30 dias continua contando. |
+| Equipe | Convites pendentes não podem ser aceitos enquanto durar a suspensão. |
+| Rotina diária e conferência (SPEC-009) | A rotina diária pula o negócio, e a conferência ao abrir o Financeiro e o Painel também. Ao reativar, a conferência gera as contas do período e recebe as parcelas vencidas, nas datas de vencimento. |
 | Dados | Nada é apagado nem alterado. |
 | Avisos | O Dono vê na hora, no sistema e em "Acessos do suporte", e por e-mail quando houver domínio. |
 
@@ -365,7 +388,7 @@ O painel mostra a situação "Suspenso" e tem o filtro.
 | **INV-006** | Acesso de emergência e troca de plano pela plataforma só com duas contas de Administrador diferentes (quem pede ≠ quem aprova), ambas com reconfirmação. O pedido expira em 12 h, e a emergência dura até 4 h. | Teste com a mesma conta, conta comum, pedido vencido e aprovação dupla. |
 | **INV-007** | Todo pedido e acesso de emergência aparece para o Dono desde o pedido. Não existe parâmetro, papel ou caminho no sistema que o esconda. | Teste da tela "Acessos do suporte" em cada etapa e revisão do código. |
 | **INV-008** | Negócio suspenso não aceita nenhuma escrita de membros nem do suporte nos módulos e em Configurações, exceto o acesso do suporte. A rotina diária o pula. Leitura, exportação e exclusão de conta continuam, e nada é apagado. | Testes de integração com cada fábrica de ação e com a rotina. |
-| **INV-009** | Os dados pessoais dos clientes nunca são alterados nem mostrados sem máscara ao Administrador, em nenhum modo. | Testes das ações de clientes no contexto de suporte e de emergência, e das consultas. |
+| **INV-009** | Os dados pessoais dos clientes e dos fornecedores nunca são alterados nem mostrados sem máscara ao Administrador, em nenhum modo, e nunca entram no antes e depois das correções. | Testes das ações de clientes e de fornecedores no contexto de suporte e de emergência, e das consultas. |
 | **INV-010** | O contexto de emergência é montado no servidor a cada requisição, a partir do acesso aprovado e conferido no banco (não expirado nem encerrado, mesmo Administrador que pediu). O cookie é só um ponteiro. | Teste com cookie forjado, acesso de outro negócio, outra conta e acesso encerrado. |
 | **INV-011** | Os eventos novos seguem a RN32: só inclusão, guardados por 5 anos. | O gatilho `he_somente_insercao` cobre os eventos novos (teste existente estendido). |
 
@@ -390,8 +413,9 @@ O painel mostra a situação "Suspenso" e tem o filtro.
 ## 8. Impacto arquitetural
 
 - **`src/lib/auth/adaptador-supabase.ts`:**
-  - as claims passam a trazer o `aal` e os horários de `password` e `totp` do `amr`;
-  - novas chamadas de MFA: `enroll`, `challenge`, `verify`, `listFactors` e `unenroll`.
+  - as claims passam a trazer o `aal` e os horários de `password` e `totp` do `amr`. O SDK prevê os nomes `totp` e `mfa/totp` para o código, e os dois valem;
+  - novas chamadas de MFA: `enroll` (com o emissor do ambiente), `challenge`, `verify`, `listFactors` e `unenroll`;
+  - a nova senha trata o erro `insufficient_aal`, pedindo o código antes de gravar (OPEN-017). Hoje esse erro viraria "falha interna".
 - **`src/lib/dominio/suporte.ts`:**
   - sessão de 8 h contada pelo `password`. Hoje ela usa o maior horário do `amr`, que passaria a ser o do código: corrigir;
   - `reconfirmacaoValida` (10 min);
@@ -418,7 +442,11 @@ O painel mostra a situação "Suspenso" e tem o filtro.
   - autenticadores em Minha conta.
 - **`src/app/(app)/negocio/suporte`:** níveis por módulo na gaveta, correções com "Desfazer", emergências com "Encerrar acesso".
 - **`src/components/suporte/faixas.tsx`:** faixas de correção, emergência e suspensão.
-- **Rotina diária (SPEC-009):** pula negócios suspensos.
+- **Rotina diária e conferência (SPEC-009):**
+  - a rotina pula os negócios suspensos, como já pula os encerrados;
+  - a conferência ao abrir o Financeiro e o Painel (`conferirFinanceiro`) também pula, como já faz no modo suporte.
+- **Ações de consulta:** buscar e conferir o NCM passam a ser aceitas no contexto de suporte com correção do Catálogo (5.4).
+- **Desfazer da despesa fixa (OPEN-015):** cancela as contas geradas por ela ainda sem pagamento. Esse cancelamento só existe nesse caminho: as contas geradas por despesa continuam sem cancelamento pelos membros (SPEC-009).
 - **`scripts/admin.ts` e `.github/workflows/administradores.yml`:** ação `redefinir-2fator`, com a chave secreta do Supabase como segredo do ambiente, passada por variável de ambiente, nunca interpolada no comando.
 - **Testes:**
   - gerador de códigos TOTP (RFC 6238, com `node:crypto`) nos testes;
@@ -511,26 +539,34 @@ O painel mostra a situação "Suspenso" e tem o filtro.
 
 **CA-17 — Visual.** Dadas as telas novas e alteradas, em 390, 768 e 1440 px, claro e escuro, então seguem o design system, sem rolagem horizontal.
 
+**CA-18 — Desfazer despesa fixa (OPEN-015).** Dada uma despesa fixa criada pelo suporte, com a conta do mês gerada e sem pagamento, quando o Dono desfaz, então a despesa fica desativada e a conta, cancelada. Se a conta já tiver pagamento, o desfazer é recusado com a explicação.
+
+**CA-19 — Tipo da conta com vínculo (OPEN-016).** Dada uma conta a pagar com fornecedor, quando o suporte tenta trocá-la para "a receber", então a correção é recusada com a explicação, e o fornecedor e o documento continuam na conta. Numa correção sem trocar o tipo, o vínculo também continua.
+
+**CA-20 — Nova senha com 2º fator (OPEN-017).** Dado um Administrador com 2º fator que pediu "Esqueci a senha", quando define a nova senha, então a tela pede o código do autenticador antes de gravar e, depois, uma nova entrada com a senha nova.
+
+**CA-21 — Desfazer na suspensão (OPEN-018).** Dado um negócio suspenso com uma correção de 5 dias atrás, quando o Dono tenta desfazê-la, então é recusado com a explicação. Ao reativar, o desfazer volta enquanto não passarem os 30 dias.
+
 ---
 
 ## 12. Casos de teste derivados
 
 | # | Teste | Tipo | Cobre |
 |---|---|---|---|
-| T01 | Contexto do Administrador: `aal1`, `aal2`, fator redefinido, sessão de 8 h pela senha, reconfirmação de 10 min | Unitário | CA-02 a CA-04, INV-001, INV-002 |
-| T02 | Lista fechada: cada ação da lista aceita e cada uma de fora recusada no contexto de suporte, por módulo e nível | Unitário + integração | CA-06, CA-07, INV-003 |
+| T01 | Contexto do Administrador: `aal1`, `aal2`, fator redefinido, sessão de 8 h pela senha, reconfirmação de 10 min (`totp` e `mfa/totp`); nova senha com 2º fator pedindo o código | Unitário + integração | CA-02 a CA-04, CA-20, INV-001, INV-002 |
+| T02 | Lista fechada: cada ação da lista aceita e cada uma de fora recusada no contexto de suporte, por módulo e nível; busca de NCM aceita só com o Catálogo em correção; vínculo da conta e da despesa mantido; troca do tipo recusada com vínculo | Unitário + integração | CA-06, CA-07, CA-19, INV-003 |
 | T03 | Correção grava o antes e o depois na mesma transação; falha no registro desfaz a correção | Integração | CA-08, INV-004 |
-| T04 | Desfazer, por ação da lista: sucesso, registro alterado, saldo insuficiente, validação atual, 30 dias, só o Dono | Integração | CA-09, INV-005 |
+| T04 | Desfazer, por ação da lista: sucesso, registro alterado, saldo insuficiente, validação atual, 30 dias, só o Dono; despesa fixa criada ou ativada com a conta gerada, com e sem pagamento | Integração | CA-09, CA-18, INV-005 |
 | T05 | Pedidos de plataforma: mesma conta, segunda conta, expiração em 12 h, cancelamento, um pendente por negócio | Integração | CA-10, CA-15, CA-16, INV-006 |
 | T06 | Emergência: contexto montado do acesso aprovado, cookie forjado, só quem pediu entra, 4 h, encerramento pelo Dono, máscara, sem escrita nem exportação | Integração | CA-10 a CA-12, INV-007, INV-009, INV-010 |
 | T07 | Resultado obrigatório antes de novo pedido | Integração | CA-13 |
-| T08 | Suspensão: todas as fábricas recusam escrita, exportação e exclusão continuam, rotina pula, reativação | Integração | CA-14, INV-008 |
+| T08 | Suspensão: todas as fábricas recusam escrita, exportação e exclusão continuam, rotina e conferência pulam, convite pendente recusado, desfazer recusado, reativação | Integração | CA-14, CA-21, INV-008 |
 | T09 | Troca de plano pela plataforma com as regras do RF73 e o histórico | Integração | CA-15 |
-| T10 | Clientes no suporte e na emergência: nenhuma ação aceita e dados sempre mascarados | Integração | INV-009 |
+| T10 | Clientes e fornecedores no suporte e na emergência: nenhuma ação aceita e dados sempre mascarados | Integração | INV-009 |
 | T11 | Eventos novos só de inclusão; exportação LGPD com os eventos e pedidos | Integração | INV-011, RNF04 |
 | T12 | Workflow `redefinir-2fator`: segredo por variável de ambiente, responsável registrado, sessões invalidadas | Integração (script) | CA-05 |
 | T13 | Gerador TOTP dos testes conferido com os vetores da RFC 6238 | Unitário | base dos demais |
-| T14 | Roteiro no navegador com o Supabase falso local: cadastro do 2º fator, correção e desfazer, emergência com duas contas, suspensão, plano | Manual com captura | CA-01 a CA-16 |
+| T14 | Roteiro no navegador com o Supabase falso local: cadastro do 2º fator, nova senha, correção e desfazer, emergência com duas contas, suspensão, plano | Manual com captura | CA-01 a CA-16, CA-18 a CA-21 |
 | T15 | Telas em 390, 768 e 1440 px, claro e escuro, em build de produção | Manual com captura | CA-17 |
 | T16 | Política e Termos na nova versão, com novo aceite | Manual | RNF04 |
 | T17 | **Homologação** (ver abaixo) | Manual (uma vez) | CA-01 a CA-16 |
@@ -554,7 +590,7 @@ O painel mostra a situação "Suspenso" e tem o filtro.
 
 ## 13. Questões em aberto
 
-Todas decididas pela equipe em 28/10/2026, em entrevista, pela opção recomendada; em quatro delas, com ajustes da equipe (marcados):
+As OPEN-001 a OPEN-014 foram decididas pela equipe em 28/10/2026, em entrevista, pela opção recomendada; em quatro delas, com ajustes da equipe (marcados). As OPEN-015 a OPEN-018 surgiram na revisão antes da implementação e foram decididas em 01/11/2026, todas pela opção recomendada:
 
 | ID | Decisão |
 |---|---|
@@ -572,6 +608,10 @@ Todas decididas pela equipe em 28/10/2026, em entrevista, pela opção recomenda
 | **OPEN-012** — Quem suspende | **Um Administrador** (recomendada), com o código reconfirmado e o motivo; reativar segue a mesma regra. Descartado: duas pessoas, que atrasaria a contenção. |
 | **OPEN-013** — Ações de plataforma | **Suspender/reativar e trocar plano** (recomendada). Reenviar convite pelo painel fica fora. |
 | **OPEN-014** — Troca de plano | **Nos dois sentidos** (recomendada), com as regras do RF73, motivo (cortesia, correção, teste), histórico "pela plataforma" e aviso ao Dono. **Ajuste da equipe:** como na emergência, exige **duas pessoas** (a recomendação era um Administrador). Descartado: só para o pago. |
+| **OPEN-015** — Desfazer de despesa fixa (revisão, 01/11/2026) | **O desfazer cancela as contas geradas** (recomendada): criar ou ativar uma despesa fixa gera a conta do mês na hora, e nenhum membro cancela uma conta gerada por despesa. O desfazer desativa a despesa e cancela as contas geradas por ela ainda sem pagamento; com pagamento, é recusado. Descartadas: tirar "Criar despesa fixa" e "Ativar despesa fixa" da lista; manter o desfazer só desativando, o que deixaria a conta em aberto para sempre. |
+| **OPEN-016** — Tipo de uma conta com vínculo (revisão, 01/11/2026) | **Recusar a troca com vínculo** (recomendada): o banco só aceita fornecedor na conta a pagar e cliente na conta a receber, e o vínculo fica como está nas correções (SPEC-026). Numa conta com fornecedor ou cliente, só o Dono troca o tipo; sem vínculo, o suporte troca. Descartadas: trocar e limpar o vínculo; o suporte nunca trocar o tipo. |
+| **OPEN-017** — Nova senha com 2º fator (revisão, 01/11/2026) | **Pedir o código na nova senha** (recomendada): o Supabase só troca a senha de uma conta com 2º fator numa sessão `aal2`. A tela pede o código antes de gravar e, depois, uma nova entrada; quem perdeu o autenticador pede antes a redefinição. Descartada: trocar a senha só pelo workflow. |
+| **OPEN-018** — Desfazer durante a suspensão (revisão, 01/11/2026) | **Recusar, e o prazo continua** (recomendada): o desfazer é uma gravação, recusada como as demais (RN39), e os 30 dias continuam contando. Descartadas: recusar e prorrogar o prazo pelo tempo suspenso; permitir o desfazer na suspensão. |
 
 **Decisões derivadas (sem questão nova):**
 - prazos com correção: **1 h (padrão) ou 12 h**; prazos da emergência: **1 h, 2 h ou 4 h**;
@@ -583,7 +623,8 @@ Todas decididas pela equipe em 28/10/2026, em entrevista, pela opção recomenda
 - a troca de plano pela plataforma usa os mesmos 12 h de pedido pendente da emergência;
 - a redefinição do 2º fator invalida as sessões abertas (`segundoFatorRedefinidoEm`);
 - o painel lista as contas de Administrador, para a equipe perceber uma conta a mais;
-- os nomes dos membros continuam sem máscara, e os valores aparecem, como na SPEC-018.
+- os nomes dos membros continuam sem máscara, e os valores aparecem, como na SPEC-018;
+- *(revisão de 01/11/2026)* buscar e conferir o NCM são aceitas no Catálogo em correção; o vínculo da conta e da despesa é mantido pelo servidor; o negócio suspenso fica fora da conferência do Financeiro e não aceita convites; a emergência reaproveita o sinal de suporte das telas; o emissor do autenticador vem do ambiente; o `amr` aceita `totp` e `mfa/totp`.
 
 ---
 
@@ -591,11 +632,11 @@ Todas decididas pela equipe em 28/10/2026, em entrevista, pela opção recomenda
 
 A SPEC-019 estará concluída quando:
 
-- [ ] todos os critérios de aceitação (CA-01 a CA-17) estiverem implementados;
+- [ ] todos os critérios de aceitação (CA-01 a CA-21) estiverem implementados;
 - [ ] todos os invariantes (INV-001 a INV-011) estiverem preservados;
 - [ ] os testes derivados (T01 a T17) estiverem aprovados, com o CI verde no PR;
 - [ ] os RNFs aplicáveis (RNF01, RNF02, RNF03, RNF04, RNF05, RNF12) tiverem sido verificados como descrito na seção 10;
-- [x] as questões OPEN-001 a OPEN-014 tiverem sido decididas e registradas (28/10/2026), com a baseline ajustada (RF73–RF77, RF82–RF86, RN30–RN32, RN37–RN39, RNF12, ADR-008);
+- [x] as questões OPEN-001 a OPEN-014 tiverem sido decididas e registradas (28/10/2026), com a baseline ajustada (RF73–RF77, RF82–RF86, RN30–RN32, RN37–RN39, RNF12, ADR-008), e as OPEN-015 a OPEN-018, na revisão de 01/11/2026 (RN37 com os fornecedores);
 - [ ] não existir divergência conhecida entre a implementação e esta Spec;
 - [ ] toda divergência em relação à baseline tiver sido explicitamente analisada e registrada nos documentos (seção 9).
 

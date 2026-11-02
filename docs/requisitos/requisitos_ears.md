@@ -36,7 +36,7 @@
 | RN30 | Comportamento indesejado | **SE** o Administrador tentar acessar dados operacionais de um negócio sem liberação ativa do Dono nem acesso de emergência aprovado, **ENTÃO** o sistema deve recusar o acesso. |
 | RN31 | Comportamento indesejado | **SE** alguém que não seja o Dono tentar liberar ou revogar o acesso do suporte, **ENTÃO** o sistema deve recusar a operação. |
 | RN32 | Comportamento indesejado | **SE** houver tentativa de alterar ou apagar um registro de auditoria do suporte, **ENTÃO** o sistema deve recusar a operação. |
-| RN37 | Comportamento indesejado | **SE** o Administrador tentar, em qualquer modo, uma ação fora da lista fechada de correções (inclusive vendas, clientes, equipe, configurações, plano, acesso do suporte e LGPD), **ENTÃO** o sistema deve recusar a operação. |
+| RN37 | Comportamento indesejado | **SE** o Administrador tentar, em qualquer modo, uma ação fora da lista fechada de correções (inclusive vendas, clientes, fornecedores, equipe, configurações, plano, acesso do suporte e LGPD), **ENTÃO** o sistema deve recusar a operação. |
 | RN38 | Complexo (Estado + Indesejado) | **ENQUANTO** houver acesso de emergência ativo, o sistema deve permitir só leitura com máscara e sem exportação e mostrar o acesso ao Dono, que pode encerrá-lo; **SE** o negócio tiver liberação ativa ou estiver encerrado, **ENTÃO** o sistema deve recusar o pedido de emergência. |
 | RN39 | Complexo (Estado + Indesejado) | **ENQUANTO** o negócio estiver suspenso, o sistema deve permitir leitura, exportação dos dados e exclusão de conta; **SE** houver tentativa de escrita nos módulos ou em Configurações (exceto o acesso do suporte), **ENTÃO** o sistema deve recusá-la. |
 
