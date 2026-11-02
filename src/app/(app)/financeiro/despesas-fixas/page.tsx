@@ -9,6 +9,7 @@ import { Superficie, TituloDaSuperficie } from "@/components/ui/superficie";
 import { exigirPermissao } from "@/lib/auth/servidor";
 import { financeiro } from "@/lib/db";
 import { hoje } from "@/lib/dominio/datas";
+import { corrige } from "@/lib/dominio/correcoes";
 import { pode } from "@/lib/dominio/permissoes";
 import { conferirFinanceiro } from "@/lib/financeiro/conferencia";
 import { opcoesDoVinculo } from "@/lib/financeiro/opcoes";
@@ -26,9 +27,11 @@ export default async function DespesasFixas() {
   const [despesas, das] = await Promise.all([f.listarDespesas(), f.dasVigente(dia)]);
   const ativas = despesas.filter((d) => d.ativo);
   const totalMensal = ativas.reduce((s, d) => s + (d.valorCentavos ?? (d.origem === "DAS_MEI" ? (das ?? 0) : 0)), 0);
-  const podeEditar = pode(membro.permissoes, "financeiro", "editar");
-  const podeCriar = !membro.modoSuporte && pode(membro.permissoes, "financeiro", "criar");
-  const opcoes = podeCriar ? await opcoesDoVinculo(membro) : undefined;
+  // SPEC-019 (5.4): com o Financeiro em "ver e corrigir", o suporte cria, edita e ativa ou desativa, sem o fornecedor.
+  const suporte = membro.modoSuporte === true;
+  const podeEditar = pode(membro.permissoes, "financeiro", "editar") || corrige(membro, "financeiro.editarDespesa");
+  const podeCriar = (!suporte && pode(membro.permissoes, "financeiro", "criar")) || corrige(membro, "financeiro.criarDespesa");
+  const opcoes = podeCriar && !suporte ? await opcoesDoVinculo(membro) : undefined;
 
   const valorDe = (d: (typeof despesas)[number]) => d.valorCentavos ?? (d.origem === "DAS_MEI" ? (das ?? 0) : 0);
 
@@ -104,7 +107,7 @@ export default async function DespesasFixas() {
           <aside className="w-full lg:sticky lg:top-6 lg:w-96">
             <Superficie aria-labelledby="titulo-nova">
               <TituloDaSuperficie id="titulo-nova" titulo="Nova despesa fixa" />
-              <FormularioDespesa opcoes={opcoes} />
+              <FormularioDespesa opcoes={opcoes} vinculoComoEsta={suporte} />
             </Superficie>
           </aside>
         )}

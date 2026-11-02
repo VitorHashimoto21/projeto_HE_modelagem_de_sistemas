@@ -15,6 +15,12 @@ import type { EstadoDoFinanceiro } from "./servicos";
 // (OPEN-006): criar → avulso, saldo inicial, nova conta, pagamento, nova despesa; editar →
 // conta manual e despesa fixa; excluir → estornar e cancelar. O negócio vem do contexto
 // validado e "hoje" do relógio do servidor, nunca do formulário.
+// SPEC-019 (5.4): o último argumento marca as correções que o suporte pode fazer com o Financeiro em
+// "ver e corrigir". Nelas, o vínculo com o fornecedor ou o cliente fica como está. Saldo inicial,
+// estorno, cancelamento, pagamento e a correção do vínculo nunca são aceitos no modo suporte.
+
+/** No modo suporte, o fornecedor ou o cliente e o nº do documento não vêm do formulário (5.4). */
+const vinculo = (m: ContextoDoMembro): servicos.OpcoesDoVinculo => ({ vinculoComoEsta: m.modoSuporte === true });
 
 const deps = (m: ContextoDoMembro): servicos.DependenciasDoFinanceiro => {
   const agora = new Date();
@@ -35,8 +41,11 @@ async function atualizar(fluxo: Promise<EstadoDoFinanceiro>): Promise<EstadoDoFi
   return r;
 }
 
-export const acaoLancarAvulso = acaoComPermissao("financeiro", "criar", async (membro, _: EstadoDoFinanceiro, form: FormData) =>
-  atualizar(servicos.lancarAvulso(camposDoFormulario(form), deps(membro))),
+export const acaoLancarAvulso = acaoComPermissao(
+  "financeiro",
+  "criar",
+  async (membro, _: EstadoDoFinanceiro, form: FormData) => atualizar(servicos.lancarAvulso(camposDoFormulario(form), deps(membro))),
+  "financeiro.lancarAvulso",
 );
 
 export const acaoInformarSaldoInicial = acaoComPermissao("financeiro", "criar", async (membro, _: EstadoDoFinanceiro, form: FormData) => {
@@ -51,14 +60,17 @@ export const acaoEstornar = acaoComPermissao("financeiro", "excluir", async (mem
 );
 
 export const acaoCriarConta = acaoComPermissao("financeiro", "criar", async (membro, _: EstadoDoFinanceiro, form: FormData) => {
-  const r = await atualizar(servicos.criarConta(camposDoFormulario(form), deps(membro)));
+  const r = await atualizar(servicos.criarConta(camposDoFormulario(form), deps(membro), vinculo(membro)));
   // Sem "ver", fica no formulário com a confirmação (o detalhe da conta exige ver).
   if (r.status === "salvo" && pode(membro.permissoes, "financeiro", "ver")) redirect(`/financeiro/contas/${r.id}?nova=1`);
   return r;
-});
+}, "financeiro.criarConta");
 
-export const acaoEditarConta = acaoComPermissao("financeiro", "editar", async (membro, _: EstadoDoFinanceiro, form: FormData) =>
-  atualizar(servicos.editarConta(texto(form, "contaId"), camposDoFormulario(form), deps(membro))),
+export const acaoEditarConta = acaoComPermissao(
+  "financeiro",
+  "editar",
+  async (membro, _: EstadoDoFinanceiro, form: FormData) => atualizar(servicos.editarConta(texto(form, "contaId"), camposDoFormulario(form), deps(membro), vinculo(membro))),
+  "financeiro.editarConta",
 );
 
 /** SPEC-026 (5.4, item 5): corrigir o fornecedor ou cliente e o nº do documento pede Financeiro — editar. */
@@ -74,14 +86,24 @@ export const acaoRegistrarPagamento = acaoComPermissao("financeiro", "criar", as
   atualizar(servicos.registrarPagamento(texto(form, "contaId"), camposDoFormulario(form), deps(membro))),
 );
 
-export const acaoCriarDespesa = acaoComPermissao("financeiro", "criar", async (membro, _: EstadoDoFinanceiro, form: FormData) =>
-  atualizar(servicos.criarDespesa(camposDoFormulario(form), deps(membro))),
+export const acaoCriarDespesa = acaoComPermissao(
+  "financeiro",
+  "criar",
+  async (membro, _: EstadoDoFinanceiro, form: FormData) => atualizar(servicos.criarDespesa(camposDoFormulario(form), deps(membro), vinculo(membro))),
+  "financeiro.criarDespesa",
 );
 
-export const acaoEditarDespesa = acaoComPermissao("financeiro", "editar", async (membro, _: EstadoDoFinanceiro, form: FormData) =>
-  atualizar(servicos.editarDespesa(texto(form, "despesaId"), camposDoFormulario(form), deps(membro))),
+export const acaoEditarDespesa = acaoComPermissao(
+  "financeiro",
+  "editar",
+  async (membro, _: EstadoDoFinanceiro, form: FormData) =>
+    atualizar(servicos.editarDespesa(texto(form, "despesaId"), camposDoFormulario(form), deps(membro), vinculo(membro))),
+  "financeiro.editarDespesa",
 );
 
-export const acaoDefinirAtivo = acaoComPermissao("financeiro", "editar", async (membro, _: EstadoDoFinanceiro, form: FormData) =>
-  atualizar(servicos.definirAtivo(texto(form, "despesaId"), texto(form, "ativo") === "true", deps(membro))),
+export const acaoDefinirAtivo = acaoComPermissao(
+  "financeiro",
+  "editar",
+  async (membro, _: EstadoDoFinanceiro, form: FormData) => atualizar(servicos.definirAtivo(texto(form, "despesaId"), texto(form, "ativo") === "true", deps(membro))),
+  "financeiro.definirAtivo",
 );

@@ -12,6 +12,7 @@ import { exigirPermissao } from "@/lib/auth/servidor";
 import { financeiro } from "@/lib/db";
 import { DespesaNaoEncontrada } from "@/lib/db/financeiro";
 import { hoje } from "@/lib/dominio/datas";
+import { corrige } from "@/lib/dominio/correcoes";
 import { pode } from "@/lib/dominio/permissoes";
 import { opcoesDoVinculo } from "@/lib/financeiro/opcoes";
 
@@ -31,8 +32,10 @@ export default async function DespesaFixa({ params }: PageProps<"/financeiro/des
     f.dasVigente(hoje()),
   ]);
   const ehDas = d.origem === "DAS_MEI";
-  const podeEditar = pode(membro.permissoes, "financeiro", "editar");
-  const opcoes = podeEditar && !ehDas ? await opcoesDoVinculo(membro) : undefined;
+  // SPEC-019 (5.4): com o Financeiro em "ver e corrigir", o suporte altera e ativa ou desativa, sem o fornecedor.
+  const suporte = membro.modoSuporte === true;
+  const podeEditar = pode(membro.permissoes, "financeiro", "editar") || corrige(membro, "financeiro.editarDespesa");
+  const opcoes = podeEditar && !ehDas && !suporte ? await opcoesDoVinculo(membro) : undefined;
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
@@ -74,6 +77,7 @@ export default async function DespesaFixa({ params }: PageProps<"/financeiro/des
             <TituloDaSuperficie id="titulo-alterar" titulo={ehDas ? "Dia de vencimento" : "Alterar"} />
             <FormularioDespesa
               opcoes={opcoes}
+              vinculoComoEsta={suporte}
               despesa={{ id: d.id, descricao: d.descricao, valorCentavos: d.valorCentavos, diaVencimento: d.diaVencimento, categoria: d.categoria, das: ehDas, fornecedor: d.fornecedor }}
             />
           </Superficie>

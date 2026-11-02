@@ -36,7 +36,7 @@ const LOGIN = new Date(AGORA.getTime() - 3_600_000);
 // A lista fechada (5.4) num lugar só.
 
 describe("T02 — lista fechada (5.4 ↔ CORRECOES_PERMITIDAS)", () => {
-  it("as correções da etapa 2a: cinco do Catálogo e três do Estoque, cada uma com o desfazer", () => {
+  it("a tabela 5.4 inteira: Catálogo, Estoque, Calculadora e Financeiro, cada uma com o desfazer", () => {
     expect(Object.keys(CORRECOES_PERMITIDAS).sort()).toEqual(
       [
         "catalogo.arquivarItem",
@@ -47,6 +47,14 @@ describe("T02 — lista fechada (5.4 ↔ CORRECOES_PERMITIDAS)", () => {
         "estoque.definirMinimo",
         "estoque.registrarEntrada",
         "estoque.registrarSaida",
+        "calculadora.salvarParametros",
+        "calculadora.confirmarPreco",
+        "financeiro.lancarAvulso",
+        "financeiro.criarConta",
+        "financeiro.editarConta",
+        "financeiro.criarDespesa",
+        "financeiro.editarDespesa",
+        "financeiro.definirAtivo",
       ].sort(),
     );
     for (const [id, c] of Object.entries(CORRECOES_PERMITIDAS)) {
@@ -56,10 +64,14 @@ describe("T02 — lista fechada (5.4 ↔ CORRECOES_PERMITIDAS)", () => {
     expect(correcoesDoModulo("estoque")).toEqual(["Registrar entrada", "Registrar saída manual", "Definir estoque mínimo"]);
   });
 
-  it("só os módulos com correções na lista oferecem 'ver e corrigir'", () => {
-    expect([...MODULOS_CORRIGIVEIS]).toEqual(["catalogo", "estoque"]);
+  it("só os módulos com correções na lista oferecem 'ver e corrigir'; Vendas e Dashboard nunca", () => {
+    expect([...MODULOS_CORRIGIVEIS]).toEqual(["catalogo", "estoque", "calculadora", "financeiro"]);
     for (const m of MODULOS_CORRIGIVEIS) expect(correcoesDoModulo(m).length).toBeGreaterThan(0);
-    for (const m of ["vendas", "dashboard", "financeiro", "calculadora"]) expect(ehCorrigivel(m)).toBe(false);
+    for (const m of ["vendas", "dashboard"]) expect(ehCorrigivel(m)).toBe(false);
+    // RN37: o que o suporte nunca faz não está na lista, mesmo nos módulos corrigíveis.
+    for (const fora of ["catalogo.criarItem", "catalogo.excluirSubcategoria", "financeiro.estornar", "financeiro.registrarPagamento", "financeiro.cancelarConta", "financeiro.informarSaldoInicial", "financeiro.corrigirVinculo"]) {
+      expect(fora in CORRECOES_PERMITIDAS, fora).toBe(false);
+    }
   });
 
   it("a correção é aceita só na lista e com o módulo dela em correção", () => {
@@ -91,7 +103,7 @@ describe("T02 — lista fechada (5.4 ↔ CORRECOES_PERMITIDAS)", () => {
     for (const arquivo of arquivos("src/lib")) {
       const codigo = readFileSync(arquivo, "utf-8");
       for (const bloco of codigo.split(/(?=export const )/)) {
-        const cabeca = bloco.match(/^export const (\w+) = acaoComPermissao\("(\w+)",/);
+        const cabeca = bloco.match(/^export const (\w+) = acaoComPermissao\(\s*"(\w+)",/);
         if (!cabeca) continue;
         // A marca é o último argumento da fábrica, depois do corpo: `}, "modulo.acao");` ou `),\n  "modulo.acao",\n);`.
         const marca = bloco.match(/[)}],\s*"(consulta|[a-z]+\.[A-Za-z]+)",?\s*\);\s*(?:\/\/.*\s*|\/\*[\s\S]*?\*\/\s*)*$/)?.[1];
@@ -132,9 +144,9 @@ describe("CA-06 — liberação com correção: módulos e prazos", () => {
 
   it("corrigir só os módulos marcados e que têm correções", () => {
     expect(validarLiberacao({ ...base, "corrigir.estoque": "on", prazo: "1h" })).toEqual({ ok: false, erros: { modulos: M.correcaoForaDosModulos } });
-    // Financeiro e Vendas ainda não têm correções na lista: o pedido é ignorado e a liberação fica de leitura.
-    const r = validarLiberacao({ ...base, "corrigir.financeiro": "on", "corrigir.vendas": "on", prazo: "24h" });
-    expect(r).toMatchObject({ ok: true, dados: { modulosComCorrecao: [] } });
+    // Vendas não tem correções na lista: o pedido é ignorado.
+    expect(validarLiberacao({ ...base, "corrigir.vendas": "on", prazo: "24h" })).toMatchObject({ ok: true, dados: { modulosComCorrecao: [] } });
+    expect(validarLiberacao({ ...base, "corrigir.financeiro": "on", prazo: "12h" })).toMatchObject({ ok: true, dados: { modulosComCorrecao: ["financeiro"] } });
     // "Ver" manda o campo vazio: não é correção.
     expect(validarLiberacao({ ...base, "corrigir.catalogo": "", prazo: "24h" })).toMatchObject({ ok: true, dados: { modulosComCorrecao: [] } });
   });
@@ -422,6 +434,22 @@ describe("antes e depois só dos campos alterados", () => {
     ]);
     expect(linhasDaCorrecao({ arquivado: false }, { arquivado: true })).toEqual([{ campo: "Situação", antes: "Ativo", depois: "Arquivado" }]);
     expect(linhasDaCorrecao({ estoqueMinimo: null }, { estoqueMinimo: "5.000" })).toEqual([{ campo: "Estoque mínimo", antes: "Sem mínimo", depois: "5" }]);
+    // Financeiro e Calculadora (etapa 2b).
+    expect(linhasDaCorrecao(null, { descricao: "Frete", tipo: "SAIDA", categoria: "FORNECEDORES", valor: "35.00", data: "2026-11-02" })).toEqual([
+      { campo: "Descrição", antes: "—", depois: "Frete" },
+      { campo: "Tipo", antes: "—", depois: "Saída" },
+      { campo: "Categoria", antes: "—", depois: "Fornecedores" },
+      { campo: "Valor", antes: "—", depois: "R$\u00a035,00" },
+      { campo: "Data", antes: "—", depois: "02/11/2026" },
+    ]);
+    expect(linhasDaCorrecao({ ativo: false, geradas: ["2026-10"] }, { ativo: true, geradas: ["2026-10", "2026-11"] })).toEqual([
+      { campo: "Situação", antes: "Desativada", depois: "Ativa" },
+      { campo: "Contas geradas", antes: "10/2026", depois: "10/2026, 11/2026" },
+    ]);
+    expect(linhasDaCorrecao({ taxaCartao: "3.50", margemMeta: null }, { taxaCartao: "4.00", margemMeta: "20.00" })).toEqual([
+      { campo: "Taxa média do cartão", antes: "3,5%", depois: "4%" },
+      { campo: "Margem de lucro meta", antes: "—", depois: "20%" },
+    ]);
   });
 
   it("os históricos mostram o Administrador como suporte do HE", () => {

@@ -4,7 +4,7 @@
 > - **etapa 1 — 2º fator do Administrador:** implementada em 02/11/2026 e verificada em build local ([evidências](evidencias/SPEC-019/README.md));
 > - **etapa 2 — correções e desfazer**, em duas partes:
 >   - **2a — o mecanismo, o Catálogo e o Estoque:** implementada em 02/11/2026 e verificada em build local ([evidências](evidencias/SPEC-019/README.md#etapa-2a--correções-do-suporte-no-catálogo-e-no-estoque-e-o-desfazer-02112026));
->   - **2b — a Calculadora e o Financeiro:** a implementar;
+>   - **2b — a Calculadora e o Financeiro:** implementada em 02/11/2026 e verificada em build local ([evidências](evidencias/SPEC-019/README.md#etapa-2b--correções-do-suporte-no-financeiro-e-na-calculadora-02112026));
 > - **etapa 3 — emergência e troca de plano:** a implementar;
 > - **etapa 4 — suspensão, Política e Termos, e homologação (T17):** a implementar.
 >
@@ -562,6 +562,21 @@ Cobre as seções 5.2, 5.3 e 5.5 e a parte da 5.10 sobre as correções, com as 
 - **Ficam para as próximas etapas:**
   - as correções da Calculadora e do Financeiro (OPEN-015 e OPEN-016), na etapa 2b;
   - a recusa da correção e do desfazer em negócio suspenso (OPEN-018), na etapa 4.
+
+**Implementação — etapa 2b, correções na Calculadora e no Financeiro (02/11/2026):** [evidências](evidencias/SPEC-019/README.md#etapa-2b--correções-do-suporte-no-financeiro-e-na-calculadora-02112026).
+
+Completa a tabela 5.4 com as oito correções da Calculadora e do Financeiro e os "Detalhes das correções": vínculo como está, tipo da conta com vínculo (OPEN-016) e as contas geradas na correção (OPEN-015). Cobre os CA-18 e CA-19 e completa os T02 a T04 e a parte das correções do T14 e do T15. Sem migração nova. O roteiro no navegador teve 39 verificações. Como foi feito:
+- **Lista e ações:** as oito correções entram em `CORRECOES_PERMITIDAS`, e as Server Actions do Financeiro e da Calculadora levam a marca. Saldo inicial, estorno, cancelamento, pagamento e a correção do vínculo continuam fora da lista.
+- **Vínculo como está:** no modo suporte, o servidor ignora o fornecedor ou cliente e o nº do documento do formulário. A conta e a despesa criadas nascem sem eles, e a edição mantém os atuais. Numa conta com vínculo, a troca do tipo é recusada com "Esta conta tem {fornecedor ou cliente}. Só o Dono troca o tipo dela.".
+- **Contas geradas (OPEN-015):** o antes e o depois da despesa fixa trazem os meses das contas que ela gerou. O desfazer da criação ou da ativação desativa a despesa e cancela as contas dos meses novos. Se uma delas tem pagamento, o desfazer é recusado com o mês.
+- **Telas:** só os botões da lista no caixa, nas contas, nas despesas fixas e na Calculadora; os formulários do suporte sem o vínculo e com o aviso; os históricos do Financeiro com "{nome} (suporte do HE)".
+
+**Decisões de implementação da etapa 2b (sem mudar o comportamento da Spec):**
+- **Conta criada:** a ação leva ao detalhe da conta (redirecionamento). O motor acha a conta pelas contas novas do Administrador, não pela resposta da ação.
+- **Desfazer uma desativação:** reativa como o Dono reativaria, com a conta do mês.
+- **Confirmar preço:** o desfazer grava o preço anterior como preço manual, como na correção "Definir preço".
+- **Transação abortada:** os serviços do Financeiro traduzem as falhas em mensagens. O corpo da correção roda num ponto de retorno (savepoint): se um erro do banco for engolido assim, a correção volta e nada é gravado.
+- **Fica para a etapa 4:** a recusa da correção e do desfazer em negócio suspenso (OPEN-018).
 
 ---
 

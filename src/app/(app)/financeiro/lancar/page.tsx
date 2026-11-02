@@ -12,7 +12,8 @@ export const metadata: Metadata = { title: "Novo lançamento" };
 // Lançamento avulso (SPEC-009, 5.2; UC12a): Financeiro — criar. Quem não tem "ver" (RF06,
 // CA-13) lança a despesa operacional sem enxergar o caixa, o saldo nem as contas.
 export default async function Lancar() {
-  const membro = await exigirPermissao("financeiro", "criar");
+  // SPEC-019 (5.4): no modo suporte, também com o Financeiro em "ver e corrigir".
+  const membro = await exigirPermissao("financeiro", "criar", "financeiro.lancarAvulso");
   const podeVer = pode(membro.permissoes, "financeiro", "ver");
 
   return (

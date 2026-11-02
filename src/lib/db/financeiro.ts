@@ -18,6 +18,7 @@ import { nomeDeExibicao, type TipoCliente } from "@/lib/dominio/cliente";
 import { mascararNome } from "@/lib/dominio/suporte";
 import { ClienteNaoEncontrado } from "./clientes";
 import type { ClienteDoNegocio } from "./cliente-do-negocio";
+import { autorDoHistorico } from "./autor";
 import { FornecedorNaoEncontrado } from "./fornecedores";
 
 /**
@@ -605,7 +606,7 @@ export function criarConsultasFinanceiras(cliente: ClienteDoNegocio, negocioId: 
           data: true,
           descricao: true,
           estornoDeId: true,
-          usuario: { select: { nome: true } },
+          usuario: { select: { nome: true, administradorEm: true } },
           venda: { select: { id: true, numero: true } },
           conta: { select: { id: true, descricao: true } },
           estornadoPor: { select: { id: true } },
@@ -631,7 +632,7 @@ export function criarConsultasFinanceiras(cliente: ClienteDoNegocio, negocioId: 
           categoria: l.categoria,
           valorCentavos: centavosDe(l.valor),
           data: l.data,
-          registradoPor: l.usuario?.nome ?? null,
+          registradoPor: l.usuario ? autorDoHistorico(l.usuario) : null,
           descricao: l.descricao,
           venda: l.venda,
           conta: l.conta,
@@ -798,17 +799,20 @@ export function criarConsultasFinanceiras(cliente: ClienteDoNegocio, negocioId: 
               },
             },
             despesaFixa: { select: { id: true, descricao: true } },
-            lancamentos: { orderBy: { data: "asc" }, select: { id: true, valor: true, data: true, formaPagamento: true, usuario: { select: { nome: true } } } },
+            lancamentos: { orderBy: { data: "asc" }, select: { id: true, valor: true, data: true, formaPagamento: true, usuario: { select: { nome: true, administradorEm: true } } } },
           },
         });
       if (!c) throw new ContaNaoEncontrada();
       const autor = c.criadaPorId ? await cliente.membroNegocio.findFirst({ where: { usuarioId: c.criadaPorId }, select: { usuario: { select: { nome: true } } } }) : null;
+      // SPEC-019 (5.3, item 3): a conta criada pelo suporte mostra "{nome} (suporte do HE)" (o Administrador não é membro).
+      const doSuporte =
+        c.criadaPorId && !autor ? await cliente.usuario.findFirst({ where: { id: c.criadaPorId, administradorEm: { not: null } }, select: { nome: true, administradorEm: true } }) : null;
       return {
         ...exibirConta(c, hoje),
-        criadaPor: autor?.usuario.nome ?? null,
+        criadaPor: autor?.usuario.nome ?? (doSuporte ? autorDoHistorico(doSuporte) : null),
         venda: c.parcela?.pagamento.venda ?? null,
         despesa: c.despesaFixa,
-        lancamentos: c.lancamentos.map((l) => ({ id: l.id, valorCentavos: centavosDe(l.valor), data: l.data, registradoPor: l.usuario?.nome ?? null, forma: l.formaPagamento })),
+        lancamentos: c.lancamentos.map((l) => ({ id: l.id, valorCentavos: centavosDe(l.valor), data: l.data, registradoPor: l.usuario ? autorDoHistorico(l.usuario) : null, forma: l.formaPagamento })),
       };
     },
 
@@ -849,6 +853,22 @@ export function criarConsultasFinanceiras(cliente: ClienteDoNegocio, negocioId: 
         },
       });
       if (count === 0) await explicarRecusa(id);
+    },
+
+    /**
+     * O vínculo atual da conta (SPEC-019, OPEN-016): no modo suporte, a edição o mantém como está.
+     * Só diz se há fornecedor ou cliente, sem o nome (INV-009).
+     */
+    async vinculoDaConta(id: string): Promise<{ tipo: TipoConta; pessoa: "fornecedor" | "cliente" | null; pessoaId: string | null; numeroDocumento: string | null }> {
+      if (!UUID.test(id)) throw new ContaNaoEncontrada();
+      const c = await cliente.contaPagarReceber.findFirst({ where: { id }, select: { tipo: true, fornecedorId: true, clienteId: true, numeroDocumento: true } });
+      if (!c) throw new ContaNaoEncontrada();
+      return {
+        tipo: c.tipo,
+        pessoa: c.fornecedorId ? "fornecedor" : c.clienteId ? "cliente" : null,
+        pessoaId: c.fornecedorId ?? c.clienteId,
+        numeroDocumento: c.numeroDocumento,
+      };
     },
 
     /**

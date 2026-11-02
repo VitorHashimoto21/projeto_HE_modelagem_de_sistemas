@@ -152,3 +152,54 @@ O banco recebeu a migração `20261102180000_correcoes_do_suporte`, que só acre
 - **Etapa 2b:** as correções da Calculadora e do Financeiro (OPEN-015 e OPEN-016, vínculo da conta mantido).
 - **Negócio suspenso (OPEN-018):** a recusa da correção e do desfazer entra na etapa 4, com a suspensão.
 
+## Etapa 2b — correções do suporte no Financeiro e na Calculadora (02/11/2026)
+
+Verificação em build de produção local, no mesmo ambiente das etapas anteriores. Os dados são fictícios:
+- o Dono e o negócio **HE Testing**;
+- a conta de Administrador `suporte@exemplo.com`;
+- o fornecedor **Gráfica Exemplo** e a conta a pagar "Impressão de etiquetas", com ele e o documento NF-321.
+
+Sem migração nova: a etapa usa a estrutura da 2a.
+
+### Testes automatizados
+
+| # | Teste | Onde | Resultado |
+|---|---|---|---|
+| T02 | A lista fechada com as 16 correções da tabela 5.4. As Server Actions marcadas no código são exatamente as da lista. O que o suporte nunca faz (criar item, excluir subcategoria, estorno, pagamento, cancelar conta, saldo inicial, corrigir o vínculo) não está na lista | `test/unit/correcoes.test.ts` | ✅ |
+| T02, CA-19, OPEN-016 | Pelas Server Actions, com o banco: <ul><li>a conta e a despesa criadas pelo suporte nascem sem fornecedor ou cliente, mesmo que o formulário mande um;</li><li>a edição mantém o fornecedor e o documento;</li><li>numa conta com fornecedor, a troca para "a receber" é recusada com a explicação, e nada é registrado;</li><li>sem vínculo, a troca vale;</li><li>estorno, pagamento, cancelamento, saldo inicial e a correção do vínculo são recusados (`ForaDaListaDeCorrecoes`)</li></ul> | `test/integracao/correcoes-financeiro.test.ts` | ✅ |
+| T03, INV-004 | Cada correção grava o antes e o depois, sem o fornecedor nem o cliente (INV-009). Se o serviço do módulo engolir um erro do banco, a transação volta ao ponto anterior e nada é gravado | idem | ✅ |
+| T04, CA-18, OPEN-015 | Desfazer: <ul><li>parâmetros da Calculadora (valores anteriores);</li><li>confirmar preço (novo registro com o preço anterior);</li><li>lançamento avulso (estorno; já estornado, recusa);</li><li>criar conta (cancela; com pagamento, recusa);</li><li>editar conta (campos anteriores, com o vínculo; com pagamento depois, recusa);</li><li>criar despesa (desativa e cancela a conta gerada; com a conta paga, recusa com o mês);</li><li>ativar (cancela só a conta gerada a partir dela) e desativar (reativa);</li><li>editar despesa (campos anteriores, com o fornecedor)</li></ul> | idem | ✅ |
+| 5.3, item 3 | A conta criada e o lançamento mostram "{nome} (suporte do HE)" | idem | ✅ |
+
+**Suíte completa:** 644 testes unitários e 351 de integração passaram, além de lint, tipos, build de produção e a checagem do schema (`migrate diff` sem diferença).
+
+**Testes antigos ajustados:** o teste das permissões do Financeiro aceita a chamada da fábrica em várias linhas e a marca da correção como último argumento.
+
+### Roteiro no navegador (parte do T14 e do T15)
+
+39 verificações, todas aprovadas (`scratchpad/e2e19b/spec19b.mjs`).
+
+| Passo | Resultado | Captura |
+|---|---|---|
+| **Gaveta da liberação:** Financeiro e Calculadora oferecem "Ver e corrigir", com a lista do que o suporte poderá alterar; liberação por 12 h | ✅ | `s19b_01_gaveta_financeiro_390_escuro.png` |
+| **Só os botões da lista:** <ul><li>a faixa diz "pode corrigir: Calculadora, Financeiro";</li><li>no caixa, "Novo lançamento", sem saldo inicial e sem estorno;</li><li>na conta, sem pagamento, sem cancelar e sem corrigir o vínculo</li></ul> | ✅ | — |
+| **Lançamento avulso** pela gaveta, em nome do Administrador | ✅ | — |
+| **Nova conta (vínculo como está):** sem o fornecedor, sem "Novo fornecedor" e com o aviso; a conta mostra "Equipe de Suporte (suporte do HE)" | ✅ | `s19b_02_nova_conta_no_suporte_*` |
+| **CA-19:** na conta com fornecedor, a troca para "a receber" é recusada: "Esta conta tem fornecedor. Só o Dono troca o tipo dela." A edição da descrição mantém o fornecedor e o documento | ✅ | `s19b_03_tipo_com_vinculo_1440_claro.png` |
+| **Despesa fixa:** nova, sem o fornecedor; a conta do mês gerada na hora | ✅ | — |
+| **Calculadora:** a taxa do cartão passa a 4,2% | ✅ | — |
+| **"Acessos do suporte":** as cinco correções, com o antes e o depois; a despesa mostra a conta gerada; o fornecedor não aparece | ✅ | `s19b_04_acessos_financeiro_*` |
+| **CA-18:** o Dono paga a conta do aluguel; desfazer a despesa é recusado: "A conta de MM/AAAA desta despesa já tem pagamento. Ajuste direto no Financeiro." A despesa continua ativa | ✅ | `s19b_05_desfazer_despesa_recusado_1440_claro.png` |
+| **Desfazer a edição da conta** (a descrição volta, com o fornecedor) e **o lançamento** (estorno em nome do Dono) | ✅ | `s19b_06_desfeitas_1440_claro.png` |
+| Sem rolagem horizontal em 390 e 1440 px. Axe sem violações em "Acessos do suporte" com as correções do Financeiro, nos temas claro e escuro, em 390 e 1440 px | ✅ | todas |
+
+**Dados nas capturas:** o negócio, as contas, o fornecedor e os nomes são fictícios. No modo suporte, o nome do fornecedor aparece mascarado ("G*** E***"), como na SPEC-026.
+
+### Decisões tomadas na implementação
+
+- **Conta criada:** a ação leva ao detalhe da conta. O motor acha a conta pelas contas novas do Administrador.
+- **Vínculo como está:** na criação, a conta e a despesa nascem sem fornecedor ou cliente; na edição, ficam os atuais. O formulário do suporte não mostra esses campos e traz o aviso.
+- **Contas geradas (OPEN-015):** o antes e o depois registram os meses das contas da despesa. O desfazer da criação ou da ativação cancela as contas dos meses que não existiam antes. Se uma delas tem pagamento, o desfazer é recusado com o mês.
+- **Desfazer uma desativação:** reativa como o Dono reativaria, com a conta do mês.
+- **Transação abortada:** os serviços do Financeiro traduzem as falhas em mensagens. Se um erro do banco for engolido assim, a correção volta ao ponto anterior e nada é gravado.
+- **Históricos do Financeiro:** o lançamento e a conta criada pelo suporte mostram "{nome} (suporte do HE)".
