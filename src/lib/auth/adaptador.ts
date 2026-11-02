@@ -20,7 +20,20 @@ export type ResultadoEnvio = { ok: true } | { ok: false; erro: ErroDeLimite | Er
 
 export type ResultadoNovaSenha =
   | { ok: true }
-  | { ok: false; erro: "SenhaRecusada" | "MesmaSenha" | "SemSessao" | ErroInterno };
+  /** SPEC-019 (OPEN-017): conta com 2º fator só troca a senha depois do código (sessão `aal2`). */
+  | { ok: false; erro: "SenhaRecusada" | "MesmaSenha" | "SemSessao" | "SegundoFatorNecessario" | ErroInterno };
+
+/** Autenticador (fator TOTP) da conta, como o Supabase Auth informa (SPEC-019, 5.1). */
+export type FatorDoUsuario = { id: string; nome: string; criadoEm: Date; verificado: boolean };
+
+export type ResultadoDoCadastroDoFator =
+  /** `qrCode`: imagem SVG em data URI; `segredo`: para digitar se a câmera falhar. */
+  | { ok: true; fatorId: string; qrCode: string; segredo: string }
+  | { ok: false; erro: "NomeRepetido" | "MuitosFatores" | "SegundoFatorNecessario" | ErroDeLimite | ErroInterno };
+
+export type ResultadoDoCodigo = { ok: true } | { ok: false; erro: "CodigoInvalido" | ErroDeLimite | ErroInterno };
+
+export type ResultadoDaRemocaoDoFator = { ok: true } | { ok: false; erro: "SegundoFatorNecessario" | ErroInterno };
 
 /** Tipo do link recebido por e-mail. */
 export type TipoDeLink = "email" | "recovery";
@@ -47,7 +60,19 @@ export interface AdaptadorDeAutenticacao {
   usuarioDaSessao(): Promise<string | null>;
   /** Sessão validada no servidor, com o momento da entrada (SPEC-018, RNF12), ou null. */
   sessaoAtual(): Promise<SessaoAtual | null>;
+
+  // SPEC-019 (5.1): 2º fator pelo MFA TOTP do Supabase Auth.
+  /** Autenticadores TOTP da conta da sessão, verificados ou não. */
+  fatores(): Promise<FatorDoUsuario[]>;
+  /** Novo autenticador: apaga os cadastros não concluídos e gera o QR code com o emissor do ambiente. */
+  iniciarCadastroDoFator(nome: string, emissor: string): Promise<ResultadoDoCadastroDoFator>;
+  /** Confere o código de um autenticador; com sucesso, a sessão passa a `aal2` e o horário do código é renovado. */
+  verificarCodigo(fatorId: string, codigo: string): Promise<ResultadoDoCodigo>;
+  removerFator(fatorId: string): Promise<ResultadoDaRemocaoDoFator>;
 }
 
-/** `autenticadoEm`: quando a pessoa entrou (login) nesta sessão; null se o provedor não informar. */
-export type SessaoAtual = { usuarioId: string; autenticadoEm: Date | null };
+/**
+ * `autenticadoEm`: quando a pessoa entrou com a senha nesta sessão; null se o provedor não informar.
+ * SPEC-019: `nivel` da sessão (`aal2` depois do código) e `codigoEm`, o último código verificado.
+ */
+export type SessaoAtual = { usuarioId: string; autenticadoEm: Date | null; nivel?: "aal1" | "aal2" | null; codigoEm?: Date | null };

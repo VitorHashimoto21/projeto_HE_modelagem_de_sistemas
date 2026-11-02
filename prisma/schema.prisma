@@ -204,6 +204,9 @@ enum EventoSuporte {
   ENTRADA // o Administrador entrou em modo suporte
   TELA // cada tela aberta em modo suporte
   SAIDA // saiu do modo suporte
+  SEGUNDO_FATOR_CADASTRADO // SPEC-019 (5.1): autenticador cadastrado pelo Administrador
+  SEGUNDO_FATOR_REMOVIDO // SPEC-019 (5.1): autenticador removido, com o código reconfirmado
+  SEGUNDO_FATOR_REDEFINIDO // SPEC-019 (OPEN-002): fatores apagados pelo workflow, por outra pessoa da equipe
 }
 
 // ==========================================================
@@ -219,13 +222,14 @@ model Usuario {
   email String @unique
 
   // RNF04: consentimento explícito de uso de dados (LGPD)
-  consentimentoLgpdEm  DateTime?
-  versaoTermosAceita   String? // SPEC-002, OPEN-005: versão da política e dos termos aceita (ex.: "2026-10-03")
-  excluidoEm           DateTime? // RN27: acesso bloqueado
-  anonimizadoEm        DateTime? // RN27: nome/e-mail/senha substituídos por valores anônimos
-  credencialRemovidaEm DateTime? // SPEC-014 (OPEN-001): credencial apagada no Supabase Auth; nula com excluidoEm = pendência da rotina diária
-  termosAceitosEm      DateTime? // SPEC-018 (RF78, OPEN-011): data do último aceite da política e dos termos (versaoTermosAceita)
-  administradorEm      DateTime? // SPEC-018 (RF74, OPEN-001): Administrador da plataforma desde; concedido só pelo script (5.1)
+  consentimentoLgpdEm      DateTime?
+  versaoTermosAceita       String? // SPEC-002, OPEN-005: versão da política e dos termos aceita (ex.: "2026-10-03")
+  excluidoEm               DateTime? // RN27: acesso bloqueado
+  anonimizadoEm            DateTime? // RN27: nome/e-mail/senha substituídos por valores anônimos
+  credencialRemovidaEm     DateTime? // SPEC-014 (OPEN-001): credencial apagada no Supabase Auth; nula com excluidoEm = pendência da rotina diária
+  termosAceitosEm          DateTime? // SPEC-018 (RF78, OPEN-011): data do último aceite da política e dos termos (versaoTermosAceita)
+  administradorEm          DateTime? // SPEC-018 (RF74, OPEN-001): Administrador da plataforma desde; concedido só pelo script (5.1)
+  segundoFatorRedefinidoEm DateTime? // SPEC-019 (OPEN-002): 2º fator redefinido pelo workflow; sessões abertas antes disso deixam de valer
 
   membroEm          MembroNegocio[]
   movimentacoes     MovimentacaoEstoque[] // RNF05: auditoria (quem fez a alteração)

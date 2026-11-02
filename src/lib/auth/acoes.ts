@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { acaoPublica } from "./acao";
 import { ROTA_ENTRAR } from "./rotas";
-import { adaptadorDoServidor, dependenciasDeAcesso } from "./servidor";
+import { adaptadorDoServidor, dependenciasDeAcesso, exigirSessaoDaRecuperacao } from "./servidor";
 import * as servicos from "./servicos";
 import type { EstadoDoFormulario } from "./servicos";
 import { camposDoFormulario } from "./validacao";
@@ -35,6 +35,8 @@ export const acaoPedirRecuperacao = acaoPublica(async (_: EstadoDoFormulario, fo
 );
 
 export const acaoDefinirNovaSenha = acaoPublica(async (_: EstadoDoFormulario, form: FormData) => {
+  // A mesma guarda da página (SPEC-019): a sessão vencida do Administrador não troca a senha.
+  await exigirSessaoDaRecuperacao();
   const estado = await servicos.definirNovaSenha(camposDoFormulario(form), await dependenciasDeAcesso());
   return seAutenticadoRedirecionar(estado);
 });

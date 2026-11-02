@@ -21,7 +21,12 @@ export type NivelDeAcesso =
    */
   | { tipo: "conta" }
   /** Painel do Administrador da plataforma (SPEC-018, RF74). */
-  | { tipo: "administrador" };
+  | { tipo: "administrador" }
+  /**
+   * SPEC-019 (5.1): as telas do 2º fator. Só a conta de Administrador, com ou sem o código já
+   * verificado (cadastrar, digitar o código, cadastrar outro autenticador).
+   */
+  | { tipo: "segundoFator" };
 
 export type ContextoDoMembro = {
   usuarioId: string;
@@ -47,7 +52,9 @@ export type MotivoDaRecusa =
   /** SPEC-018 (RF78): falta o aceite da versão vigente dos termos. */
   | "TermosPendentes"
   /** SPEC-018 (RNF12): sessão do Administrador com mais de 8 h. */
-  | "SessaoExpirada";
+  | "SessaoExpirada"
+  /** SPEC-019 (INV-001): conta de Administrador sem o código verificado nesta sessão. */
+  | "SegundoFatorPendente";
 
 export type Autorizacao =
   | { ok: true; contexto: ContextoComPapel | null; membro: ContextoDoMembro | null }
@@ -66,6 +73,11 @@ export function autorizar(contexto: ContextoComPapel | null, nivel: NivelDeAcess
   if (nivel.tipo === "publica") return { ok: true, contexto, membro: contexto ? membroDo(contexto) : null };
   if (!contexto) return { ok: false, motivo: "SemSessao" };
   if (contexto.sessaoExpirada) return { ok: false, motivo: "SessaoExpirada" };
+  // SPEC-019 (5.1): senha → código → aceite dos termos → painel. Sem o código, só as telas do 2º fator.
+  if (nivel.tipo === "segundoFator") {
+    return contexto.administrador ? { ok: true, contexto, membro: null } : { ok: false, motivo: "SomenteAdministrador" };
+  }
+  if (contexto.administrador && contexto.segundoFatorPendente) return { ok: false, motivo: "SegundoFatorPendente" };
   if (nivel.tipo === "conta") return { ok: true, contexto, membro: null };
   if (contexto.termosPendentes) return { ok: false, motivo: "TermosPendentes" };
   if (nivel.tipo === "administrador") {

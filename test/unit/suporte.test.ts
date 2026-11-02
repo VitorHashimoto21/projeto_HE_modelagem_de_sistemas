@@ -126,6 +126,9 @@ const entrada = (extra: Partial<Parameters<typeof resolverContextoDaRequisicao>[
   negocioDoCookie: NEGOCIO,
   suporteDoCookie: ACESSO,
   autenticadoEm: new Date(AGORA.getTime() - 3_600_000),
+  // SPEC-019: a sessão do Administrador já com o código verificado (aal2).
+  nivelDaSessao: "aal2" as const,
+  codigoEm: new Date(AGORA.getTime() - 3_000_000),
   agora: AGORA,
   versaoDosTermos: VERSAO,
   ...extra,

@@ -36,7 +36,8 @@ async function usuario(nome: string, email: string, extra: Record<string, unknow
 /** Contexto como a aplicação o monta nesta requisição (servidor.ts → obterContexto). */
 const contexto = (usuarioId: string, suporteDoCookie?: string, negocioDoCookie?: string) =>
   resolverContextoDaRequisicao(
-    { usuarioId, negocioDoCookie, suporteDoCookie, autenticadoEm: new Date(Date.now() - 60_000), agora: new Date(), versaoDosTermos: VERSAO },
+    // SPEC-019: a sessão do Administrador já com o código verificado (aal2).
+    { usuarioId, negocioDoCookie, suporteDoCookie, autenticadoEm: new Date(Date.now() - 60_000), nivelDaSessao: "aal2", codigoEm: new Date(Date.now() - 30_000), agora: new Date(), versaoDosTermos: VERSAO },
     { filiacao: (u, n) => acesso.filiacao(u, n), conta: (u) => acesso.estadoDaConta(u), liberacao: (id) => suporte.liberacaoDoContexto(id) },
   );
 

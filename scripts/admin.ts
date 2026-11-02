@@ -3,6 +3,11 @@
  *
  *   ADMIN_RESPONSAVEL="Nome" npm run admin:conceder <e-mail>
  *   ADMIN_RESPONSAVEL="Nome" npm run admin:retirar <e-mail>
+ *   ADMIN_RESPONSAVEL="Nome" npx tsx scripts/admin.ts redefinir-2fator <e-mail>
+ *
+ * SPEC-019 (OPEN-002): `redefinir-2fator` apaga os autenticadores de quem perdeu todos, pela API de
+ * administração do Supabase Auth (SUPABASE_URL e SUPABASE_SECRET_KEY, só por variável de ambiente),
+ * e invalida as sessões abertas antes. Roda sempre por outra pessoa da equipe.
  *
  * Em desenvolvimento, roda com o banco do .env. Em homologação e produção, roda pelo workflow
  * manual "Administradores" do GitHub Actions, com o segredo DIRECT_URL do ambiente escolhido
@@ -14,6 +19,7 @@ import "dotenv/config";
 import { criarPrismaClient } from "@/lib/db/criar-cliente";
 import { criarConsultasDeSuporte } from "@/lib/db/suporte";
 import { mascararEmail } from "@/lib/dominio/suporte";
+import { apiDeAdministracaoDoSupabase, MENSAGENS_DA_REDEFINICAO, redefinirSegundoFator } from "@/lib/suporte/redefinir-segundo-fator";
 
 const noActions = process.env.GITHUB_ACTIONS === "true";
 
@@ -30,13 +36,18 @@ const MENSAGENS = {
 
 async function principal() {
   const [acao, email] = process.argv.slice(2);
-  if (acao !== "conceder" && acao !== "retirar") falhar("Use: admin.ts conceder|retirar <e-mail>");
+  if (acao !== "conceder" && acao !== "retirar" && acao !== "redefinir-2fator") falhar("Use: admin.ts conceder|retirar|redefinir-2fator <e-mail>");
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) falhar("Informe o e-mail da conta.");
   const responsavel = (process.env.ADMIN_RESPONSAVEL ?? "").trim().slice(0, 80);
   if (!responsavel) falhar('Informe quem está rodando o comando: ADMIN_RESPONSAVEL="Nome".');
 
   const url = process.env.DIRECT_URL || process.env.DATABASE_URL;
   if (!url) falhar("Defina DIRECT_URL ou DATABASE_URL (veja o .env.example).");
+  const supabaseUrl = (process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || "").trim();
+  const chaveSecreta = (process.env.SUPABASE_SECRET_KEY ?? "").trim();
+  if (acao === "redefinir-2fator" && (!supabaseUrl || !chaveSecreta)) {
+    falhar("Defina SUPABASE_URL e SUPABASE_SECRET_KEY do ambiente (segredos do ambiente no GitHub) para redefinir o 2º fator.");
+  }
 
   const cliente = criarPrismaClient(url);
   const consultas = criarConsultasDeSuporte(cliente);
@@ -49,6 +60,10 @@ async function principal() {
         falhar(MENSAGENS[r.erro]);
       }
       console.log(r.jaEra ? `A conta ${conta} já é administradora desde ${r.desde.toISOString().slice(0, 10)}. Nada mudou.` : `Pronto: ${conta} agora é administradora (concedido por ${responsavel}).`);
+    } else if (acao === "redefinir-2fator") {
+      const r = await redefinirSegundoFator(email, responsavel, new Date(), { consultas, api: apiDeAdministracaoDoSupabase(supabaseUrl, chaveSecreta) });
+      if (!r.ok) falhar(MENSAGENS_DA_REDEFINICAO[r.erro]);
+      console.log(`Pronto: 2º fator de ${conta} redefinido por ${responsavel} (${r.removidos} autenticador(es) removido(s)). As sessões abertas antes disso deixaram de valer, e o próximo login pede o cadastro de novo.`);
     } else {
       const r = await consultas.retirarPapel(email, responsavel, new Date());
       if (!r.ok) falhar(MENSAGENS[r.erro]);

@@ -15,6 +15,8 @@ export const ROTA_SEM_ACESSO = "/sem-acesso";
 export const ROTA_ADMIN = "/admin";
 /** Novo aceite da política e dos termos (SPEC-018, RF78). */
 export const ROTA_ACEITE_DOS_TERMOS = "/aceite-dos-termos";
+/** SPEC-019 (5.1): cadastrar o 2º fator, digitar o código ou cadastrar outro autenticador. */
+export const ROTA_SEGUNDO_FATOR = "/segundo-fator";
 /** Sessão do Administrador vencida (SPEC-018, RNF12): encerra a sessão e volta ao login. */
 export const ROTA_SESSAO_EXPIRADA = "/auth/sessao-expirada";
 /** Cabeçalho com o caminho da página, gravado pelo proxy (registro das telas do modo suporte — SPEC-018). */

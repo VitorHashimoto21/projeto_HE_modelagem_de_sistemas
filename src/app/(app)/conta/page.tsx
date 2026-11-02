@@ -3,10 +3,11 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Download, TriangleAlert } from "lucide-react";
 import { FormularioExclusao } from "@/components/conta/exclusao";
+import { ListaDeAutenticadores } from "@/components/segundo-fator/autenticadores";
 import { AvisoDaPagina } from "@/components/ui/aviso";
 import { CabecalhoDePagina } from "@/components/ui/cabecalho-de-pagina";
 import { classeDaSuperficie, classeDoBotao } from "@/components/ui/estilos";
-import { exigirSessao } from "@/lib/auth/servidor";
+import { adaptadorDoServidor, exigirSessao } from "@/lib/auth/servidor";
 import { ROTA_ENTRAR } from "@/lib/auth/rotas";
 import { lgpd } from "@/lib/db";
 import { dataBrasileira } from "@/lib/dominio/datas";
@@ -27,11 +28,18 @@ function Linha({ rotulo, valor }: { rotulo: string; valor: React.ReactNode }) {
 
 // Minha conta (SPEC-014, 5.1): dados do titular, exportação (RNF04) e exclusão (RN27). Só o
 // usuário da sessão; aberta mesmo sem negócio ativo.
-export default async function MinhaConta() {
-  const { usuarioId, termosPendentes } = await exigirSessao();
+export default async function MinhaConta({ searchParams }: PageProps<"/conta">) {
+  const { usuarioId, termosPendentes, administrador } = await exigirSessao();
   const consultas = lgpd();
-  const [perfil, resumo] = await Promise.all([consultas.perfil(usuarioId), consultas.resumoDaExclusao(usuarioId)]);
+  const [perfil, resumo, fatores] = await Promise.all([
+    consultas.perfil(usuarioId),
+    consultas.resumoDaExclusao(usuarioId),
+    // SPEC-019 (5.1): os autenticadores da conta de Administrador.
+    administrador ? adaptadorDoServidor().then((auth) => auth.fatores()) : Promise.resolve([]),
+  ]);
   if (!perfil || !resumo) redirect(ROTA_ENTRAR);
+  const autenticadores = fatores.filter((f) => f.verificado).map(({ id, nome, criadoEm }) => ({ id, nome, criadoEm: criadoEm.toISOString() }));
+  const { autenticador } = await searchParams;
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
@@ -64,6 +72,23 @@ export default async function MinhaConta() {
           />
         </dl>
       </section>
+
+      {administrador && (
+        <section aria-labelledby="titulo-autenticadores" className={cartao}>
+          <h2 id="titulo-autenticadores" className="text-[17px] font-bold text-card-foreground">
+            Autenticadores (2º fator)
+          </h2>
+          <p className="mt-1 mb-4 text-sm text-muted-foreground">
+            A conta de Administrador entra com a senha e com o código de um destes aplicativos. Remover um autenticador pede o código de novo.
+          </p>
+          {autenticador === "cadastrado" && (
+            <AvisoDaPagina tom="sucesso" className="mb-4">
+              Autenticador cadastrado.
+            </AvisoDaPagina>
+          )}
+          <ListaDeAutenticadores autenticadores={autenticadores} />
+        </section>
+      )}
 
       <section aria-labelledby="titulo-exportar" className={cartao}>
         <h2 id="titulo-exportar" className="text-[17px] font-bold text-card-foreground">
