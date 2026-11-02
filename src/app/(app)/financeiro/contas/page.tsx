@@ -16,6 +16,7 @@ import type { SituacaoFiltrada } from "@/lib/db/financeiro";
 import { FILTRO_SEM_FORMA, FORMA_NAO_INFORMADA, FORMAS_DO_PAGAMENTO, lerFiltrosDasContas, ORIGENS_DA_CONTA, parametrosDosFiltros, quantidadeDeFiltros, ROTULO_FORMA, ROTULO_ORIGEM } from "@/lib/dominio/contas";
 import { hoje } from "@/lib/dominio/datas";
 import { CATEGORIAS } from "@/lib/dominio/financeiro";
+import { corrige } from "@/lib/dominio/correcoes";
 import { pode } from "@/lib/dominio/permissoes";
 import { inicioDoHistorico } from "@/lib/dominio/planos";
 import { planoDoMembro } from "@/lib/planos/servidor";
@@ -85,7 +86,7 @@ export default async function Contas({ searchParams }: PageProps<"/financeiro/co
         atual="contas"
         titulo="Contas"
         acoes={
-          pode(membro.permissoes, "financeiro", "criar") && (
+          (pode(membro.permissoes, "financeiro", "criar") || corrige(membro, "financeiro.criarConta")) && (
             <Link href={`/financeiro/contas/nova?tipo=${tipo}`} scroll={false} className={classeDoBotao("principal")}>
               <Plus aria-hidden="true" />
               Nova conta

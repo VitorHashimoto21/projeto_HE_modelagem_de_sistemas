@@ -141,7 +141,8 @@ describe("T12 — permissões do Financeiro (OPEN-006, CA-13)", () => {
     ["acaoEstornar", "excluir"],
     ["acaoCancelarConta", "excluir"],
   ])("%s exige Financeiro — %s", (nome, acao) => {
-    expect(acoes).toMatch(new RegExp(`export const ${nome} = acaoComPermissao\\("financeiro", "${acao}"`));
+    // A chamada pode quebrar a linha (SPEC-019: a marca da correção vem como último argumento).
+    expect(acoes).toMatch(new RegExp(`export const ${nome} = acaoComPermissao\\(\\s*"financeiro",\\s*"${acao}"`));
   });
 
   const comFinanceiro = (financeiro: Matriz["financeiro"]): Matriz => ({ ...PREDEFINICOES.COLABORADOR, financeiro });
@@ -161,8 +162,9 @@ describe("T12 — permissões do Financeiro (OPEN-006, CA-13)", () => {
     for (const pagina of ["page.tsx", "contas/page.tsx", "contas/[id]/page.tsx", "despesas-fixas/page.tsx", "despesas-fixas/[id]/page.tsx"]) {
       expect(readFileSync(`src/app/(app)/financeiro/${pagina}`, "utf-8"), pagina).toMatch(/exigirPermissao\("financeiro", "ver"\)/);
     }
-    expect(readFileSync("src/app/(app)/financeiro/lancar/page.tsx", "utf-8")).toMatch(/exigirPermissao\("financeiro", "criar"\)/);
-    expect(readFileSync("src/app/(app)/financeiro/contas/nova/page.tsx", "utf-8")).toMatch(/exigirPermissao\("financeiro", "criar"\)/);
+    // SPEC-019: a marca da correção da lista vem como terceiro argumento; a permissão continua "criar".
+    expect(readFileSync("src/app/(app)/financeiro/lancar/page.tsx", "utf-8")).toMatch(/exigirPermissao\("financeiro", "criar"(\)|, "financeiro\.lancarAvulso"\))/);
+    expect(readFileSync("src/app/(app)/financeiro/contas/nova/page.tsx", "utf-8")).toMatch(/exigirPermissao\("financeiro", "criar"(\)|, "financeiro\.criarConta"\))/);
   });
 });
 

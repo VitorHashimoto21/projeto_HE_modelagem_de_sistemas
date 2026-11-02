@@ -13,6 +13,7 @@ import { financeiro } from "@/lib/db";
 import { ContaNaoEncontrada } from "@/lib/db/financeiro";
 import { rotuloDaForma, SEM_OPCOES } from "@/lib/dominio/contas";
 import { dataBrasileira, hoje } from "@/lib/dominio/datas";
+import { corrige } from "@/lib/dominio/correcoes";
 import { pode } from "@/lib/dominio/permissoes";
 import { conferirFinanceiro } from "@/lib/financeiro/conferencia";
 import { opcoesDoVinculo } from "@/lib/financeiro/opcoes";
@@ -50,6 +51,8 @@ export default async function Conta({ params, searchParams }: PageProps<"/financ
 
   const podeRegistrar = aberta && pode(membro.permissoes, "financeiro", "criar");
   const podeEditar = !membro.modoSuporte && pode(membro.permissoes, "financeiro", "editar");
+  // SPEC-019 (5.4): o suporte com o Financeiro em "ver e corrigir" edita a conta manual, com o vínculo como está.
+  const editaConta = pode(membro.permissoes, "financeiro", "editar") || corrige(membro, "financeiro.editarConta");
   const opcoes = podeEditar ? await opcoesDoVinculo(membro) : SEM_OPCOES;
   const pessoa = c.pessoa;
   // O link para o cadastro: fornecedor com Financeiro — ver (já exigido aqui); cliente só com Vendas — ver (5.2, item 3).
@@ -148,14 +151,19 @@ export default async function Conta({ params, searchParams }: PageProps<"/financ
             )}
           </Superficie>
 
-          {alteravel && (pode(membro.permissoes, "financeiro", "editar") || pode(membro.permissoes, "financeiro", "excluir")) && (
+          {alteravel && (editaConta || pode(membro.permissoes, "financeiro", "excluir")) && (
             <Superficie aria-labelledby="titulo-editar">
-              <TituloDaSuperficie id="titulo-editar" titulo="Corrigir a conta" descricao="Enquanto não houver pagamento, a conta pode ser alterada ou cancelada." />
+              <TituloDaSuperficie
+                id="titulo-editar"
+                titulo="Corrigir a conta"
+                descricao={`Enquanto não houver pagamento, a conta pode ser alterada${pode(membro.permissoes, "financeiro", "excluir") ? " ou cancelada" : ""}.`}
+              />
               <div className="space-y-6">
-                {pode(membro.permissoes, "financeiro", "editar") && (
+                {editaConta && (
                   <FormularioConta
                     hoje={dia}
                     opcoes={opcoes}
+                    vinculoComoEsta={membro.modoSuporte === true}
                     conta={{
                       id: c.id,
                       tipo: c.tipo,

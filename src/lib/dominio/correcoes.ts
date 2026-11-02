@@ -6,11 +6,8 @@
 
 import type { Modulo } from "./permissoes";
 
-/**
- * Módulos que têm correções na lista; Vendas e Dashboard ficam só em "ver". A Calculadora e o
- * Financeiro entram com as correções deles, na etapa 2b: até lá, a gaveta não os oferece.
- */
-export const MODULOS_CORRIGIVEIS = ["catalogo", "estoque"] as const satisfies readonly Modulo[];
+/** Módulos que têm correções na lista; Vendas e Dashboard ficam só em "ver". */
+export const MODULOS_CORRIGIVEIS = ["catalogo", "estoque", "calculadora", "financeiro"] as const satisfies readonly Modulo[];
 export type ModuloCorrigivel = (typeof MODULOS_CORRIGIVEIS)[number];
 export const ehCorrigivel = (m: string): m is ModuloCorrigivel => (MODULOS_CORRIGIVEIS as readonly string[]).includes(m);
 
@@ -21,10 +18,7 @@ export type PrazoComCorrecao = (typeof PRAZOS_COM_CORRECAO)[number];
 /** O Dono desfaz uma correção em até 30 dias (OPEN-006). */
 export const DIAS_PARA_DESFAZER = 30;
 
-/**
- * A lista fechada (5.4). Cada entrada diz o módulo, o que o Dono vê e como a correção é desfeita.
- * As da etapa 2a são do Catálogo e do Estoque; as da Calculadora e do Financeiro chegam na 2b.
- */
+/** A lista fechada (5.4). Cada entrada diz o módulo, o que o Dono vê e como a correção é desfeita. */
 export const CORRECOES_PERMITIDAS = {
   "catalogo.editarItem": { modulo: "catalogo", rotulo: "Editar item", desfazer: "Volta os campos anteriores do item" },
   "catalogo.definirPreco": { modulo: "catalogo", rotulo: "Definir preço", desfazer: "Novo registro de preço com o valor anterior" },
@@ -34,6 +28,22 @@ export const CORRECOES_PERMITIDAS = {
   "estoque.registrarEntrada": { modulo: "estoque", rotulo: "Registrar entrada", desfazer: "Saída manual da mesma quantidade" },
   "estoque.registrarSaida": { modulo: "estoque", rotulo: "Registrar saída manual", desfazer: "Entrada da mesma quantidade" },
   "estoque.definirMinimo": { modulo: "estoque", rotulo: "Definir estoque mínimo", desfazer: "Volta o valor anterior" },
+  "calculadora.salvarParametros": { modulo: "calculadora", rotulo: "Salvar parâmetros de precificação", desfazer: "Volta os valores anteriores" },
+  "calculadora.confirmarPreco": { modulo: "calculadora", rotulo: "Confirmar preço", desfazer: "Novo registro de preço com o valor anterior" },
+  "financeiro.lancarAvulso": { modulo: "financeiro", rotulo: "Lançamento avulso", desfazer: "Estorno do lançamento" },
+  "financeiro.criarConta": { modulo: "financeiro", rotulo: "Criar conta a pagar ou a receber", desfazer: "Cancela a conta, se não tiver pagamento" },
+  "financeiro.editarConta": { modulo: "financeiro", rotulo: "Editar conta", desfazer: "Volta os campos anteriores, se não houve pagamento depois" },
+  "financeiro.criarDespesa": {
+    modulo: "financeiro",
+    rotulo: "Criar despesa fixa",
+    desfazer: "Desativa a despesa e cancela as contas geradas por ela ainda sem pagamento",
+  },
+  "financeiro.editarDespesa": { modulo: "financeiro", rotulo: "Editar despesa fixa", desfazer: "Volta os campos anteriores" },
+  "financeiro.definirAtivo": {
+    modulo: "financeiro",
+    rotulo: "Ativar ou desativar despesa fixa",
+    desfazer: "A operação inversa; desfazer uma ativação também cancela as contas geradas a partir dela ainda sem pagamento",
+  },
 } as const satisfies Record<string, { modulo: ModuloCorrigivel; rotulo: string; desfazer: string }>;
 
 export type IdDaCorrecao = keyof typeof CORRECOES_PERMITIDAS;
@@ -79,4 +89,10 @@ export const MENSAGENS_DAS_CORRECOES = {
   /** "{Item} mudou depois da correção. Ajuste direto em {módulo}." */
   registroMudou: (registro: string, modulo: string) => `${registro} mudou depois da correção. Ajuste direto em ${modulo}.`,
   saldoInsuficiente: (saldo: string) => `O estoque atual não permite desfazer: saldo ${saldo}.`,
+  /** OPEN-015: "A conta de {mês} desta despesa já tem pagamento. Ajuste direto no Financeiro." */
+  contaDaDespesaPaga: (mes: string) => `A conta de ${mes} desta despesa já tem pagamento. Ajuste direto no Financeiro.`,
+  /** OPEN-016: a troca entre "a pagar" e "a receber" numa conta com fornecedor ou cliente. */
+  tipoComVinculo: (pessoa: "fornecedor" | "cliente") => `Esta conta tem ${pessoa}. Só o Dono troca o tipo dela.`,
+  /** 5.4, "Vínculo como está": o aviso no formulário da conta e da despesa fixa, no modo suporte. */
+  vinculoComoEsta: "O fornecedor ou cliente e o nº do documento ficam como estão: no modo suporte, eles não mudam.",
 } as const;

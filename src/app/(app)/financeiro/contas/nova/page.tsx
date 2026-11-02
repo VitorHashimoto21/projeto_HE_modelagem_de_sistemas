@@ -6,21 +6,24 @@ import { Superficie } from "@/components/ui/superficie";
 import { exigirPermissao } from "@/lib/auth/servidor";
 import { hoje } from "@/lib/dominio/datas";
 import { pode } from "@/lib/dominio/permissoes";
+import { SEM_OPCOES } from "@/lib/dominio/contas";
 import { opcoesDoVinculo } from "@/lib/financeiro/opcoes";
 
 export const metadata: Metadata = { title: "Nova conta" };
 
 // Nova conta manual (SPEC-009, 5.3): Financeiro — criar.
 export default async function NovaConta({ searchParams }: PageProps<"/financeiro/contas/nova">) {
-  const membro = await exigirPermissao("financeiro", "criar");
+  // SPEC-019 (5.4): no modo suporte, também com o Financeiro em "ver e corrigir", sem o vínculo.
+  const membro = await exigirPermissao("financeiro", "criar", "financeiro.criarConta");
   const { tipo } = await searchParams;
-  const opcoes = await opcoesDoVinculo(membro);
+  const suporte = membro.modoSuporte === true;
+  const opcoes = suporte ? SEM_OPCOES : await opcoesDoVinculo(membro);
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       <CabecalhoDePagina voltar={pode(membro.permissoes, "financeiro", "ver") ? { href: "/financeiro/contas", rotulo: "Contas" } : undefined} titulo="Nova conta" descricao={TEXTO_DA_CONTA} />
       <Superficie>
-        <FormularioConta hoje={hoje()} tipoPadrao={tipo === "RECEBER" ? "RECEBER" : "PAGAR"} opcoes={opcoes} />
+        <FormularioConta hoje={hoje()} tipoPadrao={tipo === "RECEBER" ? "RECEBER" : "PAGAR"} opcoes={opcoes} vinculoComoEsta={suporte} />
       </Superficie>
     </div>
   );

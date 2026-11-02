@@ -19,6 +19,7 @@ import { dependenciasDoDashboard } from "@/lib/dashboard/servidor";
 import { financeiro } from "@/lib/db";
 import { dataBrasileira, hoje } from "@/lib/dominio/datas";
 import { CATEGORIAS, competenciaBrasileira, competenciaDoDia, somarMeses } from "@/lib/dominio/financeiro";
+import { corrige } from "@/lib/dominio/correcoes";
 import { pode } from "@/lib/dominio/permissoes";
 import { conferirFinanceiro } from "@/lib/financeiro/conferencia";
 import { inicioDoHistorico, limitarCompetencia } from "@/lib/dominio/planos";
@@ -56,6 +57,8 @@ export default async function Caixa({ searchParams }: PageProps<"/financeiro">) 
     cartaoSeguro("projecao", () => carregarProjecao(dependenciasDoDashboard(membro))),
   ]);
   const podeCriar = pode(membro.permissoes, "financeiro", "criar");
+  // SPEC-019 (5.4): o suporte com o Financeiro em "ver e corrigir" faz o lançamento avulso, nunca o saldo inicial.
+  const podeLancar = podeCriar || corrige(membro, "financeiro.lancarAvulso");
   const podeEstornar = pode(membro.permissoes, "financeiro", "excluir");
   const link = (extra: Record<string, string | number | undefined>) => {
     const p = new URLSearchParams();
@@ -96,7 +99,7 @@ export default async function Caixa({ searchParams }: PageProps<"/financeiro">) 
         atual="caixa"
         titulo="Fluxo de caixa"
         acoes={
-          podeCriar && (
+          podeLancar && (
             <Link href="/financeiro/lancar" scroll={false} className={classeDoBotao("principal")}>
               <Plus aria-hidden="true" />
               Novo lançamento

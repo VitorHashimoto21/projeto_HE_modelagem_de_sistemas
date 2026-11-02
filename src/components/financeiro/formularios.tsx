@@ -9,6 +9,7 @@ import { DialogoDeConfirmacao, useConfirmacaoDoEnvio } from "@/components/ui/con
 import { enviarSemReiniciar } from "@/components/ui/envio";
 import { camposDoFormulario, type ErrosDeCampo } from "@/lib/auth/validacao";
 import { FORMAS_DO_PAGAMENTO, MAX_NUMERO_DOCUMENTO, ROTULO_FORMA, SEM_OPCOES, type OpcaoDePessoa, type OpcoesDoVinculo } from "@/lib/dominio/contas";
+import { MENSAGENS_DAS_CORRECOES } from "@/lib/dominio/correcoes";
 import { somarDias } from "@/lib/dominio/estoque";
 import { CATEGORIAS, DIAS_RETROATIVOS_FINANCEIRO } from "@/lib/dominio/financeiro";
 import {
@@ -327,17 +328,27 @@ function NovoCadastro({ pessoa, aoCriar, aoCancelar }: { pessoa: "fornecedor" | 
   );
 }
 
-/** Nova conta manual ou edição de conta manual sem pagamento (5.3, OPEN-003), com o vínculo (SPEC-026). */
+/** SPEC-019 (5.4, "Vínculo como está"): no modo suporte, o formulário não mostra nem envia o vínculo. */
+function VinculoComoEsta() {
+  return <p className="rounded-lg bg-muted px-4 py-3 text-sm text-muted-foreground">{MENSAGENS_DAS_CORRECOES.vinculoComoEsta}</p>;
+}
+
+/**
+ * Nova conta manual ou edição de conta manual sem pagamento (5.3, OPEN-003), com o vínculo (SPEC-026).
+ * `vinculoComoEsta`: correção do suporte (SPEC-019), sem o fornecedor ou o cliente e o nº do documento.
+ */
 export function FormularioConta({
   hoje,
   conta,
   tipoPadrao = "PAGAR",
   opcoes = SEM_OPCOES,
+  vinculoComoEsta = false,
 }: {
   hoje: string;
   conta?: ContaEditavel;
   tipoPadrao?: "PAGAR" | "RECEBER";
   opcoes?: OpcoesDoVinculo;
+  vinculoComoEsta?: boolean;
 }) {
   const f = useFormulario(conta ? acaoEditarConta : acaoCriarConta, (c) => validarConta(c, hoje), !conta);
   const [tipo, setTipo] = useState<"PAGAR" | "RECEBER">(conta?.tipo ?? tipoPadrao);
@@ -390,18 +401,22 @@ export function FormularioConta({
               />
             </Campo>
           </div>
-          <CamposDoVinculo
-            prefixo="conta"
-            tipo={tipo}
-            pessoaId={pessoaId}
-            setPessoaId={setPessoaId}
-            listas={listas}
-            numeroDocumento={conta?.numeroDocumento}
-            erros={f.erros}
-            limpar={f.limpar}
-            podeNovo={fornecedor ? opcoes.podeCriarFornecedor : opcoes.podeCriarCliente}
-            aoNovo={() => setNovo(true)}
-          />
+          {vinculoComoEsta ? (
+            <VinculoComoEsta />
+          ) : (
+            <CamposDoVinculo
+              prefixo="conta"
+              tipo={tipo}
+              pessoaId={pessoaId}
+              setPessoaId={setPessoaId}
+              listas={listas}
+              numeroDocumento={conta?.numeroDocumento}
+              erros={f.erros}
+              limpar={f.limpar}
+              podeNovo={fornecedor ? opcoes.podeCriarFornecedor : opcoes.podeCriarCliente}
+              aoNovo={() => setNovo(true)}
+            />
+          )}
           <button type="submit" disabled={f.enviando} className={botaoPrimario}>
             {f.enviando ? "Salvando…" : conta ? "Salvar alterações" : "Cadastrar conta"}
           </button>
@@ -542,8 +557,11 @@ export type DespesaEditavel = {
   fornecedor: OpcaoDePessoa | null;
 };
 
-/** Despesa fixa (5.5): nova ou edição; o DAS do MEI só mostra o dia de vencimento (5.6). */
-export function FormularioDespesa({ despesa, opcoes = SEM_OPCOES }: { despesa?: DespesaEditavel; opcoes?: OpcoesDoVinculo }) {
+/**
+ * Despesa fixa (5.5): nova ou edição; o DAS do MEI só mostra o dia de vencimento (5.6). `vinculoComoEsta`:
+ * correção do suporte (SPEC-019), sem o fornecedor.
+ */
+export function FormularioDespesa({ despesa, opcoes = SEM_OPCOES, vinculoComoEsta = false }: { despesa?: DespesaEditavel; opcoes?: OpcoesDoVinculo; vinculoComoEsta?: boolean }) {
   const das = despesa?.das ?? false;
   const f = useFormulario(despesa ? acaoEditarDespesa : acaoCriarDespesa, das ? validarDiaVencimento : validarDespesa, !despesa);
   const [fornecedorId, setFornecedorId] = useState(despesa?.fornecedor?.id ?? "");
@@ -588,7 +606,8 @@ export function FormularioDespesa({ despesa, opcoes = SEM_OPCOES }: { despesa?: 
           </Campo>
           {!das && <CampoCategoria id="desp-categoria" erro={f.erros.categoria} limpar={f.limpar} padrao={despesa?.categoria ?? "OUTROS"} />}
         </div>
-        {!das && (
+        {!das && vinculoComoEsta && <VinculoComoEsta />}
+        {!das && !vinculoComoEsta && (
           <Campo id="desp-fornecedor" rotulo="Fornecedor (opcional)" erro={f.erros.fornecedor} dica="As próximas contas desta despesa já nascem com ele.">
             <div className="flex flex-wrap gap-2">
               <select

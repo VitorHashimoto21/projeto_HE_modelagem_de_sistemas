@@ -26,10 +26,22 @@ export function LancamentoNaGaveta({ titulo, descricao, hoje }: { titulo: string
 }
 
 /** Nova conta: ao salvar, a ação leva ao detalhe da conta (a gaveta fecha na navegação). */
-export function ContaNaGaveta({ descricao, hoje, tipoPadrao, opcoes }: { descricao: string; hoje: string; tipoPadrao: "PAGAR" | "RECEBER"; opcoes: OpcoesDoVinculo }) {
+export function ContaNaGaveta({
+  descricao,
+  hoje,
+  tipoPadrao,
+  opcoes,
+  vinculoComoEsta = false,
+}: {
+  descricao: string;
+  hoje: string;
+  tipoPadrao: "PAGAR" | "RECEBER";
+  opcoes: OpcoesDoVinculo;
+  vinculoComoEsta?: boolean;
+}) {
   return (
     <GavetaDaRota titulo="Nova conta" descricao={descricao}>
-      <FormularioConta hoje={hoje} tipoPadrao={tipoPadrao} opcoes={opcoes} />
+      <FormularioConta hoje={hoje} tipoPadrao={tipoPadrao} opcoes={opcoes} vinculoComoEsta={vinculoComoEsta} />
     </GavetaDaRota>
   );
 }

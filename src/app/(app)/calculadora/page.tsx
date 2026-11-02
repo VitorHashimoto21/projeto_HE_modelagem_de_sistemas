@@ -15,6 +15,7 @@ import { dependenciasDaCalculadora } from "@/lib/calculadora/servidor";
 import { analisarNegocio, calcular, type BaseDoNegocio, type Fonte, type MotivoDoBloqueio } from "@/lib/calculadora/servicos";
 import { validarOpcoes } from "@/lib/calculadora/validacao";
 import { duasCasas, partesDoPrecoEmReais } from "@/lib/dominio/precificacao";
+import { corrige } from "@/lib/dominio/correcoes";
 import { pode } from "@/lib/dominio/permissoes";
 import { reaisDeCentavos as reais } from "@/lib/dominio/venda";
 import { cn } from "@/lib/utils";
@@ -101,7 +102,8 @@ export default async function Calculadora({ searchParams }: PageProps<"/calculad
     analisarNegocio(deps),
     itemId && opcoes.ok ? calcular(itemId, opcoes.dados, deps) : Promise.resolve(null),
   ]);
-  const podeConfirmar = pode(membro.permissoes, "calculadora", "criar");
+  // SPEC-019 (5.4): o suporte com a Calculadora em "ver e corrigir" confirma o preço.
+  const podeConfirmar = pode(membro.permissoes, "calculadora", "criar") || corrige(membro, "calculadora.confirmarPreco");
   const base = analise.status === "ok" ? analise.base : null;
 
   // As parcelas do cálculo em reais (SPEC-023, 5.1): a mesma conta na barra e na memória (INV-003).
