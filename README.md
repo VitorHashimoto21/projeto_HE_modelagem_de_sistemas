@@ -130,6 +130,10 @@ Cada ambiente tem variáveis e credenciais próprias (RNF11); chaves de serviço
 6. **Rotina diária do Financeiro (SPEC-009):** na Vercel, cadastrar `CRON_SECRET` (*Sensitive*, ao menos 16 caracteres, por exemplo `openssl rand -hex 32`). O agendamento está em `vercel.json` (todo dia às 06:00 de Brasília): a Vercel chama `/api/rotinas/diaria` com esse segredo para gerar as contas das despesas fixas e receber as parcelas do cartão vencidas. Sem o segredo, a rotina recusa as chamadas, e as contas só são geradas quando alguém abre o Financeiro ou o Painel. Para acompanhar as execuções: *Project → Settings → Cron Jobs*.
 7. **Consultas de CNPJ e CEP (ADR-006; SPEC-004 e SPEC-022):** usam a BrasilAPI pública, sem chave. Não é preciso cadastrar nada. `BRASILAPI_URL` é opcional e serve só para apontar os testes locais para um serviço falso (deixe vazia na Vercel).
 8. **Exclusão de conta (SPEC-014):** no Supabase, *Project Settings → API Keys → Secret keys*, criar uma chave secreta; na Vercel, cadastrar `SUPABASE_SECRET_KEY` (*Sensitive*, só *Production* e *Preview*). Ela é usada só no servidor para apagar a credencial de quem exclui a conta. Sem ela, a conta é bloqueada e anonimizada do mesmo jeito, e a remoção da credencial fica pendente: a rotina diária tenta de novo assim que a chave existir.
+9. **2º fator do Administrador (SPEC-019):**
+   - **Supabase:** em *Authentication → Multi-Factor*, conferir o **TOTP (App Authenticator)** habilitado. Ele costuma vir ligado. Desligado, nenhum Administrador entra, porque o sistema falha fechado; os usuários dos negócios não são afetados.
+   - **GitHub:** no ambiente `homologacao` (e, na produção, no `producao`), cadastrar os segredos `SUPABASE_URL` (a URL do projeto) e `SUPABASE_SECRET_KEY` (a mesma chave secreta do passo 8). Eles servem só para a ação `redefinir-2fator` do workflow **Administradores**, que apaga os autenticadores de quem perdeu todos. Rode essa ação sempre por outra pessoa da equipe.
+   - **Vercel (opcional):** `EMISSOR_DO_AUTENTICADOR` com o nome que aparece no aplicativo autenticador, como `HE Homologação`. Vazio, aparece "Health Enterprise".
 
 ### Checklist de produção (quando for publicar)
 
@@ -138,6 +142,7 @@ Cada ambiente tem variáveis e credenciais próprias (RNF11); chaves de serviço
 - [ ] Ambiente `producao` no GitHub com o segredo `DIRECT_URL`; segredo `BACKUP_PROD_DATABASE_URL`
 - [ ] Domínio próprio e variáveis de *Production* na Vercel apontando só para o `he-prod`
 - [ ] Supabase Auth do `he-prod` configurado como no passo 5, com domínio verificado no Resend e as URLs de produção
+- [ ] MFA TOTP habilitado no `he-prod` e os segredos `SUPABASE_URL` e `SUPABASE_SECRET_KEY` no ambiente `producao` do GitHub (passo 9); pelo menos duas contas de Administrador, de pessoas diferentes
 - [ ] Revisão do RLS e dos segredos: nenhuma credencial de produção fora do ambiente de produção
 
 ## Backup

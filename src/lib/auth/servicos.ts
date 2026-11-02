@@ -1,5 +1,6 @@
+import { lerCodigo, MENSAGENS_DO_SEGUNDO_FATOR } from "@/lib/dominio/segundo-fator";
 import type { AdaptadorDeAutenticacao } from "./adaptador";
-import { destinoSeguro, ROTA_INICIAL } from "./rotas";
+import { destinoSeguro, ROTA_ENTRAR, ROTA_INICIAL } from "./rotas";
 import {
   esquemaCadastro,
   esquemaEmail,
@@ -136,10 +137,31 @@ export async function pedirRecuperacao(campos: Record<string, string>, deps: Dep
   return { status: "enviado", mensagem: MENSAGENS_DE_RESPOSTA.recuperacaoEnviada };
 }
 
-/** Definir nova senha pelo link de recuperação (5.4, CA-10): encerra as outras sessões. */
+/** Destino depois da nova senha de uma conta com 2º fator (SPEC-019, OPEN-017). */
+export const ROTA_SENHA_ALTERADA = `${ROTA_ENTRAR}?senha=alterada`;
+
+/**
+ * Definir nova senha pelo link de recuperação (5.4, CA-10): encerra as outras sessões.
+ * SPEC-019 (OPEN-017): a conta com 2º fator digita o código antes (o Supabase só troca a senha numa
+ * sessão aal2) e, depois, entra de novo com a senha nova: a sessão da recuperação não tem o login
+ * com senha, que conta as 8 h da sessão do Administrador.
+ */
 export async function definirNovaSenha(campos: Record<string, string>, deps: DependenciasDeAcesso): Promise<EstadoDoFormulario> {
   const v = validar(esquemaNovaSenha, campos);
   if (!v.ok) return { status: "erro", erros: v.erros };
+
+  const fatores = (await deps.auth.fatores()).filter((f) => f.verificado);
+  const comSegundoFator = fatores.length > 0;
+  if (comSegundoFator && (await deps.auth.sessaoAtual())?.nivel !== "aal2") {
+    const c = lerCodigo(campos.codigo);
+    if (!c.ok) return { status: "erro", erros: { codigo: c.erro } };
+    const fator = fatores.find((f) => f.id === campos.fator) ?? fatores[0];
+    const verificado = await deps.auth.verificarCodigo(fator.id, c.codigo);
+    if (!verificado.ok) {
+      if (verificado.erro === "CodigoInvalido") return { status: "erro", erros: { codigo: MENSAGENS_DO_SEGUNDO_FATOR.codigoInvalido } };
+      return erroDeLimiteOuInterno(verificado.erro);
+    }
+  }
 
   const r = await deps.auth.definirSenha(v.dados.senha);
   if (!r.ok) {
@@ -150,11 +172,17 @@ export async function definirNovaSenha(campos: Record<string, string>, deps: Dep
         return { status: "erro", erros: { senha: MENSAGENS_DE_RESPOSTA.mesmaSenha } };
       case "SemSessao":
         return { status: "erro", mensagem: MENSAGENS_DE_RESPOSTA.linkExpirado };
+      case "SegundoFatorNecessario":
+        return { status: "erro", erros: { codigo: MENSAGENS_DO_SEGUNDO_FATOR.reconfirmar } };
       default:
         return erroDeLimiteOuInterno(r.erro);
     }
   }
 
   await deps.auth.sair("outras");
+  if (comSegundoFator) {
+    await deps.auth.sair("local");
+    return { status: "autenticado", destino: ROTA_SENHA_ALTERADA };
+  }
   return { status: "autenticado", destino: ROTA_INICIAL };
 }

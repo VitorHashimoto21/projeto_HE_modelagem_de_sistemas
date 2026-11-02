@@ -1,5 +1,6 @@
 import "server-only";
 import type { Acao, Modulo } from "@/lib/dominio/permissoes";
+import { MENSAGENS_DO_SEGUNDO_FATOR, reconfirmacaoValida } from "@/lib/dominio/segundo-fator";
 import type { ContextoDoMembro } from "./autorizacao";
 import type { ContextoComPapel } from "./contexto";
 import { exigirNivel } from "./servidor";
@@ -50,6 +51,29 @@ export function acaoComPermissao<A extends unknown[], R>(modulo: Modulo, acao: A
 export function acaoDaConta<A extends unknown[], R>(corpo: Corpo<ContextoComPapel, A, R>) {
   return async (...args: A): Promise<R> => {
     const { contexto } = await exigirNivel({ tipo: "conta" });
+    return corpo(contexto!, ...args);
+  };
+}
+
+/** SPEC-019 (5.1): telas do 2º fator — conta de Administrador, com ou sem o código já verificado. */
+export function acaoDoSegundoFator<A extends unknown[], R>(corpo: Corpo<ContextoComPapel, A, R>) {
+  return async (...args: A): Promise<R> => {
+    const { contexto } = await exigirNivel({ tipo: "segundoFator" });
+    return corpo(contexto!, ...args);
+  };
+}
+
+/** Resposta de uma ação crítica sem o código recente: a tela pede o código e repete a ação. */
+export type ReconfirmacaoNecessaria = { status: "reconfirmar"; mensagem: string };
+
+/**
+ * SPEC-019 (OPEN-003, INV-002): ação crítica do Administrador. Além do 2º fator da sessão, exige um
+ * código verificado nos últimos 10 min; sem ele, nada é executado e a tela pede o código de novo.
+ */
+export function acaoCritica<A extends unknown[], R>(corpo: Corpo<ContextoComPapel, A, R>) {
+  return async (...args: A): Promise<R | ReconfirmacaoNecessaria> => {
+    const { contexto } = await exigirNivel({ tipo: "administrador" });
+    if (!reconfirmacaoValida(contexto!.codigoVerificadoEm, new Date())) return { status: "reconfirmar", mensagem: MENSAGENS_DO_SEGUNDO_FATOR.reconfirmar };
     return corpo(contexto!, ...args);
   };
 }

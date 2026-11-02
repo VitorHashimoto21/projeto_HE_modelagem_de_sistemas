@@ -30,6 +30,9 @@ const esquema = z.object({
   // de quem exclui a conta. Opcional: sem ela, a conta fica bloqueada e anonimizada, e a
   // remoção da credencial fica pendente até a chave ser configurada (a rotina diária tenta de novo).
   SUPABASE_SECRET_KEY: z.string().optional(),
+  // Emissor mostrado no aplicativo autenticador do 2º fator (SPEC-019, revisão de 01/11/2026), para
+  // distinguir os ambientes (ex.: "HE Homologação"). Opcional: vazio, "Health Enterprise".
+  EMISSOR_DO_AUTENTICADOR: z.string().optional(),
   // Base das consultas públicas de CNPJ e CEP (ADR-006; SPEC-022). Opcional: vazia, usa a BrasilAPI.
   // Só os testes no navegador apontam para um serviço falso local.
   BRASILAPI_URL: z

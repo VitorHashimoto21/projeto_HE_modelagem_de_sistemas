@@ -1,6 +1,12 @@
 # SPEC-019 — Suporte com edição, emergência, ações de plataforma e 2º fator
 
-> **Status:** ✅ **Aprovada em 28/10/2026 e revisada em 01/11/2026** (OPEN-015 a OPEN-018, ver "Revisão antes da implementação" abaixo), a implementar. As questões em aberto foram decididas pela equipe em entrevista (seção 13), pela opção recomendada, com quatro ajustes da equipe (prazos de 12 h e duas pessoas também na troca de plano):
+> **Status:** ✅ **Aprovada em 28/10/2026 e revisada em 01/11/2026** (OPEN-015 a OPEN-018, ver "Revisão antes da implementação" abaixo). **Em implementação por etapas** (decisão da equipe, 02/11/2026):
+> - **etapa 1 — 2º fator do Administrador:** implementada em 02/11/2026 e verificada em build local ([evidências](evidencias/SPEC-019/README.md));
+> - **etapa 2 — correções e desfazer:** a implementar;
+> - **etapa 3 — emergência e troca de plano:** a implementar;
+> - **etapa 4 — suspensão, Política e Termos, e homologação (T17):** a implementar.
+>
+> As notas da implementação estão depois da seção 9. As questões em aberto foram decididas pela equipe em entrevista (seção 13), pela opção recomendada, com quatro ajustes da equipe (prazos de 12 h e duas pessoas também na troca de plano):
 > - **2º fator obrigatório** para o Administrador, pelo MFA TOTP do Supabase Auth, com dois autenticadores, redefinição pelo workflow e o código pedido de novo antes das ações críticas;
 > - **correções em modo suporte** só nos módulos que o Dono marcar como "ver e corrigir", por até **12 h**, e só das ações de uma **lista fechada** que o Dono consegue **desfazer** em até 30 dias;
 > - **acesso de emergência** sem liberação do Dono só com **duas pessoas** (o pedido expira em **12 h**), somente leitura, por até 4 h, com **aviso na hora ao Dono**: não existe acesso secreto no HE;
@@ -487,6 +493,36 @@ O painel mostra a situação "Suspenso" e tem o filtro.
   - o painel lista as contas de Administrador.
 - **Compensações:** cada ação da lista precisa da sua compensação e de testes próprios. Uma ação sem compensação testada fica fora da lista.
 - **Configuração do Supabase:** se o MFA TOTP estiver desligado no projeto, nenhum Administrador entra (falha fechada). O README de cada ambiente registra a configuração.
+
+**Implementação — etapa 1, 2º fator do Administrador (02/11/2026):** [evidências](evidencias/SPEC-019/README.md#etapa-1--2º-fator-do-administrador-02112026).
+
+Cobre a seção 5.1, os CA-01 a CA-05 e o CA-20, os INV-001, INV-002 e INV-011, e os testes T01, T12, T13 e parte do T14 e do T15. O roteiro no navegador teve 74 verificações. Como foi feito:
+- **Banco:** a migração `20261102120000_segundo_fator` cria:
+  - o campo `Usuario.segundoFatorRedefinidoEm`;
+  - os eventos `SEGUNDO_FATOR_CADASTRADO`, `SEGUNDO_FATOR_REMOVIDO` e `SEGUNDO_FATOR_REDEFINIDO`.
+
+  Os fatores ficam só no Supabase Auth (RNF03).
+- **Contexto:** a conta de Administrador sem `aal2` só tem as telas do 2º fator e "Sair". Nem a liberação do suporte é lida. A ordem é senha → código → aceite dos termos → painel.
+- **Sessão de 8 h:** contada do login com senha (o `password` do `amr`). A sessão aberta antes da redefinição vence.
+- **Reconfirmação:** usa o horário do último código, com os nomes `totp` e `mfa/totp`.
+- **Telas:**
+  - "Configure o 2º fator", "Digite o código" e "Cadastre um segundo autenticador" ficam em `/segundo-fator`, fora do painel;
+  - Minha conta lista os autenticadores e permite cadastrar outro e remover, com reconfirmação;
+  - o painel avisa enquanto houver um só autenticador.
+- **Fábricas:** `acaoDoSegundoFator` serve às telas do 2º fator; `acaoCritica` exige o código dos últimos 10 min e, sem ele, responde "reconfirmar". O diálogo do código repete a ação. Nesta etapa, a única ação crítica é remover um autenticador.
+- **Nova senha (OPEN-017):** a tela usa uma guarda só de sessão, porque a sessão do link de recuperação não tem o login com senha. A conta com 2º fator digita o código e, depois de salvar, todas as sessões são encerradas e ela entra de novo.
+- **Workflow:** "Administradores" ganhou a ação `redefinir-2fator`, com `SUPABASE_URL` e `SUPABASE_SECRET_KEY` por variável de ambiente.
+
+**Decisões de implementação da etapa 1 (sem mudar o comportamento da Spec):**
+- **Checagem do registro:** a checagem que só aceitava sem negócio os eventos de papel passou a aceitar também os eventos do 2º fator. A comparação é em texto, por causa do valor novo do enum na mesma transação.
+- **Mesmo segundo da redefinição:** o JWT guarda o login em segundos inteiros, e um login no mesmo segundo da redefinição conta como depois dela.
+- **QR code:** o SDK entrega o SVG cru num data URI. O adaptador o codifica, para um `#` no SVG não cortar a imagem.
+- **Cadastro não concluído:** um QR code gerado e nunca confirmado é apagado antes de um cadastro novo, para não acumular fatores pendentes no Supabase.
+- **Emissor:** vem da variável opcional `EMISSOR_DO_AUTENTICADOR`; sem ela, é "Health Enterprise".
+- **Nova senha e a sessão vencida:** a tela da nova senha aceita a sessão sem o login com senha, que é o caso do link de recuperação. Uma sessão de Administrador de um login com senha que já venceu vai ao login, na página e na ação. Encontrado na revisão do código.
+- **Ficam para as próximas etapas:**
+  - a lista "Administradores" do painel (5.9), na etapa 3, junto com os pedidos de duas pessoas;
+  - a nova versão da Política e dos Termos e a atualização do modelo lógico de dados, na etapa 4.
 
 ---
 

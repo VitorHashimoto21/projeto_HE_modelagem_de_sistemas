@@ -47,6 +47,9 @@ export type ResultadoDaConcessao =
 
 export type ResultadoDaRetirada = { ok: true; naoEra: boolean } | { ok: false; erro: "ContaInexistente" };
 
+/** SPEC-019 (OPEN-002): conta cujo 2º fator a equipe vai redefinir pelo workflow. */
+export type ContaParaRedefinir = { ok: true; usuarioId: string } | { ok: false; erro: "ContaInexistente" | "NaoEAdministrador" };
+
 export type ResultadoDaEntrada = { ok: true; primeira: boolean; negocioId: string } | { ok: false; erro: "SemLiberacao" | "Expirada" };
 
 /** Liberação ativa: não revogada, não vencida e de negócio não encerrado. */
@@ -250,6 +253,39 @@ export function criarConsultasDeSuporte(cliente: PrismaClient) {
         await tx.usuario.update({ where: { id: u.id }, data: { administradorEm: null } });
         await registrar(tx, { negocioId: null, acessoId: null, usuarioId: u.id, evento: "PAPEL_RETIRADO", descricao: `Papel de Administrador retirado por ${responsavel} (script)`, criadoEm: agora });
         return { ok: true, naoEra: false } as const;
+      });
+    },
+
+    // ---------------------------------------------------------------- 2º fator (SPEC-019, 5.1)
+
+    /** Eventos do 2º fator no registro, sem negócio associado, como os de papel (RN32: só inclusão). */
+    async registrarSegundoFator(usuarioId: string, evento: "SEGUNDO_FATOR_CADASTRADO" | "SEGUNDO_FATOR_REMOVIDO", descricao: string, agora: Date): Promise<void> {
+      await registrar(cliente, { negocioId: null, acessoId: null, usuarioId, evento, descricao, criadoEm: agora });
+    },
+
+    /** Conta para a redefinição pelo workflow (OPEN-002): só conta de Administrador existente. */
+    async contaParaRedefinir(email: string): Promise<ContaParaRedefinir> {
+      const u = await cliente.usuario.findUnique({ where: { email: email.trim().toLowerCase() }, select: { id: true, excluidoEm: true, administradorEm: true } });
+      if (!u || u.excluidoEm) return { ok: false, erro: "ContaInexistente" };
+      if (!u.administradorEm) return { ok: false, erro: "NaoEAdministrador" };
+      return { ok: true, usuarioId: u.id };
+    },
+
+    /**
+     * Depois de apagar os fatores no Supabase Auth: as sessões abertas antes de `agora` deixam de
+     * valer (INV-001) e o registro mostra quem redefiniu, na mesma transação.
+     */
+    async registrarRedefinicao(usuarioId: string, responsavel: string, removidos: number, agora: Date): Promise<void> {
+      await cliente.$transaction(async (tx) => {
+        await tx.usuario.update({ where: { id: usuarioId }, data: { segundoFatorRedefinidoEm: agora } });
+        await registrar(tx, {
+          negocioId: null,
+          acessoId: null,
+          usuarioId,
+          evento: "SEGUNDO_FATOR_REDEFINIDO",
+          descricao: `2º fator redefinido por ${responsavel} (workflow): ${removidos} autenticador(es) removido(s)`,
+          criadoEm: agora,
+        });
       });
     },
 

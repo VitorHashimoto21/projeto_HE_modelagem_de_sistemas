@@ -5,6 +5,7 @@
  */
 
 import { permissoesEfetivas, type Matriz, type Modulo, type Papel } from "@/lib/dominio/permissoes";
+import { sessaoAnteriorARedefinicao, type NivelDaSessao } from "@/lib/dominio/segundo-fator";
 import { matrizDoSuporte, modulosValidos, sessaoDoAdministradorValida, situacaoDaLiberacao } from "@/lib/dominio/suporte";
 
 /** Cookie do negócio ativo (definido pela troca de negócio da SPEC-004). */
@@ -57,6 +58,10 @@ export type ContextoComPapel = ContextoDaRequisicao & {
   termosPendentes?: boolean;
   /** SPEC-018 (RNF12): sessão do Administrador com mais de 8 h desde a entrada. */
   sessaoExpirada?: boolean;
+  /** SPEC-019 (INV-001): conta de Administrador sem o código verificado nesta sessão (`aal1`). */
+  segundoFatorPendente?: boolean;
+  /** SPEC-019 (INV-002): último código verificado nesta sessão, para a reconfirmação de 10 min. */
+  codigoVerificadoEm?: Date | null;
 };
 
 /**
@@ -82,8 +87,11 @@ export async function resolverContextoComPapel(
   };
 }
 
-/** Estado da conta lido a cada requisição (SPEC-018): papel de Administrador e versão dos termos aceita. */
-export type EstadoDaConta = { administradorEm: Date | null; versaoTermosAceita: string | null };
+/**
+ * Estado da conta lido a cada requisição (SPEC-018): papel de Administrador e versão dos termos aceita.
+ * SPEC-019 (OPEN-002): quando o 2º fator foi redefinido pelo workflow.
+ */
+export type EstadoDaConta = { administradorEm: Date | null; versaoTermosAceita: string | null; segundoFatorRedefinidoEm?: Date | null };
 
 /** Liberação de suporte como o contexto precisa dela (SPEC-018). */
 export type LiberacaoDoContexto = {
@@ -100,8 +108,11 @@ export type EntradaDoContexto = {
   usuarioId: string | null;
   negocioDoCookie: string | undefined;
   suporteDoCookie: string | undefined;
-  /** Momento da entrada (login) desta sessão, das claims do JWT. */
+  /** Momento da entrada com a senha desta sessão, das claims do JWT. */
   autenticadoEm: Date | null;
+  /** SPEC-019: nível da sessão (`aal2` depois do código) e o último código verificado. */
+  nivelDaSessao?: NivelDaSessao | null;
+  codigoEm?: Date | null;
   agora: Date;
   versaoDosTermos: string;
 };
@@ -130,8 +141,24 @@ export async function resolverContextoDaRequisicao(e: EntradaDoContexto, deps: D
     return base && { ...base, administrador: false, suporte: null, suporteEncerrado: null, termosPendentes, sessaoExpirada: false };
   }
 
-  const sessaoExpirada = !sessaoDoAdministradorValida(e.autenticadoEm, e.agora);
-  const semNegocio = { usuarioId: e.usuarioId, negocioId: null, negocioRecusado: false, papel: null, permissoes: null, administrador: true, termosPendentes, sessaoExpirada };
+  // SPEC-019: 8 h contadas do login com senha (RNF12); a sessão aberta antes da redefinição do
+  // 2º fator deixa de valer (OPEN-002); sem `aal2`, nenhum contexto de Administrador (INV-001).
+  const sessaoExpirada = !sessaoDoAdministradorValida(e.autenticadoEm, e.agora) || sessaoAnteriorARedefinicao(e.autenticadoEm, conta.segundoFatorRedefinidoEm);
+  const segundoFatorPendente = e.nivelDaSessao !== "aal2";
+  const semNegocio = {
+    usuarioId: e.usuarioId,
+    negocioId: null,
+    negocioRecusado: false,
+    papel: null,
+    permissoes: null,
+    administrador: true,
+    termosPendentes,
+    sessaoExpirada,
+    segundoFatorPendente,
+    codigoVerificadoEm: e.codigoEm ?? null,
+  };
+  // Sem o código verificado, nem a liberação do suporte é lida: só as telas do 2º fator e "Sair".
+  if (segundoFatorPendente) return { ...semNegocio, suporte: null, suporteEncerrado: null };
   const lida = e.suporteDoCookie && UUID.test(e.suporteDoCookie) ? await deps.liberacao(e.suporteDoCookie) : null;
   if (!lida) return { ...semNegocio, suporte: null, suporteEncerrado: null };
 

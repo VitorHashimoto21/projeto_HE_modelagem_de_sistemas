@@ -3,9 +3,10 @@ import { LogOut, UserRound } from "lucide-react";
 import { Logo } from "@/components/marca/logo";
 import { FaixaDoModoSuporte } from "@/components/suporte/faixas";
 import { AlternarTema } from "@/components/tema/alternar-tema";
+import { AvisoDaPagina } from "@/components/ui/aviso";
 import { classeDoBotao } from "@/components/ui/estilos";
 import { acaoSair } from "@/lib/auth/acoes";
-import { exigirAdministrador } from "@/lib/auth/servidor";
+import { adaptadorDoServidor, exigirAdministrador } from "@/lib/auth/servidor";
 import { consultasDeAcesso } from "@/lib/db";
 
 // Área do Administrador da plataforma (SPEC-018, 5.2 e 5.3): estrutura própria, separada da
@@ -13,7 +14,9 @@ import { consultasDeAcesso } from "@/lib/db";
 // comuns veem "Sem acesso".
 export default async function LayoutDoAdministrador({ children }: LayoutProps<"/admin">) {
   const contexto = await exigirAdministrador();
-  const perfil = await consultasDeAcesso().perfil(contexto.usuarioId);
+  const [perfil, fatores] = await Promise.all([consultasDeAcesso().perfil(contexto.usuarioId), adaptadorDoServidor().then((auth) => auth.fatores())]);
+  // SPEC-019 (5.1): com um autenticador só, o painel avisa até o segundo ser cadastrado.
+  const soUmAutenticador = fatores.filter((f) => f.verificado).length === 1;
   return (
     <div className="flex min-h-dvh flex-1 flex-col bg-background">
       <header className="bg-estrutura text-estrutura-foreground">
@@ -39,7 +42,15 @@ export default async function LayoutDoAdministrador({ children }: LayoutProps<"/
         </div>
       </header>
       {contexto.suporte && <FaixaDoModoSuporte negocio={contexto.suporte.negocio} expiraEm={contexto.suporte.expiraEm} />}
-      <main className="mx-auto w-full max-w-[1280px] flex-1 px-4 pt-6 pb-16 sm:px-6 lg:px-10 lg:pt-8">{children}</main>
+      <main className="mx-auto w-full max-w-[1280px] flex-1 px-4 pt-6 pb-16 sm:px-6 lg:px-10 lg:pt-8">
+        {soUmAutenticador && (
+          <AvisoDaPagina tom="atencao" className="mb-6">
+            Sua conta tem só um autenticador. <Link href="/segundo-fator?outro=1">Cadastre um segundo</Link>, em outro aparelho ou num gerenciador de senhas, para não
+            perder o acesso.
+          </AvisoDaPagina>
+        )}
+        {children}
+      </main>
       <footer className="mx-auto flex w-full max-w-[1280px] justify-end px-4 pb-6 sm:px-6 lg:px-10">
         <AlternarTema />
       </footer>

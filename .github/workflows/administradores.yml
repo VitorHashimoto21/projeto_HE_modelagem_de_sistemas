@@ -10,7 +10,7 @@ on:
       acao:
         description: "Ação"
         type: choice
-        options: [conceder, retirar]
+        options: [conceder, retirar, redefinir-2fator]
         required: true
       email:
         description: "E-mail da conta (exclusiva para o suporte, já cadastrada)"
@@ -34,6 +34,10 @@ jobs:
     environment: ${{ inputs.ambiente }}
     env:
       DIRECT_URL: ${{ secrets.DIRECT_URL }}
+      # SPEC-019 (OPEN-002): só para redefinir-2fator; a chave secreta fica no ambiente e chega ao
+      # script por variável, nunca no comando.
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
       ADMIN_RESPONSAVEL: ${{ github.actor }} (GitHub Actions)
       ACAO: ${{ inputs.acao }}
       EMAIL: ${{ inputs.email }}
@@ -42,6 +46,10 @@ jobs:
         run: |
           if [ -z "$DIRECT_URL" ]; then
             echo "::error title=Administradores::Segredo DIRECT_URL não definido para o ambiente ${{ inputs.ambiente }}."
+            exit 1
+          fi
+          if [ "$ACAO" = "redefinir-2fator" ] && { [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_SECRET_KEY" ]; }; then
+            echo "::error title=Administradores::Segredos SUPABASE_URL e SUPABASE_SECRET_KEY não definidos para o ambiente ${{ inputs.ambiente }}."
             exit 1
           fi
 

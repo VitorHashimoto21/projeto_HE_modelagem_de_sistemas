@@ -36,8 +36,8 @@ export function criarConsultasDeAcesso(cliente: PrismaClient) {
     },
 
     /** SPEC-018: papel de Administrador e versão dos termos aceita, lidos a cada requisição. */
-    async estadoDaConta(usuarioId: string): Promise<{ administradorEm: Date | null; versaoTermosAceita: string | null } | null> {
-      return cliente.usuario.findUnique({ where: { id: usuarioId }, select: { administradorEm: true, versaoTermosAceita: true } });
+    async estadoDaConta(usuarioId: string): Promise<{ administradorEm: Date | null; versaoTermosAceita: string | null; segundoFatorRedefinidoEm: Date | null } | null> {
+      return cliente.usuario.findUnique({ where: { id: usuarioId }, select: { administradorEm: true, versaoTermosAceita: true, segundoFatorRedefinidoEm: true } });
     },
 
     /** SPEC-018 (RF78): registra o novo aceite da versão vigente da política e dos termos. */

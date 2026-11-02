@@ -6,6 +6,7 @@
 
 import { FUSO_NEGOCIO } from "./datas";
 import { ACOES, MODULOS, ROTULO_MODULO, type Matriz, type Modulo } from "./permissoes";
+import { instantesDasClaims } from "./segundo-fator";
 
 /** OPEN-006: prazos que o Dono escolhe; 24 h é o padrão. */
 export const PRAZOS = {
@@ -121,16 +122,12 @@ export function sessaoDoAdministradorValida(autenticadoEm: Date | null, agora: D
 }
 
 /**
- * Horário da entrada a partir das claims do JWT do Supabase: o `amr` (métodos de
- * autenticação) guarda o momento do login e não muda quando a sessão é renovada.
+ * Horário da entrada a partir das claims do JWT do Supabase: o login com senha (o método
+ * `password` do `amr`), que não muda quando a sessão é renovada. SPEC-019 (RNF12): o código do
+ * 2º fator não reinicia as 8 h; sem o login com senha, não há horário (falha fechada).
  */
 export function autenticadoEmDasClaims(claims: Record<string, unknown> | null | undefined): Date | null {
-  const amr = claims?.amr;
-  if (!Array.isArray(amr)) return null;
-  const instantes = amr
-    .map((a) => (typeof a === "object" && a !== null ? (a as { timestamp?: unknown }).timestamp : undefined))
-    .filter((t): t is number => typeof t === "number" && Number.isFinite(t));
-  return instantes.length ? new Date(Math.max(...instantes) * 1000) : null;
+  return instantesDasClaims(claims).senhaEm;
 }
 
 // ---------------------------------------------------------------------------------------
