@@ -47,8 +47,12 @@ export default async function LayoutDaAplicacao({ children, gaveta }: LayoutProp
         administrador={contexto.administrador ? { negocio: modoSuporte?.negocio ?? null } : undefined}
       />
       <div className="flex min-w-0 flex-1 flex-col">
-        {modoSuporte && <FaixaDoModoSuporte negocio={modoSuporte.negocio} expiraEm={modoSuporte.expiraEm} />}
-        {liberacao && <FaixaDoSuporteLiberado modulos={liberacao.modulos} expiraEm={liberacao.expiraEm} ehDono={membro?.papel === "DONO"} />}
+        {modoSuporte && (
+          <FaixaDoModoSuporte negocio={modoSuporte.negocio} expiraEm={modoSuporte.expiraEm} corrigir={modoSuporte.modulosComCorrecao} correcaoPendente={modoSuporte.correcaoPendente} />
+        )}
+        {liberacao && (
+          <FaixaDoSuporteLiberado modulos={liberacao.modulos} modulosComCorrecao={liberacao.modulosComCorrecao} expiraEm={liberacao.expiraEm} ehDono={membro?.papel === "DONO"} />
+        )}
         {faixa?.ok && (
           <FaixaDoCaixaCompacta
             dados={faixa.dados}

@@ -45,7 +45,7 @@ describe("T02 — liberação: validação, prazos, situação e matriz só de l
   const campos = { motivo: "  Vendas   de ontem  ", "modulo.vendas": "on", "modulo.estoque": "on", prazo: "24h" };
 
   it("valida motivo, módulos e prazo", () => {
-    expect(validarLiberacao(campos)).toEqual({ ok: true, dados: { motivo: "Vendas de ontem", modulos: ["estoque", "vendas"], prazo: "24h" } });
+    expect(validarLiberacao(campos)).toEqual({ ok: true, dados: { motivo: "Vendas de ontem", modulos: ["estoque", "vendas"], modulosComCorrecao: [], prazo: "24h" } });
     expect(validarLiberacao({})).toEqual({
       ok: false,
       erros: { motivo: MENSAGENS_SUPORTE.motivoObrigatorio, modulos: MENSAGENS_SUPORTE.modulosObrigatorios, prazo: MENSAGENS_SUPORTE.prazoInvalido },

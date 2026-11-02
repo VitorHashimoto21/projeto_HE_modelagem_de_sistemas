@@ -41,7 +41,7 @@ const contexto = (usuarioId: string, suporteDoCookie?: string, negocioDoCookie?:
     { filiacao: (u, n) => acesso.filiacao(u, n), conta: (u) => acesso.estadoDaConta(u), liberacao: (id) => suporte.liberacaoDoContexto(id) },
   );
 
-const LIBERAR = { motivo: "Vendas de ontem não aparecem no caixa", modulos: ["vendas" as const, "estoque" as const], prazo: "24h" as const };
+const LIBERAR: { motivo: string; modulos: ("vendas" | "estoque")[]; modulosComCorrecao: ("vendas" | "estoque")[]; prazo: "24h" } = { motivo: "Vendas de ontem não aparecem no caixa", modulos: ["vendas" as const, "estoque" as const], modulosComCorrecao: [], prazo: "24h" as const };
 
 beforeEach(async () => {
   const tabelas = await base.$queryRaw<{ tablename: string }[]>`
@@ -97,7 +97,8 @@ describe("T05 — painel: só metadados (INV-009, CA-01)", () => {
     for (const n of negocios) expect(Object.keys(n).sort()).toEqual([...campos].sort());
     const salao = negocios.find((n) => n.id === negocio)!;
     expect(salao).toMatchObject({ membros: 1, encerrado: false, dono: { nome: "Rafael Dono", email: "dono@exemplo.com" }, liberacao: { motivo: LIBERAR.motivo, modulos: ["estoque", "vendas"] } });
-    expect(Object.keys(salao.liberacao!).sort()).toEqual(["expiraEm", "id", "modulos", "motivo"]);
+    // SPEC-019 (5.3): a ficha mostra também os módulos em correção, um dado da própria liberação.
+    expect(Object.keys(salao.liberacao!).sort()).toEqual(["expiraEm", "id", "modulos", "modulosComCorrecao", "motivo"]);
 
     expect((await suporte.listarNegocios("salão", 1, agora())).negocios.map((n) => n.id)).toEqual([negocio]);
     expect((await suporte.listarNegocios("DONO@exemplo", 1, agora())).total).toBe(2);

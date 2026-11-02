@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { LifeBuoy } from "lucide-react";
+import { CorrecoesDoSuporte } from "@/components/suporte/correcoes-do-suporte";
 import { LiberarAcesso } from "@/components/suporte/liberar-acesso";
 import { RevogarAcesso } from "@/components/suporte/revogar-acesso";
 import { AvisoDaPagina } from "@/components/ui/aviso";
@@ -8,7 +9,7 @@ import { EstadoVazio } from "@/components/ui/estado-vazio";
 import { Selo, type TomDoSelo } from "@/components/ui/selo";
 import { Superficie } from "@/components/ui/superficie";
 import { exigirDono } from "@/lib/auth/servidor";
-import { suporte, type EventoDoRegistro } from "@/lib/db";
+import { correcoes as correcoesDoSuporte, suporte, type CorrecaoDoNegocio, type EventoDoRegistro } from "@/lib/db";
 import { dataHoraCompleta, dataHoraCurta, listaDeModulos, situacaoDaLiberacao, type SituacaoDaLiberacao } from "@/lib/dominio/suporte";
 
 export const metadata: Metadata = { title: "Acesso do suporte" };
@@ -32,6 +33,10 @@ function textoDoEvento(e: EventoDoRegistro): string {
       return `Viu: ${e.descricao}`;
     case "SAIDA":
       return `Suporte HE — ${e.autor} saiu do modo suporte`;
+    case "CORRECAO":
+      return `Suporte HE — ${e.autor} corrigiu: ${e.descricao}`;
+    case "CORRECAO_DESFEITA":
+      return `${e.autor}: ${e.descricao}`;
     default:
       return e.descricao;
   }
@@ -39,17 +44,24 @@ function textoDoEvento(e: EventoDoRegistro): string {
 
 // Acesso do suporte (SPEC-018, 5.4 e 5.6 — RF75, RF77): só o Dono (Configurações). Liberar,
 // revogar e acompanhar cada entrada, tela aberta e saída do suporte, com data, hora e nome.
+// SPEC-019 (5.10): o nível de cada módulo e as correções, com o antes, o depois e o "Desfazer".
 export default async function AcessoDoSuporte({ searchParams }: PageProps<"/negocio/suporte">) {
   const { negocioId } = await exigirDono();
   const agora = new Date();
-  const [liberacoes, { revogado, erro }] = await Promise.all([suporte().liberacoesDoNegocio(negocioId), searchParams]);
+  const [liberacoes, correcoes, { revogado, erro }] = await Promise.all([
+    suporte().liberacoesDoNegocio(negocioId),
+    correcoesDoSuporte().correcoesDoNegocio(negocioId, agora),
+    searchParams,
+  ]);
   const ativa = liberacoes.find((l) => situacaoDaLiberacao(l, agora) === "ATIVA");
+  const porLiberacao = new Map<string, CorrecaoDoNegocio[]>();
+  for (const c of correcoes) if (c.acessoId) porLiberacao.set(c.acessoId, [...(porLiberacao.get(c.acessoId) ?? []), c]);
 
   return (
     <div className="space-y-6">
       <CabecalhoDePagina
         titulo="Acesso do suporte"
-        descricao="Quando precisar de ajuda, libere o suporte do HE para ver (sem alterar) os módulos que você escolher, por um prazo. O suporte nunca entra sem a sua liberação."
+        descricao="Quando precisar de ajuda, libere o suporte do HE para ver os módulos que você escolher, por um prazo, e, se quiser, corrigir alguns deles. O suporte nunca entra sem a sua liberação, e você pode desfazer cada correção."
         acoes={<LiberarAcesso substitui={Boolean(ativa)} />}
       />
 
@@ -66,6 +78,7 @@ export default async function AcessoDoSuporte({ searchParams }: PageProps<"/nego
         <ul className="space-y-4" aria-label="Liberações do suporte">
           {liberacoes.map((l) => {
             const situacao = situacaoDaLiberacao(l, agora);
+            const dela = porLiberacao.get(l.id) ?? [];
             return (
               <li key={l.id}>
                 <Superficie tom={situacao === "ATIVA" ? "atencao" : "cartao"} aria-labelledby={`liberacao-${l.id}`}>
@@ -85,11 +98,14 @@ export default async function AcessoDoSuporte({ searchParams }: PageProps<"/nego
                         <span className="font-semibold">Motivo:</span> {l.motivo}
                       </p>
                       <p className="text-sm text-muted-foreground">
-                        {listaDeModulos(l.modulos)} · liberado por {l.liberadoPor} em {dataHoraCompleta(l.criadoEm)}
+                        Ver: {listaDeModulos(l.modulos)}
+                        {l.modulosComCorrecao.length > 0 && <> · corrigir: {listaDeModulos(l.modulosComCorrecao)}</>} · liberado por {l.liberadoPor} em{" "}
+                        {dataHoraCompleta(l.criadoEm)}
                       </p>
                     </div>
                     {situacao === "ATIVA" && <RevogarAcesso acessoId={l.id} />}
                   </div>
+                  {dela.length > 0 && <CorrecoesDoSuporte correcoes={dela} id={`correcoes-${l.id}`} />}
                   <details className="group mt-4" open={situacao === "ATIVA"}>
                     <summary className="cursor-pointer text-sm font-semibold text-primary hover:underline">
                       Registro ({l.eventos.length} {l.eventos.length === 1 ? "evento" : "eventos"})

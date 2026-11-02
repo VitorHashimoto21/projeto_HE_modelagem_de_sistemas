@@ -2,7 +2,9 @@
 
 > **Status:** ✅ **Aprovada em 28/10/2026 e revisada em 01/11/2026** (OPEN-015 a OPEN-018, ver "Revisão antes da implementação" abaixo). **Em implementação por etapas** (decisão da equipe, 02/11/2026):
 > - **etapa 1 — 2º fator do Administrador:** implementada em 02/11/2026 e verificada em build local ([evidências](evidencias/SPEC-019/README.md));
-> - **etapa 2 — correções e desfazer:** a implementar;
+> - **etapa 2 — correções e desfazer**, em duas partes:
+>   - **2a — o mecanismo, o Catálogo e o Estoque:** implementada em 02/11/2026 e verificada em build local ([evidências](evidencias/SPEC-019/README.md#etapa-2a--correções-do-suporte-no-catálogo-e-no-estoque-e-o-desfazer-02112026));
+>   - **2b — a Calculadora e o Financeiro:** a implementar;
 > - **etapa 3 — emergência e troca de plano:** a implementar;
 > - **etapa 4 — suspensão, Política e Termos, e homologação (T17):** a implementar.
 >
@@ -523,6 +525,43 @@ Cobre a seção 5.1, os CA-01 a CA-05 e o CA-20, os INV-001, INV-002 e INV-011, 
 - **Ficam para as próximas etapas:**
   - a lista "Administradores" do painel (5.9), na etapa 3, junto com os pedidos de duas pessoas;
   - a nova versão da Política e dos Termos e a atualização do modelo lógico de dados, na etapa 4.
+
+**Implementação — etapa 2a, correções no Catálogo e no Estoque e o desfazer (02/11/2026):** [evidências](evidencias/SPEC-019/README.md#etapa-2a--correções-do-suporte-no-catálogo-e-no-estoque-e-o-desfazer-02112026).
+
+Cobre as seções 5.2, 5.3 e 5.5 e a parte da 5.10 sobre as correções, com as oito correções do Catálogo e do Estoque da tabela 5.4. Também cobre os CA-06 a CA-09, os INV-003 a INV-005 (sem a suspensão, que é da etapa 4) e a parte do Catálogo e do Estoque dos T02 a T04, do T14 e do T15. O roteiro no navegador teve 59 verificações. Como foi feito:
+- **Banco:** a migração `20261102180000_correcoes_do_suporte` cria:
+  - os eventos `CORRECAO` e `CORRECAO_DESFEITA`;
+  - `AcessoSuporte.modulosComCorrecao`;
+  - `RegistroSuporte.dados` e `RegistroSuporte.correcaoId`.
+
+  As checagens do banco repetem as regras: módulos e prazo da liberação, dados obrigatórios da correção, um desfazer por correção e o mesmo negócio.
+- **Lista fechada:** vive em `CORRECOES_PERMITIDAS` (`src/lib/dominio/correcoes.ts`). Cada Server Action da lista leva a marca da correção na fábrica `acaoComPermissao`, e um teste confere que as marcas do código são exatamente as da lista. As consultas do NCM levam a marca "consulta".
+- **Autorização:** no modo suporte, a ação só passa se o módulo dela estiver em "ver e corrigir" e ela for da lista. Fora da lista, a recusa é `ForaDaListaDeCorrecoes`; nos outros módulos, continua `SomenteLeitura`.
+- **Motor das correções** (`src/lib/db/correcoes.ts`): a ação roda numa transação só, com o estado do registro antes e depois e o evento `CORRECAO`. Sem mudança real, nada é registrado. Se o registro falhar, a correção é desfeita.
+- **Desfazer:** é uma ação só do Dono e confere:
+  - os 30 dias;
+  - se a correção já foi desfeita;
+  - se o estado atual é o "depois".
+
+  Faz a compensação da tabela 5.4 pelas mesmas funções do módulo, em nome do Dono, e grava `CORRECAO_DESFEITA` na mesma transação.
+- **Telas:**
+  - a gaveta da liberação com "Ver" e "Ver e corrigir";
+  - "Corrigir" na ficha do painel;
+  - as faixas com "pode corrigir";
+  - só os botões da lista no Catálogo e no Estoque;
+  - "Acessos do suporte" com o antes, o depois e o "Desfazer";
+  - os históricos de preço e de movimentações com "{nome} (suporte do HE)".
+- **E-mails ao Dono:** a liberação e a primeira entrada dizem o que o suporte pode corrigir. Na saída, o Dono recebe o resumo "O suporte fez N correções".
+
+**Decisões de implementação da etapa 2a (sem mudar o comportamento da Spec):**
+- **Antes e depois:** o evento guarda só os campos alterados. O "depois" do INV-005 é esse recorte: o desfazer confere o estado atual nesses campos, e outro campo mudado depois não impede o desfazer e continua como está.
+- **Transação única:** as funções do módulo abrem as próprias transações. Dentro da correção, cada uma vira um passo (savepoint) da transação da correção. O cliente do negócio usa essa transação só durante a correção.
+- **Reconfirmação da entrada:** a entrada fica no registro com a marca da reconfirmação. A correção vale para a entrada desta sessão até a saída, a expiração ou a revogação. Com um login novo, a faixa avisa "para corrigir, saia e entre de novo".
+- **Telas das correções:** no modo suporte, abrem só as telas das ações da lista (editar item, registrar entrada e saída). As demais telas de escrita continuam recusadas.
+- **Calculadora e Financeiro:** até a etapa 2b, a gaveta não oferece "Ver e corrigir" para eles, porque ainda não há correções deles na lista.
+- **Ficam para as próximas etapas:**
+  - as correções da Calculadora e do Financeiro (OPEN-015 e OPEN-016), na etapa 2b;
+  - a recusa da correção e do desfazer em negócio suspenso (OPEN-018), na etapa 4.
 
 ---
 

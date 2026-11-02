@@ -4,6 +4,7 @@ import { codigoExatoPrimeiro, custoTotal, normalizarNome } from "@/lib/dominio/c
 import { hoje } from "@/lib/dominio/datas";
 import { descricaoDoNcm, LIMITE_DA_BUSCA, prefixoDeNcmNaBusca, termosDaBusca } from "@/lib/dominio/ncm";
 import type { ClienteDoNegocio } from "./cliente-do-negocio";
+import { autorDoHistorico } from "./autor";
 
 /**
  * Catálogo do negócio ativo (SPEC-006). Tudo passa pelo cliente do negócio (SPEC-001):
@@ -369,7 +370,7 @@ export function criarConsultasDoCatalogo(cliente: ClienteDoNegocio, negocioId: s
           subcategoria: subcategoriaDoItem,
           materiais: { include: { material: true }, orderBy: { material: { nome: "asc" } } },
           usadoEm: { where: { servico: { arquivadoEm: null } }, include: { servico: { select: { id: true, nome: true } } } },
-          historicoPrecos: { include: { usuario: { select: { nome: true } } }, orderBy: { dataConfirmacao: "desc" } },
+          historicoPrecos: { include: { usuario: { select: { nome: true, administradorEm: true } } }, orderBy: { dataConfirmacao: "desc" } },
           _count: { select: { materiais: true } },
         },
       });
@@ -387,7 +388,7 @@ export function criarConsultasDoCatalogo(cliente: ClienteDoNegocio, negocioId: s
         preco: num(h.preco)!,
         anterior: idx + 1 < lista.length ? num(lista[idx + 1].preco) : null,
         origem: h.origem,
-        usuario: h.usuario.nome,
+        usuario: autorDoHistorico(h.usuario),
         data: h.dataConfirmacao,
       }));
       return {

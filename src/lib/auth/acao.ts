@@ -1,4 +1,6 @@
 import "server-only";
+import { correcoes } from "@/lib/db";
+import type { IdDaCorrecao } from "@/lib/dominio/correcoes";
 import type { Acao, Modulo } from "@/lib/dominio/permissoes";
 import { MENSAGENS_DO_SEGUNDO_FATOR, reconfirmacaoValida } from "@/lib/dominio/segundo-fator";
 import type { ContextoDoMembro } from "./autorizacao";
@@ -39,11 +41,27 @@ export function acaoDoDono<A extends unknown[], R>(corpo: Corpo<ContextoDoMembro
   };
 }
 
-/** Ação de módulo: exige a permissão (módulo, ação) no negócio ativo (RF06). Nunca no modo suporte (INV-002). */
-export function acaoComPermissao<A extends unknown[], R>(modulo: Modulo, acao: Acao, corpo: Corpo<ContextoDoMembro, A, R>) {
+/** O `redirect()` do Next é um erro com o digest NEXT_REDIRECT: na correção, conta como sucesso. */
+function ehRedirecionamento(e: unknown): boolean {
+  const digest = typeof e === "object" && e !== null ? (e as { digest?: unknown }).digest : undefined;
+  return typeof digest === "string" && digest.startsWith("NEXT_REDIRECT");
+}
+
+/**
+ * Ação de módulo: exige a permissão (módulo, ação) no negócio ativo (RF06). No modo suporte, nunca
+ * (SPEC-018, INV-002), exceto as correções da lista fechada nos módulos em "ver e corrigir" (SPEC-019,
+ * 5.4): `correcao` diz qual é. A correção roda pelo motor, numa transação única com o evento
+ * `CORRECAO` e o antes e o depois (INV-004). "consulta" marca as consultas dos formulários (o NCM).
+ */
+export function acaoComPermissao<A extends unknown[], R>(modulo: Modulo, acao: Acao, corpo: Corpo<ContextoDoMembro, A, R>, correcao?: IdDaCorrecao | "consulta") {
   return async (...args: A): Promise<R> => {
-    const { membro } = await exigirNivel({ tipo: "permissao", modulo, acao, origem: "acao" });
-    return corpo(membro!, ...args);
+    const { membro } = await exigirNivel({ tipo: "permissao", modulo, acao, origem: "acao", correcao });
+    const m = membro!;
+    if (m.suporte && m.correcao) {
+      const contexto = { negocioId: m.negocioId, administradorId: m.usuarioId, acessoId: m.suporte.acessoId };
+      return correcoes().executar(contexto, m.correcao, args, () => corpo(m, ...args), ehRedirecionamento);
+    }
+    return corpo(m, ...args);
   };
 }
 

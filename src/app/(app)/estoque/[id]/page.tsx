@@ -16,6 +16,7 @@ import { ItemNaoEncontrado } from "@/lib/db/catalogo";
 import { dataBrasileira, hoje } from "@/lib/dominio/datas";
 import { diasEntre, JANELA_DIAS } from "@/lib/dominio/estoque";
 import { pode } from "@/lib/dominio/permissoes";
+import { corrige } from "@/lib/dominio/correcoes";
 import { inicioDoHistorico } from "@/lib/dominio/planos";
 import { comRetorno, retornoSeguro, rotuloDoRetorno } from "@/lib/estrutura/retorno";
 import { planoDoMembro } from "@/lib/planos/servidor";
@@ -51,8 +52,9 @@ export default async function EstoqueDoProduto({ params, searchParams }: PagePro
       throw e;
     });
   const unidade = rotuloUnidade(d.unidadeMedida);
-  const podeMovimentar = pode(membro.permissoes, "estoque", "criar");
-  const podeEditarMinimo = pode(membro.permissoes, "estoque", "editar");
+  // SPEC-019 (5.3, item 2): no modo suporte com o Estoque em "ver e corrigir", os botões da lista.
+  const podeMovimentar = pode(membro.permissoes, "estoque", "criar") || corrige(membro, "estoque.registrarEntrada");
+  const podeEditarMinimo = pode(membro.permissoes, "estoque", "editar") || corrige(membro, "estoque.definirMinimo");
   const diasConsumo = d.consumoNaJanela.primeiroDia ? Math.min(JANELA_DIAS, diasEntre(d.consumoNaJanela.primeiroDia, dia) + 1) : 0;
 
   const minimo = d.minimo?.valor ?? null;

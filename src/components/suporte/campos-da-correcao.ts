@@ -1,0 +1,43 @@
+import { reais, numero, ROTULO_CATEGORIA, rotuloUnidade } from "@/components/catalogo/rotulos";
+import { ROTULO_MOTIVO, ROTULO_MOVIMENTACAO } from "@/components/estoque/situacao";
+import type { Estado } from "@/lib/db";
+import { formatarNcm } from "@/lib/dominio/ncm";
+
+// O antes e o depois das correções do suporte, como o Dono lê (SPEC-019, 5.3 e 5.10). Só os
+// campos da lista, na ordem do formulário; os ids ficam de fora (o nome vem ao lado).
+
+const n = (v: unknown) => (v === null || v === undefined || v === "" ? null : Number(v));
+const texto = (v: unknown) => (v === null || v === undefined || v === "" ? "—" : String(v));
+const deUmMapa = (mapa: Record<string, string>) => (v: unknown) => (typeof v === "string" && Object.hasOwn(mapa, v) ? mapa[v] : texto(v));
+
+type Material = { nome?: string; quantidade?: string };
+
+const CAMPOS: [chave: string, rotulo: string, formatar: (v: unknown) => string][] = [
+  ["nome", "Nome", texto],
+  ["codigo", "Código interno", texto],
+  ["categoria", "Categoria", deUmMapa(ROTULO_CATEGORIA)],
+  ["subcategoria", "Subcategoria", (v) => (v ? String(v) : "Sem subcategoria")],
+  ["ncm", "NCM", (v) => (typeof v === "string" && v ? formatarNcm(v) : "—")],
+  ["unidadeMedida", "Unidade", (v) => (typeof v === "string" ? rotuloUnidade(v) : "—")],
+  ["custoBase", "Custo", (v) => reais(n(v))],
+  ["comissaoPercentual", "Comissão", (v) => (n(v) === null ? "—" : `${numero(n(v))}%`)],
+  ["materiais", "Materiais", (v) => (Array.isArray(v) && v.length ? (v as Material[]).map((m) => `${m.nome ?? "Material"} × ${numero(n(m.quantidade))}`).join("; ") : "Nenhum")],
+  ["preco", "Preço", (v) => reais(n(v))],
+  ["arquivado", "Situação", (v) => (v === true ? "Arquivado" : v === false ? "Ativo" : "—")],
+  ["estoqueMinimo", "Estoque mínimo", (v) => (n(v) === null ? "Sem mínimo" : numero(n(v)))],
+  ["item", "Item", texto],
+  ["movimento", "Movimentação", deUmMapa(ROTULO_MOVIMENTACAO)],
+  ["quantidade", "Quantidade", (v) => (n(v) === null ? "—" : numero(n(v)))],
+  ["motivo", "Motivo", (v) => (v ? deUmMapa(ROTULO_MOTIVO)(v) : "—")],
+];
+
+export type LinhaDaCorrecao = { campo: string; antes: string; depois: string };
+
+/** Uma linha por campo que a correção mudou (ou que a criação gravou). Sem o antes, "—". */
+export function linhasDaCorrecao(antes: Estado, depois: Estado): LinhaDaCorrecao[] {
+  return CAMPOS.filter(([chave]) => (antes !== null && chave in antes) || (depois !== null && chave in depois)).map(([chave, campo, formatar]) => ({
+    campo,
+    antes: antes === null ? "—" : formatar(antes[chave]),
+    depois: depois === null ? "—" : formatar(depois[chave]),
+  }));
+}

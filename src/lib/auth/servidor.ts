@@ -7,6 +7,7 @@ import { cache } from "react";
 import { consultasDeAcesso, suporte, type ContextoDeNegocio } from "@/lib/db";
 import { ambiente } from "@/lib/env";
 import { criarAdaptadorSupabase } from "./adaptador-supabase";
+import type { IdDaCorrecao } from "@/lib/dominio/correcoes";
 import type { Acao, Modulo } from "@/lib/dominio/permissoes";
 import { descreverTela } from "@/lib/dominio/suporte";
 import { autorizar, type ContextoDoMembro, type MotivoDaRecusa, type NivelDeAcesso } from "./autorizacao";
@@ -101,7 +102,7 @@ export const obterContexto = cache(async (): Promise<ContextoComPapel | null> =>
     {
       filiacao: (u, n) => acesso.filiacao(u, n),
       conta: (u) => acesso.estadoDaConta(u),
-      liberacao: (id) => suporte().liberacaoDoContexto(id),
+      liberacao: (id, administradorId) => suporte().liberacaoDoContexto(id, administradorId),
     },
   );
 });
@@ -125,6 +126,7 @@ function destinoDaRecusa(motivo: MotivoDaRecusa, contexto: ContextoComPapel | nu
     case "SomenteDono":
     case "SemPermissao":
     case "SomenteLeitura":
+    case "ForaDaListaDeCorrecoes":
     case "SomenteAdministrador":
       return ROTA_SEM_ACESSO;
   }
@@ -237,6 +239,6 @@ export async function exigirDono(): Promise<ContextoDoMembro> {
 }
 
 /** Páginas e ações de módulo: exige a permissão (módulo, ação) no negócio ativo (5.5). */
-export async function exigirPermissao(modulo: Modulo, acao: Acao): Promise<ContextoDoMembro> {
-  return (await exigirNivel({ tipo: "permissao", modulo, acao })).membro!;
+export async function exigirPermissao(modulo: Modulo, acao: Acao, correcao?: IdDaCorrecao): Promise<ContextoDoMembro> {
+  return (await exigirNivel({ tipo: "permissao", modulo, acao, correcao })).membro!;
 }

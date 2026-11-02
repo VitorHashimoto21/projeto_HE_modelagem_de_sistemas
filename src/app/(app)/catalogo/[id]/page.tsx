@@ -19,6 +19,7 @@ import { ItemNaoEncontrado, type NcmDoItem } from "@/lib/db/catalogo";
 import { hoje } from "@/lib/dominio/datas";
 import { formatarNcm } from "@/lib/dominio/ncm";
 import { pode } from "@/lib/dominio/permissoes";
+import { corrige } from "@/lib/dominio/correcoes";
 import { comissaoNoPreco } from "@/lib/dominio/precificacao";
 import { reaisDeCentavos } from "@/lib/dominio/venda";
 import { comRetorno, retornoSeguro, rotuloDoRetorno } from "@/lib/estrutura/retorno";
@@ -69,8 +70,10 @@ export default async function DetalheDoItem({ params, searchParams }: PageProps<
     if (e instanceof ItemNaoEncontrado) notFound();
     throw e;
   });
-  const podeEditar = pode(membro.permissoes, "catalogo", "editar");
-  const podeArquivar = pode(membro.permissoes, "catalogo", "excluir");
+  // SPEC-019 (5.3, item 2): no modo suporte com o Catálogo em "ver e corrigir", só os botões da lista.
+  const podeEditar = pode(membro.permissoes, "catalogo", "editar") || corrige(membro, "catalogo.editarItem");
+  const podeDefinirPreco = pode(membro.permissoes, "catalogo", "editar") || corrige(membro, "catalogo.definirPreco");
+  const podeArquivar = pode(membro.permissoes, "catalogo", "excluir") || corrige(membro, "catalogo.arquivarItem");
   const doArquivamento = typeof busca.resultado === "string" ? MENSAGENS_DO_ARQUIVAMENTO[busca.resultado] : undefined;
   // SPEC-024 (5.2): a reativação recusada pelo código mostra o código do item.
   const resultado =
@@ -138,7 +141,7 @@ export default async function DetalheDoItem({ params, searchParams }: PageProps<
               </Link>
             )}
           </Superficie>
-          {podeEditar && !item.arquivado && (
+          {podeDefinirPreco && !item.arquivado && (
             <Superficie aria-labelledby="titulo-novo-preco">
               <TituloDaSuperficie id="titulo-novo-preco" titulo="Definir o preço" />
               <FormularioPreco itemId={item.id} />

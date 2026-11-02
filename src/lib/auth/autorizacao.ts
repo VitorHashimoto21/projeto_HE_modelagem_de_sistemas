@@ -1,3 +1,4 @@
+import { correcaoPermitida, moduloDaCorrecao, type IdDaCorrecao } from "@/lib/dominio/correcoes";
 import type { Acao, Matriz, Modulo, Papel } from "@/lib/dominio/permissoes";
 import type { ContextoComPapel, SuporteAtivo } from "./contexto";
 
@@ -14,7 +15,17 @@ export type NivelDeAcesso =
   | { tipo: "sessao"; origem?: "acao" }
   /** Configurações do negócio (OPEN-002). */
   | { tipo: "dono"; origem?: "acao" }
-  | { tipo: "permissao"; modulo: Modulo; acao: Acao; origem?: "acao" }
+  | {
+      tipo: "permissao";
+      modulo: Modulo;
+      acao: Acao;
+      origem?: "acao";
+      /**
+       * SPEC-019 (5.4): a ação é uma correção da lista fechada, ou uma consulta de formulário (o NCM)
+       * que a correção usa. Sem isso, a ação nunca é aceita no modo suporte.
+       */
+      correcao?: IdDaCorrecao | "consulta";
+    }
   /**
    * Minha conta (SPEC-014) e o novo aceite dos termos (SPEC-018, RF78): basta a sessão,
    * mesmo com os termos pendentes — a pessoa pode exportar os dados ou excluir a conta.
@@ -37,6 +48,8 @@ export type ContextoDoMembro = {
   /** SPEC-018: modo suporte — somente leitura e dados pessoais mascarados. */
   modoSuporte?: boolean;
   suporte?: SuporteAtivo | null;
+  /** SPEC-019 (5.3): a correção do suporte que esta ação executa (sempre pelo motor das correções). */
+  correcao?: IdDaCorrecao;
 };
 
 export type MotivoDaRecusa =
@@ -44,8 +57,10 @@ export type MotivoDaRecusa =
   | "SemNegocio"
   | "SomenteDono"
   | "SemPermissao"
-  /** SPEC-018 (INV-002): no modo suporte, nenhuma Server Action é executada. */
+  /** SPEC-018 (INV-002): no modo suporte, nenhuma Server Action é executada fora de um módulo em correção. */
   | "SomenteLeitura"
+  /** SPEC-019 (5.4, INV-003): no módulo em correção, a ação não está na lista fechada. */
+  | "ForaDaListaDeCorrecoes"
   /** SPEC-018 (INV-004): a conta de Administrador não cria negócio, não aceita convite nem troca de negócio. */
   | "ContaDeAdministrador"
   | "SomenteAdministrador"
@@ -85,7 +100,7 @@ export function autorizar(contexto: ContextoComPapel | null, nivel: NivelDeAcess
   }
 
   const ehAcao = nivel.origem === "acao";
-  if (ehAcao && contexto.suporte) return { ok: false, motivo: "SomenteLeitura" };
+  if (ehAcao && contexto.suporte) return autorizarNoSuporte(contexto, nivel);
   if (ehAcao && contexto.administrador && nivel.tipo === "sessao") return { ok: false, motivo: "ContaDeAdministrador" };
   if (nivel.tipo === "sessao") return { ok: true, contexto, membro: membroDo(contexto) };
 
@@ -94,5 +109,35 @@ export function autorizar(contexto: ContextoComPapel | null, nivel: NivelDeAcess
   if (nivel.tipo === "dono") {
     return membro.papel === "DONO" ? { ok: true, contexto, membro } : { ok: false, motivo: "SomenteDono" };
   }
-  return membro.permissoes[nivel.modulo][nivel.acao] ? { ok: true, contexto, membro } : { ok: false, motivo: "SemPermissao" };
+  if (membro.permissoes[nivel.modulo][nivel.acao]) return { ok: true, contexto, membro };
+  // SPEC-019 (5.3): no modo suporte, a tela de uma correção da lista (ex.: o formulário de editar item).
+  const correcao = nivel.correcao === "consulta" ? undefined : nivel.correcao;
+  if (contexto.suporte && correcaoPermitida(correcao, contexto.suporte.modulosComCorrecao) && moduloDaCorrecao(correcao) === nivel.modulo) {
+    return { ok: true, contexto, membro };
+  }
+  return { ok: false, motivo: "SemPermissao" };
+}
+
+/** A matriz do suporte com o módulo em correção liberado, só para o corpo da ação já autorizada. */
+function comOModulo(matriz: Matriz, modulo: Modulo): Matriz {
+  return { ...matriz, [modulo]: { ver: true, criar: true, editar: true, excluir: true } };
+}
+
+/**
+ * SPEC-019 (5.3, 5.4; INV-003): no modo suporte, uma Server Action só passa se o módulo dela estiver em
+ * "ver e corrigir" na liberação ativa (o contexto só traz esses módulos depois da entrada com o código
+ * reconfirmado) e se ela for uma correção da lista fechada ou uma consulta de formulário desse módulo.
+ * Nos outros módulos, continua somente leitura (SPEC-018, INV-002).
+ */
+function autorizarNoSuporte(contexto: ContextoComPapel, nivel: NivelDeAcesso): Autorizacao {
+  const suporte = contexto.suporte!;
+  if (nivel.tipo !== "permissao" || !suporte.modulosComCorrecao.includes(nivel.modulo)) return { ok: false, motivo: "SomenteLeitura" };
+  const membro = membroDo(contexto);
+  if (!membro) return { ok: false, motivo: "SemNegocio" };
+  const permissoes = comOModulo(membro.permissoes, nivel.modulo);
+  if (nivel.correcao === "consulta") return { ok: true, contexto, membro: { ...membro, permissoes } };
+  if (correcaoPermitida(nivel.correcao, suporte.modulosComCorrecao) && moduloDaCorrecao(nivel.correcao) === nivel.modulo) {
+    return { ok: true, contexto, membro: { ...membro, permissoes, correcao: nivel.correcao } };
+  }
+  return { ok: false, motivo: "ForaDaListaDeCorrecoes" };
 }

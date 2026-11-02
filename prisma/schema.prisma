@@ -207,6 +207,8 @@ enum EventoSuporte {
   SEGUNDO_FATOR_CADASTRADO // SPEC-019 (5.1): autenticador cadastrado pelo Administrador
   SEGUNDO_FATOR_REMOVIDO // SPEC-019 (5.1): autenticador removido, com o código reconfirmado
   SEGUNDO_FATOR_REDEFINIDO // SPEC-019 (OPEN-002): fatores apagados pelo workflow, por outra pessoa da equipe
+  CORRECAO // SPEC-019 (5.3): correção do suporte, com o antes e o depois, gravada na mesma transação
+  CORRECAO_DESFEITA // SPEC-019 (5.5): o Dono desfez a correção (aponta a correção em correcaoId)
 }
 
 // ==========================================================
@@ -890,16 +892,17 @@ model HistoricoPlano {
 // SPEC-018 (RF75, RN31): liberação do acesso de suporte pelo Dono — motivo, módulos (só "ver")
 // e prazo. No máximo uma ativa por negócio (a nova revoga a anterior, na mesma transação).
 model AcessoSuporte {
-  id                String    @id @default(uuid()) @db.Uuid
-  negocioId         String    @db.Uuid
-  liberadoPorId     String    @db.Uuid
-  motivo            String    @db.VarChar(300)
-  modulos           String[] // módulos da matriz (SPEC-005) liberados para leitura
-  criadoEm          DateTime  @default(now())
-  expiraEm          DateTime
-  revogadoEm        DateTime?
-  revogadoPorId     String?   @db.Uuid
-  primeiraEntradaEm DateTime? // OPEN-009: e-mail ao Dono só na primeira entrada
+  id                 String    @id @default(uuid()) @db.Uuid
+  negocioId          String    @db.Uuid
+  liberadoPorId      String    @db.Uuid
+  motivo             String    @db.VarChar(300)
+  modulos            String[] // módulos da matriz (SPEC-005) liberados para leitura
+  modulosComCorrecao String[]  @default([]) // SPEC-019 (OPEN-004): subconjunto de modulos em "ver e corrigir"
+  criadoEm           DateTime  @default(now())
+  expiraEm           DateTime
+  revogadoEm         DateTime?
+  revogadoPorId      String?   @db.Uuid
+  primeiraEntradaEm  DateTime? // OPEN-009: e-mail ao Dono só na primeira entrada
 
   negocio     Negocio           @relation(fields: [negocioId], references: [id])
   liberadoPor Usuario           @relation("AcessoLiberadoPor", fields: [liberadoPorId], references: [id])
@@ -913,18 +916,24 @@ model AcessoSuporte {
 // (gatilho he_somente_insercao), guardado por 5 anos (OPEN-010). negocioId nulo só nos
 // eventos de papel (PAPEL_CONCEDIDO / PAPEL_RETIRADO).
 model RegistroSuporte {
-  id        String        @id @default(uuid()) @db.Uuid
-  negocioId String?       @db.Uuid
-  acessoId  String?       @db.Uuid
-  usuarioId String        @db.Uuid
-  evento    EventoSuporte
-  modulo    String?       @db.VarChar(20)
-  descricao String        @db.VarChar(200)
-  criadoEm  DateTime      @default(now())
+  id         String        @id @default(uuid()) @db.Uuid
+  negocioId  String?       @db.Uuid
+  acessoId   String?       @db.Uuid
+  usuarioId  String        @db.Uuid
+  evento     EventoSuporte
+  modulo     String?       @db.VarChar(20)
+  descricao  String        @db.VarChar(200)
+  criadoEm   DateTime      @default(now())
+  /// SPEC-019 (5.3): na correção, a ação, o registro afetado e o antes e o depois (nunca dados pessoais).
+  dados      Json?
+  /// SPEC-019 (5.5): no desfazer, a correção desfeita (no máximo uma vez).
+  correcaoId String?       @db.Uuid
 
-  negocio Negocio?       @relation(fields: [negocioId], references: [id])
-  acesso  AcessoSuporte? @relation(fields: [acessoId], references: [id])
-  usuario Usuario        @relation(fields: [usuarioId], references: [id])
+  negocio   Negocio?          @relation(fields: [negocioId], references: [id])
+  acesso    AcessoSuporte?    @relation(fields: [acessoId], references: [id])
+  usuario   Usuario           @relation(fields: [usuarioId], references: [id])
+  correcao  RegistroSuporte?  @relation("CorrecaoDesfeita", fields: [correcaoId], references: [id], onDelete: Restrict)
+  desfeitas RegistroSuporte[] @relation("CorrecaoDesfeita")
 
   @@index([negocioId, criadoEm])
   @@index([acessoId, criadoEm])

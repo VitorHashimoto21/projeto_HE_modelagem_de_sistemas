@@ -2,6 +2,7 @@ import type { LiberacaoDoContexto } from "@/lib/auth/contexto";
 import type { ContextoDoMembro } from "@/lib/auth/autorizacao";
 import type { MensagemDeEmail } from "@/lib/integracoes/email";
 import type { Modulo } from "@/lib/dominio/permissoes";
+import { MENSAGENS_DO_SEGUNDO_FATOR, reconfirmacaoValida } from "@/lib/dominio/segundo-fator";
 import {
   dataHoraCompleta,
   listaDeModulos,
@@ -24,6 +25,9 @@ export type EstadoDaLiberacao =
 
 export const LIBERACAO_INICIAL: EstadoDaLiberacao = { status: "ocioso" };
 
+/** Desfazer uma correção do suporte (SPEC-019, 5.5): a recusa vem com a explicação para o Dono. */
+export type EstadoDoDesfazer = { status: "ocioso" } | { status: "ok"; mensagem: string } | { status: "erro"; mensagem: string };
+
 export type DependenciasDoDono = {
   membro: ContextoDoMembro;
   agora: () => Date;
@@ -44,7 +48,7 @@ export async function liberar(campos: Record<string, string | undefined>, deps: 
   const criada = await deps.liberar(deps.membro.negocioId, deps.membro.usuarioId, v.dados, agora);
   if (!criada) return { status: "erro", mensagem: MENSAGENS_SUPORTE.negocioEncerrado };
   const dono = await deps.dono(deps.membro.negocioId);
-  if (dono) deps.avisar(emailDeLiberacao(dono, v.dados.modulos, criada.expiraEm, PRAZOS[v.dados.prazo].rotulo, deps.origem));
+  if (dono) deps.avisar(emailDeLiberacao(dono, v.dados.modulos, v.dados.modulosComCorrecao, criada.expiraEm, PRAZOS[v.dados.prazo].rotulo, deps.origem));
   return { status: "ok", mensagem: `${MENSAGENS_SUPORTE.liberado} Vale até ${dataHoraCompleta(criada.expiraEm)}.` };
 }
 
@@ -59,16 +63,20 @@ export async function revogar(acessoId: string, deps: DependenciasDoDono): Promi
 export type DependenciasDoAdministrador = {
   administradorId: string;
   agora: () => Date;
-  liberacaoAtiva: (negocioId: string) => Promise<{ id: string } | null>;
-  entrar: (acessoId: string, administradorId: string, agora: Date) => Promise<{ ok: true; primeira: boolean; negocioId: string } | { ok: false; erro: string }>;
+  liberacaoAtiva: (negocioId: string) => Promise<{ id: string; modulosComCorrecao: Modulo[] } | null>;
+  entrar: (acessoId: string, administradorId: string, agora: Date, reconfirmada: boolean) => Promise<{ ok: true; primeira: boolean; negocioId: string } | { ok: false; erro: string }>;
   liberacao: (acessoId: string) => Promise<LiberacaoDoContexto | null>;
   sair: (negocioId: string, acessoId: string, administradorId: string) => Promise<void>;
+  /** SPEC-019 (5.3, item 5): correções deste Administrador desde a última entrada nesta liberação. */
+  correcoesDaVisita: (acessoId: string, administradorId: string) => Promise<number>;
   dono: (negocioId: string) => Promise<{ nome: string; email: string; negocio: string } | null>;
   avisar: (m: MensagemDeEmail) => void;
   origem: string;
 };
 
-export type ResultadoDaEntrada = { ok: true; acessoId: string; expiraEm: Date; destino: string } | { ok: false; mensagem: string };
+export type ResultadoDaEntrada =
+  | { ok: true; acessoId: string; expiraEm: Date; destino: string }
+  | { ok: false; mensagem: string; reconfirmar?: boolean };
 
 /** Primeira tela do modo suporte: o primeiro módulo liberado, na ordem da matriz. */
 const TELA_INICIAL: Record<Modulo, string> = {
@@ -81,42 +89,61 @@ const TELA_INICIAL: Record<Modulo, string> = {
 };
 const ORDEM_DE_ENTRADA: Modulo[] = ["dashboard", "vendas", "estoque", "catalogo", "financeiro", "calculadora"];
 
-/** Entrar em modo suporte (5.5): só com liberação ativa, conferida e registrada no banco. */
-export async function entrar(negocioId: string, deps: DependenciasDoAdministrador): Promise<ResultadoDaEntrada> {
+/**
+ * Entrar em modo suporte (5.5): só com liberação ativa, conferida e registrada no banco. Na liberação
+ * com correção (SPEC-019, 5.3), só com o código verificado nos últimos 10 min; senão, a tela pede o código.
+ */
+export async function entrar(negocioId: string, deps: DependenciasDoAdministrador, codigoVerificadoEm: Date | null = null): Promise<ResultadoDaEntrada> {
   const ativa = await deps.liberacaoAtiva(negocioId);
   if (!ativa) return { ok: false, mensagem: MENSAGENS_SUPORTE.semLiberacao };
   const agora = deps.agora();
-  const r = await deps.entrar(ativa.id, deps.administradorId, agora);
+  const reconfirmada = reconfirmacaoValida(codigoVerificadoEm, agora);
+  if (ativa.modulosComCorrecao.length > 0 && !reconfirmada) return { ok: false, mensagem: MENSAGENS_DO_SEGUNDO_FATOR.reconfirmar, reconfirmar: true };
+  const r = await deps.entrar(ativa.id, deps.administradorId, agora, reconfirmada);
+  if (!r.ok && r.erro === "Reconfirmar") return { ok: false, mensagem: MENSAGENS_DO_SEGUNDO_FATOR.reconfirmar, reconfirmar: true };
   if (!r.ok) return { ok: false, mensagem: MENSAGENS_SUPORTE.expirou };
   const lida = await deps.liberacao(ativa.id);
   if (!lida) return { ok: false, mensagem: MENSAGENS_SUPORTE.expirou };
   if (r.primeira) {
     const dono = await deps.dono(negocioId);
-    if (dono) deps.avisar(emailDeEntrada(dono, agora, deps.origem));
+    if (dono) deps.avisar(emailDeEntrada(dono, agora, ativa.modulosComCorrecao, deps.origem));
   }
   const primeiro = ORDEM_DE_ENTRADA.find((m) => lida.modulos.includes(m)) ?? "dashboard";
   return { ok: true, acessoId: ativa.id, expiraEm: lida.expiraEm, destino: TELA_INICIAL[primeiro] };
 }
 
-/** Sair do modo suporte (5.5): registra a saída se a liberação ainda existir. */
+/**
+ * Sair do modo suporte (5.5): registra a saída se a liberação ainda existir. SPEC-019 (5.3, item 5): se
+ * o suporte corrigiu algo nesta visita, o Dono recebe o resumo "O suporte fez N correções".
+ */
 export async function sair(acessoId: string | null, deps: DependenciasDoAdministrador): Promise<string | null> {
   if (!acessoId) return null;
   const lida = await deps.liberacao(acessoId);
   if (!lida) return null;
+  const correcoes = await deps.correcoesDaVisita(acessoId, deps.administradorId);
   await deps.sair(lida.negocioId, acessoId, deps.administradorId);
+  if (correcoes > 0) {
+    const dono = await deps.dono(lida.negocioId);
+    if (dono) deps.avisar(emailDasCorrecoes(dono, correcoes, deps.origem));
+  }
   return lida.negocioId;
 }
 
 // ---------------------------------------------------------------- e-mails ao Dono (OPEN-009)
 
-function emailDeLiberacao(dono: { nome: string; email: string; negocio: string }, modulos: Modulo[], expira: Date, prazo: string, origem: string): MensagemDeEmail {
+function emailDeLiberacao(dono: { nome: string; email: string; negocio: string }, modulos: Modulo[], corrigir: Modulo[], expira: Date, prazo: string, origem: string): MensagemDeEmail {
+  // SPEC-019 (5.2): com correção, o e-mail diz o que o suporte pode corrigir e como desfazer.
+  const oQue = corrigir.length
+    ? `para ver ${listaDeModulos(modulos)} e corrigir ${listaDeModulos(corrigir)}, só as ações da lista,`
+    : `para ver (sem alterar) ${listaDeModulos(modulos)}`;
   return {
     para: dono.email,
     assunto: `Você liberou o acesso do suporte ao ${dono.negocio}`,
     texto: [
       `Olá, ${dono.nome}!`,
       "",
-      `Você liberou o suporte do Health Enterprise para ver (sem alterar) ${listaDeModulos(modulos)} do negócio ${dono.negocio}, por ${prazo}: até ${dataHoraCompleta(expira)}.`,
+      `Você liberou o suporte do Health Enterprise ${oQue} do negócio ${dono.negocio}, por ${prazo}: até ${dataHoraCompleta(expira)}.`,
+      ...(corrigir.length ? ["Cada correção aparece em Acessos do suporte na hora, com o antes e o depois, e você pode desfazê-la em até 30 dias."] : []),
       "Os dados dos seus clientes (nome, documento, contato e endereço) e os e-mails da equipe aparecem mascarados para o suporte; os valores desses módulos (vendas e, com Dashboard e Financeiro, o saldo) aparecem normalmente.",
       `Você acompanha cada tela aberta e pode revogar quando quiser em ${origem}/negocio/suporte.`,
       "",
@@ -125,16 +152,31 @@ function emailDeLiberacao(dono: { nome: string; email: string; negocio: string }
   };
 }
 
-function emailDeEntrada(dono: { nome: string; email: string; negocio: string }, quando: Date, origem: string): MensagemDeEmail {
+function emailDeEntrada(dono: { nome: string; email: string; negocio: string }, quando: Date, corrigir: Modulo[], origem: string): MensagemDeEmail {
+  const modo = corrigir.length ? `podendo corrigir ${listaDeModulos(corrigir)}` : "em modo somente leitura";
   return {
     para: dono.email,
     assunto: `O suporte do HE entrou no ${dono.negocio}`,
     texto: [
       `Olá, ${dono.nome}!`,
       "",
-      `O suporte do Health Enterprise entrou no negócio ${dono.negocio} em ${dataHoraCompleta(quando)}, em modo somente leitura, usando o acesso que você liberou.`,
+      `O suporte do Health Enterprise entrou no negócio ${dono.negocio} em ${dataHoraCompleta(quando)}, ${modo}, usando o acesso que você liberou.`,
       `Veja cada tela aberta ou revogue o acesso em ${origem}/negocio/suporte.`,
     ].join("\n"),
   };
 }
 
+/** SPEC-019 (5.3, item 5): resumo das correções, na saída do modo suporte. */
+function emailDasCorrecoes(dono: { nome: string; email: string; negocio: string }, quantas: number, origem: string): MensagemDeEmail {
+  const correcoes = quantas === 1 ? "1 correção" : `${quantas} correções`;
+  return {
+    para: dono.email,
+    assunto: `O suporte fez ${correcoes} no ${dono.negocio}`,
+    texto: [
+      `Olá, ${dono.nome}!`,
+      "",
+      `O suporte do Health Enterprise fez ${correcoes} no negócio ${dono.negocio}, usando o acesso que você liberou.`,
+      `Veja o antes e o depois de cada uma em ${origem}/negocio/suporte. Você pode desfazer cada correção em até 30 dias.`,
+    ].join("\n"),
+  };
+}

@@ -4,11 +4,13 @@ import { exigirPermissao } from "@/lib/auth/servidor";
 import { podeCriarSubcategoria } from "@/lib/catalogo/validacao";
 import { catalogo } from "@/lib/db";
 import { pode } from "@/lib/dominio/permissoes";
+import { corrige } from "@/lib/dominio/correcoes";
 
 export const metadata: Metadata = { title: "Subcategorias" };
 
 // Subcategorias do negócio (SPEC-020, 5.3): Catálogo — ver. Criar com Catálogo — criar ou editar,
-// renomear com editar e excluir com excluir (OPEN-005); no modo suporte, só a lista.
+// renomear com editar e excluir com excluir (OPEN-005); no modo suporte, só a lista, e com o Catálogo
+// em "ver e corrigir", também criar e renomear (SPEC-019, 5.4).
 export default async function Subcategorias() {
   const membro = await exigirPermissao("catalogo", "ver");
   const subcategorias = await catalogo(membro).subcategorias();
@@ -17,8 +19,8 @@ export default async function Subcategorias() {
     <GestaoDeSubcategorias
       descricao="Organize o catálogo dentro de cada categoria. A margem sugerida continua a da categoria."
       subcategorias={subcategorias}
-      podeCriar={!somenteLeitura && podeCriarSubcategoria(membro.permissoes)}
-      podeRenomear={!somenteLeitura && pode(membro.permissoes, "catalogo", "editar")}
+      podeCriar={(!somenteLeitura && podeCriarSubcategoria(membro.permissoes)) || corrige(membro, "catalogo.criarSubcategoria")}
+      podeRenomear={(!somenteLeitura && pode(membro.permissoes, "catalogo", "editar")) || corrige(membro, "catalogo.renomearSubcategoria")}
       podeExcluir={!somenteLeitura && pode(membro.permissoes, "catalogo", "excluir")}
       podeCriarItem={!somenteLeitura && pode(membro.permissoes, "catalogo", "criar")}
     />

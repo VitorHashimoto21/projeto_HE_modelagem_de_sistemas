@@ -2,7 +2,7 @@
 
 A SPEC-019 é implementada em quatro etapas, por decisão da equipe (02/11/2026), cada uma com os próprios testes e a própria PR:
 1. 2º fator do Administrador;
-2. correções e desfazer;
+2. correções e desfazer, em duas partes: 2a (o mecanismo, o Catálogo e o Estoque) e 2b (a Calculadora e o Financeiro);
 3. emergência e troca de plano;
 4. suspensão, nova versão da Política e dos Termos, e homologação (T17).
 
@@ -82,3 +82,73 @@ O banco recebeu a migração `20261102120000_segundo_fator`, que só acrescenta 
 - **Lista "Administradores" no painel (5.9):** com quantos autenticadores cada conta tem. Entra na etapa 3, junto com os pedidos que precisam de duas pessoas.
 - **Política e Termos:** a nova versão sai na etapa 4, com um único novo aceite.
 - **Modelo lógico de dados:** atualizado na etapa 4, com as entidades novas da SPEC-019.
+
+## Etapa 2a — correções do suporte no Catálogo e no Estoque, e o desfazer (02/11/2026)
+
+Verificação em build de produção local, no mesmo ambiente da etapa 1: Postgres local e o Supabase Auth falso. Os dados são fictícios:
+- o Dono e o negócio **HE Testing** das evidências anteriores;
+- a conta de Administrador `suporte@exemplo.com` ("Equipe de Suporte");
+- o item **Caneta azul**, com custo de R$ 40,00 e preço de R$ 50,00.
+
+O banco recebeu a migração `20261102180000_correcoes_do_suporte`, que só acrescenta:
+- os eventos `CORRECAO` e `CORRECAO_DESFEITA`;
+- `AcessoSuporte.modulosComCorrecao`, vazio nas liberações que já existem (continuam só de leitura);
+- `RegistroSuporte.dados` (a ação, o registro, o antes e o depois) e `RegistroSuporte.correcaoId` (o desfazer aponta a correção);
+- checagens no banco:
+  - os módulos em correção estão entre os liberados e entre os que têm correções;
+  - com correção, o prazo é de até 12 h;
+  - a correção sempre tem os dados e a liberação;
+  - cada correção é desfeita no máximo uma vez;
+  - o desfazer só aponta uma correção do mesmo negócio.
+
+### Testes automatizados
+
+| # | Teste | Onde | Resultado |
+|---|---|---|---|
+| T02 | A lista fechada num lugar só: as oito correções da etapa, cada uma com o desfazer. As Server Actions marcadas no código são exatamente as da lista, uma vez cada e no módulo certo. Só as consultas do NCM são marcadas como consulta. Vendas, clientes e fornecedores nunca são marcados | `test/unit/correcoes.test.ts` | ✅ |
+| T02, CA-06 | Liberação: com correção, só 1 h ou 12 h; sem ela, os prazos de leitura. Corrigir só os módulos marcados que têm correções | idem | ✅ |
+| T02, CA-07, INV-003 | Autorização no modo suporte: <ul><li>as correções da lista passam no módulo em correção;</li><li>fora da lista: `ForaDaListaDeCorrecoes`;</li><li>nos módulos só em "ver" e no resto: `SomenteLeitura`;</li><li>a busca do NCM só no módulo em correção;</li><li>sem a entrada com o código reconfirmado nesta sessão (outra sessão, depois da saída, outra conta): só leitura;</li><li>para os membros, a marca não muda nada</li></ul> | idem e `test/integracao/correcoes.test.ts` | ✅ |
+| 5.3, item 1 | Entrar na liberação com correção pede o código dos últimos 10 min; a entrada fica registrada como reconfirmada | idem | ✅ |
+| T03, CA-08, INV-004 | Pelas Server Actions da aplicação, com o banco: <ul><li>cada correção grava o evento `CORRECAO` com o antes e o depois só dos campos alterados, na mesma transação;</li><li>sem mudança (mesmo valor, erro de validação), nada é registrado;</li><li>falha forçada no registro: a correção não é gravada</li></ul> | `test/integracao/correcoes.test.ts` | ✅ |
+| T04, CA-09, INV-005 | Desfazer, por ação da lista: <ul><li>custo e campos do item;</li><li>preço (novo registro; sem preço antes, recusa);</li><li>arquivar e reativar (código em uso, recusa com a mensagem do Catálogo);</li><li>criar subcategoria (com itens, recusa) e renomear;</li><li>entrada (saída de 10; saldo insuficiente, recusa), saída e mínimo</li></ul>Também: <ul><li>registro mudado, recusa; outro campo mudado não impede;</li><li>30 dias, uma vez, só o Dono, só o próprio negócio</li></ul> | idem | ✅ |
+| 5.3, item 5 | O resumo ao Dono na saída conta só as correções desta visita, deste Administrador | `test/unit/correcoes.test.ts` e `test/integracao/correcoes.test.ts` | ✅ |
+
+**Suíte completa:** 644 testes unitários e 337 de integração passaram, além de lint, tipos e a checagem do schema (`migrate diff` sem diferença).
+
+**Testes antigos ajustados:**
+- as guardas das ações do NCM e das subcategorias passaram a levar a marca da correção;
+- a ficha do painel mostra também os módulos em correção da liberação.
+
+### Roteiro no navegador (parte do T14 e do T15)
+
+59 verificações, todas aprovadas (`scratchpad/e2e19a/spec19a.mjs`).
+
+| Passo | Resultado | Captura |
+|---|---|---|
+| **Gaveta da liberação (5.2, CA-06):** <ul><li>Catálogo e Estoque oferecem "Ver" (padrão) e "Ver e corrigir"; Vendas, não;</li><li>com "Ver e corrigir", a lista do que o suporte poderá alterar e o texto do desfazer em 30 dias;</li><li>os prazos passam a ser 1 h (marcado) e 12 h</li></ul> | ✅ | `s19a_01_gaveta_ver_e_corrigir_*` |
+| **Faixa dos membros:** "O suporte do HE pode ver … e corrigir Catálogo até …"; a liberação mostra o nível de cada módulo | ✅ | `s19a_04_*` |
+| **Entrada com o código (5.3, item 1):** <ul><li>a ficha do painel mostra "Corrigir: Catálogo";</li><li>com o último código de mais de 10 min, "Entrar em modo suporte" abre o diálogo do código, e nada é registrado antes;</li><li>com o código, entra e o registro guarda a entrada reconfirmada</li></ul> | ✅ | `s19a_02_entrada_pede_codigo_1440_claro.png` |
+| **Só os botões da lista (5.3, item 2; CA-07):** <ul><li>a faixa diz "pode corrigir: Catálogo";</li><li>Vendas e Estoque (só ver) sem botões;</li><li>Catálogo sem "Novo item";</li><li>o item com "Editar item", "Definir o preço" e "Arquivar item"</li></ul> | ✅ | `s19a_03_item_no_suporte_*` |
+| **Correção (CA-08):** <ul><li>o custo passa de R$ 40,00 a R$ 42,00, e o evento guarda só o custo;</li><li>o preço passa a R$ 55,00, e o histórico mostra "Equipe de Suporte (suporte do HE)"</li></ul> | ✅ | — |
+| **"Acessos do suporte" (5.10):** as duas correções na hora, com o campo, o antes, o depois e quem corrigiu | ✅ | `s19a_04_acessos_com_correcoes_*` |
+| **Desfazer recusado (5.5, item 4):** o Dono mudou o custo depois da correção. O diálogo diz o que o desfazer faz, e a recusa explica: "Caneta azul mudou depois da correção. Ajuste direto em Catálogo." O custo do Dono fica | ✅ | `s19a_05_confirmar_desfazer_1440_claro.png`, `s19a_06_desfazer_recusado_1440_claro.png` |
+| **Desfazer o preço (CA-09):** <ul><li>o preço volta a R$ 50,00;</li><li>o histórico mantém 50, 55 e 50;</li><li>o cartão mostra "Desfeita por …", e o registro, o desfazer em nome do Dono</li></ul> | ✅ | `s19a_07_desfeita_*` |
+| **Saída:** registrada; a correção vale só até ela | ✅ | — |
+| Sem rolagem horizontal em 390, 768 e 1440 px. Axe sem violações nos temas claro e escuro, em 390 e 1440 px: gaveta da liberação e "Acessos do suporte" | ✅ | todas |
+
+**Dados nas capturas:** o negócio, o item, as contas e os nomes são fictícios.
+
+### Decisões tomadas na implementação
+
+- **Antes e depois:** o evento guarda só os campos que a correção mudou (5.3, item 4). O desfazer confere o estado atual nesses campos. Outro campo mudado depois não impede o desfazer e continua como está.
+- **Transação única:** as funções do módulo abrem as próprias transações. Dentro da correção, cada uma vira um passo da transação da correção, e o evento entra na mesma transação.
+- **Reconfirmação da entrada:** vale para a entrada nesta sessão, até a saída, a expiração ou a revogação. Se o Administrador entrar de novo com a senha, a faixa avisa "para corrigir, saia e entre de novo".
+- **Telas da correção:** no modo suporte, abrem só as telas das ações da lista: editar item, registrar entrada e registrar saída.
+- **Calculadora e Financeiro:** a gaveta só oferece "Ver e corrigir" para eles na etapa 2b, junto com as correções deles.
+- **E-mails ao Dono:** a liberação e a primeira entrada dizem o que o suporte pode corrigir. Na saída, o Dono recebe "O suporte fez N correções", se houve alguma.
+
+### Fica para as próximas etapas
+
+- **Etapa 2b:** as correções da Calculadora e do Financeiro (OPEN-015 e OPEN-016, vínculo da conta mantido).
+- **Negócio suspenso (OPEN-018):** a recusa da correção e do desfazer entra na etapa 4, com a suspensão.
+

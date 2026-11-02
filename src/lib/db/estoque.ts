@@ -14,6 +14,7 @@ import {
 import { custoNaData, quantidadeNaData, type ProdutoNaData, type RegistroDeCusto } from "@/lib/dominio/inventario";
 import { condicaoDaBusca, condicaoDaSubcategoria, ItemNaoEncontrado, type SubcategoriaDoItem } from "./catalogo";
 import type { ClienteDoNegocio } from "./cliente-do-negocio";
+import { autorDoHistorico } from "./autor";
 
 /**
  * Estoque do negócio ativo (SPEC-007). Leituras e escritas pelo cliente do negócio; as
@@ -299,7 +300,7 @@ export function criarConsultasDoEstoque(cliente: ClienteDoNegocio, negocioId: st
         orderBy: { registradoEm: "desc" },
         skip: (atual - 1) * MOVIMENTACOES_POR_PAGINA,
         take: MOVIMENTACOES_POR_PAGINA,
-        include: { usuario: { select: { nome: true } } },
+        include: { usuario: { select: { nome: true, administradorEm: true } } },
       });
       const r = mapa.get(id) ?? VAZIO;
       return {
@@ -316,7 +317,7 @@ export function criarConsultasDoEstoque(cliente: ClienteDoNegocio, negocioId: st
           quantidade: num(m.quantidade)!,
           saldoAnterior: num(m.saldoAnterior)!,
           saldoPosterior: num(m.saldoPosterior)!,
-          usuario: m.usuario.nome,
+          usuario: autorDoHistorico(m.usuario),
           data: m.data,
           registradoEm: m.registradoEm,
           observacao: m.observacao,

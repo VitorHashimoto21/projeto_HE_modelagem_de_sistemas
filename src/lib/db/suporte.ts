@@ -24,7 +24,7 @@ export type NegocioNoPainel = {
   membros: number;
   encerrado: boolean;
   dono: { nome: string; email: string } | null;
-  liberacao: { id: string; motivo: string; modulos: Modulo[]; expiraEm: Date } | null;
+  liberacao: { id: string; motivo: string; modulos: Modulo[]; modulosComCorrecao: Modulo[]; expiraEm: Date } | null;
 };
 
 export type EventoDoRegistro = { id: string; evento: EventoSuporte; modulo: string | null; descricao: string; criadoEm: Date; autor: string };
@@ -33,6 +33,8 @@ export type LiberacaoDoNegocio = {
   id: string;
   motivo: string;
   modulos: Modulo[];
+  /** SPEC-019 (5.10): o nível de cada módulo — estes em "ver e corrigir". */
+  modulosComCorrecao: Modulo[];
   criadoEm: Date;
   expiraEm: Date;
   revogadoEm: Date | null;
@@ -50,7 +52,7 @@ export type ResultadoDaRetirada = { ok: true; naoEra: boolean } | { ok: false; e
 /** SPEC-019 (OPEN-002): conta cujo 2º fator a equipe vai redefinir pelo workflow. */
 export type ContaParaRedefinir = { ok: true; usuarioId: string } | { ok: false; erro: "ContaInexistente" | "NaoEAdministrador" };
 
-export type ResultadoDaEntrada = { ok: true; primeira: boolean; negocioId: string } | { ok: false; erro: "SemLiberacao" | "Expirada" };
+export type ResultadoDaEntrada = { ok: true; primeira: boolean; negocioId: string } | { ok: false; erro: "SemLiberacao" | "Expirada" | "Reconfirmar" };
 
 /** Liberação ativa: não revogada, não vencida e de negócio não encerrado. */
 const ativa = (agora: Date) => ({ revogadoEm: null, expiraEm: { gt: agora }, negocio: { encerradoEm: null } });
@@ -68,23 +70,47 @@ export function criarConsultasDeSuporte(cliente: PrismaClient) {
   return {
     // ---------------------------------------------------------------- contexto (INV-001)
 
-    async liberacaoDoContexto(acessoId: string): Promise<LiberacaoDoContexto | null> {
+    /**
+     * A liberação do cookie, conferida no banco. Com `administradorId` e módulos em correção, diz também
+     * quando esse Administrador entrou com o código reconfirmado (SPEC-019, 5.3): a última entrada dele
+     * nessa liberação, se não houve saída depois.
+     */
+    async liberacaoDoContexto(acessoId: string, administradorId?: string): Promise<LiberacaoDoContexto | null> {
       const l = await cliente.acessoSuporte.findUnique({
         where: { id: acessoId },
-        select: { id: true, negocioId: true, modulos: true, expiraEm: true, revogadoEm: true, negocio: { select: { nome: true, encerradoEm: true } } },
+        select: { id: true, negocioId: true, modulos: true, modulosComCorrecao: true, expiraEm: true, revogadoEm: true, negocio: { select: { nome: true, encerradoEm: true } } },
       });
       if (!l) return null;
-      return { id: l.id, negocioId: l.negocioId, negocio: l.negocio.nome, negocioEncerrado: l.negocio.encerradoEm !== null, modulos: l.modulos, expiraEm: l.expiraEm, revogadoEm: l.revogadoEm };
+      const ultima =
+        administradorId && (l.modulosComCorrecao ?? []).length > 0
+          ? await cliente.registroSuporte.findFirst({
+              where: { acessoId, usuarioId: administradorId, evento: { in: ["ENTRADA", "SAIDA"] } },
+              orderBy: { criadoEm: "desc" },
+              select: { evento: true, dados: true, criadoEm: true },
+            })
+          : null;
+      const reconfirmada = ultima?.evento === "ENTRADA" && (ultima.dados as { reconfirmada?: unknown } | null)?.reconfirmada === true;
+      return {
+        entradaComCorrecaoEm: reconfirmada ? ultima.criadoEm : null,
+        id: l.id,
+        negocioId: l.negocioId,
+        negocio: l.negocio.nome,
+        negocioEncerrado: l.negocio.encerradoEm !== null,
+        modulos: l.modulos,
+        modulosComCorrecao: l.modulosComCorrecao ?? [],
+        expiraEm: l.expiraEm,
+        revogadoEm: l.revogadoEm,
+      };
     },
 
     /** Liberação ativa do negócio, para a faixa dos membros (5.6). */
-    async liberacaoAtiva(negocioId: string, agora: Date): Promise<{ id: string; modulos: Modulo[]; expiraEm: Date } | null> {
+    async liberacaoAtiva(negocioId: string, agora: Date): Promise<{ id: string; modulos: Modulo[]; modulosComCorrecao: Modulo[]; expiraEm: Date } | null> {
       const l = await comNegocio(cliente, { negocioId }).acessoSuporte.findFirst({
         where: { revogadoEm: null, expiraEm: { gt: agora } },
         orderBy: { criadoEm: "desc" },
-        select: { id: true, modulos: true, expiraEm: true },
+        select: { id: true, modulos: true, modulosComCorrecao: true, expiraEm: true },
       });
-      return l && { id: l.id, modulos: modulosValidos(l.modulos), expiraEm: l.expiraEm };
+      return l && { id: l.id, modulos: modulosValidos(l.modulos), modulosComCorrecao: modulosValidos(l.modulosComCorrecao ?? []), expiraEm: l.expiraEm };
     },
 
     // ---------------------------------------------------------------- Dono (5.4, 5.6)
@@ -105,10 +131,11 @@ export function criarConsultasDeSuporte(cliente: PrismaClient) {
         }
         const expira = calcularExpiracao(agora, dados.prazo);
         const nova = await db.acessoSuporte.create({
-          data: { negocioId, liberadoPorId: donoId, motivo: dados.motivo, modulos: dados.modulos, criadoEm: agora, expiraEm: expira },
+          data: { negocioId, liberadoPorId: donoId, motivo: dados.motivo, modulos: dados.modulos, modulosComCorrecao: dados.modulosComCorrecao, criadoEm: agora, expiraEm: expira },
           select: { id: true, expiraEm: true },
         });
-        await registrar(db, { negocioId, acessoId: nova.id, usuarioId: donoId, evento: "LIBERACAO", descricao: `Liberou ${listaDeModulos(dados.modulos)} até ${dataHoraCompleta(expira)}`, criadoEm: agora });
+        const correcao = dados.modulosComCorrecao.length ? ` (corrigir ${listaDeModulos(dados.modulosComCorrecao)})` : "";
+        await registrar(db, { negocioId, acessoId: nova.id, usuarioId: donoId, evento: "LIBERACAO", descricao: `Liberou ${listaDeModulos(dados.modulos)}${correcao} até ${dataHoraCompleta(expira)}`, criadoEm: agora });
         return nova;
       });
     },
@@ -133,6 +160,7 @@ export function criarConsultasDeSuporte(cliente: PrismaClient) {
           id: true,
           motivo: true,
           modulos: true,
+          modulosComCorrecao: true,
           criadoEm: true,
           expiraEm: true,
           revogadoEm: true,
@@ -145,6 +173,7 @@ export function criarConsultasDeSuporte(cliente: PrismaClient) {
         id: l.id,
         motivo: l.motivo,
         modulos: modulosValidos(l.modulos),
+        modulosComCorrecao: modulosValidos(l.modulosComCorrecao ?? []),
         criadoEm: l.criadoEm,
         expiraEm: l.expiraEm,
         revogadoEm: l.revogadoEm,
@@ -185,17 +214,25 @@ export function criarConsultasDeSuporte(cliente: PrismaClient) {
       return n && paraPainel(n);
     },
 
-    /** Entrada em modo suporte (5.5): confere a liberação, marca a primeira entrada e registra. */
-    async entrar(acessoId: string, administradorId: string, agora: Date): Promise<ResultadoDaEntrada> {
+    /**
+     * Entrada em modo suporte (5.5): confere a liberação, marca a primeira entrada e registra. Na
+     * liberação com correção (SPEC-019, 5.3), só com o código reconfirmado, que fica no registro da entrada.
+     */
+    async entrar(acessoId: string, administradorId: string, agora: Date, reconfirmada = false): Promise<ResultadoDaEntrada> {
       const alvo = await cliente.acessoSuporte.findUnique({ where: { id: acessoId }, select: { negocioId: true } });
       if (!alvo) return { ok: false, erro: "SemLiberacao" };
       const negocioId = alvo.negocioId;
       return comNegocio(cliente, { negocioId }).$transaction(async (db) => {
         // Marca a primeira entrada só uma vez, mesmo com duas entradas simultâneas (OPEN-009).
-        const ainda = await db.acessoSuporte.findFirst({ where: { id: acessoId, ...ativa(agora) }, select: { id: true } });
+        const ainda = await db.acessoSuporte.findFirst({ where: { id: acessoId, ...ativa(agora) }, select: { id: true, modulosComCorrecao: true } });
         if (!ainda) return { ok: false, erro: "Expirada" } as const;
+        const correcao = modulosValidos(ainda.modulosComCorrecao ?? []);
+        if (correcao.length > 0 && !reconfirmada) return { ok: false, erro: "Reconfirmar" } as const;
         const primeira = (await db.acessoSuporte.updateMany({ where: { id: acessoId, primeiraEntradaEm: null }, data: { primeiraEntradaEm: agora } })).count === 1;
-        await registrar(db, { negocioId, acessoId, usuarioId: administradorId, evento: "ENTRADA", descricao: "Entrou em modo suporte (somente leitura)", criadoEm: agora });
+        const descricao = correcao.length > 0 ? `Entrou em modo suporte com o código reconfirmado (pode corrigir ${listaDeModulos(correcao)})` : "Entrou em modo suporte (somente leitura)";
+        await db.registroSuporte.create({
+          data: { negocioId, acessoId, usuarioId: administradorId, evento: "ENTRADA", descricao: descricao.slice(0, 200), criadoEm: agora, dados: correcao.length > 0 ? { reconfirmada: true } : undefined },
+        });
         return { ok: true, primeira, negocioId } as const;
       });
     },
@@ -215,6 +252,13 @@ export function criarConsultasDeSuporte(cliente: PrismaClient) {
         if (c) descricao = `Financeiro — conta "${c.descricao}"`;
       }
       await registrar(db, { negocioId, acessoId, usuarioId: administradorId, evento: "TELA", modulo: tela.modulo, descricao });
+    },
+
+    /** SPEC-019 (5.3, item 5): correções deste Administrador desde a última entrada nesta liberação. */
+    async correcoesDaVisita(acessoId: string, administradorId: string): Promise<number> {
+      const entrada = await cliente.registroSuporte.findFirst({ where: { acessoId, usuarioId: administradorId, evento: "ENTRADA" }, orderBy: { criadoEm: "desc" }, select: { criadoEm: true } });
+      if (!entrada) return 0;
+      return cliente.registroSuporte.count({ where: { acessoId, usuarioId: administradorId, evento: "CORRECAO", criadoEm: { gte: entrada.criadoEm } } });
     },
 
     async sair(negocioId: string, acessoId: string, administradorId: string): Promise<void> {
@@ -321,7 +365,7 @@ const SELECAO_DO_PAINEL = (agora: Date) =>
       where: { revogadoEm: null, expiraEm: { gt: agora } },
       orderBy: { criadoEm: "desc" },
       take: 1,
-      select: { id: true, motivo: true, modulos: true, expiraEm: true },
+      select: { id: true, motivo: true, modulos: true, modulosComCorrecao: true, expiraEm: true },
     },
   }) as const;
 
@@ -334,7 +378,7 @@ type LinhaDoPainel = {
   encerradoEm: Date | null;
   _count: { membros: number };
   membros: { usuario: { nome: string; email: string; excluidoEm: Date | null } }[];
-  acessosSuporte: { id: string; motivo: string; modulos: string[]; expiraEm: Date }[];
+  acessosSuporte: { id: string; motivo: string; modulos: string[]; modulosComCorrecao: string[]; expiraEm: Date }[];
 };
 
 function paraPainel(n: LinhaDoPainel): NegocioNoPainel {
@@ -349,7 +393,7 @@ function paraPainel(n: LinhaDoPainel): NegocioNoPainel {
     membros: n._count.membros,
     encerrado: n.encerradoEm !== null,
     dono: dono && !dono.excluidoEm ? { nome: dono.nome, email: dono.email } : null,
-    liberacao: l ? { id: l.id, motivo: l.motivo, modulos: modulosValidos(l.modulos), expiraEm: l.expiraEm } : null,
+    liberacao: l ? { id: l.id, motivo: l.motivo, modulos: modulosValidos(l.modulos), modulosComCorrecao: modulosValidos(l.modulosComCorrecao ?? []), expiraEm: l.expiraEm } : null,
   };
 }
 

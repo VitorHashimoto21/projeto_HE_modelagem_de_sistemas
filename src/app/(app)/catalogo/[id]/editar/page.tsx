@@ -11,7 +11,8 @@ export const metadata: Metadata = { title: "Editar item" };
 
 // Edição do item (SPEC-006, 5.3): Catálogo — editar. O tipo e o preço não mudam aqui.
 export default async function EditarItem({ params, searchParams }: PageProps<"/catalogo/[id]/editar">) {
-  const membro = await exigirPermissao("catalogo", "editar");
+  // SPEC-019 (5.4): no modo suporte, também com o Catálogo em "ver e corrigir".
+  const membro = await exigirPermissao("catalogo", "editar", "catalogo.editarItem");
   const [{ id }, p] = await Promise.all([params, searchParams]);
   // O retorno do detalhe segue pela edição (SPEC-020, correção da homologação T12).
   const retorno = retornoSeguro(p.voltar, "") || null;
