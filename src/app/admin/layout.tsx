@@ -4,6 +4,7 @@ import { Logo } from "@/components/marca/logo";
 import { FaixaDoModoSuporte } from "@/components/suporte/faixas";
 import { AlternarTema } from "@/components/tema/alternar-tema";
 import { AvisoDaPagina } from "@/components/ui/aviso";
+import { AvisosFlutuantes } from "@/components/ui/avisos-flutuantes";
 import { classeDoBotao } from "@/components/ui/estilos";
 import { acaoSair } from "@/lib/auth/acoes";
 import { adaptadorDoServidor, exigirAdministrador } from "@/lib/auth/servidor";
@@ -54,6 +55,7 @@ export default async function LayoutDoAdministrador({ children }: LayoutProps<"/
       <footer className="mx-auto flex w-full max-w-[1280px] justify-end px-4 pb-6 sm:px-6 lg:px-10">
         <AlternarTema />
       </footer>
+      <AvisosFlutuantes />
     </div>
   );
 }

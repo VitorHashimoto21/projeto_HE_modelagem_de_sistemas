@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { LifeBuoy } from "lucide-react";
+import { ArrowLeftRight, LifeBuoy } from "lucide-react";
 import { CorrecoesDoSuporte } from "@/components/suporte/correcoes-do-suporte";
 import { LiberarAcesso } from "@/components/suporte/liberar-acesso";
 import { RevogarAcesso } from "@/components/suporte/revogar-acesso";
@@ -9,7 +9,9 @@ import { EstadoVazio } from "@/components/ui/estado-vazio";
 import { Selo, type TomDoSelo } from "@/components/ui/selo";
 import { Superficie } from "@/components/ui/superficie";
 import { exigirDono } from "@/lib/auth/servidor";
-import { correcoes as correcoesDoSuporte, suporte, type CorrecaoDoNegocio, type EventoDoRegistro } from "@/lib/db";
+import { correcoes as correcoesDoSuporte, plataforma, suporte, type CorrecaoDoNegocio, type EventoDoRegistro, type LiberacaoDoNegocio, type PedidoDaPlataforma } from "@/lib/db";
+import { ROTULO_MOTIVO_DA_TROCA, type SituacaoDoPedido } from "@/lib/dominio/plataforma";
+import { ROTULO_PLANO } from "@/lib/dominio/planos";
 import { dataHoraCompleta, dataHoraCurta, listaDeModulos, situacaoDaLiberacao, type SituacaoDaLiberacao } from "@/lib/dominio/suporte";
 
 export const metadata: Metadata = { title: "Acesso do suporte" };
@@ -19,6 +21,58 @@ const SITUACAO: Record<SituacaoDaLiberacao, { rotulo: string; tom: TomDoSelo }> 
   EXPIRADA: { rotulo: "Expirada", tom: "neutro" },
   REVOGADA: { rotulo: "Revogada", tom: "neutro" },
 };
+
+const SITUACAO_DO_PEDIDO: Record<SituacaoDoPedido, { rotulo: string; tom: TomDoSelo }> = {
+  PENDENTE: { rotulo: "Aguardando aprovação", tom: "atencao" },
+  APROVADO: { rotulo: "Plano trocado", tom: "ok" },
+  RECUSADO: { rotulo: "Recusado", tom: "neutro" },
+  CANCELADO: { rotulo: "Cancelado", tom: "neutro" },
+  EXPIRADO: { rotulo: "Expirado", tom: "neutro" },
+};
+
+/** Como terminou o pedido de troca de plano, para o Dono (SPEC-019, 5.10). */
+function desfechoParaODono(p: PedidoDaPlataforma): string {
+  const quando = p.decididoEm ? dataHoraCurta(p.decididoEm) : "";
+  switch (p.situacao) {
+    case "PENDENTE":
+      return `Aguarda a aprovação de outra pessoa da equipe do HE até ${dataHoraCurta(p.expiraEm)}. Nada muda antes disso.`;
+    case "APROVADO":
+      return `Aprovado por ${p.decididoPor ?? "outra pessoa"} (suporte do HE) em ${quando}: o plano mudou.`;
+    case "RECUSADO":
+      return `Recusado por ${p.decididoPor ?? "outra pessoa"} (suporte do HE) em ${quando}: ${(p.motivoDaRecusa ?? "").replace(/[.!]+$/, "")}. O plano não mudou.`;
+    case "CANCELADO":
+      return `Cancelado por quem pediu em ${quando}. O plano não mudou.`;
+    case "EXPIRADO":
+      return `Expirou sem aprovação em ${quando}. O plano não mudou.`;
+  }
+}
+
+/** Uma troca de plano pedida pela plataforma (SPEC-019, 5.8 e 5.10), na linha do tempo do Dono. */
+function PedidoDePlano({ p }: { p: PedidoDaPlataforma }) {
+  const situacao = SITUACAO_DO_PEDIDO[p.situacao];
+  return (
+    <Superficie tom={p.situacao === "PENDENTE" ? "atencao" : "cartao"} aria-labelledby={`pedido-${p.id}`}>
+      <div className="min-w-0 space-y-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <Selo tom={situacao.tom}>{situacao.rotulo}</Selo>
+          <h2 id={`pedido-${p.id}`} className="flex items-center gap-1.5 text-[15px] font-bold text-current">
+            <ArrowLeftRight className="size-4 shrink-0" aria-hidden="true" />
+            Troca de plano pela plataforma{p.plano ? `: para o ${ROTULO_PLANO[p.plano.para].toLowerCase()}` : ""}
+          </h2>
+        </div>
+        {p.plano && (
+          <p className="text-sm break-words">
+            <span className="font-semibold">Motivo:</span> {ROTULO_MOTIVO_DA_TROCA[p.plano.motivo]} — {p.plano.descricao}
+          </p>
+        )}
+        <p className="text-sm text-muted-foreground">
+          Pedido por {p.solicitadoPor} (suporte do HE) em {dataHoraCompleta(p.criadoEm)}
+        </p>
+        <p className="text-sm break-words">{desfechoParaODono(p)}</p>
+      </div>
+    </Superficie>
+  );
+}
 
 /** Texto de cada evento do registro, do ponto de vista do Dono. */
 function textoDoEvento(e: EventoDoRegistro): string {
@@ -48,11 +102,17 @@ function textoDoEvento(e: EventoDoRegistro): string {
 export default async function AcessoDoSuporte({ searchParams }: PageProps<"/negocio/suporte">) {
   const { negocioId } = await exigirDono();
   const agora = new Date();
-  const [liberacoes, correcoes, { revogado, erro }] = await Promise.all([
+  const [liberacoes, correcoes, pedidos, { revogado, erro }] = await Promise.all([
     suporte().liberacoesDoNegocio(negocioId),
     correcoesDoSuporte().correcoesDoNegocio(negocioId, agora),
+    plataforma().pedidosDoNegocio(negocioId, agora),
     searchParams,
   ]);
+  // SPEC-019 (5.10): liberações e trocas de plano pela plataforma numa só linha do tempo, da mais nova à mais antiga.
+  const linha: ({ tipo: "liberacao"; l: LiberacaoDoNegocio } | { tipo: "plano"; p: PedidoDaPlataforma })[] = [
+    ...liberacoes.map((l) => ({ tipo: "liberacao" as const, l })),
+    ...pedidos.filter((p) => p.tipo === "PLANO").map((p) => ({ tipo: "plano" as const, p })),
+  ].sort((a, b) => (b.tipo === "liberacao" ? b.l.criadoEm : b.p.criadoEm).getTime() - (a.tipo === "liberacao" ? a.l.criadoEm : a.p.criadoEm).getTime());
   const ativa = liberacoes.find((l) => situacaoDaLiberacao(l, agora) === "ATIVA");
   const porLiberacao = new Map<string, CorrecaoDoNegocio[]>();
   for (const c of correcoes) if (c.acessoId) porLiberacao.set(c.acessoId, [...(porLiberacao.get(c.acessoId) ?? []), c]);
@@ -61,22 +121,29 @@ export default async function AcessoDoSuporte({ searchParams }: PageProps<"/nego
     <div className="space-y-6">
       <CabecalhoDePagina
         titulo="Acesso do suporte"
-        descricao="Quando precisar de ajuda, libere o suporte do HE para ver os módulos que você escolher, por um prazo, e, se quiser, corrigir alguns deles. O suporte nunca entra sem a sua liberação, e você pode desfazer cada correção."
+        descricao="Quando precisar de ajuda, libere o suporte do HE para ver os módulos que você escolher, por um prazo, e, se quiser, corrigir alguns deles. O suporte nunca entra sem a sua liberação, e você pode desfazer cada correção. As trocas de plano feitas pela plataforma também aparecem aqui."
         acoes={<LiberarAcesso substitui={Boolean(ativa)} />}
       />
 
       {revogado && <AvisoDaPagina tom="sucesso">Acesso do suporte revogado.</AvisoDaPagina>}
       {erro && <AvisoDaPagina tom="erro">Este acesso já tinha terminado. Atualize a página.</AvisoDaPagina>}
 
-      {liberacoes.length === 0 ? (
+      {linha.length === 0 ? (
         <Superficie>
           <EstadoVazio Icone={LifeBuoy} titulo="Nenhum acesso liberado ainda">
             Os dados dos seus clientes (nome, documento, contato e endereço) e os e-mails da equipe aparecem mascarados para o suporte, e cada tela aberta fica registrada aqui.
           </EstadoVazio>
         </Superficie>
       ) : (
-        <ul className="space-y-4" aria-label="Liberações do suporte">
-          {liberacoes.map((l) => {
+        <ul className="space-y-4" aria-label="Liberações do suporte e trocas de plano pela plataforma">
+          {linha.map((item) => {
+            if (item.tipo === "plano")
+              return (
+                <li key={item.p.id}>
+                  <PedidoDePlano p={item.p} />
+                </li>
+              );
+            const l = item.l;
             const situacao = situacaoDaLiberacao(l, agora);
             const dela = porLiberacao.get(l.id) ?? [];
             return (

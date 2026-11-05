@@ -5,7 +5,9 @@
 > - **etapa 2 — correções e desfazer**, em duas partes:
 >   - **2a — o mecanismo, o Catálogo e o Estoque:** implementada em 02/11/2026 e verificada em build local ([evidências](evidencias/SPEC-019/README.md#etapa-2a--correções-do-suporte-no-catálogo-e-no-estoque-e-o-desfazer-02112026));
 >   - **2b — a Calculadora e o Financeiro:** implementada em 02/11/2026 e verificada em build local ([evidências](evidencias/SPEC-019/README.md#etapa-2b--correções-do-suporte-no-financeiro-e-na-calculadora-02112026));
-> - **etapa 3 — emergência e troca de plano:** a implementar;
+> - **etapa 3 — troca de plano e emergência**, em duas partes (decisão da equipe, 05/11/2026):
+>   - **3a — pedidos com duas pessoas, troca de plano pela plataforma e painel do Administrador:** implementada em 05/11/2026 e verificada em build local ([evidências](evidencias/SPEC-019/README.md#etapa-3a--pedidos-com-duas-pessoas-troca-de-plano-pela-plataforma-e-painel-05112026));
+>   - **3b — acesso de emergência:** a implementar;
 > - **etapa 4 — suspensão, Política e Termos, e homologação (T17):** a implementar.
 >
 > As notas da implementação estão depois da seção 9. As questões em aberto foram decididas pela equipe em entrevista (seção 13), pela opção recomendada, com quatro ajustes da equipe (prazos de 12 h e duas pessoas também na troca de plano):
@@ -577,6 +579,49 @@ Completa a tabela 5.4 com as oito correções da Calculadora e do Financeiro e o
 - **Confirmar preço:** o desfazer grava o preço anterior como preço manual, como na correção "Definir preço".
 - **Transação abortada:** os serviços do Financeiro traduzem as falhas em mensagens. O corpo da correção roda num ponto de retorno (savepoint): se um erro do banco for engolido assim, a correção volta e nada é gravado.
 - **Fica para a etapa 4:** a recusa da correção e do desfazer em negócio suspenso (OPEN-018).
+
+**Implementação — etapa 3a, pedidos com duas pessoas, troca de plano pela plataforma e painel (05/11/2026):** [evidências](evidencias/SPEC-019/README.md#etapa-3a--pedidos-com-duas-pessoas-troca-de-plano-pela-plataforma-e-painel-05112026).
+
+Cobre a seção 5.8, os itens 2, 4 e 5 ("Trocar plano") da 5.9 e a parte das trocas de plano da 5.10. Também cobre os CA-15 e CA-16, o INV-006 na troca de plano, o T09 e a parte de plano dos T05, T14 e T15. O roteiro no navegador teve 81 verificações, com duas contas de Administrador. Como foi feito:
+- **Banco:** a migração `20261105120000_pedidos_da_plataforma` cria:
+  - a tabela `PedidoPlataforma`, com os tipos `EMERGENCIA` e `PLANO` (a emergência chega na 3b) e as situações `PENDENTE`, `APROVADO`, `RECUSADO`, `CANCELADO` e `EXPIRADO`;
+  - os eventos `PLANO_SOLICITADO`, `PLANO_APROVADO` e `PLANO_RECUSADO`, que apontam o pedido (`RegistroSuporte.pedidoId`);
+  - `HistoricoPlano.motivo` e `HistoricoPlano.pedidoId`.
+
+  As checagens do banco repetem as regras:
+  - quem decide nunca é quem pediu (INV-006);
+  - o pedido vale até 12 h;
+  - cada situação tem os seus campos (a recusa, o motivo);
+  - os dados do pedido de plano são completos;
+  - há um pedido pendente por negócio e tipo;
+  - o pedido nunca é apagado, e só a decisão muda, uma vez;
+  - o histórico e o registro apontam pedidos do mesmo negócio.
+
+  A tabela tem RLS ligado, sem política.
+- **Pedir** (Administrador A): na ficha do negócio, "Trocar plano" abre uma gaveta com o plano de destino, o motivo (cortesia, correção, teste) e a descrição. É uma ação crítica: sem o código dos últimos 10 min, a tela pede o código e repete o pedido. Com um pedido pendente ou o negócio encerrado, o botão fica desligado.
+- **Decidir** (Administrador B): "Aprovar" (com confirmação) e "Recusar" (com o motivo), também ações críticas. A transação trava o negócio e o pedido e confere tudo de novo: outra conta, papel de Administrador, pedido pendente e no prazo.
+- **Troca:** na aprovação, o plano muda pelo mesmo núcleo da troca do Dono (`aplicarTroca`, RF73). O histórico guarda o pedido e a descrição, e o plano fica "alterado por" quem aprovou.
+- **Painel:** três seções.
+  - **Negócios:** a lista de antes, com o aviso dos pedidos que aguardam esta conta.
+  - **Pedidos:** os pendentes de todas as contas, com "Aprovar" e "Recusar" nos das outras e "Aguardando outra pessoa" e "Cancelar" nos próprios, e os decididos recentemente, com o motivo da recusa.
+  - **Administradores:** as contas, desde quando e quantos autenticadores ativos têm; com menos de dois, em destaque.
+- **Dono:**
+  - a tela Plano mostra o aviso da última troca pela plataforma e o histórico do plano, com "pela plataforma do HE" e o motivo (CA-15);
+  - "Acessos do suporte" mostra cada pedido de plano desde o pedido, com o desfecho, na mesma linha do tempo das liberações;
+  - na aprovação, o e-mail (com domínio) traz o motivo e os efeitos da troca.
+- **Uma conta só (CA-16):** a gaveta e a página de pedidos avisam que o pedido vai expirar sem aprovação.
+
+**Decisões de implementação da etapa 3a (sem mudar o comportamento da Spec):**
+- **Volta ao gratuito pela plataforma:** o Administrador não vê a equipe e não escolhe quem continua. Com um colaborador com acesso, ele continua. Com mais de um, todos ficam sem acesso até o Dono escolher quem volta em Equipe ("trocar acesso", SPEC-013). O e-mail e a gaveta avisam disso.
+- **Expiração:** a leitura já mostra o pedido vencido como expirado. A primeira gravação depois do prazo (pedir, aprovar ou cancelar) o marca no banco, com a hora do prazo.
+- **Cancelar:** só quem pediu, sem o código (só reduz o que pode acontecer). O pedido guarda a situação e a hora. A seção 7 não prevê um evento de cancelamento de plano, e o registro não ganhou um.
+- **Quem pediu perdeu o papel:** a aprovação é recusada; o pedido ainda pode ser recusado.
+- **O Dono trocou o plano antes da aprovação:** a aprovação é recusada ("o negócio já está no plano"), e o pedido pode ser recusado.
+- **Motivo no histórico:** `HistoricoPlano.motivo` guarda a descrição; o motivo da lista fica no pedido, apontado por `pedidoId`.
+- **Contagem dos autenticadores:** lê os fatores TOTP verificados em `auth.mfa_factors`, no banco. Fora do Supabase, a migração cria um substituto mínimo dessa tabela, como já fazia com `auth.users`. Se a leitura falhar, a lista mostra "Não informado". A homologação (T17) confere a contagem.
+- **Fica para as próximas etapas:**
+  - o acesso de emergência, com o mesmo pedido, e o histórico de emergências no painel, na etapa 3b;
+  - a suspensão (a troca de plano vale para negócio suspenso), a situação "Suspenso" e o filtro do painel, na etapa 4.
 
 ---
 

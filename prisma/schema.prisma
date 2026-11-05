@@ -209,6 +209,23 @@ enum EventoSuporte {
   SEGUNDO_FATOR_REDEFINIDO // SPEC-019 (OPEN-002): fatores apagados pelo workflow, por outra pessoa da equipe
   CORRECAO // SPEC-019 (5.3): correção do suporte, com o antes e o depois, gravada na mesma transação
   CORRECAO_DESFEITA // SPEC-019 (5.5): o Dono desfez a correção (aponta a correção em correcaoId)
+  PLANO_SOLICITADO // SPEC-019 (5.8): um Administrador pediu a troca de plano (aponta o pedido em pedidoId)
+  PLANO_APROVADO // SPEC-019 (5.8): outra conta de Administrador aprovou, e o plano mudou
+  PLANO_RECUSADO // SPEC-019 (5.8): outra conta de Administrador recusou, com o motivo
+}
+
+// SPEC-019 (5.6, 5.8): pedidos que precisam de uma segunda conta de Administrador (INV-006).
+enum TipoPedidoPlataforma {
+  EMERGENCIA // acesso de emergência (5.6)
+  PLANO // troca de plano pela plataforma (5.8)
+}
+
+enum SituacaoPedidoPlataforma {
+  PENDENTE // aguarda outra conta, por até 12 h
+  APROVADO
+  RECUSADO // com o motivo da recusa
+  CANCELADO // por quem pediu
+  EXPIRADO // 12 h sem resposta
 }
 
 // ==========================================================
@@ -246,6 +263,8 @@ model Usuario {
   acessosLiberados  AcessoSuporte[]        @relation("AcessoLiberadoPor") // SPEC-018 (RF75)
   acessosRevogados  AcessoSuporte[]        @relation("AcessoRevogadoPor") // SPEC-018 (RF75)
   registrosSuporte  RegistroSuporte[] // SPEC-018 (RF77): autor do evento
+  pedidosFeitos     PedidoPlataforma[]     @relation("PedidoSolicitadoPor") // SPEC-019 (5.8)
+  pedidosDecididos  PedidoPlataforma[]     @relation("PedidoDecididoPor") // SPEC-019 (5.8)
   createdAt         DateTime               @default(now())
 }
 
@@ -289,26 +308,27 @@ model Negocio {
 
   planoAlteradoPor Usuario? @relation("PlanoAlteradoPor", fields: [planoAlteradoPorId], references: [id])
 
-  membros          MembroNegocio[]
-  convites         Convite[]
-  historicoPlanos  HistoricoPlano[] // SPEC-013 (OPEN-007)
-  acessosSuporte   AcessoSuporte[] // SPEC-018 (RF75)
-  registrosSuporte RegistroSuporte[] // SPEC-018 (RF77)
-  itens            Item[]
-  subcategorias    Subcategoria[] // SPEC-020 (RF79)
-  materiaisServico MaterialServico[]
-  movimentacoes    MovimentacaoEstoque[]
-  historicoPrecos  HistoricoPreco[]
-  historicoCustos  HistoricoCusto[]
-  vendas           Venda[]
-  itensVenda       ItemVenda[]
-  pagamentos       Pagamento[]
-  parcelas         Parcela[]
-  lancamentos      LancamentoFinanceiro[]
-  contas           ContaPagarReceber[]
-  clientes         Cliente[]
-  fornecedores     Fornecedor[] // SPEC-026
-  despesasFixas    DespesaFixa[]
+  membros           MembroNegocio[]
+  convites          Convite[]
+  historicoPlanos   HistoricoPlano[] // SPEC-013 (OPEN-007)
+  acessosSuporte    AcessoSuporte[] // SPEC-018 (RF75)
+  registrosSuporte  RegistroSuporte[] // SPEC-018 (RF77)
+  pedidosPlataforma PedidoPlataforma[] // SPEC-019 (5.6, 5.8)
+  itens             Item[]
+  subcategorias     Subcategoria[] // SPEC-020 (RF79)
+  materiaisServico  MaterialServico[]
+  movimentacoes     MovimentacaoEstoque[]
+  historicoPrecos   HistoricoPreco[]
+  historicoCustos   HistoricoCusto[]
+  vendas            Venda[]
+  itensVenda        ItemVenda[]
+  pagamentos        Pagamento[]
+  parcelas          Parcela[]
+  lancamentos       LancamentoFinanceiro[]
+  contas            ContaPagarReceber[]
+  clientes          Cliente[]
+  fornecedores      Fornecedor[] // SPEC-026
+  despesasFixas     DespesaFixa[]
 
   @@index([id])
 }
@@ -882,9 +902,14 @@ model HistoricoPlano {
   para      PlanoNegocio
   usuarioId String       @db.Uuid
   createdAt DateTime     @default(now())
+  /// SPEC-019 (5.8): na troca pela plataforma, a descrição do pedido; o motivo (cortesia, correção, teste) fica no pedido.
+  motivo    String?      @db.VarChar(300)
+  /// SPEC-019 (5.8): o pedido aprovado que trocou o plano ("pela plataforma").
+  pedidoId  String?      @db.Uuid
 
-  negocio Negocio @relation(fields: [negocioId], references: [id])
-  usuario Usuario @relation(fields: [usuarioId], references: [id])
+  negocio Negocio           @relation(fields: [negocioId], references: [id])
+  usuario Usuario           @relation(fields: [usuarioId], references: [id])
+  pedido  PedidoPlataforma? @relation(fields: [pedidoId], references: [id], onDelete: Restrict)
 
   @@index([negocioId, createdAt])
 }
@@ -928,13 +953,43 @@ model RegistroSuporte {
   dados      Json?
   /// SPEC-019 (5.5): no desfazer, a correção desfeita (no máximo uma vez).
   correcaoId String?       @db.Uuid
+  /// SPEC-019 (5.8): nos eventos de pedido da plataforma, o pedido.
+  pedidoId   String?       @db.Uuid
 
   negocio   Negocio?          @relation(fields: [negocioId], references: [id])
   acesso    AcessoSuporte?    @relation(fields: [acessoId], references: [id])
   usuario   Usuario           @relation(fields: [usuarioId], references: [id])
   correcao  RegistroSuporte?  @relation("CorrecaoDesfeita", fields: [correcaoId], references: [id], onDelete: Restrict)
   desfeitas RegistroSuporte[] @relation("CorrecaoDesfeita")
+  pedido    PedidoPlataforma? @relation(fields: [pedidoId], references: [id], onDelete: Restrict)
 
   @@index([negocioId, criadoEm])
   @@index([acessoId, criadoEm])
+}
+
+// SPEC-019 (5.6, 5.8 — INV-006): pedido de um Administrador que só vale com a aprovação de OUTRA conta
+// de Administrador, em até 12 h. Um pendente por negócio e tipo (índice parcial na migração); quem
+// decide nunca é quem pediu (CHECK). Só o servidor lê e grava (RLS ligado, sem política).
+model PedidoPlataforma {
+  id              String                   @id @default(uuid()) @db.Uuid
+  tipo            TipoPedidoPlataforma
+  negocioId       String                   @db.Uuid
+  solicitadoPorId String                   @db.Uuid
+  /// Na troca de plano: { para, motivo, descricao }. Na emergência (etapa 3b): motivo, referência, módulos e prazo.
+  dados           Json
+  criadoEm        DateTime                 @default(now())
+  expiraEm        DateTime
+  situacao        SituacaoPedidoPlataforma @default(PENDENTE)
+  decididoPorId   String?                  @db.Uuid
+  decididoEm      DateTime?
+  motivoDaRecusa  String?                  @db.VarChar(300)
+
+  negocio       Negocio           @relation(fields: [negocioId], references: [id])
+  solicitadoPor Usuario           @relation("PedidoSolicitadoPor", fields: [solicitadoPorId], references: [id])
+  decididoPor   Usuario?          @relation("PedidoDecididoPor", fields: [decididoPorId], references: [id], onDelete: Restrict)
+  registros     RegistroSuporte[]
+  trocasDePlano HistoricoPlano[]
+
+  @@index([negocioId, criadoEm])
+  @@index([situacao, expiraEm])
 }

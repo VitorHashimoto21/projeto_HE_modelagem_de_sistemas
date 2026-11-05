@@ -17,6 +17,7 @@ import { criarConsultasDeRelatorios } from "./relatorios";
 import { criarConsultasFiscais } from "./parametros-fiscais";
 import { criarConsultasDeSuporte } from "./suporte";
 import { criarConsultasDeCorrecoes, transacaoDaCorrecao } from "./correcoes";
+import { criarConsultasDaPlataforma } from "./plataforma";
 import { prismaBase } from "./prisma";
 import type { Matriz } from "@/lib/dominio/permissoes";
 
@@ -36,7 +37,8 @@ export type { ConsultasDeEquipe, ConvitePendente, EquipeDoNegocio, MembroDaEquip
 export { CnpjJaCadastrado } from "./negocios";
 export type { ConsultasDeNegocios, ResumoDoNegocio } from "./negocios";
 export type { ConsultasDaLgpd, ResumoDaExclusao } from "./lgpd";
-export type { ConsultasDePlanos, SituacaoDoPlano } from "./planos";
+export type { ConsultasDePlanos, SituacaoDoPlano, TrocaDoHistorico } from "./planos";
+export type { AdministradorDaPlataforma, ConsultasDaPlataforma, PedidoDaPlataforma, ResultadoDaDecisao, ResultadoDoCancelamento, ResultadoDoPedido } from "./plataforma";
 export type { ConsultasDeRelatorios } from "./relatorios";
 export type { ConsultasDeSuporte, EventoDoRegistro, LiberacaoDoNegocio, NegocioNoPainel } from "./suporte";
 export { DesfazerRecusado } from "./correcoes";
@@ -156,6 +158,11 @@ export function suporte() {
 /** Correções do suporte e o desfazer do Dono (SPEC-019, 5.3 a 5.5). */
 export function correcoes() {
   return criarConsultasDeCorrecoes(prismaBase());
+}
+
+/** Pedidos da plataforma com duas pessoas e a lista de Administradores (SPEC-019, 5.8 e 5.9). */
+export function plataforma() {
+  return criarConsultasDaPlataforma(prismaBase());
 }
 
 /** Parâmetros fiscais oficiais (SPEC-003): somente leitura, com a versão vigente na data. */
