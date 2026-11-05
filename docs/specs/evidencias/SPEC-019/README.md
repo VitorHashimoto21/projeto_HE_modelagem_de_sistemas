@@ -8,6 +8,12 @@ A SPEC-019 é implementada em quatro etapas, por decisão da equipe (02/11/2026)
 
 A homologação é uma só, no fim, com um único novo aceite dos termos.
 
+**Como as capturas são feitas** (refeitas em 05/11/2026):
+- **Páginas inteiras:** a janela do navegador cresce até a altura da página. Assim, o menu lateral, o cabeçalho e as barras fixas ficam no lugar em que a pessoa os vê.
+- **Diálogo ou gaveta aberta:** a captura mostra só a área visível da tela, com o fundo escurecido inteiro.
+- **Por que mudou:** as capturas anteriores usavam a página inteira do navegador. Nela, o menu lateral e o fundo escurecido do diálogo ficavam recortados na altura da janela, e o resto da página aparecia deslocado ou com outra iluminação.
+- **O app não mudou:** era só a forma de capturar. Os roteiros e as verificações são os mesmos.
+
 ## Etapa 1 — 2º fator do Administrador (02/11/2026)
 
 Verificação em build de produção local (`next build` + `next start`). O ambiente tinha:
