@@ -1,18 +1,22 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Eye, Lock } from "lucide-react";
+import { CartaoDoPedido } from "@/components/plataforma/pedido";
+import { TrocarPlano } from "@/components/plataforma/trocar-plano";
 import { ROTULO_REGIME } from "@/components/negocio/rotulos";
 import { AvisoDaPagina } from "@/components/ui/aviso";
 import { CabecalhoDePagina } from "@/components/ui/cabecalho-de-pagina";
-import { classeDoBotao } from "@/components/ui/estilos";
+import { classeDaSuperficie, classeDoBotao } from "@/components/ui/estilos";
 import { Selo } from "@/components/ui/selo";
 import { Superficie, TituloDaSuperficie } from "@/components/ui/superficie";
 import { EntrarEmModoSuporte } from "@/components/suporte/entrar-em-modo-suporte";
-import { adaptadorDoServidor, exigirAdministrador } from "@/lib/auth/servidor";
-import { suporte } from "@/lib/db";
+import { exigirAdministrador } from "@/lib/auth/servidor";
+import { plataforma, suporte } from "@/lib/db";
 import { dataBrasileira } from "@/lib/dominio/datas";
 import { ROTULO_PLANO } from "@/lib/dominio/planos";
+import { MENSAGENS_DA_PLATAFORMA } from "@/lib/dominio/plataforma";
 import { dataHoraCompleta, listaDeModulos, MENSAGENS_SUPORTE } from "@/lib/dominio/suporte";
+import { autenticadoresDaSessao } from "@/lib/plataforma/servidor";
 
 export const metadata: Metadata = { title: "Negócio — administração" };
 
@@ -20,15 +24,21 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 // Ficha do negócio no painel (SPEC-018, 5.3): os mesmos metadados, a liberação ativa do Dono
 // e a entrada em modo suporte — habilitada só com liberação ativa, conferida de novo no servidor.
+// SPEC-019 (5.9, item 5): "Trocar plano", com o pedido pendente e os anteriores deste negócio.
 export default async function NegocioNoPainel({ params, searchParams }: PageProps<"/admin/negocios/[id]">) {
-  await exigirAdministrador();
+  const { usuarioId } = await exigirAdministrador();
   const [{ id }, busca] = await Promise.all([params, searchParams]);
   if (!UUID.test(id)) notFound();
-  const n = await suporte().negocioNoPainel(id, new Date());
+  const agora = new Date();
+  const n = await suporte().negocioNoPainel(id, agora);
   if (!n) notFound();
-  // SPEC-019 (5.3): com correção, a entrada pede o código de novo; o diálogo lista os autenticadores.
   const comCorrecao = (n.liberacao?.modulosComCorrecao.length ?? 0) > 0;
-  const autenticadores = comCorrecao ? (await (await adaptadorDoServidor()).fatores()).filter((f) => f.verificado).map(({ id: fator, nome }) => ({ id: fator, nome })) : [];
+  // SPEC-019 (OPEN-003): entrar para corrigir e pedir, aprovar ou recusar pedem o código de novo; o
+  // diálogo lista os autenticadores.
+  const [autenticadores, pedidos, administradores] = await Promise.all([autenticadoresDaSessao(), plataforma().pedidosDoNegocio(n.id, agora), plataforma().administradores()]);
+  const pedidosDePlano = pedidos.filter((p) => p.tipo === "PLANO");
+  const pendente = pedidosDePlano.find((p) => p.situacao === "PENDENTE");
+  const anteriores = pedidosDePlano.filter((p) => p.situacao !== "PENDENTE").slice(0, 5);
 
   const dados: [string, React.ReactNode][] = [
     ["Regime", ROTULO_REGIME[n.regime]],
@@ -94,6 +104,49 @@ export default async function NegocioNoPainel({ params, searchParams }: PageProp
           )}
         </Superficie>
       </div>
+
+      <Superficie aria-labelledby="titulo-plano">
+        <TituloDaSuperficie
+          id="titulo-plano"
+          titulo="Plano"
+          descricao="A troca pela plataforma só vale com a aprovação de outra conta de Administrador, em até 12 horas. O Dono é avisado."
+          acoes={
+            <TrocarPlano
+              negocioId={n.id}
+              negocio={n.nome}
+              planoAtual={n.plano}
+              autenticadores={autenticadores}
+              umaContaSo={administradores.length < 2}
+              disponivel={!n.encerrado && !pendente}
+            />
+          }
+        />
+        <div className="space-y-4">
+          <p className="text-sm">
+            <span className="font-semibold">Plano atual:</span> {ROTULO_PLANO[n.plano]}.
+          </p>
+          {n.encerrado && <p className="text-sm text-muted-foreground">{MENSAGENS_DA_PLATAFORMA.negocioEncerrado}</p>}
+          {pendente && (
+            <div className={classeDaSuperficie("recuo", "p-4")}>
+              <CartaoDoPedido pedido={pendente} administradorId={usuarioId} autenticadores={autenticadores} comNegocio={false} />
+            </div>
+          )}
+          {anteriores.length > 0 && (
+            <details className="group">
+              <summary className="cursor-pointer text-sm font-semibold text-primary hover:underline">
+                Pedidos anteriores ({anteriores.length})
+              </summary>
+              <ul className="mt-3 divide-y">
+                {anteriores.map((p) => (
+                  <li key={p.id} className="py-3 first:pt-0 last:pb-0">
+                    <CartaoDoPedido pedido={p} administradorId={usuarioId} autenticadores={autenticadores} comNegocio={false} />
+                  </li>
+                ))}
+              </ul>
+            </details>
+          )}
+        </div>
+      </Superficie>
     </div>
   );
 }

@@ -127,7 +127,7 @@ describe("T04 — sem trava de volume; um só ponto de troca de plano (INV-001, 
     }
   });
 
-  it("Negocio.plano e o HistoricoPlano só são escritos por alterarPlano (src/lib/db/planos.ts)", () => {
+  it("Negocio.plano e o HistoricoPlano só são escritos pelo núcleo da troca (aplicarTroca, em src/lib/db/planos.ts)", () => {
     const escreve = fontes.filter((f) => /planoAlteradoEm\s*:|historicoPlano\.create|data:\s*\{\s*plano\s*:/.test(readFileSync(f, "utf8")));
     expect(escreve.map((f) => f.replace(/\\/g, "/"))).toEqual(["src/lib/db/planos.ts"]);
   });

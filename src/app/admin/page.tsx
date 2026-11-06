@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ChevronRight, Search, Store } from "lucide-react";
 import { ROTULO_REGIME } from "@/components/negocio/rotulos";
+import { NavegacaoDoPainel } from "@/components/plataforma/navegacao";
 import { AvisoDaPagina } from "@/components/ui/aviso";
 import { CabecalhoDePagina } from "@/components/ui/cabecalho-de-pagina";
 import { classeDoCampo } from "@/components/ui/classes";
@@ -10,7 +11,7 @@ import { classeDoBotao } from "@/components/ui/estilos";
 import { Selo } from "@/components/ui/selo";
 import { Superficie } from "@/components/ui/superficie";
 import { exigirAdministrador } from "@/lib/auth/servidor";
-import { suporte, type NegocioNoPainel } from "@/lib/db";
+import { plataforma, suporte, type NegocioNoPainel } from "@/lib/db";
 import { dataBrasileira } from "@/lib/dominio/datas";
 import { ROTULO_PLANO } from "@/lib/dominio/planos";
 import { dataHoraCurta, MENSAGENS_SUPORTE } from "@/lib/dominio/suporte";
@@ -27,11 +28,14 @@ function SituacaoDoSuporte({ n }: { n: NegocioNoPainel }) {
 // metadados. Nenhum dado de vendas, valores, clientes ou estoque aparece aqui: para ver um
 // negócio, só com a liberação do Dono e em modo suporte.
 export default async function PainelDoAdministrador({ searchParams }: PageProps<"/admin">) {
-  await exigirAdministrador();
+  const { usuarioId } = await exigirAdministrador();
   const busca = await searchParams;
   const termo = typeof busca.busca === "string" ? busca.busca : "";
   const pagina = Math.max(1, Number.parseInt(typeof busca.pagina === "string" ? busca.pagina : "1", 10) || 1);
-  const { negocios, total, paginas } = await suporte().listarNegocios(termo, pagina, new Date());
+  const agora = new Date();
+  const [{ negocios, total, paginas }, pendentes] = await Promise.all([suporte().listarNegocios(termo, pagina, agora), plataforma().pedidosPendentes(agora)]);
+  // SPEC-019 (5.9): os pedidos de outras contas aguardam uma decisão desta.
+  const aguardando = pendentes.filter((p) => p.solicitadoPorId !== usuarioId).length;
   const link = (p: number) => `/admin?${new URLSearchParams({ ...(termo ? { busca: termo } : {}), pagina: String(p) })}`;
 
   return (
@@ -41,6 +45,14 @@ export default async function PainelDoAdministrador({ searchParams }: PageProps<
         descricao={`${total} ${total === 1 ? "negócio" : "negócios"}. Só os dados de cadastro: para ver um negócio por dentro, o Dono precisa liberar o acesso do suporte.`}
       />
 
+      <NavegacaoDoPainel atual="negocios" aguardando={aguardando} />
+
+      {aguardando > 0 && (
+        <AvisoDaPagina tom="atencao">
+          {aguardando === 1 ? "1 pedido de outra conta aguarda" : `${aguardando} pedidos de outras contas aguardam`} a sua decisão.{" "}
+          <Link href="/admin/pedidos">Ver os pedidos</Link>
+        </AvisoDaPagina>
+      )}
       {busca.suporte === "revogado" && <AvisoDaPagina tom="atencao">{MENSAGENS_SUPORTE.revogadoPeloDono}</AvisoDaPagina>}
       {busca.suporte === "expirou" && <AvisoDaPagina tom="atencao">{MENSAGENS_SUPORTE.expirou}</AvisoDaPagina>}
 

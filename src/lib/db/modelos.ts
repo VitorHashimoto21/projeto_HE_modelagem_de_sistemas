@@ -32,6 +32,7 @@ export const MODELOS = {
       historicoPlanos: { modelo: "HistoricoPlano" },
       acessosSuporte: { modelo: "AcessoSuporte" },
       registrosSuporte: { modelo: "RegistroSuporte" },
+      pedidosPlataforma: { modelo: "PedidoPlataforma" },
       itens: { modelo: "Item" },
       subcategorias: { modelo: "Subcategoria" },
       materiaisServico: { modelo: "MaterialServico" },
@@ -63,6 +64,8 @@ export const MODELOS = {
     relacoes: {
       negocio: { modelo: "Negocio", fk: "negocioId" },
       usuario: { modelo: "Usuario", fk: "usuarioId" },
+      // SPEC-019 (5.8): a troca pela plataforma aponta o pedido aprovado.
+      pedido: { modelo: "PedidoPlataforma", fk: "pedidoId" },
     },
   },
   Convite: {
@@ -235,6 +238,19 @@ export const MODELOS = {
       // SPEC-019 (5.5): o desfazer aponta a correção desfeita.
       correcao: { modelo: "RegistroSuporte", fk: "correcaoId" },
       desfeitas: { modelo: "RegistroSuporte" },
+      // SPEC-019 (5.8): os eventos de pedido apontam o pedido.
+      pedido: { modelo: "PedidoPlataforma", fk: "pedidoId" },
+    },
+  },
+  // SPEC-019 (5.6, 5.8): pedidos que precisam de uma segunda conta de Administrador.
+  PedidoPlataforma: {
+    classe: "operacional",
+    relacoes: {
+      negocio: { modelo: "Negocio", fk: "negocioId" },
+      solicitadoPor: { modelo: "Usuario", fk: "solicitadoPorId" },
+      decididoPor: { modelo: "Usuario", fk: "decididoPorId" },
+      registros: { modelo: "RegistroSuporte" },
+      trocasDePlano: { modelo: "HistoricoPlano" },
     },
   },
 
@@ -254,6 +270,8 @@ export const MODELOS = {
       acessosLiberados: { modelo: "AcessoSuporte" },
       acessosRevogados: { modelo: "AcessoSuporte" },
       registrosSuporte: { modelo: "RegistroSuporte" },
+      pedidosFeitos: { modelo: "PedidoPlataforma" },
+      pedidosDecididos: { modelo: "PedidoPlataforma" },
     },
   },
   FaixaTributaria: { classe: "global", relacoes: {} },

@@ -3,7 +3,7 @@
 A SPEC-019 é implementada em quatro etapas, por decisão da equipe (02/11/2026), cada uma com os próprios testes e a própria PR:
 1. 2º fator do Administrador;
 2. correções e desfazer, em duas partes: 2a (o mecanismo, o Catálogo e o Estoque) e 2b (a Calculadora e o Financeiro);
-3. emergência e troca de plano;
+3. troca de plano e emergência, em duas partes: 3a (pedidos com duas pessoas, troca de plano pela plataforma e painel) e 3b (acesso de emergência);
 4. suspensão, nova versão da Política e dos Termos, e homologação (T17).
 
 A homologação é uma só, no fim, com um único novo aceite dos termos.
@@ -209,3 +209,78 @@ Sem migração nova: a etapa usa a estrutura da 2a.
 - **Desfazer uma desativação:** reativa como o Dono reativaria, com a conta do mês.
 - **Transação abortada:** os serviços do Financeiro traduzem as falhas em mensagens. Se um erro do banco for engolido assim, a correção volta ao ponto anterior e nada é gravado.
 - **Históricos do Financeiro:** o lançamento e a conta criada pelo suporte mostram "{nome} (suporte do HE)".
+
+## Etapa 3a — pedidos com duas pessoas, troca de plano pela plataforma e painel (05/11/2026)
+
+Verificação em build de produção local, no mesmo ambiente das etapas anteriores. Os dados são fictícios:
+- o Dono e o negócio **HE Testing**, que começa no plano gratuito, com a colaboradora Joana;
+- duas contas de Administrador: `suporte@exemplo.com` ("Equipe de Suporte", a conta A, que pede) e `suporte2@exemplo.com` ("Segunda Pessoa do Suporte", a conta B, que aprova ou recusa).
+
+O banco recebeu a migração `20261105120000_pedidos_da_plataforma`, que só acrescenta:
+- a tabela `PedidoPlataforma` (RLS ligado, sem política), com os tipos `EMERGENCIA` e `PLANO` e as situações `PENDENTE`, `APROVADO`, `RECUSADO`, `CANCELADO` e `EXPIRADO`;
+- os eventos `PLANO_SOLICITADO`, `PLANO_APROVADO` e `PLANO_RECUSADO`, com `RegistroSuporte.pedidoId`;
+- `HistoricoPlano.motivo` e `HistoricoPlano.pedidoId`, vazios nas trocas antigas, feitas pelo Dono;
+- checagens no banco:
+  - quem decide nunca é quem pediu (INV-006);
+  - o pedido vale até 12 h;
+  - cada situação tem os seus campos, e a recusa tem o motivo;
+  - os dados do pedido de plano são completos;
+  - um pedido pendente por negócio e tipo;
+  - o pedido nunca é apagado, e só a decisão muda, uma vez;
+  - o histórico e o registro só apontam pedidos do mesmo negócio;
+- fora do Supabase, um substituto mínimo de `auth.mfa_factors`, para a contagem dos autenticadores. No Supabase, nada muda.
+
+### Testes automatizados
+
+| # | Teste | Onde | Resultado |
+|---|---|---|---|
+| T05, CA-15, CA-16, INV-006 | Pelo banco real: <ul><li>o pedido fica pendente por 12 h, com o `PLANO_SOLICITADO` na mesma transação;</li><li>um pendente por negócio (também pelo índice);</li><li>mesmo plano, negócio encerrado e inexistente recusados;</li><li>quem pediu não aprova nem recusa, e o banco recusa também;</li><li>conta comum não decide;</li><li>duas aprovações ao mesmo tempo trocam o plano uma vez só;</li><li>a recusa guarda o motivo;</li><li>com uma conta só, o pedido expira em 12 h sem aprovação;</li><li>o vencido não é aprovado, e um novo pedido toma o lugar dele;</li><li>só quem pediu cancela;</li><li>quem pediu sem o papel e o negócio encerrado depois do pedido recusam a aprovação</li></ul> | `test/integracao/plataforma.test.ts` | ✅ |
+| T09 | A troca pela plataforma pelo mesmo núcleo da troca do Dono: reativa os suspensos no pago; na volta ao gratuito, um colaborador continua, e com dois, os dois ficam sem acesso até o Dono escolher; os convites pendentes são cancelados; o histórico tem o pedido e a descrição; nada é apagado | idem | ✅ |
+| INV-006, RN32 | O pedido decidido não muda, nenhum pedido é apagado, a situação vem com os seus campos (CHECK), o isolamento entre negócios e os eventos só de inclusão. RLS ligado, sem política | idem | ✅ |
+| 5.9 e 5.10 | As listas do painel e do Dono com os nomes e a situação; a lista de Administradores conta os autenticadores ativos em `auth.mfa_factors` | idem | ✅ |
+| 5.8 | Os fluxos (`servicos.ts`): validação do pedido e da recusa, cada recusa com a sua mensagem, e o e-mail ao Dono só na aprovação, com o motivo e os efeitos | `test/unit/plataforma.test.ts` e `test/integracao/plataforma.test.ts` | ✅ |
+| INV-002, OPEN-003 | Pedir, aprovar e recusar são ações críticas (`acaoCritica`); cancelar o próprio pedido basta a conta de Administrador | `test/unit/plataforma.test.ts` | ✅ |
+
+**Suíte completa:** 662 testes unitários e 376 de integração passaram, além de lint, tipos, build de produção e a checagem do schema (`migrate diff` sem diferença).
+
+**Testes antigos:** a troca de plano do Dono passou a usar o núcleo comum (`aplicarTroca`), e os testes da SPEC-013 continuam passando. Só o nome de um deles mudou: o que confere quem escreve o plano agora cita o núcleo.
+
+### Roteiro no navegador (parte do T14 e do T15)
+
+81 verificações, todas aprovadas (`scratchpad/e2e19c/spec19c.mjs`).
+
+| Passo | Resultado | Captura |
+|---|---|---|
+| **2º fator das duas contas:** A cadastra um autenticador, e B, dois. Os três aparecem em `auth.mfa_factors` | ✅ | — |
+| **Administradores:** as duas contas, com "(você)" na própria, desde quando e os autenticadores. A, com um só, em destaque | ✅ | `s19c_01_administradores_*` |
+| **Pedir a troca:** na ficha, a gaveta com o plano atual desligado, o destino, o motivo e a descrição. Sem motivo e descrição, a gaveta explica o que falta | ✅ | `s19c_02_pedir_troca_*` |
+| **Código de novo:** passados 10 min, nada é gravado e o código é pedido. Com ele, o pedido fica pendente por 12 h, com o `PLANO_SOLICITADO` | ✅ | `s19c_03_pedir_pede_codigo_1440_claro.png` |
+| **INV-006 na tela:** no próprio pedido, "Aguardando outra pessoa" e "Cancelar pedido", sem "Aprovar"; "Trocar plano" desligado | ✅ | `s19c_04_ficha_pedido_pendente_*` |
+| **O Dono vê o pedido** em "Acessos do suporte", com o motivo, quem pediu e que nada muda antes da aprovação | ✅ | — |
+| **B vê o aviso:** no painel, "1 pedido de outra conta aguarda a sua decisão", e a seção Pedidos mostra 1 | ✅ | `s19c_05_painel_aguardando_1440_claro.png` |
+| **B aprova** (CA-15): o pedido com o negócio, o motivo e quem pediu; a confirmação diz o que muda; o código de novo. O plano passa a pago em nome de B, com o histórico "pela plataforma" e o `PLANO_APROVADO` | ✅ | `s19c_06_pedidos_para_aprovar_*`, `s19c_07_confirmar_aprovacao_1440_claro.png` |
+| **O Dono é avisado:** na tela Plano, o aviso e o histórico do plano "pela plataforma do HE", com o motivo; em "Acessos do suporte", "Plano trocado", com quem aprovou | ✅ | `s19c_08_plano_do_dono_*`, `s19c_09_acessos_do_suporte_*` |
+| **Recusa e cancelamento:** B recusa outro pedido (sem motivo, a recusa é recusada); A cancela um terceiro. Quem pediu vê o motivo da recusa, e o Dono vê os dois desfechos | ✅ | `s19c_10_recusar_390_claro.png`, `s19c_11_pedidos_decididos_*` |
+| **Uma conta só** (CA-16): sem o papel de B, a gaveta e a página de pedidos avisam que o pedido vai expirar sem aprovação, e a conta A não tem "Aprovar" | ✅ | `s19c_12_uma_conta_so_1440_claro.png` |
+| Sem rolagem horizontal em 390, 768 e 1440 px. Axe sem violações em Administradores, ficha com o pedido, Pedidos, Plano e "Acessos do suporte", nos temas claro e escuro, em 390 e 1440 px | ✅ | todas |
+
+**Dados nas capturas:** as contas, os e-mails (`@exemplo.com`), o negócio e os nomes são fictícios.
+
+### Encontrado no roteiro e nos testes
+
+- **Checagem que aceitava NULL:** a recusa sem motivo e o pedido de plano sem uma das chaves passavam pela checagem do banco, porque a comparação dava NULL, e o PostgreSQL aceita NULL num CHECK. As duas checagens passaram a usar `COALESCE(..., false)`, e o teste cobre os dois casos.
+- **Aviso que não aparecia:** depois de pedir, aprovar, recusar ou cancelar, a página recarregada tira o componente da tela (o pedido sai da lista), e o aviso flutuante, disparado depois, não aparecia. Agora o aviso sai da resposta da própria ação, e "Trocar plano" fica sempre na tela, desligado quando não cabe.
+- **Link só pela cor:** o nome do negócio no título do pedido passou a ser sublinhado (axe, `link-in-text-block`).
+
+### Decisões tomadas na implementação
+
+- **Volta ao gratuito pela plataforma:** o Administrador não vê a equipe e não escolhe quem continua. Com um colaborador com acesso, ele continua. Com mais de um, todos ficam sem acesso até o Dono escolher quem volta em Equipe.
+- **Expiração:** a leitura mostra o vencido como expirado. A primeira gravação depois do prazo o marca no banco, com a hora do prazo.
+- **Cancelar:** sem o código e sem evento no registro (a seção 7 não prevê um). O pedido guarda a situação e a hora.
+- **Quem aparece como autor:** o plano fica "alterado por" quem aprovou; o pedido guarda quem pediu.
+- **Seções do painel:** Negócios, Pedidos (com o número que aguarda esta conta) e Administradores.
+
+### Fica para as próximas etapas
+
+- **3b:** o acesso de emergência, com o mesmo pedido de duas pessoas, e o histórico das emergências no painel.
+- **Etapa 4:** a suspensão (a troca de plano vale para negócio suspenso), a situação "Suspenso" e o filtro do painel, a nova versão da Política e dos Termos e a homologação (T17), que confere também a contagem dos autenticadores no Supabase.
