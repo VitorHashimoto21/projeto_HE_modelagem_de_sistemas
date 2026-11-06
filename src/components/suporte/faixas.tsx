@@ -1,9 +1,10 @@
 import Link from "next/link";
-import { Eye, LifeBuoy, LogOut } from "lucide-react";
+import { Eye, LifeBuoy, LogOut, Siren } from "lucide-react";
 import { classeDoBotao } from "@/components/ui/estilos";
 import { dataHoraCurta, listaDeModulos } from "@/lib/dominio/suporte";
 import { acaoSairDoModoSuporte } from "@/lib/suporte/acoes";
 import { cn } from "@/lib/utils";
+import { EncerrarEmergencia } from "./encerrar-emergencia";
 
 // Avisos do acesso de suporte (SPEC-018, 5.5 e 5.6). Dois lados da mesma liberação:
 // o Administrador vê sempre onde está e até quando; a equipe do negócio vê que o suporte
@@ -21,12 +22,16 @@ export function FaixaDoModoSuporte({
   expiraEm,
   corrigir = [],
   correcaoPendente = false,
+  emergencia = null,
 }: {
   negocio: string;
   expiraEm: Date;
   corrigir?: string[];
   correcaoPendente?: boolean;
+  /** SPEC-019 (5.6): acesso de emergência, com o motivo curto. */
+  emergencia?: { motivo: string } | null;
 }) {
+  if (emergencia) return <FaixaDaEmergenciaDoAdministrador negocio={negocio} expiraEm={expiraEm} motivo={emergencia.motivo} />;
   const nivel = corrigir.length > 0 ? `pode corrigir: ${listaDeModulos(corrigir)}` : correcaoPendente ? "somente leitura (para corrigir, saia e entre de novo)" : "somente leitura";
   return (
     <div role="region" aria-label="Modo suporte" className="bg-ambar md:sticky md:top-0 md:z-40 text-ambar-foreground shadow-[0_6px_16px_color-mix(in_srgb,var(--estrutura)_18%,transparent)]">
@@ -49,6 +54,64 @@ export function FaixaDoModoSuporte({
             Sair do modo suporte
           </button>
         </form>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * SPEC-019 (5.6): a faixa vermelha do Administrador no acesso de emergência — "Emergência · {negócio} ·
+ * somente leitura · até {hora} · {motivo}". Sair encerra o acesso (sem renovação).
+ */
+function FaixaDaEmergenciaDoAdministrador({ negocio, expiraEm, motivo }: { negocio: string; expiraEm: Date; motivo: string }) {
+  return (
+    <div role="region" aria-label="Acesso de emergência" className="bg-status-danger text-background md:sticky md:top-0 md:z-40 shadow-[0_6px_16px_color-mix(in_srgb,var(--estrutura)_18%,transparent)]">
+      <div className="mx-auto flex w-full max-w-[1280px] flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 py-2.5 sm:px-6 lg:px-10">
+        <p className="flex min-w-0 items-center gap-2 text-sm font-bold">
+          <Siren className="size-4 shrink-0" strokeWidth={2.4} aria-hidden="true" />
+          <span className="min-w-0">
+            <span className="font-extrabold">Emergência</span>
+            <span aria-hidden="true"> · </span>
+            <span className="break-words">{negocio}</span>
+            <span aria-hidden="true"> · </span>
+            <span className="font-semibold">
+              somente leitura · até {dataHoraCurta(expiraEm)} · {motivo}
+            </span>
+          </span>
+        </p>
+        <form action={acaoSairDoModoSuporte}>
+          <button type="submit" className={classeDoBotao("secundario", "sm", "border-background/40 bg-background/10 text-background hover:bg-background/20")}>
+            <LogOut aria-hidden="true" />
+            Sair e encerrar
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * SPEC-019 (5.6): a faixa vermelha para todos os membros enquanto houver acesso de emergência — "Acesso de
+ * emergência do suporte do HE até {hora}: {motivo}". O Dono ganha "Ver detalhes" e "Encerrar acesso".
+ */
+export function FaixaDaEmergencia({ acessoId, motivo, expiraEm, ehDono }: { acessoId: string; motivo: string; expiraEm: Date; ehDono: boolean }) {
+  return (
+    <div role="status" className="border-b border-status-danger/30 bg-status-danger-bg text-status-danger">
+      <div className="mx-auto flex w-full max-w-[1280px] flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 py-2.5 text-sm sm:px-6 lg:px-10">
+        <p className="flex min-w-0 items-start gap-2 font-semibold">
+          <Siren className="mt-0.5 size-4 shrink-0" strokeWidth={2.4} aria-hidden="true" />
+          <span>
+            Acesso de emergência do suporte do HE até {dataHoraCurta(expiraEm)}: {motivo}.
+          </span>
+        </p>
+        {ehDono && (
+          <div className="flex flex-wrap items-center gap-3 pl-6 sm:pl-0">
+            <Link href="/negocio/suporte" className="font-bold underline underline-offset-2">
+              Ver detalhes
+            </Link>
+            <EncerrarEmergencia acessoId={acessoId} />
+          </div>
+        )}
       </div>
     </div>
   );

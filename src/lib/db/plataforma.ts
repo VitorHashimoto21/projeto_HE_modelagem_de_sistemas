@@ -1,5 +1,7 @@
 import type { Prisma, PrismaClient } from "@/generated/prisma/client";
 import type { EventoSuporte, PlanoNegocio } from "@/generated/prisma/enums";
+import { fimDaEmergencia, lerPedidoDeEmergencia, MOTIVO_CURTO_DA_EMERGENCIA, ROTULO_MOTIVO_DA_EMERGENCIA, type PedidoDeEmergencia } from "@/lib/dominio/emergencia";
+import { listaDeModulos, PRAZOS } from "@/lib/dominio/suporte";
 import {
   expiracaoDoPedido,
   lerPedidoDePlano,
@@ -14,7 +16,7 @@ import { aplicarTroca } from "./planos";
 
 /**
  * Pedidos da plataforma (SPEC-019, 5.6 e 5.8 — INV-006): um Administrador pede, OUTRA conta de
- * Administrador aprova ou recusa, em até 12 h. Nesta etapa, a troca de plano.
+ * Administrador aprova ou recusa, em até 12 h: a troca de plano (5.8) e o acesso de emergência (5.6).
  *
  * Concorrência: toda escrita trava primeiro a linha do negócio e depois a do pedido, sempre nessa
  * ordem (sem impasse), e confere de novo dentro da transação. O pedido vencido é marcado como
@@ -26,13 +28,22 @@ export type ResultadoDoPedido =
   | { ok: false; erro: "NegocioInexistente" | "NegocioEncerrado" | "PedidoPendente" }
   | { ok: false; erro: "MesmoPlano"; plano: PlanoNegocio };
 
+/** SPEC-019 (5.6): o pedido de emergência e as recusas próprias dele. */
+export type ResultadoDoPedidoDeEmergencia =
+  | { ok: true; id: string; expiraEm: Date }
+  | { ok: false; erro: "NegocioInexistente" | "NegocioEncerrado" | "PedidoPendente" | "LiberacaoAtiva" | "EmergenciaAtiva" | "ResultadoPendente" };
+
 export type ErroDaDecisao = "PedidoInexistente" | "PedidoJaDecidido" | "PedidoExpirado" | "MesmoAdministrador" | "NaoEAdministrador";
 
 export type ResultadoDaDecisao =
-  | { ok: true; situacao: "APROVADO"; negocioId: string; pedido: PedidoDePlano; suspensos: number; reativados: number; convitesCancelados: number }
-  | { ok: true; situacao: "RECUSADO"; negocioId: string; pedido: PedidoDePlano }
-  | { ok: false; erro: ErroDaDecisao | "SolicitanteSemPapel" | "NegocioEncerrado" }
+  | { ok: true; tipo: "PLANO"; situacao: "APROVADO"; negocioId: string; pedido: PedidoDePlano; suspensos: number; reativados: number; convitesCancelados: number }
+  | { ok: true; tipo: "PLANO"; situacao: "RECUSADO"; negocioId: string; pedido: PedidoDePlano }
+  | { ok: true; tipo: "EMERGENCIA"; situacao: "APROVADO"; negocioId: string; emergencia: PedidoDeEmergencia; acessoId: string; expiraEm: Date; solicitadoPor: string }
+  | { ok: true; tipo: "EMERGENCIA"; situacao: "RECUSADO"; negocioId: string; emergencia: PedidoDeEmergencia }
+  | { ok: false; erro: ErroDaDecisao | "SolicitanteSemPapel" | "NegocioEncerrado" | "LiberacaoAtiva" | "EmergenciaAtiva" }
   | { ok: false; erro: "MesmoPlano"; plano: PlanoNegocio };
+
+type Decisao = { aprovar: true } | { aprovar: false; motivo: string };
 
 export type ResultadoDoCancelamento = { ok: true } | { ok: false; erro: "PedidoInexistente" | "PedidoJaDecidido" | "PedidoExpirado" | "SoQuemPediu" };
 
@@ -52,6 +63,8 @@ export type PedidoDaPlataforma = {
   motivoDaRecusa: string | null;
   /** Na troca de plano: o plano de destino, o motivo e a descrição. */
   plano: PedidoDePlano | null;
+  /** No acesso de emergência: o motivo, a referência, a justificativa, os módulos e o prazo. */
+  emergencia: PedidoDeEmergencia | null;
 };
 
 /** Conta de Administrador na lista do painel (5.9, item 4). */
@@ -116,10 +129,15 @@ const paraPedido = (p: LinhaDoPedido, agora: Date): PedidoDaPlataforma => {
     decididoEm: p.decididoEm ?? (situacao === "EXPIRADO" ? p.expiraEm : null),
     motivoDaRecusa: p.motivoDaRecusa,
     plano: p.tipo === "PLANO" ? lerPedidoDePlano(p.dados) : null,
+    emergencia: p.tipo === "EMERGENCIA" ? lerPedidoDeEmergencia(p.dados) : null,
   };
 };
 
 type Transacao = Pick<ClienteDoNegocio, "$queryRaw" | "$executeRaw" | "pedidoPlataforma" | "registroSuporte" | "usuario">;
+
+/** Acesso de emergência ou liberação do Dono ainda valendo no negócio (5.6, "Limites"). */
+const acessoAtivo = (tx: Pick<ClienteDoNegocio, "acessoSuporte">, tipo: "LIBERACAO" | "EMERGENCIA", agora: Date) =>
+  tx.acessoSuporte.count({ where: { tipo, revogadoEm: null, expiraEm: { gt: agora } } });
 
 /** Trava a linha do negócio (primeiro) e diz o plano e se está encerrado; null se não existe. */
 const travarNegocio = async (tx: Pick<ClienteDoNegocio, "$queryRaw">, negocioId: string) =>
@@ -143,15 +161,23 @@ const ehAdministrador = async (tx: Pick<ClienteDoNegocio, "usuario">, usuarioId:
   return Boolean(u?.administradorEm && !u.excluidoEm);
 };
 
-/** Registro de auditoria (RN32): só inserção, com o pedido. */
-const registrar = (tx: Pick<ClienteDoNegocio, "registroSuporte">, r: { negocioId: string; pedidoId: string; usuarioId: string; evento: EventoSuporte; descricao: string; criadoEm: Date }) =>
-  tx.registroSuporte.create({ data: { negocioId: r.negocioId, acessoId: null, pedidoId: r.pedidoId, usuarioId: r.usuarioId, evento: r.evento, descricao: r.descricao.slice(0, 200), criadoEm: r.criadoEm } });
+/** Registro de auditoria (RN32): só inserção, com o pedido (e, na aprovação da emergência, o acesso). */
+const registrar = (
+  tx: Pick<ClienteDoNegocio, "registroSuporte">,
+  r: { negocioId: string; pedidoId: string; acessoId?: string; usuarioId: string; evento: EventoSuporte; descricao: string; criadoEm: Date },
+) =>
+  tx.registroSuporte.create({
+    data: { negocioId: r.negocioId, acessoId: r.acessoId ?? null, pedidoId: r.pedidoId, usuarioId: r.usuarioId, evento: r.evento, descricao: r.descricao.slice(0, 200), criadoEm: r.criadoEm },
+  });
+
+/** "incidente de segurança, INC-42" — o resumo do pedido de emergência no registro. */
+const resumoDaEmergencia = (e: PedidoDeEmergencia) => `${MOTIVO_CURTO_DA_EMERGENCIA[e.motivo]}, ${e.referencia}`;
 
 const UNICO_PENDENTE = "PedidoPlataforma_um_pendente";
 const violouUnicoPendente = (e: unknown) => typeof e === "object" && e !== null && (e as { code?: unknown }).code === "P2002" && JSON.stringify(e).includes(UNICO_PENDENTE);
 
 export function criarConsultasDaPlataforma(cliente: PrismaClient) {
-  return {
+  const consultas = {
     // ---------------------------------------------------------------- escrita
 
     /**
@@ -196,12 +222,7 @@ export function criarConsultasDaPlataforma(cliente: PrismaClient) {
      * com o pedido e a descrição no histórico; ao voltar ao gratuito, fica o colaborador com acesso se
      * houver um só, e com mais de um, o Dono escolhe depois quem volta (Equipe). Tudo numa transação.
      */
-    async decidirTrocaDePlano(
-      pedidoId: string,
-      administradorId: string,
-      decisao: { aprovar: true } | { aprovar: false; motivo: string },
-      agora: Date,
-    ): Promise<ResultadoDaDecisao> {
+    async decidirTrocaDePlano(pedidoId: string, administradorId: string, decisao: Decisao, agora: Date): Promise<ResultadoDaDecisao> {
       const alvo = await cliente.pedidoPlataforma.findUnique({ where: { id: pedidoId }, select: { negocioId: true, tipo: true } });
       if (!alvo || alvo.tipo !== "PLANO") return { ok: false, erro: "PedidoInexistente" };
       const negocioId = alvo.negocioId;
@@ -224,7 +245,7 @@ export function criarConsultasDaPlataforma(cliente: PrismaClient) {
             descricao: `Recusou a troca para o ${resumoDoPedidoDePlano(pedido)}: ${decisao.motivo}`,
             criadoEm: agora,
           });
-          return { ok: true, situacao: "RECUSADO", negocioId, pedido };
+          return { ok: true, tipo: "PLANO", situacao: "RECUSADO", negocioId, pedido };
         }
 
         if (!(await ehAdministrador(tx, p.solicitadoPorId))) return { ok: false, erro: "SolicitanteSemPapel" };
@@ -249,8 +270,124 @@ export function criarConsultasDaPlataforma(cliente: PrismaClient) {
           descricao: `Aprovou a troca para o ${resumoDoPedidoDePlano(pedido)}: o plano mudou pela plataforma`,
           criadoEm: agora,
         });
-        return { ok: true, situacao: "APROVADO", negocioId, pedido, suspensos: troca.suspensos, reativados: troca.reativados, convitesCancelados: troca.convitesCancelados };
+        return { ok: true, tipo: "PLANO", situacao: "APROVADO", negocioId, pedido, suspensos: troca.suspensos, reativados: troca.reativados, convitesCancelados: troca.convitesCancelados };
       });
+    },
+
+    /**
+     * Pedir acesso de emergência (5.6): só sem liberação ativa do Dono, sem outro pedido de emergência
+     * pendente nem acesso de emergência em andamento no negócio, em negócio não encerrado (suspenso vale), e
+     * só se esta conta já registrou o resultado das emergências anteriores. Registra EMERGENCIA_SOLICITADA
+     * na mesma transação: o Dono vê o pedido desde já (INV-007).
+     */
+    async pedirEmergencia(negocioId: string, administradorId: string, dados: PedidoDeEmergencia, agora: Date): Promise<ResultadoDoPedidoDeEmergencia> {
+      return comNegocio(cliente, { negocioId })
+        .$transaction(async (tx): Promise<ResultadoDoPedidoDeEmergencia> => {
+          const negocio = await travarNegocio(tx, negocioId);
+          if (!negocio) return { ok: false, erro: "NegocioInexistente" };
+          if (negocio.encerrado) return { ok: false, erro: "NegocioEncerrado" };
+          if ((await acessoAtivo(tx, "LIBERACAO", agora)) > 0) return { ok: false, erro: "LiberacaoAtiva" };
+          if ((await acessoAtivo(tx, "EMERGENCIA", agora)) > 0) return { ok: false, erro: "EmergenciaAtiva" };
+          await expirarVencidos(tx, negocioId, agora);
+          if ((await tx.pedidoPlataforma.count({ where: { tipo: "EMERGENCIA", situacao: "PENDENTE" } })) > 0) return { ok: false, erro: "PedidoPendente" };
+          // Sem o resultado registrado, esta conta não pede outra emergência (em nenhum negócio).
+          const semResultado = await cliente.acessoSuporte.count({ where: { tipo: "EMERGENCIA", resultado: null, pedido: { solicitadoPorId: administradorId } } });
+          if (semResultado > 0) return { ok: false, erro: "ResultadoPendente" };
+          const expiraEm = expiracaoDoPedido(agora);
+          const pedido = await tx.pedidoPlataforma.create({
+            data: { tipo: "EMERGENCIA", negocioId, solicitadoPorId: administradorId, dados: { ...dados }, criadoEm: agora, expiraEm },
+            select: { id: true },
+          });
+          await registrar(tx, {
+            negocioId,
+            pedidoId: pedido.id,
+            usuarioId: administradorId,
+            evento: "EMERGENCIA_SOLICITADA",
+            descricao: `Pediu acesso de emergência (${resumoDaEmergencia(dados)}): ${listaDeModulos(dados.modulos)}, por ${PRAZOS[dados.prazo].rotulo}`,
+            criadoEm: agora,
+          });
+          return { ok: true, id: pedido.id, expiraEm };
+        })
+        .catch((e) => {
+          if (violouUnicoPendente(e)) return { ok: false as const, erro: "PedidoPendente" as const };
+          throw e;
+        });
+    },
+
+    /**
+     * Aprovar ou recusar o acesso de emergência (5.6 — INV-006): só outra conta de Administrador, com o pedido
+     * pendente e no prazo. Na aprovação, ainda sem liberação ativa e sem outra emergência, cria o acesso:
+     * somente leitura (sem correção), nos módulos pedidos, da aprovação até o fim do prazo, sem renovação.
+     */
+    async decidirEmergencia(pedidoId: string, administradorId: string, decisao: Decisao, agora: Date): Promise<ResultadoDaDecisao> {
+      const alvo = await cliente.pedidoPlataforma.findUnique({ where: { id: pedidoId }, select: { negocioId: true, tipo: true } });
+      if (!alvo || alvo.tipo !== "EMERGENCIA") return { ok: false, erro: "PedidoInexistente" };
+      const negocioId = alvo.negocioId;
+      return comNegocio(cliente, { negocioId }).$transaction(async (tx): Promise<ResultadoDaDecisao> => {
+        const negocio = await travarNegocio(tx, negocioId);
+        const p = await travarPedido(tx, pedidoId);
+        if (!negocio || !p) return { ok: false, erro: "PedidoInexistente" };
+        const conferido = await conferirDecisao(tx, p, pedidoId, administradorId, agora);
+        if (conferido) return { ok: false, erro: conferido };
+        const emergencia = lerPedidoDeEmergencia(p.dados);
+        if (!emergencia) return { ok: false, erro: "PedidoInexistente" };
+
+        if (!decisao.aprovar) {
+          await tx.pedidoPlataforma.update({ where: { id: pedidoId }, data: { situacao: "RECUSADO", decididoPorId: administradorId, decididoEm: agora, motivoDaRecusa: decisao.motivo } });
+          await registrar(tx, {
+            negocioId,
+            pedidoId,
+            usuarioId: administradorId,
+            evento: "EMERGENCIA_RECUSADA",
+            descricao: `Recusou o acesso de emergência (${resumoDaEmergencia(emergencia)}): ${decisao.motivo}`,
+            criadoEm: agora,
+          });
+          return { ok: true, tipo: "EMERGENCIA", situacao: "RECUSADO", negocioId, emergencia };
+        }
+
+        if (!(await ehAdministrador(tx, p.solicitadoPorId))) return { ok: false, erro: "SolicitanteSemPapel" };
+        if (negocio.encerrado) return { ok: false, erro: "NegocioEncerrado" };
+        if ((await acessoAtivo(tx, "LIBERACAO", agora)) > 0) return { ok: false, erro: "LiberacaoAtiva" };
+        if ((await acessoAtivo(tx, "EMERGENCIA", agora)) > 0) return { ok: false, erro: "EmergenciaAtiva" };
+
+        await tx.pedidoPlataforma.update({ where: { id: pedidoId }, data: { situacao: "APROVADO", decididoPorId: administradorId, decididoEm: agora } });
+        const expiraEm = fimDaEmergencia(agora, emergencia.prazo);
+        const acesso = await tx.acessoSuporte.create({
+          data: {
+            negocioId,
+            tipo: "EMERGENCIA",
+            motivo: ROTULO_MOTIVO_DA_EMERGENCIA[emergencia.motivo],
+            motivoEmergencia: emergencia.motivo,
+            referencia: emergencia.referencia,
+            justificativa: emergencia.justificativa,
+            modulos: emergencia.modulos,
+            modulosComCorrecao: [],
+            pedidoId,
+            criadoEm: agora,
+            expiraEm,
+          },
+          select: { id: true },
+        });
+        await registrar(tx, {
+          negocioId,
+          pedidoId,
+          acessoId: acesso.id,
+          usuarioId: administradorId,
+          evento: "EMERGENCIA_APROVADA",
+          descricao: `Aprovou o acesso de emergência (${resumoDaEmergencia(emergencia)}): somente leitura até o fim do prazo`,
+          criadoEm: agora,
+        });
+        const solicitadoPor = (await tx.usuario.findUnique({ where: { id: p.solicitadoPorId }, select: { nome: true } }))?.nome ?? "";
+        return { ok: true, tipo: "EMERGENCIA", situacao: "APROVADO", negocioId, emergencia, acessoId: acesso.id, expiraEm, solicitadoPor };
+      });
+    },
+
+    /** Aprovar ou recusar um pedido, de qualquer tipo (as telas não precisam saber qual é). */
+    async decidir(pedidoId: string, administradorId: string, decisao: Decisao, agora: Date): Promise<ResultadoDaDecisao> {
+      const alvo = await cliente.pedidoPlataforma.findUnique({ where: { id: pedidoId }, select: { tipo: true } });
+      if (!alvo) return { ok: false, erro: "PedidoInexistente" };
+      // Sem `this`: as dependências das ações recebem os métodos soltos.
+      return alvo.tipo === "EMERGENCIA" ? consultas.decidirEmergencia(pedidoId, administradorId, decisao, agora) : consultas.decidirTrocaDePlano(pedidoId, administradorId, decisao, agora);
     },
 
     /** Quem pediu cancela o próprio pedido pendente (5.9, item 2). O pedido guarda a hora. */
@@ -321,6 +458,7 @@ export function criarConsultasDaPlataforma(cliente: PrismaClient) {
       return contas.map((c) => ({ id: c.id, nome: c.nome, email: c.email, desde: c.administradorEm!, autenticadores: fatores ? (fatores.get(c.id) ?? 0) : null }));
     },
   };
+  return consultas;
 }
 
 /** Confere a decisão com as linhas travadas; devolve o erro, ou null se pode decidir. */

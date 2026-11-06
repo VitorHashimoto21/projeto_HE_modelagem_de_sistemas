@@ -5,8 +5,9 @@ import { redirect } from "next/navigation";
 import { acaoDaConta, acaoDoAdministrador, acaoDoDono, type ReconfirmacaoNecessaria } from "@/lib/auth/acao";
 import { ROTA_ADMIN, destinoSeguro } from "@/lib/auth/rotas";
 import { camposDoFormulario, VERSAO_TERMOS } from "@/lib/auth/validacao";
-import { consultasDeAcesso, correcoes, DesfazerRecusado } from "@/lib/db";
+import { consultasDeAcesso, correcoes, DesfazerRecusado, suporte } from "@/lib/db";
 import { MENSAGENS_DAS_CORRECOES } from "@/lib/dominio/correcoes";
+import { MENSAGENS_DA_EMERGENCIA } from "@/lib/dominio/emergencia";
 import { dependenciasDoAdministrador, dependenciasDoDono, gravarModoSuporte, lerModoSuporte, limparModoSuporte } from "./servidor";
 import * as servicos from "./servicos";
 
@@ -45,6 +46,19 @@ export const acaoDesfazerCorrecao = acaoDoDono(async (membro, _: servicos.Estado
   }
   revalidatePath("/", "layout");
   return { status: "ok", mensagem: MENSAGENS_DAS_CORRECOES.desfeita };
+});
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Dono: encerrar o acesso de emergência a qualquer momento (SPEC-019, 5.6). A próxima requisição do
+ * Administrador já não tem o contexto e volta ao painel (INV-010).
+ */
+export const acaoEncerrarEmergencia = acaoDoDono(async (membro, _: servicos.EstadoDoEncerramento, form: FormData): Promise<servicos.EstadoDoEncerramento> => {
+  const acessoId = texto(form, "acessoId");
+  const ok = UUID.test(acessoId) && (await suporte().encerrarEmergencia(membro.negocioId, acessoId, membro.usuarioId, new Date(), "DONO"));
+  revalidatePath("/", "layout");
+  return ok ? { status: "ok", mensagem: MENSAGENS_DA_EMERGENCIA.encerrada } : { status: "erro", mensagem: MENSAGENS_DA_EMERGENCIA.jaEncerrada };
 });
 
 /**

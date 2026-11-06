@@ -132,7 +132,7 @@ describe("T05 — duas pessoas (INV-006, CA-15, CA-16)", () => {
     const id = await pedir();
     const agora = new Date();
     const r = await plataforma.decidirTrocaDePlano(id, adminB, { aprovar: true }, agora);
-    expect(r).toEqual({ ok: true, situacao: "APROVADO", negocioId: negocio, pedido: PAGO, suspensos: 0, reativados: 1, convitesCancelados: 0 });
+    expect(r).toEqual({ ok: true, tipo: "PLANO", situacao: "APROVADO", negocioId: negocio, pedido: PAGO, suspensos: 0, reativados: 1, convitesCancelados: 0 });
 
     const n = await base.negocio.findUniqueOrThrow({ where: { id: negocio }, select: { plano: true, planoAlteradoPorId: true, planoAlteradoEm: true } });
     expect(n).toEqual({ plano: "PAGO", planoAlteradoPorId: adminB, planoAlteradoEm: agora });
@@ -166,7 +166,7 @@ describe("T05 — duas pessoas (INV-006, CA-15, CA-16)", () => {
   it("recusa com motivo: o plano não muda e o registro guarda quem recusou", async () => {
     const id = await pedir();
     const r = await plataforma.decidirTrocaDePlano(id, adminB, { aprovar: false, motivo: "Sem combinação com o Dono" }, new Date());
-    expect(r).toEqual({ ok: true, situacao: "RECUSADO", negocioId: negocio, pedido: PAGO });
+    expect(r).toEqual({ ok: true, tipo: "PLANO", situacao: "RECUSADO", negocioId: negocio, pedido: PAGO });
     expect(await base.pedidoPlataforma.findUniqueOrThrow({ where: { id } })).toMatchObject({ situacao: "RECUSADO", decididoPorId: adminB, motivoDaRecusa: "Sem combinação com o Dono" });
     expect((await eventos()).map((e) => e.evento)).toEqual(["PLANO_SOLICITADO", "PLANO_RECUSADO"]);
     expect(await plano()).toBe("GRATUITO");
@@ -351,7 +351,10 @@ describe("fluxos (servicos.ts) com o banco: mensagens e o aviso ao Dono", () => 
     administradorId,
     agora: () => new Date(),
     pedirTrocaDePlano: plataforma.pedirTrocaDePlano,
-    decidirTrocaDePlano: plataforma.decidirTrocaDePlano,
+    pedirEmergencia: plataforma.pedirEmergencia,
+    decidir: plataforma.decidir,
+    entrarNaEmergencia: suporte.entrarNaEmergencia,
+    registrarResultado: suporte.registrarResultado,
     cancelar: plataforma.cancelar,
     dono: suporte.donoDoNegocio,
     avisar: (m) => avisos.push(m),

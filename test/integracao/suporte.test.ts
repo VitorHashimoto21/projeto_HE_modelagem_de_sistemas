@@ -93,7 +93,8 @@ describe("T05 — painel: só metadados (INV-009, CA-01)", () => {
     await suporte.liberar(negocio, dono, LIBERAR, agora());
     const { negocios, total } = await suporte.listarNegocios("", 1, agora());
     expect(total).toBe(2);
-    const campos: (keyof NegocioNoPainel)[] = ["id", "nome", "regime", "plano", "criadoEm", "membros", "encerrado", "dono", "liberacao"];
+    // SPEC-019 (5.6): o acesso de emergência em andamento, um dado do próprio acesso (nada de dentro do negócio).
+    const campos: (keyof NegocioNoPainel)[] = ["id", "nome", "regime", "plano", "criadoEm", "membros", "encerrado", "dono", "liberacao", "emergencia"];
     for (const n of negocios) expect(Object.keys(n).sort()).toEqual([...campos].sort());
     const salao = negocios.find((n) => n.id === negocio)!;
     expect(salao).toMatchObject({ membros: 1, encerrado: false, dono: { nome: "Rafael Dono", email: "dono@exemplo.com" }, liberacao: { motivo: LIBERAR.motivo, modulos: ["estoque", "vendas"] } });

@@ -284,3 +284,77 @@ O banco recebeu a migração `20261105120000_pedidos_da_plataforma`, que só acr
 
 - **3b:** o acesso de emergência, com o mesmo pedido de duas pessoas, e o histórico das emergências no painel.
 - **Etapa 4:** a suspensão (a troca de plano vale para negócio suspenso), a situação "Suspenso" e o filtro do painel, a nova versão da Política e dos Termos e a homologação (T17), que confere também a contagem dos autenticadores no Supabase.
+
+## Etapa 3b — acesso de emergência (06/11/2026)
+
+Verificação em build de produção local, no mesmo ambiente da etapa 3a. Os dados são fictícios:
+- o Dono e o negócio **HE Testing**, com a colaboradora Joana;
+- as contas de Administrador `suporte@exemplo.com` ("Equipe de Suporte", a conta A, que pede) e `suporte2@exemplo.com` ("Segunda Pessoa do Suporte", a conta B, que aprova ou recusa).
+
+O banco recebeu a migração `20261106120000_acesso_de_emergencia`, que só acrescenta:
+- o tipo do acesso do suporte (`LIBERACAO`, o padrão das liberações que já existem, ou `EMERGENCIA`) e os campos da emergência: motivo da lista, referência, justificativa, pedido aprovado e resultado;
+- os eventos `EMERGENCIA_SOLICITADA`, `EMERGENCIA_APROVADA`, `EMERGENCIA_RECUSADA`, `EMERGENCIA_ENCERRADA` e `EMERGENCIA_RESULTADO`. Por decisão da equipe, o cancelamento não vai para o registro;
+- checagens no banco:
+  - cada tipo de acesso com os seus campos;
+  - a emergência sem correção e com até 4 h;
+  - o resultado registrado uma vez, com a hora, sem mudar depois;
+  - os dados completos do pedido de emergência;
+  - os eventos apontando o pedido ou o acesso;
+  - o pedido do mesmo negócio.
+
+### Testes automatizados
+
+| # | Teste | Onde | Resultado |
+|---|---|---|---|
+| T06, INV-007 | O pedido fica pendente por 12 h, com o `EMERGENCIA_SOLICITADA`, e aparece na leitura do Dono desde já. É recusado com liberação ativa, negócio encerrado, outro pedido pendente e emergência em andamento. O banco recusa dados fora da lista | `test/integracao/emergencia.test.ts` | ✅ |
+| CA-10, INV-006 | A não aprova o próprio pedido. B aprova e nasce o acesso: somente leitura, nos módulos pedidos, pelo prazo pedido, sem correção. O vencido expira; a recusa guarda o motivo e não cria acesso; com a liberação feita depois do pedido, a aprovação é recusada. Cancelar não vai para o registro | idem | ✅ |
+| INV-010, CA-11, CA-12 | O contexto vale só para quem pediu: outra conta, cookie forjado e cookie inválido não têm nada. Toda ação é recusada, mesmo a de uma correção da lista, e o banco não aceita correção na emergência. O Dono encerra, e a próxima requisição volta ao painel. Vencido o prazo, o contexto acaba. Só quem pediu entra, e a saída encerra. A liberação do Dono não encerra a emergência | idem e `test/unit/emergencia.test.ts` | ✅ |
+| T07, CA-13 | O resultado só depois do fim, só por quem pediu, uma vez; o banco não deixa mudar. Sem ele, não há novo pedido, em nenhum negócio. O resultado aparece para o Dono e no histórico do painel | `test/integracao/emergencia.test.ts` | ✅ |
+| 5.6 | Os fluxos (`servicos.ts`): validação do pedido e do resultado, cada recusa com a sua explicação e os e-mails ao Dono no pedido e na aprovação | `test/unit/emergencia.test.ts` e `test/integracao/emergencia.test.ts` | ✅ |
+| INV-002, OPEN-003 | Pedir a emergência é ação crítica (`acaoCritica`); entrar e registrar o resultado bastam a conta de Administrador; encerrar é do Dono | `test/unit/emergencia.test.ts` | ✅ |
+
+**Suíte completa:** 676 testes unitários e 395 de integração passaram, além de lint, tipos, build de produção e a checagem do schema (`migrate diff` sem diferença).
+
+**Testes antigos ajustados:**
+- os testes da 3a passaram a usar a decisão comum aos dois tipos de pedido (`decidir`), e os resultados trazem o tipo;
+- a lista fechada de campos do painel (INV-009 da SPEC-018) ganhou a emergência em andamento, um dado do próprio acesso;
+- as dependências do modo suporte ganharam o encerramento da emergência.
+
+### Roteiro no navegador (parte do T14 e do T15)
+
+70 verificações, todas aprovadas (`scratchpad/e2e19d/spec19d.mjs`).
+
+| Passo | Resultado | Captura |
+|---|---|---|
+| **A pede, sem liberação do Dono:** na ficha, a gaveta com o motivo, a referência, a justificativa, os módulos e o prazo. Sem os campos, a gaveta explica o que falta. Passados 10 min, o código é pedido de novo, e nada é gravado antes | ✅ | `s19d_01_pedir_emergencia_*` |
+| **Pedido pendente:** registrado com o `EMERGENCIA_SOLICITADA`; no próprio pedido, A não tem "Aprovar" | ✅ | `s19d_02_ficha_pedido_pendente_1440_claro.png` |
+| **INV-007:** o Dono vê o pedido em "Acessos do suporte" desde já, com o motivo e a referência, e que o suporte não entra antes da aprovação | ✅ | `s19d_03_dono_ve_o_pedido_*` |
+| **B aprova** (CA-10): o pedido com o motivo, a referência, os módulos e o prazo; a confirmação diz o que acontece; o código de novo. Nasce o acesso de 2 h, em Vendas e Financeiro, sem correção | ✅ | `s19d_04_confirmar_aprovacao_1440_claro.png` |
+| **Faixas vermelhas:** o Dono, com "Ver detalhes" e "Encerrar acesso"; a colaboradora, sem o botão | ✅ | `s19d_05_faixa_do_dono_*` |
+| **INV-010:** B não tem "Entrar"; com o cookie do acesso forjado, B volta ao painel | ✅ | — |
+| **A entra** (CA-12): a faixa "Emergência · HE Testing · somente leitura · até … · incidente de segurança"; sem "Nova venda" e sem "Novo lançamento"; o Catálogo e a exportação recusados; a entrada e cada tela registradas | ✅ | `s19d_06_administrador_na_emergencia_*` |
+| **O Dono encerra** (CA-11): vê quem pediu, quem aprovou, a entrada e as telas; confirma no diálogo; a faixa some | ✅ | `s19d_07_acessos_com_emergencia_1440_claro.png`, `s19d_08_encerrar_acesso_390_claro.png` |
+| **A volta ao painel** com "O Dono encerrou o acesso de emergência" | ✅ | `s19d_09_encerrado_pelo_dono_1440_claro.png` |
+| **Resultado obrigatório** (CA-13): sem ele, "Solicitar" fica desligado com a explicação; em Emergências, o resultado vazio é recusado e o preenchido, registrado; o Dono o vê | ✅ | `s19d_10_emergencias_*`, `s19d_11_resultado_para_o_dono_390_escuro.png` |
+| **Recusa:** B recusa com o motivo; o Dono vê "O suporte não entrou" | ✅ | — |
+| **A saída encerra:** outro pedido aprovado; A entra e sai com "Sair e encerrar"; o acesso fica encerrado em nome de A, e a ficha pede o resultado | ✅ | — |
+| **Com a liberação do Dono,** "Solicitar acesso de emergência" fica desligado, com a explicação | ✅ | `s19d_12_ficha_com_liberacao_1440_claro.png` |
+| Sem rolagem horizontal em 390, 768 e 1440 px. Axe sem violações em "Acessos do suporte" com o pedido, Vendas no acesso de emergência, Emergências e a ficha, nos temas claro e escuro, em 390 e 1440 px | ✅ | todas |
+
+**Dados nas capturas:** as contas, os e-mails (`@exemplo.com`), o negócio, os nomes e as referências são fictícios.
+
+### Encontrado no roteiro
+
+- **Título do pedido:** o título com o ícone da emergência virou um contêiner flexível, e o nome do negócio saía numa linha à parte no texto lido. O ícone passou a ficar em linha com o título.
+- **Selo da emergência:** o selo de perigo do design system traz uma seta para baixo, pensada para valores em queda. Os selos da emergência passaram a usar a sirene.
+
+### Decisões tomadas na implementação
+
+- **A saída encerra:** sair do acesso de emergência o encerra; não há segunda entrada no mesmo acesso.
+- **Liberação depois do pedido:** a aprovação é recusada. Uma liberação feita durante a emergência não a encerra.
+- **Resultado pendente:** vale em qualquer negócio.
+- **Cancelamento:** como na troca de plano, não vai para o registro (decisão da equipe, 06/11/2026), e o pedido cancelado continua visível.
+
+### Fica para a etapa 4
+
+A suspensão (a emergência vale para negócio suspenso), a nova versão da Política e dos Termos, a exportação LGPD dos eventos novos, o modelo lógico de dados e a homologação (T17).

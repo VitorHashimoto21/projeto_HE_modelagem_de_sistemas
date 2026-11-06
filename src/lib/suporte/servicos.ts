@@ -28,6 +28,9 @@ export const LIBERACAO_INICIAL: EstadoDaLiberacao = { status: "ocioso" };
 /** Desfazer uma correção do suporte (SPEC-019, 5.5): a recusa vem com a explicação para o Dono. */
 export type EstadoDoDesfazer = { status: "ocioso" } | { status: "ok"; mensagem: string } | { status: "erro"; mensagem: string };
 
+/** Encerrar o acesso de emergência (SPEC-019, 5.6): o Dono, a qualquer momento. */
+export type EstadoDoEncerramento = EstadoDoDesfazer;
+
 export type DependenciasDoDono = {
   membro: ContextoDoMembro;
   agora: () => Date;
@@ -67,6 +70,8 @@ export type DependenciasDoAdministrador = {
   entrar: (acessoId: string, administradorId: string, agora: Date, reconfirmada: boolean) => Promise<{ ok: true; primeira: boolean; negocioId: string } | { ok: false; erro: string }>;
   liberacao: (acessoId: string) => Promise<LiberacaoDoContexto | null>;
   sair: (negocioId: string, acessoId: string, administradorId: string) => Promise<void>;
+  /** SPEC-019 (5.6): a saída encerra o acesso de emergência (sem renovação). */
+  encerrarEmergencia: (negocioId: string, acessoId: string, usuarioId: string, agora: Date, quem: "DONO" | "ADMINISTRADOR") => Promise<boolean>;
   /** SPEC-019 (5.3, item 5): correções deste Administrador desde a última entrada nesta liberação. */
   correcoesDaVisita: (acessoId: string, administradorId: string) => Promise<number>;
   dono: (negocioId: string) => Promise<{ nome: string; email: string; negocio: string } | null>;
@@ -89,6 +94,11 @@ const TELA_INICIAL: Record<Modulo, string> = {
 };
 const ORDEM_DE_ENTRADA: Modulo[] = ["dashboard", "vendas", "estoque", "catalogo", "financeiro", "calculadora"];
 
+/** A primeira tela do modo suporte, também no acesso de emergência (SPEC-019, 5.6). */
+export function telaInicialDoSuporte(modulos: readonly string[]): string {
+  return TELA_INICIAL[ORDEM_DE_ENTRADA.find((m) => modulos.includes(m)) ?? "dashboard"];
+}
+
 /**
  * Entrar em modo suporte (5.5): só com liberação ativa, conferida e registrada no banco. Na liberação
  * com correção (SPEC-019, 5.3), só com o código verificado nos últimos 10 min; senão, a tela pede o código.
@@ -108,8 +118,7 @@ export async function entrar(negocioId: string, deps: DependenciasDoAdministrado
     const dono = await deps.dono(negocioId);
     if (dono) deps.avisar(emailDeEntrada(dono, agora, ativa.modulosComCorrecao, deps.origem));
   }
-  const primeiro = ORDEM_DE_ENTRADA.find((m) => lida.modulos.includes(m)) ?? "dashboard";
-  return { ok: true, acessoId: ativa.id, expiraEm: lida.expiraEm, destino: TELA_INICIAL[primeiro] };
+  return { ok: true, acessoId: ativa.id, expiraEm: lida.expiraEm, destino: telaInicialDoSuporte(lida.modulos) };
 }
 
 /**
@@ -122,6 +131,8 @@ export async function sair(acessoId: string | null, deps: DependenciasDoAdminist
   if (!lida) return null;
   const correcoes = await deps.correcoesDaVisita(acessoId, deps.administradorId);
   await deps.sair(lida.negocioId, acessoId, deps.administradorId);
+  // SPEC-019 (5.6): sair do acesso de emergência o encerra; quem pediu registra o resultado depois.
+  if (lida.emergencia) await deps.encerrarEmergencia(lida.negocioId, acessoId, deps.administradorId, deps.agora(), "ADMINISTRADOR");
   if (correcoes > 0) {
     const dono = await deps.dono(lida.negocioId);
     if (dono) deps.avisar(emailDasCorrecoes(dono, correcoes, deps.origem));

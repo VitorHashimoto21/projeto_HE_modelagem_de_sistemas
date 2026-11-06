@@ -7,7 +7,7 @@
 >   - **2b — a Calculadora e o Financeiro:** implementada em 02/11/2026 e verificada em build local ([evidências](evidencias/SPEC-019/README.md#etapa-2b--correções-do-suporte-no-financeiro-e-na-calculadora-02112026));
 > - **etapa 3 — troca de plano e emergência**, em duas partes (decisão da equipe, 05/11/2026):
 >   - **3a — pedidos com duas pessoas, troca de plano pela plataforma e painel do Administrador:** implementada em 05/11/2026 e verificada em build local ([evidências](evidencias/SPEC-019/README.md#etapa-3a--pedidos-com-duas-pessoas-troca-de-plano-pela-plataforma-e-painel-05112026));
->   - **3b — acesso de emergência:** a implementar;
+>   - **3b — acesso de emergência:** implementada em 06/11/2026 e verificada em build local ([evidências](evidencias/SPEC-019/README.md#etapa-3b--acesso-de-emergência-06112026));
 > - **etapa 4 — suspensão, Política e Termos, e homologação (T17):** a implementar.
 >
 > As notas da implementação estão depois da seção 9. As questões em aberto foram decididas pela equipe em entrevista (seção 13), pela opção recomendada, com quatro ajustes da equipe (prazos de 12 h e duas pessoas também na troca de plano):
@@ -622,6 +622,49 @@ Cobre a seção 5.8, os itens 2, 4 e 5 ("Trocar plano") da 5.9 e a parte das tro
 - **Fica para as próximas etapas:**
   - o acesso de emergência, com o mesmo pedido, e o histórico de emergências no painel, na etapa 3b;
   - a suspensão (a troca de plano vale para negócio suspenso), a situação "Suspenso" e o filtro do painel, na etapa 4.
+
+**Decisões da equipe sobre a etapa 3a (06/11/2026), depois da revisão da PR:**
+- **Volta ao gratuito pela plataforma:** fica como implementada. O Dono escolhe qual colaborador volta para a equipe.
+- **Cancelamento de pedido:** não vai para o registro de auditoria, porque nada muda no negócio. Vale para os dois tipos de pedido: o evento `EMERGENCIA_CANCELADA` da seção 7 não foi criado.
+- **Pedido cancelado:** continua visível como "Cancelado" no painel e em "Acessos do suporte".
+- **Contagem dos autenticadores:** a equipe confere na homologação.
+
+**Implementação — etapa 3b, acesso de emergência (06/11/2026):** [evidências](evidencias/SPEC-019/README.md#etapa-3b--acesso-de-emergência-06112026).
+
+Cobre a seção 5.6, o item 3 ("Emergências") e o "Solicitar acesso de emergência" da 5.9, e a parte da emergência da 5.10. Também cobre os CA-10 a CA-13, os INV-003 (a emergência nunca escreve), INV-006, INV-007 e INV-010, os T06 e T07 e a parte da emergência dos T05, T14 e T15. O roteiro no navegador teve 70 verificações, com duas contas de Administrador, o Dono e uma colaboradora. Como foi feito:
+- **Banco:** a migração `20261106120000_acesso_de_emergencia` acrescenta:
+  - em `AcessoSuporte`, o `tipo` (`LIBERACAO`, o padrão das liberações que já existem, ou `EMERGENCIA`), `liberadoPorId` opcional, e os campos da emergência: `motivoEmergencia`, `referencia`, `justificativa`, `pedidoId`, `resultado` e `resultadoEm`;
+  - os eventos `EMERGENCIA_SOLICITADA`, `EMERGENCIA_APROVADA`, `EMERGENCIA_RECUSADA`, `EMERGENCIA_ENCERRADA` e `EMERGENCIA_RESULTADO`.
+
+  As checagens do banco repetem as regras:
+  - cada tipo com os seus campos;
+  - a emergência sem correção e com até 4 h;
+  - o resultado com a hora, uma vez só;
+  - o tipo e o pedido do acesso não mudam;
+  - os dados do pedido de emergência completos (motivo da lista, referência, justificativa, módulos e prazo de 1, 2 ou 4 h);
+  - os eventos apontam o pedido ou o acesso;
+  - o pedido aponta o mesmo negócio.
+- **Pedir** (Administrador A): na ficha, só sem liberação ativa. Pede o motivo da lista, a referência, a justificativa, os módulos e o prazo. É uma ação crítica, com o código de novo. Também é recusado com outro pedido pendente, com emergência em andamento, com o negócio encerrado ou sem o resultado da última emergência desta conta. O Dono vê o pedido na hora em "Acessos do suporte" e recebe o e-mail (com domínio).
+- **Aprovar** (Administrador B): pelo mesmo pedido de duas pessoas da etapa 3a, com o código de novo. Ainda sem liberação ativa, a aprovação cria o acesso: somente leitura, nos módulos pedidos, da aprovação até o fim do prazo, sem renovação. O Dono recebe o e-mail (com domínio).
+- **Contexto (INV-010):** o acesso de emergência usa o mesmo sinal do modo suporte, lido do banco a cada requisição. Só vale para a conta que pediu: para outra conta, o cookie não aponta nada. A emergência nunca corrige, mesmo que o banco trouxesse módulos em correção. Máscaras, telas registradas, exportação recusada e Inventário e Relatórios fora valem sem código novo.
+- **Faixas:**
+  - o Administrador vê a faixa vermelha "Emergência · {negócio} · somente leitura · até {hora} · {motivo}", com "Sair e encerrar";
+  - todos os membros veem "Acesso de emergência do suporte do HE até {hora}: {motivo}";
+  - o Dono tem também "Ver detalhes" e "Encerrar acesso".
+- **Encerrar:** o Dono encerra a qualquer momento, na faixa ou em "Acessos do suporte". A próxima tela do Administrador volta ao painel com o aviso. A saída do Administrador também encerra o acesso.
+- **Resultado (CA-13):** depois do fim (saída, expiração ou encerramento), quem pediu registra o resultado, até 1000 caracteres, na ficha ou em "Emergências". Sem ele, essa conta não faz um novo pedido.
+- **Painel:**
+  - a seção "Emergências" mostra o histórico de todas as contas, com o motivo, a referência, quem pediu, quem aprovou, quem encerrou, os horários e o resultado;
+  - a lista de negócios mostra "Emergência até {hora}";
+  - os pedidos de emergência aparecem em "Pedidos", com os da troca de plano.
+- **Dono:** "Acessos do suporte" mostra o pedido desde o pedido, com o desfecho ("o suporte não entrou", na recusa, no cancelamento e na expiração). O acesso aparece com o selo "Emergência", o motivo, a referência, a justificativa, quem pediu, quem aprovou, o resultado e o registro de cada tela.
+
+**Decisões de implementação da etapa 3b (sem mudar o comportamento da Spec):**
+- **A saída encerra:** a Spec lista a saída entre os fins do acesso ("saída, expiração ou encerramento"). Por isso, sair do acesso de emergência o encerra, e não há segunda entrada no mesmo acesso.
+- **Liberação depois do pedido:** se o Dono liberar o acesso enquanto o pedido está pendente, a aprovação é recusada, porque o caminho passa a ser a liberação. Uma liberação feita durante uma emergência não a encerra: o Dono encerra a emergência à parte.
+- **Resultado pendente:** vale em qualquer negócio. A conta com uma emergência sem resultado não pede outra em nenhum negócio.
+- **Motivo no acesso:** o campo `motivo` guarda o motivo da lista por extenso; o motivo curto aparece nas faixas.
+- **Fica para a etapa 4:** a suspensão (a emergência vale para negócio suspenso), a nova versão da Política e dos Termos, a exportação LGPD dos eventos novos e a homologação (T17).
 
 ---
 

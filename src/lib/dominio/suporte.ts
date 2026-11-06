@@ -12,6 +12,9 @@ import { instantesDasClaims } from "./segundo-fator";
 /** OPEN-006: prazos que o Dono escolhe; 24 h é o padrão. */
 export const PRAZOS = {
   "1h": { rotulo: "1 hora", horas: 1 },
+  // SPEC-019 (5.6): só no acesso de emergência.
+  "2h": { rotulo: "2 horas", horas: 2 },
+  "4h": { rotulo: "4 horas", horas: 4 },
   // SPEC-019 (OPEN-004): só na liberação com correção.
   "12h": { rotulo: "12 horas", horas: 12 },
   "24h": { rotulo: "24 horas", horas: 24 },

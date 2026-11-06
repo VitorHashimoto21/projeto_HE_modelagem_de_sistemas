@@ -2,12 +2,13 @@ import { Suspense } from "react";
 import { FaixaDoCaixaCompacta } from "@/components/estrutura/faixa-do-caixa";
 import { Navegacao } from "@/components/estrutura/navegacao";
 import { Minigrafico } from "@/components/graficos/minigrafico";
-import { FaixaDoModoSuporte, FaixaDoSuporteLiberado } from "@/components/suporte/faixas";
+import { FaixaDaEmergencia, FaixaDoModoSuporte, FaixaDoSuporteLiberado } from "@/components/suporte/faixas";
 import { AvisoDaUrl, AvisosFlutuantes } from "@/components/ui/avisos-flutuantes";
 import { exigirSessao } from "@/lib/auth/servidor";
 import { carregarFaixa, cartaoSeguro } from "@/lib/dashboard/servicos";
 import { dependenciasDoDashboard } from "@/lib/dashboard/servidor";
 import { consultasDeAcesso, negocios, planos, suporte } from "@/lib/db";
+import { MOTIVO_CURTO_DA_EMERGENCIA } from "@/lib/dominio/emergencia";
 import { reaisDeCentavos as reais } from "@/lib/dominio/venda";
 import { veDashboardCompleto } from "@/lib/dominio/permissoes";
 import { menuDoMembro, menuDoSuporte } from "@/lib/equipe/menu";
@@ -28,12 +29,14 @@ export default async function LayoutDaAplicacao({ children, gaveta }: LayoutProp
       : null;
   const comFaixa = membro !== null && veDashboardCompleto(membro.permissoes);
   const agora = new Date();
-  const [perfil, meusNegocios, plano, faixa, liberacao] = await Promise.all([
+  const [perfil, meusNegocios, plano, faixa, liberacao, emergencia] = await Promise.all([
     consultasDeAcesso().perfil(contexto.usuarioId),
     contexto.administrador ? Promise.resolve([]) : negocios().listarDoUsuario(contexto.usuarioId),
     contexto.negocioId ? planos().planoDoNegocio(contexto.negocioId) : Promise.resolve(null),
     comFaixa ? cartaoSeguro("faixa", () => carregarFaixa(dependenciasDoDashboard(membro))) : Promise.resolve(null),
     membro && !modoSuporte ? suporte().liberacaoAtiva(membro.negocioId, agora) : Promise.resolve(null),
+    // SPEC-019 (5.6, INV-007): todos os membros veem a faixa vermelha enquanto houver acesso de emergência.
+    membro && !modoSuporte ? suporte().emergenciaAtiva(membro.negocioId, agora) : Promise.resolve(null),
   ]);
   const menu = modoSuporte && contexto.permissoes ? menuDoSuporte(contexto.permissoes) : menuDoMembro(contexto.papel, contexto.permissoes, plano ?? "GRATUITO");
 
@@ -48,8 +51,15 @@ export default async function LayoutDaAplicacao({ children, gaveta }: LayoutProp
       />
       <div className="flex min-w-0 flex-1 flex-col">
         {modoSuporte && (
-          <FaixaDoModoSuporte negocio={modoSuporte.negocio} expiraEm={modoSuporte.expiraEm} corrigir={modoSuporte.modulosComCorrecao} correcaoPendente={modoSuporte.correcaoPendente} />
+          <FaixaDoModoSuporte
+            negocio={modoSuporte.negocio}
+            expiraEm={modoSuporte.expiraEm}
+            corrigir={modoSuporte.modulosComCorrecao}
+            correcaoPendente={modoSuporte.correcaoPendente}
+            emergencia={modoSuporte.emergencia}
+          />
         )}
+        {emergencia && <FaixaDaEmergencia acessoId={emergencia.id} motivo={MOTIVO_CURTO_DA_EMERGENCIA[emergencia.motivo]} expiraEm={emergencia.expiraEm} ehDono={membro?.papel === "DONO"} />}
         {liberacao && (
           <FaixaDoSuporteLiberado modulos={liberacao.modulos} modulosComCorrecao={liberacao.modulosComCorrecao} expiraEm={liberacao.expiraEm} ehDono={membro?.papel === "DONO"} />
         )}

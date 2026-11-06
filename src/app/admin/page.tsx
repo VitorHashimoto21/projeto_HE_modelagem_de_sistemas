@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ChevronRight, Search, Store } from "lucide-react";
 import { ROTULO_REGIME } from "@/components/negocio/rotulos";
 import { NavegacaoDoPainel } from "@/components/plataforma/navegacao";
+import { SeloDaEmergencia } from "@/components/suporte/selo-da-emergencia";
 import { AvisoDaPagina } from "@/components/ui/aviso";
 import { CabecalhoDePagina } from "@/components/ui/cabecalho-de-pagina";
 import { classeDoCampo } from "@/components/ui/classes";
@@ -20,6 +21,8 @@ export const metadata: Metadata = { title: "Painel do administrador" };
 
 function SituacaoDoSuporte({ n }: { n: NegocioNoPainel }) {
   if (n.encerrado) return <Selo tom="neutro">Encerrado</Selo>;
+  // SPEC-019 (5.6): a emergência em andamento aparece antes da liberação.
+  if (n.emergencia) return <SeloDaEmergencia>Emergência até {dataHoraCurta(n.emergencia.expiraEm)}</SeloDaEmergencia>;
   if (n.liberacao) return <Selo tom="atencao">Liberado até {dataHoraCurta(n.liberacao.expiraEm)}</Selo>;
   return <span className="text-muted-foreground">Sem liberação</span>;
 }
@@ -55,6 +58,11 @@ export default async function PainelDoAdministrador({ searchParams }: PageProps<
       )}
       {busca.suporte === "revogado" && <AvisoDaPagina tom="atencao">{MENSAGENS_SUPORTE.revogadoPeloDono}</AvisoDaPagina>}
       {busca.suporte === "expirou" && <AvisoDaPagina tom="atencao">{MENSAGENS_SUPORTE.expirou}</AvisoDaPagina>}
+      {busca.suporte === "emergencia" && (
+        <AvisoDaPagina tom="atencao">
+          O Dono encerrou o acesso de emergência. <Link href="/admin/emergencias">Registre o resultado em Emergências</Link>.
+        </AvisoDaPagina>
+      )}
 
       <form role="search" action="/admin" className="flex flex-wrap gap-2">
         <label htmlFor="busca" className="sr-only">

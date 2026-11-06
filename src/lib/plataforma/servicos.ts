@@ -1,6 +1,15 @@
-import type { ResultadoDaDecisao, ResultadoDoCancelamento, ResultadoDoPedido } from "@/lib/db/plataforma";
+import type { ResultadoDaDecisao, ResultadoDoCancelamento, ResultadoDoPedido, ResultadoDoPedidoDeEmergencia } from "@/lib/db/plataforma";
+import type { ResultadoDaEntradaNaEmergencia, ResultadoDoResultado } from "@/lib/db/suporte";
 import type { MensagemDeEmail } from "@/lib/integracoes/email";
-import { dataHoraCompleta } from "@/lib/dominio/suporte";
+import {
+  MENSAGENS_DA_EMERGENCIA,
+  ROTULO_MOTIVO_DA_EMERGENCIA,
+  validarPedidoDeEmergencia,
+  validarResultado,
+  type CampoDaEmergencia,
+  type PedidoDeEmergencia,
+} from "@/lib/dominio/emergencia";
+import type { Modulo } from "@/lib/dominio/permissoes";
 import { ROTULO_PLANO } from "@/lib/dominio/planos";
 import {
   MENSAGENS_DA_PLATAFORMA,
@@ -10,11 +19,12 @@ import {
   type CampoDoPedidoDePlano,
   type PedidoDePlano,
 } from "@/lib/dominio/plataforma";
+import { dataHoraCompleta, listaDeModulos, PRAZOS } from "@/lib/dominio/suporte";
 
 /**
- * Fluxos dos pedidos da plataforma (SPEC-019, 5.8), sem framework: as Server Actions (já com o 2º fator
- * e o código reconfirmado) só leem o formulário e chamam estes fluxos, que validam tudo de novo. A regra
- * das duas pessoas (INV-006) é conferida no banco, dentro da transação.
+ * Fluxos dos pedidos da plataforma (SPEC-019, 5.6 e 5.8), sem framework: as Server Actions (já com o 2º
+ * fator e, nas críticas, o código reconfirmado) só leem o formulário e chamam estes fluxos, que validam tudo
+ * de novo. A regra das duas pessoas (INV-006) é conferida no banco, dentro da transação.
  */
 
 export type EstadoDoPedido =
@@ -24,19 +34,32 @@ export type EstadoDoPedido =
 
 export const PEDIDO_INICIAL: EstadoDoPedido = { status: "ocioso" };
 
-/** Aprovar, recusar ou cancelar: a resposta vai para a tela, com a explicação na recusa. */
+/** SPEC-019 (5.6): o pedido de emergência, com os erros de cada campo. */
+export type EstadoDaEmergencia =
+  | { status: "ocioso" }
+  | { status: "erro"; mensagem?: string; erros?: Partial<Record<CampoDaEmergencia, string>> }
+  | { status: "ok"; mensagem: string };
+
+export const EMERGENCIA_INICIAL: EstadoDaEmergencia = { status: "ocioso" };
+
+/** Aprovar, recusar, cancelar e registrar o resultado: a resposta vai para a tela, com a explicação na recusa. */
 export type EstadoDaDecisao = { status: "ocioso" } | { status: "erro"; mensagem: string } | { status: "ok"; mensagem: string };
 
 export const DECISAO_INICIAL: EstadoDaDecisao = { status: "ocioso" };
 
 type Dono = { nome: string; email: string; negocio: string };
+type Decisao = { aprovar: true } | { aprovar: false; motivo: string };
 
 export type DependenciasDaPlataforma = {
   administradorId: string;
   agora: () => Date;
   pedirTrocaDePlano: (negocioId: string, administradorId: string, dados: PedidoDePlano, agora: Date) => Promise<ResultadoDoPedido>;
-  decidirTrocaDePlano: (pedidoId: string, administradorId: string, decisao: { aprovar: true } | { aprovar: false; motivo: string }, agora: Date) => Promise<ResultadoDaDecisao>;
+  pedirEmergencia: (negocioId: string, administradorId: string, dados: PedidoDeEmergencia, agora: Date) => Promise<ResultadoDoPedidoDeEmergencia>;
+  /** Aprova ou recusa um pedido de qualquer tipo. */
+  decidir: (pedidoId: string, administradorId: string, decisao: Decisao, agora: Date) => Promise<ResultadoDaDecisao>;
   cancelar: (pedidoId: string, administradorId: string, agora: Date) => Promise<ResultadoDoCancelamento>;
+  entrarNaEmergencia: (negocioId: string, administradorId: string, agora: Date) => Promise<ResultadoDaEntradaNaEmergencia>;
+  registrarResultado: (acessoId: string, administradorId: string, resultado: string, agora: Date) => Promise<ResultadoDoResultado>;
   dono: (negocioId: string) => Promise<Dono | null>;
   /** E-mail depois da resposta (OPEN-008): a falha no envio nunca bloqueia nada. */
   avisar: (m: MensagemDeEmail) => void;
@@ -44,6 +67,7 @@ export type DependenciasDaPlataforma = {
 };
 
 const M = MENSAGENS_DA_PLATAFORMA;
+const E = MENSAGENS_DA_EMERGENCIA;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** Pedir a troca de plano (5.8, item 1): plano de destino, motivo da lista e descrição. */
@@ -66,6 +90,33 @@ export async function pedirTrocaDePlano(campos: Record<string, string | undefine
   }
 }
 
+/**
+ * Pedir acesso de emergência (5.6): motivo da lista, referência, justificativa, módulos e prazo. O Dono vê
+ * o pedido em "Acessos do suporte" desde já (INV-007) e recebe o e-mail (com domínio).
+ */
+export async function pedirEmergencia(campos: Record<string, string | undefined>, deps: DependenciasDaPlataforma): Promise<EstadoDaEmergencia> {
+  const negocioId = campos.negocioId ?? "";
+  if (!UUID.test(negocioId)) return { status: "erro", mensagem: M.negocioInexistente };
+  const v = validarPedidoDeEmergencia(campos);
+  if (!v.ok) return { status: "erro", erros: v.erros };
+  const agora = deps.agora();
+  const r = await deps.pedirEmergencia(negocioId, deps.administradorId, v.dados, agora);
+  if (!r.ok) {
+    const mensagem = {
+      NegocioInexistente: M.negocioInexistente,
+      NegocioEncerrado: "Este negócio está encerrado: não há acesso de emergência.",
+      PedidoPendente: E.pedidoPendente,
+      LiberacaoAtiva: E.liberacaoAtiva,
+      EmergenciaAtiva: E.emergenciaAtiva,
+      ResultadoPendente: E.resultadoPendente,
+    }[r.erro];
+    return { status: "erro", mensagem };
+  }
+  const dono = await deps.dono(negocioId);
+  if (dono) deps.avisar(emailDoPedidoDeEmergencia(dono, v.dados, agora, deps.origem));
+  return { status: "ok", mensagem: E.pedidoFeito(r.expiraEm) };
+}
+
 function mensagemDaDecisao(r: Extract<ResultadoDaDecisao, { ok: false }>): string {
   switch (r.erro) {
     case "MesmoAdministrador":
@@ -80,6 +131,10 @@ function mensagemDaDecisao(r: Extract<ResultadoDaDecisao, { ok: false }>): strin
       return M.negocioEncerrado;
     case "MesmoPlano":
       return `${M.mesmoPlano(r.plano)} Recuse o pedido.`;
+    case "LiberacaoAtiva":
+      return `${E.liberacaoAtiva} Recuse o pedido.`;
+    case "EmergenciaAtiva":
+      return E.emergenciaAtiva;
     case "PedidoInexistente":
     case "NaoEAdministrador":
       return M.pedidoInexistente;
@@ -87,28 +142,33 @@ function mensagemDaDecisao(r: Extract<ResultadoDaDecisao, { ok: false }>): strin
 }
 
 /**
- * Aprovar (5.8, itens 3 a 5): outra conta de Administrador. O plano muda pela função da troca do Dono, e o
- * Dono recebe o e-mail (com domínio) além do aviso na tela Plano e em "Acessos do suporte".
+ * Aprovar (5.6 e 5.8): outra conta de Administrador. Na troca de plano, o plano muda pela função da troca do
+ * Dono; na emergência, nasce o acesso somente leitura. O Dono recebe o e-mail (com domínio) além do aviso no
+ * sistema.
  */
 export async function aprovar(campos: Record<string, string | undefined>, deps: DependenciasDaPlataforma): Promise<EstadoDaDecisao> {
   const pedidoId = campos.pedidoId ?? "";
   if (!UUID.test(pedidoId)) return { status: "erro", mensagem: M.pedidoInexistente };
   const agora = deps.agora();
-  const r = await deps.decidirTrocaDePlano(pedidoId, deps.administradorId, { aprovar: true }, agora);
+  const r = await deps.decidir(pedidoId, deps.administradorId, { aprovar: true }, agora);
   if (!r.ok) return { status: "erro", mensagem: mensagemDaDecisao(r) };
   if (r.situacao !== "APROVADO") return { status: "erro", mensagem: M.pedidoJaDecidido };
   const dono = await deps.dono(r.negocioId);
-  if (dono) deps.avisar(emailDaTroca(dono, r, agora, deps.origem));
-  return { status: "ok", mensagem: M.aprovado(r.pedido.para) };
+  if (r.tipo === "PLANO") {
+    if (dono) deps.avisar(emailDaTroca(dono, r, agora, deps.origem));
+    return { status: "ok", mensagem: M.aprovado(r.pedido.para) };
+  }
+  if (dono) deps.avisar(emailDaEmergenciaAprovada(dono, r.emergencia, r.expiraEm, deps.origem));
+  return { status: "ok", mensagem: E.aprovado(r.solicitadoPor, r.expiraEm) };
 }
 
-/** Recusar (5.8, item 3): outra conta de Administrador, com o motivo. */
+/** Recusar (5.6 e 5.8): outra conta de Administrador, com o motivo. */
 export async function recusar(campos: Record<string, string | undefined>, deps: DependenciasDaPlataforma): Promise<EstadoDaDecisao> {
   const pedidoId = campos.pedidoId ?? "";
   if (!UUID.test(pedidoId)) return { status: "erro", mensagem: M.pedidoInexistente };
   const v = validarRecusa(campos);
   if (!v.ok) return { status: "erro", mensagem: v.erro };
-  const r = await deps.decidirTrocaDePlano(pedidoId, deps.administradorId, { aprovar: false, motivo: v.motivo }, deps.agora());
+  const r = await deps.decidir(pedidoId, deps.administradorId, { aprovar: false, motivo: v.motivo }, deps.agora());
   if (!r.ok) return { status: "erro", mensagem: mensagemDaDecisao(r) };
   return { status: "ok", mensagem: M.recusado };
 }
@@ -123,9 +183,32 @@ export async function cancelar(campos: Record<string, string | undefined>, deps:
   return { status: "erro", mensagem };
 }
 
-// ---------------------------------------------------------------- e-mail ao Dono (5.8, item 5)
+/** Entrar no acesso de emergência (5.6): só quem pediu, enquanto vale. Devolve para onde ir. */
+export async function entrarNaEmergencia(
+  negocioId: string,
+  deps: DependenciasDaPlataforma,
+): Promise<{ ok: true; acessoId: string; expiraEm: Date; modulos: Modulo[] } | { ok: false; mensagem: string }> {
+  if (!UUID.test(negocioId)) return { ok: false, mensagem: E.semEmergencia };
+  const r = await deps.entrarNaEmergencia(negocioId, deps.administradorId, deps.agora());
+  if (!r.ok) return { ok: false, mensagem: r.erro === "SoQuemPediu" ? E.soQuemPediuEntra : E.semEmergencia };
+  return { ok: true, acessoId: r.acessoId, expiraEm: r.expiraEm, modulos: r.modulos };
+}
 
-function emailDaTroca(dono: Dono, r: Extract<ResultadoDaDecisao, { situacao: "APROVADO" }>, quando: Date, origem: string): MensagemDeEmail {
+/** Registrar o resultado (5.6, "Depois"): quem pediu, depois do fim do acesso, uma vez. */
+export async function registrarResultado(campos: Record<string, string | undefined>, deps: DependenciasDaPlataforma): Promise<EstadoDaDecisao> {
+  const acessoId = campos.acessoId ?? "";
+  if (!UUID.test(acessoId)) return { status: "erro", mensagem: E.semEmergencia };
+  const v = validarResultado(campos);
+  if (!v.ok) return { status: "erro", mensagem: v.erro };
+  const r = await deps.registrarResultado(acessoId, deps.administradorId, v.resultado, deps.agora());
+  if (r.ok) return { status: "ok", mensagem: E.resultadoRegistrado };
+  const mensagem = { AcessoInexistente: E.semEmergencia, SoQuemPediu: E.soQuemPediuRegistra, AindaAtiva: E.aindaAtiva, JaRegistrado: E.resultadoJaRegistrado }[r.erro];
+  return { status: "erro", mensagem };
+}
+
+// ---------------------------------------------------------------- e-mails ao Dono (5.6, 5.8 e 5.10)
+
+function emailDaTroca(dono: Dono, r: Extract<ResultadoDaDecisao, { tipo: "PLANO"; situacao: "APROVADO" }>, quando: Date, origem: string): MensagemDeEmail {
   const plano = ROTULO_PLANO[r.pedido.para];
   const plural = (n: number, um: string, varios: string) => (n === 1 ? um : `${n} ${varios}`);
   const efeitos =
@@ -151,6 +234,37 @@ function emailDaTroca(dono: Dono, r: Extract<ResultadoDaDecisao, { situacao: "AP
       `Veja o histórico do plano em ${origem}/negocio/plano e o registro do suporte em ${origem}/negocio/suporte.`,
       "",
       "Se tiver dúvidas sobre esta troca, fale com o suporte do HE.",
+    ].join("\n"),
+  };
+}
+
+function emailDoPedidoDeEmergencia(dono: Dono, e: PedidoDeEmergencia, quando: Date, origem: string): MensagemDeEmail {
+  return {
+    para: dono.email,
+    assunto: `Pedido de acesso de emergência ao ${dono.negocio}`,
+    texto: [
+      `Olá, ${dono.nome}!`,
+      "",
+      `Em ${dataHoraCompleta(quando)}, uma pessoa do suporte do Health Enterprise pediu acesso de emergência ao negócio ${dono.negocio}, sem a sua liberação.`,
+      `Motivo: ${ROTULO_MOTIVO_DA_EMERGENCIA[e.motivo]} (${e.referencia}).`,
+      `Pedido: ver ${listaDeModulos(e.modulos)}, somente leitura, por ${PRAZOS[e.prazo].rotulo}.`,
+      "O acesso só começa se outra pessoa da equipe aprovar, em até 12 horas. Você é avisado na aprovação e pode encerrar o acesso a qualquer momento.",
+      `Acompanhe em ${origem}/negocio/suporte.`,
+    ].join("\n"),
+  };
+}
+
+function emailDaEmergenciaAprovada(dono: Dono, e: PedidoDeEmergencia, fim: Date, origem: string): MensagemDeEmail {
+  return {
+    para: dono.email,
+    assunto: `Acesso de emergência do suporte ao ${dono.negocio} até ${dataHoraCompleta(fim)}`,
+    texto: [
+      `Olá, ${dono.nome}!`,
+      "",
+      `O pedido de acesso de emergência ao negócio ${dono.negocio} foi aprovado por uma segunda pessoa da equipe do Health Enterprise.`,
+      `Motivo: ${ROTULO_MOTIVO_DA_EMERGENCIA[e.motivo]} (${e.referencia}).`,
+      `Quem pediu pode ver ${listaDeModulos(e.modulos)}, somente leitura, até ${dataHoraCompleta(fim)}. Os dados dos seus clientes e fornecedores aparecem mascarados, e cada tela aberta fica registrada.`,
+      `Você pode encerrar o acesso a qualquer momento em ${origem}/negocio/suporte.`,
     ].join("\n"),
   };
 }

@@ -1,8 +1,11 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { Eye, Lock } from "lucide-react";
+import { Eye, Lock, LogIn, Siren } from "lucide-react";
 import { CartaoDoPedido } from "@/components/plataforma/pedido";
+import { RegistrarResultado } from "@/components/plataforma/registrar-resultado";
+import { SolicitarEmergencia } from "@/components/plataforma/solicitar-emergencia";
 import { TrocarPlano } from "@/components/plataforma/trocar-plano";
+import { SeloDaEmergencia } from "@/components/suporte/selo-da-emergencia";
 import { ROTULO_REGIME } from "@/components/negocio/rotulos";
 import { AvisoDaPagina } from "@/components/ui/aviso";
 import { CabecalhoDePagina } from "@/components/ui/cabecalho-de-pagina";
@@ -14,8 +17,10 @@ import { exigirAdministrador } from "@/lib/auth/servidor";
 import { plataforma, suporte } from "@/lib/db";
 import { dataBrasileira } from "@/lib/dominio/datas";
 import { ROTULO_PLANO } from "@/lib/dominio/planos";
+import { MENSAGENS_DA_EMERGENCIA, ROTULO_MOTIVO_DA_EMERGENCIA } from "@/lib/dominio/emergencia";
 import { MENSAGENS_DA_PLATAFORMA } from "@/lib/dominio/plataforma";
-import { dataHoraCompleta, listaDeModulos, MENSAGENS_SUPORTE } from "@/lib/dominio/suporte";
+import { dataHoraCompleta, dataHoraCurta, listaDeModulos, MENSAGENS_SUPORTE } from "@/lib/dominio/suporte";
+import { acaoEntrarEmEmergencia } from "@/lib/plataforma/acoes";
 import { autenticadoresDaSessao } from "@/lib/plataforma/servidor";
 
 export const metadata: Metadata = { title: "Negócio — administração" };
@@ -24,7 +29,9 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 // Ficha do negócio no painel (SPEC-018, 5.3): os mesmos metadados, a liberação ativa do Dono
 // e a entrada em modo suporte — habilitada só com liberação ativa, conferida de novo no servidor.
-// SPEC-019 (5.9, item 5): "Trocar plano", com o pedido pendente e os anteriores deste negócio.
+// SPEC-019 (5.9, item 5): "Trocar plano", com o pedido pendente e os anteriores deste negócio; e o acesso de
+// emergência (5.6): solicitar só sem liberação ativa, o pedido pendente, "Entrar" só para quem pediu, e o
+// resultado que essa conta ainda deve.
 export default async function NegocioNoPainel({ params, searchParams }: PageProps<"/admin/negocios/[id]">) {
   const { usuarioId } = await exigirAdministrador();
   const [{ id }, busca] = await Promise.all([params, searchParams]);
@@ -35,10 +42,28 @@ export default async function NegocioNoPainel({ params, searchParams }: PageProp
   const comCorrecao = (n.liberacao?.modulosComCorrecao.length ?? 0) > 0;
   // SPEC-019 (OPEN-003): entrar para corrigir e pedir, aprovar ou recusar pedem o código de novo; o
   // diálogo lista os autenticadores.
-  const [autenticadores, pedidos, administradores] = await Promise.all([autenticadoresDaSessao(), plataforma().pedidosDoNegocio(n.id, agora), plataforma().administradores()]);
+  const [autenticadores, pedidos, administradores, semResultado] = await Promise.all([
+    autenticadoresDaSessao(),
+    plataforma().pedidosDoNegocio(n.id, agora),
+    plataforma().administradores(),
+    suporte().emergencias({ semResultadoDe: usuarioId }),
+  ]);
   const pedidosDePlano = pedidos.filter((p) => p.tipo === "PLANO");
   const pendente = pedidosDePlano.find((p) => p.situacao === "PENDENTE");
   const anteriores = pedidosDePlano.filter((p) => p.situacao !== "PENDENTE").slice(0, 5);
+  const emergenciaPendente = pedidos.find((p) => p.tipo === "EMERGENCIA" && p.situacao === "PENDENTE");
+  const emergencia = n.emergencia;
+  // O resultado só se registra depois do fim (saída, expiração ou encerramento).
+  const resultadoDevido = semResultado.filter((e) => e.negocioId === n.id && (e.encerradoEm !== null || e.expiraEm.getTime() <= agora.getTime()));
+  const devoResultado = semResultado.some((e) => e.encerradoEm !== null || e.expiraEm.getTime() <= agora.getTime());
+  const podeSolicitar = !n.encerrado && !n.liberacao && !emergencia && !emergenciaPendente && !devoResultado;
+  const porQueNao = n.encerrado
+    ? "Negócio encerrado: não há acesso de emergência."
+    : n.liberacao
+      ? "O Dono liberou o acesso: use a liberação. A emergência é só para quando não há liberação."
+      : devoResultado
+        ? MENSAGENS_DA_EMERGENCIA.resultadoPendente
+        : null;
 
   const dados: [string, React.ReactNode][] = [
     ["Regime", ROTULO_REGIME[n.regime]],
@@ -54,6 +79,11 @@ export default async function NegocioNoPainel({ params, searchParams }: PageProp
       <CabecalhoDePagina voltar={{ href: "/admin", rotulo: "Negócios" }} titulo={n.nome} descricao="Dados de cadastro do negócio. Nada de vendas, valores, clientes ou estoque." />
 
       {typeof busca.erro === "string" && <AvisoDaPagina tom="erro">{busca.erro}</AvisoDaPagina>}
+      {emergencia && (
+        <AvisoDaPagina tom="erro">
+          Acesso de emergência em andamento até {dataHoraCurta(emergencia.expiraEm)}, pedido por {emergencia.solicitadoPor}. O Dono e a equipe veem a faixa vermelha.
+        </AvisoDaPagina>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
         <Superficie aria-labelledby="titulo-cadastro">
@@ -145,6 +175,63 @@ export default async function NegocioNoPainel({ params, searchParams }: PageProp
               </ul>
             </details>
           )}
+        </div>
+      </Superficie>
+
+      <Superficie tom={emergencia ? "perigo" : "cartao"} aria-labelledby="titulo-emergencia">
+        <TituloDaSuperficie
+          id="titulo-emergencia"
+          titulo={
+            <span className="flex items-center gap-2">
+              <Siren className="size-5 shrink-0 text-status-danger" aria-hidden="true" />
+              Acesso de emergência
+            </span>
+          }
+          descricao="Só sem a liberação do Dono, com a aprovação de outra conta de Administrador. Somente leitura, por até 4 horas, e o Dono vê tudo desde o pedido."
+          acoes={
+            !emergencia && !emergenciaPendente ? (
+              <SolicitarEmergencia negocioId={n.id} negocio={n.nome} autenticadores={autenticadores} umaContaSo={administradores.length < 2} disponivel={podeSolicitar} />
+            ) : undefined
+          }
+        />
+        <div className="space-y-4">
+          {!emergencia && !emergenciaPendente && porQueNao && <p className="text-sm text-muted-foreground">{porQueNao}</p>}
+          {emergencia && (
+            <div className="space-y-3">
+              <SeloDaEmergencia>Em andamento até {dataHoraCompleta(emergencia.expiraEm)}</SeloDaEmergencia>
+              <p className="text-sm break-words">
+                <span className="font-semibold">{ROTULO_MOTIVO_DA_EMERGENCIA[emergencia.motivo]}</span> · referência {emergencia.referencia}
+              </p>
+              <p className="text-sm">
+                <span className="font-semibold">Ver:</span> {listaDeModulos(emergencia.modulos)} (somente leitura). Pedido por {emergencia.solicitadoPor}.
+              </p>
+              {emergencia.solicitadoPorId === usuarioId ? (
+                <form action={acaoEntrarEmEmergencia}>
+                  <input type="hidden" name="negocioId" value={n.id} />
+                  <button type="submit" className={classeDoBotao("perigo")}>
+                    <LogIn aria-hidden="true" />
+                    Entrar (somente leitura)
+                  </button>
+                </form>
+              ) : (
+                <p className="text-sm text-muted-foreground">{MENSAGENS_DA_EMERGENCIA.soQuemPediuEntra}</p>
+              )}
+            </div>
+          )}
+          {emergenciaPendente && (
+            <div className={classeDaSuperficie("recuo", "p-4")}>
+              <CartaoDoPedido pedido={emergenciaPendente} administradorId={usuarioId} autenticadores={autenticadores} comNegocio={false} />
+            </div>
+          )}
+          {resultadoDevido.map((e) => (
+            <div key={e.id} className={classeDaSuperficie("recuo", "space-y-3 p-4")}>
+              <p className="text-sm">
+                <span className="font-semibold">Registre o resultado</span> do acesso de emergência de {dataHoraCurta(e.aprovadoEm)} ({e.referencia}), que terminou em{" "}
+                {dataHoraCurta(e.encerradoEm ?? e.expiraEm)}.
+              </p>
+              <RegistrarResultado acessoId={e.id} />
+            </div>
+          ))}
         </div>
       </Superficie>
     </div>
