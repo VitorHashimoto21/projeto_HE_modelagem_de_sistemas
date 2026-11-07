@@ -1,6 +1,6 @@
 import { Segmentos } from "@/components/ui/segmentos";
 
-export type SecaoDoPainel = "negocios" | "pedidos" | "administradores";
+export type SecaoDoPainel = "negocios" | "pedidos" | "emergencias" | "administradores";
 
 /**
  * Seções do painel do Administrador (SPEC-019, 5.9). "Pedidos" mostra quantos pedidos de OUTRAS contas
@@ -27,6 +27,7 @@ export function NavegacaoDoPainel({ atual, aguardando }: { atual: SecaoDoPainel;
           ),
           ativo: atual === "pedidos",
         },
+        { href: "/admin/emergencias", rotulo: "Emergências", ativo: atual === "emergencias" },
         { href: "/admin/administradores", rotulo: "Administradores", ativo: atual === "administradores" },
       ]}
     />

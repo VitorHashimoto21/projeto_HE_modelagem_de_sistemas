@@ -226,6 +226,8 @@ export const MODELOS = {
       negocio: { modelo: "Negocio", fk: "negocioId" },
       liberadoPor: { modelo: "Usuario", fk: "liberadoPorId" },
       revogadoPor: { modelo: "Usuario", fk: "revogadoPorId" },
+      // SPEC-019 (5.6): a emergência aponta o pedido aprovado.
+      pedido: { modelo: "PedidoPlataforma", fk: "pedidoId" },
       registros: { modelo: "RegistroSuporte" },
     },
   },
@@ -251,6 +253,7 @@ export const MODELOS = {
       decididoPor: { modelo: "Usuario", fk: "decididoPorId" },
       registros: { modelo: "RegistroSuporte" },
       trocasDePlano: { modelo: "HistoricoPlano" },
+      acessoEmergencia: { modelo: "AcessoSuporte" },
     },
   },
 

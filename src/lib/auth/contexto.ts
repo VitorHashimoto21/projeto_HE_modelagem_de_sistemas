@@ -54,6 +54,8 @@ export type SuporteAtivo = {
   /** SPEC-019 (5.3): a liberação tem correção, mas falta entrar de novo com o código. */
   correcaoPendente?: boolean;
   expiraEm: Date;
+  /** SPEC-019 (5.6): acesso de emergência (somente leitura), com o motivo curto para a faixa vermelha. */
+  emergencia?: { motivo: string } | null;
 };
 
 /** Contexto com o papel e as permissões efetivas no negócio ativo (SPEC-005, 5.5). */
@@ -65,8 +67,11 @@ export type ContextoComPapel = ContextoDaRequisicao & {
   administrador?: boolean;
   /** SPEC-018 (RF76): modo suporte; o negócio ativo é o da liberação e a matriz só tem "ver". */
   suporte?: SuporteAtivo | null;
-  /** SPEC-018: havia um modo suporte que acabou (o Dono revogou ou o prazo venceu). */
-  suporteEncerrado?: "revogado" | "expirou" | null;
+  /**
+   * SPEC-018: havia um modo suporte que acabou (o Dono revogou ou o prazo venceu). SPEC-019 (5.6):
+   * "emergencia" quando o acesso de emergência foi encerrado.
+   */
+  suporteEncerrado?: "revogado" | "expirou" | "emergencia" | null;
   /** SPEC-018 (RF78): a versão aceita da política e dos termos não é a vigente. */
   termosPendentes?: boolean;
   /** SPEC-018 (RNF12): sessão do Administrador com mais de 8 h desde a entrada. */
@@ -119,6 +124,8 @@ export type LiberacaoDoContexto = {
   entradaComCorrecaoEm?: Date | null;
   expiraEm: Date;
   revogadoEm: Date | null;
+  /** SPEC-019 (5.6, INV-010): no acesso de emergência, o motivo curto e a conta que pediu (a única que entra). */
+  emergencia?: { motivo: string; solicitadoPorId: string } | null;
 };
 
 export type EntradaDoContexto = {
@@ -178,14 +185,20 @@ export async function resolverContextoDaRequisicao(e: EntradaDoContexto, deps: D
   if (segundoFatorPendente) return { ...semNegocio, suporte: null, suporteEncerrado: null };
   const lida = e.suporteDoCookie && UUID.test(e.suporteDoCookie) ? await deps.liberacao(e.suporteDoCookie, e.usuarioId) : null;
   if (!lida) return { ...semNegocio, suporte: null, suporteEncerrado: null };
+  // SPEC-019 (INV-010): o acesso de emergência só vale para a conta que pediu; para outra, o cookie não aponta nada.
+  if (lida.emergencia && lida.emergencia.solicitadoPorId !== e.usuarioId) return { ...semNegocio, suporte: null, suporteEncerrado: null };
 
   const situacao = lida.negocioEncerrado ? "REVOGADA" : situacaoDaLiberacao(lida, e.agora);
-  if (situacao !== "ATIVA") return { ...semNegocio, suporte: null, suporteEncerrado: situacao === "EXPIRADA" ? "expirou" : "revogado" };
+  if (situacao !== "ATIVA") {
+    const encerrado = situacao === "EXPIRADA" ? "expirou" : lida.emergencia ? "emergencia" : "revogado";
+    return { ...semNegocio, suporte: null, suporteEncerrado: encerrado };
+  }
 
   const modulos = modulosValidos(lida.modulos);
   // SPEC-019 (5.3, INV-003): a correção vale da entrada com o código reconfirmado, nesta sessão, até a
   // saída, a expiração ou a revogação. Sem ela (cookie de outra sessão, ou antes de entrar), só leitura.
-  const comCorrecao = modulosValidos(lida.modulosComCorrecao ?? []).filter((m) => modulos.includes(m));
+  // SPEC-019 (INV-003): a emergência nunca corrige, seja o que for que o banco tenha.
+  const comCorrecao = lida.emergencia ? [] : modulosValidos(lida.modulosComCorrecao ?? []).filter((m) => modulos.includes(m));
   const entrada = lida.entradaComCorrecaoEm ?? null;
   const correcaoLiberada = entrada !== null && e.autenticadoEm !== null && entrada.getTime() >= e.autenticadoEm.getTime();
   return {
@@ -200,6 +213,7 @@ export async function resolverContextoDaRequisicao(e: EntradaDoContexto, deps: D
       modulosComCorrecao: correcaoLiberada ? comCorrecao : [],
       correcaoPendente: comCorrecao.length > 0 && !correcaoLiberada,
       expiraEm: lida.expiraEm,
+      emergencia: lida.emergencia ? { motivo: lida.emergencia.motivo } : null,
     },
     suporteEncerrado: null,
   };

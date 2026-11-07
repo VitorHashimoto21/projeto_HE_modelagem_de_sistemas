@@ -212,6 +212,25 @@ enum EventoSuporte {
   PLANO_SOLICITADO // SPEC-019 (5.8): um Administrador pediu a troca de plano (aponta o pedido em pedidoId)
   PLANO_APROVADO // SPEC-019 (5.8): outra conta de Administrador aprovou, e o plano mudou
   PLANO_RECUSADO // SPEC-019 (5.8): outra conta de Administrador recusou, com o motivo
+  EMERGENCIA_SOLICITADA // SPEC-019 (5.6): um Administrador pediu acesso de emergência (o Dono vê desde o pedido)
+  EMERGENCIA_APROVADA // SPEC-019 (5.6): outra conta aprovou; aponta o pedido e o acesso criado
+  EMERGENCIA_RECUSADA // SPEC-019 (5.6): outra conta recusou, com o motivo
+  EMERGENCIA_ENCERRADA // SPEC-019 (5.6): o Dono encerrou o acesso, ou quem pediu saiu
+  EMERGENCIA_RESULTADO // SPEC-019 (5.6): quem pediu registrou o resultado
+}
+
+// SPEC-019 (5.6): o acesso do suporte nasce da liberação do Dono ou, sem ela, de um pedido de
+// emergência aprovado por outra conta de Administrador.
+enum TipoAcessoSuporte {
+  LIBERACAO
+  EMERGENCIA
+}
+
+// SPEC-019 (5.6, RN38): motivos da emergência, de uma lista fechada.
+enum MotivoEmergencia {
+  ORDEM_JUDICIAL // ordem judicial ou requisição de autoridade competente
+  INCIDENTE // incidente de segurança ou falha que afeta os dados do negócio
+  DONO_SEM_ACESSO // Dono sem acesso, a pedido de um membro
 }
 
 // SPEC-019 (5.6, 5.8): pedidos que precisam de uma segunda conta de Administrador (INV-006).
@@ -917,21 +936,34 @@ model HistoricoPlano {
 // SPEC-018 (RF75, RN31): liberação do acesso de suporte pelo Dono — motivo, módulos (só "ver")
 // e prazo. No máximo uma ativa por negócio (a nova revoga a anterior, na mesma transação).
 model AcessoSuporte {
-  id                 String    @id @default(uuid()) @db.Uuid
-  negocioId          String    @db.Uuid
-  liberadoPorId      String    @db.Uuid
-  motivo             String    @db.VarChar(300)
+  id                 String            @id @default(uuid()) @db.Uuid
+  negocioId          String            @db.Uuid
+  /// SPEC-019 (5.6): liberação do Dono ou acesso de emergência.
+  tipo               TipoAcessoSuporte @default(LIBERACAO)
+  /// O Dono que liberou; vazio na emergência.
+  liberadoPorId      String?           @db.Uuid
+  /// Na liberação, o motivo do Dono; na emergência, o motivo da lista, por extenso.
+  motivo             String            @db.VarChar(300)
   modulos            String[] // módulos da matriz (SPEC-005) liberados para leitura
-  modulosComCorrecao String[]  @default([]) // SPEC-019 (OPEN-004): subconjunto de modulos em "ver e corrigir"
-  criadoEm           DateTime  @default(now())
+  modulosComCorrecao String[]          @default([]) // SPEC-019 (OPEN-004): subconjunto de modulos em "ver e corrigir"
+  criadoEm           DateTime          @default(now())
   expiraEm           DateTime
   revogadoEm         DateTime?
-  revogadoPorId      String?   @db.Uuid
+  revogadoPorId      String?           @db.Uuid
   primeiraEntradaEm  DateTime? // OPEN-009: e-mail ao Dono só na primeira entrada
+  /// SPEC-019 (5.6): na emergência, o motivo da lista, a referência, a justificativa e o pedido aprovado.
+  motivoEmergencia   MotivoEmergencia?
+  referencia         String?           @db.VarChar(120)
+  justificativa      String?           @db.VarChar(500)
+  pedidoId           String?           @unique @db.Uuid
+  /// SPEC-019 (5.6): o resultado, registrado por quem pediu depois do fim do acesso.
+  resultado          String?           @db.VarChar(1000)
+  resultadoEm        DateTime?
 
   negocio     Negocio           @relation(fields: [negocioId], references: [id])
-  liberadoPor Usuario           @relation("AcessoLiberadoPor", fields: [liberadoPorId], references: [id])
+  liberadoPor Usuario?          @relation("AcessoLiberadoPor", fields: [liberadoPorId], references: [id], onDelete: Restrict)
   revogadoPor Usuario?          @relation("AcessoRevogadoPor", fields: [revogadoPorId], references: [id])
+  pedido      PedidoPlataforma? @relation(fields: [pedidoId], references: [id], onDelete: Restrict)
   registros   RegistroSuporte[]
 
   @@index([negocioId, criadoEm])
@@ -984,11 +1016,13 @@ model PedidoPlataforma {
   decididoEm      DateTime?
   motivoDaRecusa  String?                  @db.VarChar(300)
 
-  negocio       Negocio           @relation(fields: [negocioId], references: [id])
-  solicitadoPor Usuario           @relation("PedidoSolicitadoPor", fields: [solicitadoPorId], references: [id])
-  decididoPor   Usuario?          @relation("PedidoDecididoPor", fields: [decididoPorId], references: [id], onDelete: Restrict)
-  registros     RegistroSuporte[]
-  trocasDePlano HistoricoPlano[]
+  negocio          Negocio           @relation(fields: [negocioId], references: [id])
+  solicitadoPor    Usuario           @relation("PedidoSolicitadoPor", fields: [solicitadoPorId], references: [id])
+  decididoPor      Usuario?          @relation("PedidoDecididoPor", fields: [decididoPorId], references: [id], onDelete: Restrict)
+  registros        RegistroSuporte[]
+  trocasDePlano    HistoricoPlano[]
+  /// SPEC-019 (5.6): o acesso de emergência criado na aprovação.
+  acessoEmergencia AcessoSuporte?
 
   @@index([negocioId, criadoEm])
   @@index([situacao, expiraEm])

@@ -314,6 +314,7 @@ function depsDoAdministrador(modulosComCorrecao: string[], correcoesDaVisita = 0
     administradorId: ADMIN,
     agora: () => AGORA,
     liberacaoAtiva: async () => ({ id: ACESSO, modulosComCorrecao: modulosComCorrecao as never }),
+    encerrarEmergencia: vi.fn(async () => true),
     entrar: vi.fn(async (...args: unknown[]) => {
       entradas.push(args);
       return { ok: true as const, primeira: false, negocioId: NEGOCIO };

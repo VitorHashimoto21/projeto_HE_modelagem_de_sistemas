@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
-import { ArrowLeftRight, LifeBuoy } from "lucide-react";
+import { ArrowLeftRight, LifeBuoy, Siren } from "lucide-react";
 import { CorrecoesDoSuporte } from "@/components/suporte/correcoes-do-suporte";
+import { EncerrarEmergencia } from "@/components/suporte/encerrar-emergencia";
+import { SeloDaEmergencia } from "@/components/suporte/selo-da-emergencia";
 import { LiberarAcesso } from "@/components/suporte/liberar-acesso";
 import { RevogarAcesso } from "@/components/suporte/revogar-acesso";
 import { AvisoDaPagina } from "@/components/ui/aviso";
@@ -10,9 +12,10 @@ import { Selo, type TomDoSelo } from "@/components/ui/selo";
 import { Superficie } from "@/components/ui/superficie";
 import { exigirDono } from "@/lib/auth/servidor";
 import { correcoes as correcoesDoSuporte, plataforma, suporte, type CorrecaoDoNegocio, type EventoDoRegistro, type LiberacaoDoNegocio, type PedidoDaPlataforma } from "@/lib/db";
+import { ROTULO_MOTIVO_DA_EMERGENCIA } from "@/lib/dominio/emergencia";
 import { ROTULO_MOTIVO_DA_TROCA, type SituacaoDoPedido } from "@/lib/dominio/plataforma";
 import { ROTULO_PLANO } from "@/lib/dominio/planos";
-import { dataHoraCompleta, dataHoraCurta, listaDeModulos, situacaoDaLiberacao, type SituacaoDaLiberacao } from "@/lib/dominio/suporte";
+import { dataHoraCompleta, dataHoraCurta, listaDeModulos, PRAZOS, situacaoDaLiberacao, type SituacaoDaLiberacao } from "@/lib/dominio/suporte";
 
 export const metadata: Metadata = { title: "Acesso do suporte" };
 
@@ -30,40 +33,61 @@ const SITUACAO_DO_PEDIDO: Record<SituacaoDoPedido, { rotulo: string; tom: TomDoS
   EXPIRADO: { rotulo: "Expirado", tom: "neutro" },
 };
 
-/** Como terminou o pedido de troca de plano, para o Dono (SPEC-019, 5.10). */
+/** Como terminou o pedido da plataforma, para o Dono (SPEC-019, 5.10): o plano não mudou, ou o suporte não entrou. */
 function desfechoParaODono(p: PedidoDaPlataforma): string {
   const quando = p.decididoEm ? dataHoraCurta(p.decididoEm) : "";
+  const semEfeito = p.tipo === "EMERGENCIA" ? "O suporte não entrou." : "O plano não mudou.";
   switch (p.situacao) {
     case "PENDENTE":
-      return `Aguarda a aprovação de outra pessoa da equipe do HE até ${dataHoraCurta(p.expiraEm)}. Nada muda antes disso.`;
+      return p.tipo === "EMERGENCIA"
+        ? `Aguarda a aprovação de outra pessoa da equipe do HE até ${dataHoraCurta(p.expiraEm)}. O suporte não entra antes disso, e você é avisado se for aprovado.`
+        : `Aguarda a aprovação de outra pessoa da equipe do HE até ${dataHoraCurta(p.expiraEm)}. Nada muda antes disso.`;
     case "APROVADO":
       return `Aprovado por ${p.decididoPor ?? "outra pessoa"} (suporte do HE) em ${quando}: o plano mudou.`;
     case "RECUSADO":
-      return `Recusado por ${p.decididoPor ?? "outra pessoa"} (suporte do HE) em ${quando}: ${(p.motivoDaRecusa ?? "").replace(/[.!]+$/, "")}. O plano não mudou.`;
+      return `Recusado por ${p.decididoPor ?? "outra pessoa"} (suporte do HE) em ${quando}: ${(p.motivoDaRecusa ?? "").replace(/[.!]+$/, "")}. ${semEfeito}`;
     case "CANCELADO":
-      return `Cancelado por quem pediu em ${quando}. O plano não mudou.`;
+      return `Cancelado por quem pediu em ${quando}. ${semEfeito}`;
     case "EXPIRADO":
-      return `Expirou sem aprovação em ${quando}. O plano não mudou.`;
+      return `Expirou sem aprovação em ${quando}. ${semEfeito}`;
   }
 }
 
-/** Uma troca de plano pedida pela plataforma (SPEC-019, 5.8 e 5.10), na linha do tempo do Dono. */
-function PedidoDePlano({ p }: { p: PedidoDaPlataforma }) {
+/**
+ * Um pedido da plataforma na linha do tempo do Dono (SPEC-019, 5.10): a troca de plano (5.8) e o pedido de
+ * emergência, visível desde o pedido (5.6, item 4; INV-007). A emergência aprovada aparece como o acesso.
+ */
+function PedidoParaODono({ p }: { p: PedidoDaPlataforma }) {
   const situacao = SITUACAO_DO_PEDIDO[p.situacao];
+  const e = p.emergencia;
   return (
-    <Superficie tom={p.situacao === "PENDENTE" ? "atencao" : "cartao"} aria-labelledby={`pedido-${p.id}`}>
+    <Superficie tom={p.situacao === "PENDENTE" ? (e ? "perigo" : "atencao") : "cartao"} aria-labelledby={`pedido-${p.id}`}>
       <div className="min-w-0 space-y-1">
         <div className="flex flex-wrap items-center gap-2">
+          {e && <SeloDaEmergencia>Emergência</SeloDaEmergencia>}
           <Selo tom={situacao.tom}>{situacao.rotulo}</Selo>
           <h2 id={`pedido-${p.id}`} className="flex items-center gap-1.5 text-[15px] font-bold text-current">
-            <ArrowLeftRight className="size-4 shrink-0" aria-hidden="true" />
-            Troca de plano pela plataforma{p.plano ? `: para o ${ROTULO_PLANO[p.plano.para].toLowerCase()}` : ""}
+            {e ? <Siren className="size-4 shrink-0" aria-hidden="true" /> : <ArrowLeftRight className="size-4 shrink-0" aria-hidden="true" />}
+            {e ? "Pedido de acesso de emergência" : `Troca de plano pela plataforma${p.plano ? `: para o ${ROTULO_PLANO[p.plano.para].toLowerCase()}` : ""}`}
           </h2>
         </div>
         {p.plano && (
           <p className="text-sm break-words">
             <span className="font-semibold">Motivo:</span> {ROTULO_MOTIVO_DA_TROCA[p.plano.motivo]} — {p.plano.descricao}
           </p>
+        )}
+        {e && (
+          <>
+            <p className="text-sm break-words">
+              <span className="font-semibold">Motivo:</span> {ROTULO_MOTIVO_DA_EMERGENCIA[e.motivo]}, {e.referencia}
+            </p>
+            <p className="text-sm break-words">
+              <span className="font-semibold">Justificativa:</span> {e.justificativa}
+            </p>
+            <p className="text-sm">
+              <span className="font-semibold">Pedido:</span> ver {listaDeModulos(e.modulos)}, somente leitura, por {PRAZOS[e.prazo].rotulo}
+            </p>
+          </>
         )}
         <p className="text-sm text-muted-foreground">
           Pedido por {p.solicitadoPor} (suporte do HE) em {dataHoraCompleta(p.criadoEm)}
@@ -77,12 +101,18 @@ function PedidoDePlano({ p }: { p: PedidoDaPlataforma }) {
 /** Texto de cada evento do registro, do ponto de vista do Dono. */
 function textoDoEvento(e: EventoDoRegistro): string {
   switch (e.evento) {
+    case "EMERGENCIA_APROVADA":
+      return `Suporte HE — ${e.autor} aprovou o acesso de emergência`;
+    case "EMERGENCIA_ENCERRADA":
+      return `${e.autor}: ${e.descricao.toLowerCase()}`;
+    case "EMERGENCIA_RESULTADO":
+      return `Suporte HE — ${e.autor} registrou o resultado`;
     case "LIBERACAO":
       return `${e.autor} liberou o acesso`;
     case "REVOGACAO":
       return `${e.autor}: ${e.descricao.toLowerCase()}`;
     case "ENTRADA":
-      return `Suporte HE — ${e.autor} entrou em modo suporte`;
+      return `Suporte HE — ${e.autor} ${e.descricao.startsWith("Entrou no acesso de emergência") ? "entrou no acesso de emergência" : "entrou em modo suporte"}`;
     case "TELA":
       return `Viu: ${e.descricao}`;
     case "SAIDA":
@@ -108,12 +138,13 @@ export default async function AcessoDoSuporte({ searchParams }: PageProps<"/nego
     plataforma().pedidosDoNegocio(negocioId, agora),
     searchParams,
   ]);
-  // SPEC-019 (5.10): liberações e trocas de plano pela plataforma numa só linha do tempo, da mais nova à mais antiga.
-  const linha: ({ tipo: "liberacao"; l: LiberacaoDoNegocio } | { tipo: "plano"; p: PedidoDaPlataforma })[] = [
+  // SPEC-019 (5.10): liberações, acessos de emergência e pedidos da plataforma numa só linha do tempo, da mais
+  // nova à mais antiga. O pedido de emergência aprovado aparece como o acesso que ele criou.
+  const linha: ({ tipo: "liberacao"; l: LiberacaoDoNegocio } | { tipo: "pedido"; p: PedidoDaPlataforma })[] = [
     ...liberacoes.map((l) => ({ tipo: "liberacao" as const, l })),
-    ...pedidos.filter((p) => p.tipo === "PLANO").map((p) => ({ tipo: "plano" as const, p })),
+    ...pedidos.filter((p) => !(p.tipo === "EMERGENCIA" && p.situacao === "APROVADO")).map((p) => ({ tipo: "pedido" as const, p })),
   ].sort((a, b) => (b.tipo === "liberacao" ? b.l.criadoEm : b.p.criadoEm).getTime() - (a.tipo === "liberacao" ? a.l.criadoEm : a.p.criadoEm).getTime());
-  const ativa = liberacoes.find((l) => situacaoDaLiberacao(l, agora) === "ATIVA");
+  const ativa = liberacoes.find((l) => l.tipo === "LIBERACAO" && situacaoDaLiberacao(l, agora) === "ATIVA");
   const porLiberacao = new Map<string, CorrecaoDoNegocio[]>();
   for (const c of correcoes) if (c.acessoId) porLiberacao.set(c.acessoId, [...(porLiberacao.get(c.acessoId) ?? []), c]);
 
@@ -121,7 +152,7 @@ export default async function AcessoDoSuporte({ searchParams }: PageProps<"/nego
     <div className="space-y-6">
       <CabecalhoDePagina
         titulo="Acesso do suporte"
-        descricao="Quando precisar de ajuda, libere o suporte do HE para ver os módulos que você escolher, por um prazo, e, se quiser, corrigir alguns deles. O suporte nunca entra sem a sua liberação, e você pode desfazer cada correção. As trocas de plano feitas pela plataforma também aparecem aqui."
+        descricao="Quando precisar de ajuda, libere o suporte do HE para ver os módulos que você escolher, por um prazo, e, se quiser, corrigir alguns deles. Sem a sua liberação, o suporte só entra numa emergência aprovada por duas pessoas da equipe, somente leitura, e você vê tudo aqui desde o pedido. As trocas de plano feitas pela plataforma também aparecem aqui."
         acoes={<LiberarAcesso substitui={Boolean(ativa)} />}
       />
 
@@ -135,42 +166,65 @@ export default async function AcessoDoSuporte({ searchParams }: PageProps<"/nego
           </EstadoVazio>
         </Superficie>
       ) : (
-        <ul className="space-y-4" aria-label="Liberações do suporte e trocas de plano pela plataforma">
+        <ul className="space-y-4" aria-label="Liberações, acessos de emergência e pedidos da plataforma">
           {linha.map((item) => {
-            if (item.tipo === "plano")
+            if (item.tipo === "pedido")
               return (
                 <li key={item.p.id}>
-                  <PedidoDePlano p={item.p} />
+                  <PedidoParaODono p={item.p} />
                 </li>
               );
             const l = item.l;
             const situacao = situacaoDaLiberacao(l, agora);
             const dela = porLiberacao.get(l.id) ?? [];
+            const e = l.emergencia;
             return (
               <li key={l.id}>
-                <Superficie tom={situacao === "ATIVA" ? "atencao" : "cartao"} aria-labelledby={`liberacao-${l.id}`}>
+                <Superficie tom={situacao === "ATIVA" ? (e ? "perigo" : "atencao") : "cartao"} aria-labelledby={`liberacao-${l.id}`}>
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="min-w-0 space-y-1">
                       <div className="flex flex-wrap items-center gap-2">
-                        <Selo tom={SITUACAO[situacao].tom}>{SITUACAO[situacao].rotulo}</Selo>
+                        {e && <SeloDaEmergencia>Emergência</SeloDaEmergencia>}
+                        <Selo tom={SITUACAO[situacao].tom}>{e && situacao === "REVOGADA" ? "Encerrada" : SITUACAO[situacao].rotulo}</Selo>
                         <h2 id={`liberacao-${l.id}`} className="text-[15px] font-bold text-current">
                           {situacao === "ATIVA"
                             ? `Até ${dataHoraCurta(l.expiraEm)}`
                             : situacao === "REVOGADA"
-                              ? `Revogada em ${dataHoraCurta(l.revogadoEm!)}`
+                              ? `${e ? "Encerrada" : "Revogada"} em ${dataHoraCurta(l.revogadoEm!)}${e && l.revogadoPor ? ` por ${l.revogadoPor}` : ""}`
                               : `Expirou em ${dataHoraCurta(l.expiraEm)}`}
                         </h2>
                       </div>
-                      <p className="text-sm break-words">
-                        <span className="font-semibold">Motivo:</span> {l.motivo}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        Ver: {listaDeModulos(l.modulos)}
-                        {l.modulosComCorrecao.length > 0 && <> · corrigir: {listaDeModulos(l.modulosComCorrecao)}</>} · liberado por {l.liberadoPor} em{" "}
-                        {dataHoraCompleta(l.criadoEm)}
-                      </p>
+                      {e ? (
+                        <>
+                          <p className="text-sm break-words">
+                            <span className="font-semibold">Motivo:</span> {ROTULO_MOTIVO_DA_EMERGENCIA[e.motivo]}, {e.referencia}
+                          </p>
+                          <p className="text-sm break-words">
+                            <span className="font-semibold">Justificativa:</span> {e.justificativa}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            Ver: {listaDeModulos(l.modulos)} (somente leitura) · pedido por {e.solicitadoPor} e aprovado por {e.aprovadoPor ?? "outra pessoa"} (suporte do HE) em{" "}
+                            {dataHoraCompleta(l.criadoEm)}
+                          </p>
+                          <p className="text-sm break-words">
+                            <span className="font-semibold">Resultado:</span>{" "}
+                            {e.resultado ?? (situacao === "ATIVA" ? "registrado por quem pediu depois do fim do acesso." : `ainda não registrado por ${e.solicitadoPor}.`)}
+                          </p>
+                        </>
+                      ) : (
+                        <>
+                          <p className="text-sm break-words">
+                            <span className="font-semibold">Motivo:</span> {l.motivo}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            Ver: {listaDeModulos(l.modulos)}
+                            {l.modulosComCorrecao.length > 0 && <> · corrigir: {listaDeModulos(l.modulosComCorrecao)}</>} · liberado por {l.liberadoPor} em{" "}
+                            {dataHoraCompleta(l.criadoEm)}
+                          </p>
+                        </>
+                      )}
                     </div>
-                    {situacao === "ATIVA" && <RevogarAcesso acessoId={l.id} />}
+                    {situacao === "ATIVA" && (e ? <EncerrarEmergencia acessoId={l.id} /> : <RevogarAcesso acessoId={l.id} />)}
                   </div>
                   {dela.length > 0 && <CorrecoesDoSuporte correcoes={dela} id={`correcoes-${l.id}`} />}
                   <details className="group mt-4" open={situacao === "ATIVA"}>

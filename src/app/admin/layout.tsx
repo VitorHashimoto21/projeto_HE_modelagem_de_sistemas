@@ -42,7 +42,7 @@ export default async function LayoutDoAdministrador({ children }: LayoutProps<"/
           </div>
         </div>
       </header>
-      {contexto.suporte && <FaixaDoModoSuporte negocio={contexto.suporte.negocio} expiraEm={contexto.suporte.expiraEm} />}
+      {contexto.suporte && <FaixaDoModoSuporte negocio={contexto.suporte.negocio} expiraEm={contexto.suporte.expiraEm} emergencia={contexto.suporte.emergencia} />}
       <main className="mx-auto w-full max-w-[1280px] flex-1 px-4 pt-6 pb-16 sm:px-6 lg:px-10 lg:pt-8">
         {soUmAutenticador && (
           <AvisoDaPagina tom="atencao" className="mb-6">

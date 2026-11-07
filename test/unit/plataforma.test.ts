@@ -65,7 +65,10 @@ function deps(extra: Partial<servicos.DependenciasDaPlataforma> = {}): servicos.
     administradorId: "a0000000-0000-4000-8000-0000000000a1",
     agora: () => new Date("2026-11-05T12:00:00Z"),
     pedirTrocaDePlano: vi.fn(async () => ({ ok: true as const, id: PEDIDO, expiraEm: new Date("2026-11-06T00:00:00Z") })),
-    decidirTrocaDePlano: vi.fn(async () => ({ ok: false as const, erro: "PedidoInexistente" as const })),
+    pedirEmergencia: vi.fn(async () => ({ ok: true as const, id: PEDIDO, expiraEm: new Date("2026-11-06T00:00:00Z") })),
+    decidir: vi.fn(async () => ({ ok: false as const, erro: "PedidoInexistente" as const })),
+    entrarNaEmergencia: vi.fn(async () => ({ ok: false as const, erro: "SemEmergencia" as const })),
+    registrarResultado: vi.fn(async () => ({ ok: true as const, negocioId: NEGOCIO })),
     cancelar: vi.fn(async () => ({ ok: true as const })),
     dono: vi.fn(async () => ({ nome: "Rafael", email: "dono@exemplo.com", negocio: "HE Testing" })),
     avisar: vi.fn(),
@@ -96,13 +99,14 @@ describe("fluxos dos pedidos (servicos.ts)", () => {
   });
 
   it("aprovar: avisa o Dono por e-mail só quando o plano muda", async () => {
-    const recusada = deps({ decidirTrocaDePlano: async () => ({ ok: false, erro: "MesmoAdministrador" }) });
+    const recusada = deps({ decidir: async () => ({ ok: false, erro: "MesmoAdministrador" }) });
     expect(await servicos.aprovar({ pedidoId: PEDIDO }, recusada)).toEqual({ status: "erro", mensagem: M.mesmoAdministrador });
     expect(recusada.avisar).not.toHaveBeenCalled();
 
     const aprovada = deps({
-      decidirTrocaDePlano: async () => ({
+      decidir: async () => ({
         ok: true,
+        tipo: "PLANO",
         situacao: "APROVADO",
         negocioId: NEGOCIO,
         pedido: { para: "GRATUITO", motivo: "CORRECAO", descricao: "Pago por engano" },
@@ -122,7 +126,7 @@ describe("fluxos dos pedidos (servicos.ts)", () => {
   });
 
   it("aprovar e recusar: cada recusa vira a sua explicação", async () => {
-    const com = (r: Awaited<ReturnType<servicos.DependenciasDaPlataforma["decidirTrocaDePlano"]>>) => servicos.aprovar({ pedidoId: PEDIDO }, deps({ decidirTrocaDePlano: async () => r }));
+    const com = (r: Awaited<ReturnType<servicos.DependenciasDaPlataforma["decidir"]>>) => servicos.aprovar({ pedidoId: PEDIDO }, deps({ decidir: async () => r }));
     expect(await com({ ok: false, erro: "PedidoExpirado" })).toEqual({ status: "erro", mensagem: M.pedidoExpirado });
     expect(await com({ ok: false, erro: "PedidoJaDecidido" })).toEqual({ status: "erro", mensagem: M.pedidoJaDecidido });
     expect(await com({ ok: false, erro: "SolicitanteSemPapel" })).toEqual({ status: "erro", mensagem: M.solicitanteSemPapel });
@@ -132,7 +136,7 @@ describe("fluxos dos pedidos (servicos.ts)", () => {
 
     const d = deps();
     expect(await servicos.recusar({ pedidoId: PEDIDO }, d)).toEqual({ status: "erro", mensagem: M.motivoDaRecusaObrigatorio });
-    expect(d.decidirTrocaDePlano).not.toHaveBeenCalled();
+    expect(d.decidir).not.toHaveBeenCalled();
   });
 
   it("cancelar: só quem pediu", async () => {

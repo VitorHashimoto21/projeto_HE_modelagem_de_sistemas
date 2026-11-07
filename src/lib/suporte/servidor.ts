@@ -25,6 +25,7 @@ export async function dependenciasDoAdministrador(administradorId: string): Prom
     entrar: s.entrar,
     liberacao: (acessoId) => s.liberacaoDoContexto(acessoId),
     sair: s.sair,
+    encerrarEmergencia: s.encerrarEmergencia,
     correcoesDaVisita: s.correcoesDaVisita,
     dono: s.donoDoNegocio,
     avisar,
