@@ -290,6 +290,8 @@ describe("fluxos (servicos.ts) com o banco: mensagens e os avisos ao Dono", () =
     decidir: plataforma.decidir,
     cancelar: plataforma.cancelar,
     entrarNaEmergencia: suporte.entrarNaEmergencia,
+    suspender: plataforma.suspender,
+    reativar: plataforma.reativar,
     registrarResultado: suporte.registrarResultado,
     dono: suporte.donoDoNegocio,
     avisar: (m) => avisos.push(m),

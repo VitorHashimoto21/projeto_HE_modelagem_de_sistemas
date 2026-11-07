@@ -33,10 +33,14 @@ export function acaoComSessao<A extends unknown[], R>(corpo: Corpo<ContextoComPa
   };
 }
 
-/** Configurações do negócio: só o Dono do negócio ativo (OPEN-002). */
-export function acaoDoDono<A extends unknown[], R>(corpo: Corpo<ContextoDoMembro, A, R>) {
+/**
+ * Configurações do negócio: só o Dono do negócio ativo (OPEN-002). Com o negócio suspenso (SPEC-019, 5.7),
+ * recusada (`NegocioSuspenso`), salvo `naSuspensao`: o acesso do suporte (liberar, revogar, encerrar a
+ * emergência) e o desfazer, que recusa com a explicação (OPEN-018).
+ */
+export function acaoDoDono<A extends unknown[], R>(corpo: Corpo<ContextoDoMembro, A, R>, opcoes?: { naSuspensao: true }) {
   return async (...args: A): Promise<R> => {
-    const { membro } = await exigirNivel({ tipo: "dono", origem: "acao" });
+    const { membro } = await exigirNivel({ tipo: "dono", origem: "acao", naSuspensao: opcoes?.naSuspensao });
     return corpo(membro!, ...args);
   };
 }

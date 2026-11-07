@@ -126,6 +126,8 @@ function deps(extra: Partial<servicos.DependenciasDaPlataforma> = {}): servicos.
     cancelar: vi.fn(async () => ({ ok: true as const })),
     entrarNaEmergencia: vi.fn(async () => ({ ok: true as const, acessoId: ACESSO, expiraEm: AGORA, modulos: ["vendas" as const], primeira: true })),
     registrarResultado: vi.fn(async () => ({ ok: true as const, negocioId: NEGOCIO })),
+    suspender: vi.fn(async () => ({ ok: true as const, negocio: "HE Testing" })),
+    reativar: vi.fn(async () => ({ ok: true as const, negocio: "HE Testing" })),
     dono: vi.fn(async () => ({ nome: "Rafael", email: "dono@exemplo.com", negocio: "HE Testing" })),
     avisar: vi.fn(),
     origem: "https://he.exemplo.com",

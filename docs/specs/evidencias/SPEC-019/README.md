@@ -4,7 +4,7 @@ A SPEC-019 é implementada em quatro etapas, por decisão da equipe (02/11/2026)
 1. 2º fator do Administrador;
 2. correções e desfazer, em duas partes: 2a (o mecanismo, o Catálogo e o Estoque) e 2b (a Calculadora e o Financeiro);
 3. troca de plano e emergência, em duas partes: 3a (pedidos com duas pessoas, troca de plano pela plataforma e painel) e 3b (acesso de emergência);
-4. suspensão, nova versão da Política e dos Termos, e homologação (T17).
+4. suspensão, nova versão da Política e dos Termos, e homologação, em duas partes: 4a (suspender e reativar o negócio) e 4b (Política e Termos, exportação LGPD, exclusão da conta de Administrador, modelo lógico de dados e homologação, T17).
 
 A homologação é uma só, no fim, com um único novo aceite dos termos.
 
@@ -358,3 +358,76 @@ O banco recebeu a migração `20261106120000_acesso_de_emergencia`, que só acre
 ### Fica para a etapa 4
 
 A suspensão (a emergência vale para negócio suspenso), a nova versão da Política e dos Termos, a exportação LGPD dos eventos novos, o modelo lógico de dados e a homologação (T17).
+
+## Etapa 4a — suspender e reativar o negócio (07/11/2026)
+
+Verificação em build de produção local, no mesmo ambiente das etapas 3a e 3b. Os dados são fictícios:
+- o Dono e o negócio **HE Testing**, com a colaboradora Joana, o item "Caneta azul" e um convite pendente para uma pessoa nova;
+- a conta de Administrador `suporte@exemplo.com` ("Equipe de Suporte"), que suspende e reativa.
+
+O banco recebeu a migração `20261107120000_suspensao_do_negocio`, que só acrescenta:
+- no negócio, quando foi suspenso, por quem, o motivo da lista (`MotivoSuspensao`) e a descrição, até 500 caracteres;
+- os eventos `SUSPENSAO` e `REATIVACAO`, com o motivo e a descrição completa nos dados;
+- checagens no banco: a suspensão tem tudo junto ou nada; negócio encerrado não fica suspenso; os eventos são do negócio e têm os dados;
+- o gatilho `he_negocio_suspenso` (segunda barreira, INV-008). Com o negócio suspenso, ele recusa toda gravação nas tabelas dos módulos e no próprio negócio, menos o plano e os campos da suspensão. Ficam de fora a equipe, os convites, o histórico de planos, os acessos e o registro do suporte e os pedidos da plataforma.
+
+### Testes automatizados
+
+| # | Teste | Onde | Resultado |
+|---|---|---|---|
+| T08, 5.7 | Um Administrador suspende com o motivo e a descrição de 500 caracteres; o registro guarda os dois. Recusa negócio já suspenso, encerrado, inexistente e conta comum. Outra conta reativa com a descrição, e a lista do Dono mostra as duas | `test/integracao/suspensao.test.ts` | ✅ |
+| T08, banco | O banco recusa a suspensão incompleta, a suspensão de negócio encerrado, o encerramento que não tira a suspensão e o evento sem os dados | idem | ✅ |
+| INV-008, fábricas | Com o negócio suspenso, as ações de módulo (inclusive a de "ver" que grava) e as do Dono são recusadas (`NegocioSuspenso`), para o Dono e para a gerente. A consulta do NCM passa. O desfazer passa pela fábrica e recusa com a explicação | idem e `test/unit/suspensao.test.ts` | ✅ |
+| INV-008, banco | Toda gravação nos módulos é recusada pelo banco, pelo cliente do negócio e direto: incluir, alterar e excluir item, incluir cliente e um `UPDATE` cru. No negócio, o nome e o número da venda ficam travados. O outro negócio do mesmo Dono continua gravando. Cada tabela dos módulos tem o gatilho; as que gravam na suspensão, não | `test/integracao/suspensao.test.ts` e `test/unit/modelos.test.ts` | ✅ |
+| INV-003 | No suporte, as correções saem da liberação e a chamada direta é recusada; reativado, a correção volta | idem e `test/unit/suspensao.test.ts` | ✅ |
+| CA-14 | Os membros leem e exportam. A liberação, a revogação, a emergência e a troca de plano pela plataforma continuam. A rotina diária pula o negócio; a conferência não tenta, e a chamada direta é recusada. Ao reativar, a conferência gera as contas do período e a gravação volta, sem nada perdido | `test/integracao/suspensao.test.ts` | ✅ |
+| 5.7, Equipe | O convite pendente não é aceito e continua pendente; ao reativar, é aceito | idem | ✅ |
+| 5.7, Direitos do titular | Excluir a conta do Dono encerra o negócio suspenso e tira a suspensão; a suspensão continua no registro, e os itens e os clientes (anonimizados) ficam | idem | ✅ |
+| CA-21 | Uma correção de 5 dias, com o negócio suspenso: o desfazer é recusado com a explicação. O prazo continua: com 31 dias, não dá mais; reativado aos 5 dias, o desfazer volta | idem | ✅ |
+| 5.7 | Os fluxos (`servicos.ts`): validação do motivo e da descrição, cada recusa com a sua explicação e os e-mails ao Dono na suspensão e na reativação | `test/unit/suspensao.test.ts` | ✅ |
+| OPEN-003 | Suspender e reativar são ações críticas (`acaoCritica`). Só as quatro ações do Dono marcadas continuam na suspensão: liberar, revogar, encerrar a emergência e desfazer | idem | ✅ |
+
+**Suíte completa:** 692 testes unitários e 408 de integração passaram, além de lint, tipos, build de produção e a checagem do schema (`migrate diff` sem diferença).
+
+**Testes antigos ajustados:**
+- a filiação passou a trazer a suspensão do negócio (`suspensao: null` quando não há);
+- a lista fechada de campos do painel (INV-009 da SPEC-018) ganhou a suspensão, um metadado do próprio negócio;
+- as dependências da plataforma ganharam suspender e reativar.
+
+### Roteiro no navegador (parte do T14)
+
+79 verificações, todas aprovadas (`scratchpad/e2e19e/spec19e.mjs`).
+
+| Passo | Resultado | Captura |
+|---|---|---|
+| **Preparação:** o Dono libera o Catálogo em "Ver e corrigir"; A entra com o código e corrige o custo da caneta (R$ 40,00 → R$ 42,00) | ✅ | — |
+| **A suspende** (CA-04): na ficha, a seção "Suspensão" e a gaveta com o motivo da lista e a descrição. Sem os campos, a gaveta explica o que falta. Passados 10 min, o código é pedido de novo, e nada é gravado antes | ✅ | `s19e_01_gaveta_suspender_*` |
+| **Ficha suspensa:** desde quando, o motivo, quem suspendeu e a descrição; "Reativar" no lugar de "Suspender"; o acesso de suporte avisa que as correções esperam a reativação; o registro com o `SUSPENSAO` | ✅ | `s19e_02_ficha_suspensa_*` |
+| **Painel** (5.9): "Suspenso desde …" na lista e o filtro "Suspensos", só com os suspensos | ✅ | `s19e_03_painel_suspensos_*` |
+| **Faixa do Dono** (CA-14): "Negócio suspenso pelo HE desde {data}: incidente de segurança. Fale com o suporte.", com "Ver detalhes" | ✅ | `s19e_04_faixa_do_dono_*` |
+| **Gravação recusada:** o Dono vê o item; "Novo item" e "Definir preço" levam à explicação, e o preço não muda. A exportação continua em Minha conta | ✅ | `s19e_05_gravacao_recusada_*` |
+| **"Acessos do suporte":** a suspensão com o motivo, a descrição e quem suspendeu. O desfazer é recusado com a explicação (CA-21), e nada é desfeito | ✅ | `s19e_06_acessos_do_suporte_*` |
+| **Colaboradora:** a faixa, sem "Ver detalhes" | ✅ | `s19e_07_faixa_da_colaboradora_390_claro.png` |
+| **Convite:** o link avisa e não oferece o aceite; em "Convites para você", o aceite é recusado e o convite continua pendente | ✅ | `s19e_08_convite_suspenso_390_escuro.png` |
+| **Modo suporte** (INV-003): a faixa "somente leitura (negócio suspenso: sem correções até a reativação)"; sem os botões de correção no item | ✅ | `s19e_09_modo_suporte_suspenso_1440_claro.png` |
+| **A reativa:** sem a descrição, a gaveta explica; com ela, o negócio volta e o registro guarda o `REATIVACAO`. A ficha mostra o histórico das duas | ✅ | `s19e_10_gaveta_reativar_1440_claro.png` |
+| **De volta** (CA-14, CA-21): a faixa some; o Dono vê a reativação com a descrição; o desfazer volta (custo R$ 40,00); o Dono define o preço; a pessoa convidada aceita o convite | ✅ | `s19e_11_reativado_*` |
+| Sem rolagem horizontal em 390 e 1440 px. Axe sem violações na gaveta "Suspender", na ficha suspensa, no painel com o filtro, no Painel do Dono com a faixa, na explicação da suspensão e em "Acessos do suporte", nos temas claro e escuro, em 390 e 1440 px | ✅ | todas |
+
+**Dados nas capturas:** as contas, os e-mails (`@exemplo.com`), o negócio, os nomes e as descrições são fictícios. O token do convite não aparece.
+
+### Encontrado no roteiro
+
+- **Texto repetido:** a explicação da recusa repetia "suspenso pelo HE" logo depois da faixa. Passou a dizer desde quando, o motivo e o que continua.
+- **Faixa da liberação:** com o negócio suspenso, ela ainda dizia que o suporte podia corrigir. Passou a avisar que as correções liberadas esperam a reativação.
+
+### Decisões tomadas na implementação
+
+- **Botões de gravar visíveis:** a faixa avisa, e a recusa leva à explicação, sem rever cada tela dos módulos.
+- **Ações de "ver" que gravam:** são recusadas na suspensão; só as consultas marcadas passam.
+- **Exclusão da conta do Dono:** encerra o negócio e tira a suspensão; a suspensão continua no registro.
+- **Entrada com correção:** ainda pede o código, mas as correções ficam recusadas até a reativação.
+
+### Fica para a etapa 4b
+
+A nova versão da Política e dos Termos, com novo aceite (RF78), a exportação LGPD dos eventos novos e dos pedidos da plataforma, a exclusão da conta de Administrador sem o papel e os autenticadores, o modelo lógico de dados e a homologação (T17).

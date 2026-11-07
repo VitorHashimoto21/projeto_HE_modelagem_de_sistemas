@@ -2,6 +2,7 @@ import type { Prisma, PrismaClient } from "@/generated/prisma/client";
 import type { EventoSuporte, PlanoNegocio } from "@/generated/prisma/enums";
 import { fimDaEmergencia, lerPedidoDeEmergencia, MOTIVO_CURTO_DA_EMERGENCIA, ROTULO_MOTIVO_DA_EMERGENCIA, type PedidoDeEmergencia } from "@/lib/dominio/emergencia";
 import { listaDeModulos, PRAZOS } from "@/lib/dominio/suporte";
+import { lerDadosDaSuspensao, MOTIVO_CURTO_DA_SUSPENSAO, type DadosDaSuspensao, type MotivoDaSuspensao } from "@/lib/dominio/suspensao";
 import {
   expiracaoDoPedido,
   lerPedidoDePlano,
@@ -44,6 +45,21 @@ export type ResultadoDaDecisao =
   | { ok: false; erro: "MesmoPlano"; plano: PlanoNegocio };
 
 type Decisao = { aprovar: true } | { aprovar: false; motivo: string };
+
+/** SPEC-019 (5.7): suspender e reativar, com as recusas da tabela da seção 7. */
+export type ResultadoDaSuspensao =
+  | { ok: true; negocio: string }
+  | { ok: false; erro: "NegocioInexistente" | "NegocioEncerrado" | "JaSuspenso" | "NaoSuspenso" | "NaoEAdministrador" };
+
+/** Uma suspensão ou reativação no registro, para "Acessos do suporte" e a ficha (5.10). */
+export type SuspensaoNoRegistro = {
+  id: string;
+  evento: "SUSPENSAO" | "REATIVACAO";
+  motivo: MotivoDaSuspensao | null;
+  descricao: string;
+  autor: string;
+  criadoEm: Date;
+};
 
 export type ResultadoDoCancelamento = { ok: true } | { ok: false; erro: "PedidoInexistente" | "PedidoJaDecidido" | "PedidoExpirado" | "SoQuemPediu" };
 
@@ -172,6 +188,11 @@ const registrar = (
 
 /** "incidente de segurança, INC-42" — o resumo do pedido de emergência no registro. */
 const resumoDaEmergencia = (e: PedidoDeEmergencia) => `${MOTIVO_CURTO_DA_EMERGENCIA[e.motivo]}, ${e.referencia}`;
+
+/** SPEC-019 (5.7): trava a linha do negócio e diz o nome, se está encerrado e se está suspenso. */
+const travarParaSuspender = async (tx: Pick<ClienteDoNegocio, "$queryRaw">, negocioId: string) =>
+  (await tx.$queryRaw<{ nome: string; encerrado: boolean; suspenso: boolean }[]>`
+    SELECT "nome", "encerradoEm" IS NOT NULL AS "encerrado", "suspensoEm" IS NOT NULL AS "suspenso" FROM "Negocio" WHERE "id" = ${negocioId}::uuid FOR UPDATE`)[0] ?? null;
 
 const UNICO_PENDENTE = "PedidoPlataforma_um_pendente";
 const violouUnicoPendente = (e: unknown) => typeof e === "object" && e !== null && (e as { code?: unknown }).code === "P2002" && JSON.stringify(e).includes(UNICO_PENDENTE);
@@ -426,6 +447,83 @@ export function criarConsultasDaPlataforma(cliente: PrismaClient) {
         select: SELECAO,
       });
       return linhas.map((l) => paraPedido(l, agora));
+    },
+
+    /**
+     * Suspender (5.7): um Administrador, negócio existente, não encerrado e ainda não suspenso. O negócio fica
+     * somente leitura (os gatilhos do banco recusam a gravação nos módulos), e o registro guarda o motivo e a
+     * descrição completa na mesma transação. Nada é apagado nem alterado nos dados do negócio.
+     */
+    async suspender(negocioId: string, administradorId: string, dados: DadosDaSuspensao, agora: Date): Promise<ResultadoDaSuspensao> {
+      return comNegocio(cliente, { negocioId }).$transaction(async (tx): Promise<ResultadoDaSuspensao> => {
+        const n = await travarParaSuspender(tx, negocioId);
+        if (!n) return { ok: false, erro: "NegocioInexistente" };
+        if (!(await ehAdministrador(tx, administradorId))) return { ok: false, erro: "NaoEAdministrador" };
+        if (n.encerrado) return { ok: false, erro: "NegocioEncerrado" };
+        if (n.suspenso) return { ok: false, erro: "JaSuspenso" };
+        await tx.negocio.updateMany({
+          where: { id: negocioId },
+          data: { suspensoEm: agora, suspensoPorId: administradorId, motivoSuspensao: dados.motivo, descricaoSuspensao: dados.descricao },
+        });
+        await tx.registroSuporte.create({
+          data: {
+            negocioId,
+            acessoId: null,
+            pedidoId: null,
+            usuarioId: administradorId,
+            evento: "SUSPENSAO",
+            descricao: `Suspendeu o negócio (${MOTIVO_CURTO_DA_SUSPENSAO[dados.motivo]}): ${dados.descricao}`.slice(0, 200),
+            dados: { motivo: dados.motivo, descricao: dados.descricao },
+            criadoEm: agora,
+          },
+        });
+        return { ok: true, negocio: n.nome };
+      });
+    },
+
+    /** Reativar (5.7): um Administrador, com a descrição. A gravação volta; o registro guarda a reativação. */
+    async reativar(negocioId: string, administradorId: string, descricao: string, agora: Date): Promise<ResultadoDaSuspensao> {
+      return comNegocio(cliente, { negocioId }).$transaction(async (tx): Promise<ResultadoDaSuspensao> => {
+        const n = await travarParaSuspender(tx, negocioId);
+        if (!n) return { ok: false, erro: "NegocioInexistente" };
+        if (!(await ehAdministrador(tx, administradorId))) return { ok: false, erro: "NaoEAdministrador" };
+        if (!n.suspenso) return { ok: false, erro: "NaoSuspenso" };
+        await tx.negocio.updateMany({ where: { id: negocioId }, data: { suspensoEm: null, suspensoPorId: null, motivoSuspensao: null, descricaoSuspensao: null } });
+        await tx.registroSuporte.create({
+          data: {
+            negocioId,
+            acessoId: null,
+            pedidoId: null,
+            usuarioId: administradorId,
+            evento: "REATIVACAO",
+            descricao: `Reativou o negócio: ${descricao}`.slice(0, 200),
+            dados: { descricao },
+            criadoEm: agora,
+          },
+        });
+        return { ok: true, negocio: n.nome };
+      });
+    },
+
+    /** Suspensões e reativações do negócio, da mais nova à mais antiga (5.10): para o Dono e a ficha do painel. */
+    async suspensoesDoNegocio(negocioId: string): Promise<SuspensaoNoRegistro[]> {
+      const linhas = await comNegocio(cliente, { negocioId }).registroSuporte.findMany({
+        where: { evento: { in: ["SUSPENSAO", "REATIVACAO"] } },
+        orderBy: { criadoEm: "desc" },
+        take: PEDIDOS_DO_NEGOCIO,
+        select: { id: true, evento: true, dados: true, descricao: true, criadoEm: true, usuario: { select: { nome: true } } },
+      });
+      return linhas.map((l) => {
+        const d = lerDadosDaSuspensao(l.dados);
+        return {
+          id: l.id,
+          evento: l.evento === "SUSPENSAO" ? "SUSPENSAO" : "REATIVACAO",
+          motivo: d?.motivo ?? null,
+          descricao: d?.descricao ?? l.descricao,
+          autor: l.usuario.nome,
+          criadoEm: l.criadoEm,
+        };
+      });
     },
 
     /** Pedidos de um negócio, do mais novo ao mais antigo: na ficha do painel e para o Dono (5.10). */

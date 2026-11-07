@@ -67,3 +67,20 @@ export const acaoRegistrarResultado = acaoDoAdministrador(async (contexto, _: un
   atualizar();
   return estado;
 });
+
+/**
+ * SPEC-019 (5.7, OPEN-012): suspender o negócio — um Administrador, com o código reconfirmado, o motivo e a
+ * descrição. O negócio fica somente leitura até a reativação.
+ */
+export const acaoSuspenderNegocio = acaoCritica(async (contexto, _: unknown, form: FormData): Promise<servicos.EstadoDaSuspensao> => {
+  const estado = await servicos.suspender(camposDoFormulario(form), await dependenciasDaPlataforma(contexto.usuarioId));
+  if (estado.status === "ok") atualizar();
+  return estado;
+});
+
+/** SPEC-019 (5.7): reativar o negócio suspenso — um Administrador, com o código reconfirmado e a descrição. */
+export const acaoReativarNegocio = acaoCritica(async (contexto, _: unknown, form: FormData): Promise<servicos.EstadoDaSuspensao> => {
+  const estado = await servicos.reativar(camposDoFormulario(form), await dependenciasDaPlataforma(contexto.usuarioId));
+  if (estado.status === "ok") atualizar();
+  return estado;
+});

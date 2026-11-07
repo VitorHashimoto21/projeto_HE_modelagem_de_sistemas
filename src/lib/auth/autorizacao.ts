@@ -1,5 +1,6 @@
 import { correcaoPermitida, moduloDaCorrecao, type IdDaCorrecao } from "@/lib/dominio/correcoes";
 import type { Acao, Matriz, Modulo, Papel } from "@/lib/dominio/permissoes";
+import type { SuspensaoDoNegocio } from "@/lib/dominio/suspensao";
 import type { ContextoComPapel, SuporteAtivo } from "./contexto";
 
 /**
@@ -13,8 +14,12 @@ export type NivelDeAcesso =
   | { tipo: "publica" }
   /** Sessão sem negócio ativo (cadastrar negócio, aceitar convite, sair do negócio…). */
   | { tipo: "sessao"; origem?: "acao" }
-  /** Configurações do negócio (OPEN-002). */
-  | { tipo: "dono"; origem?: "acao" }
+  /**
+   * Configurações do negócio (OPEN-002). SPEC-019 (5.7): `naSuspensao` marca as ações do Dono que continuam
+   * com o negócio suspenso: liberar e revogar o suporte, encerrar a emergência e o desfazer, que recusa com a
+   * explicação (OPEN-018). As demais são recusadas (`NegocioSuspenso`).
+   */
+  | { tipo: "dono"; origem?: "acao"; naSuspensao?: true }
   | {
       tipo: "permissao";
       modulo: Modulo;
@@ -50,6 +55,8 @@ export type ContextoDoMembro = {
   suporte?: SuporteAtivo | null;
   /** SPEC-019 (5.3): a correção do suporte que esta ação executa (sempre pelo motor das correções). */
   correcao?: IdDaCorrecao;
+  /** SPEC-019 (5.7): o negócio está suspenso pela plataforma (somente leitura). */
+  negocioSuspenso?: SuspensaoDoNegocio | null;
 };
 
 export type MotivoDaRecusa =
@@ -69,7 +76,9 @@ export type MotivoDaRecusa =
   /** SPEC-018 (RNF12): sessão do Administrador com mais de 8 h. */
   | "SessaoExpirada"
   /** SPEC-019 (INV-001): conta de Administrador sem o código verificado nesta sessão. */
-  | "SegundoFatorPendente";
+  | "SegundoFatorPendente"
+  /** SPEC-019 (5.7, RN39, INV-008): o negócio está suspenso — nada é gravado nos módulos nem em Configurações. */
+  | "NegocioSuspenso";
 
 export type Autorizacao =
   | { ok: true; contexto: ContextoComPapel | null; membro: ContextoDoMembro | null }
@@ -77,11 +86,21 @@ export type Autorizacao =
 
 function membroDo(contexto: ContextoComPapel): ContextoDoMembro | null {
   if (!contexto.negocioId || !contexto.permissoes) return null;
+  const negocioSuspenso = contexto.negocioSuspenso ?? null;
   if (contexto.suporte) {
-    return { usuarioId: contexto.usuarioId, negocioId: contexto.negocioId, papel: null, permissoes: contexto.permissoes, modoSuporte: true, suporte: contexto.suporte };
+    return { usuarioId: contexto.usuarioId, negocioId: contexto.negocioId, papel: null, permissoes: contexto.permissoes, modoSuporte: true, suporte: contexto.suporte, negocioSuspenso };
   }
   if (!contexto.papel) return null;
-  return { usuarioId: contexto.usuarioId, negocioId: contexto.negocioId, papel: contexto.papel, permissoes: contexto.permissoes };
+  return { usuarioId: contexto.usuarioId, negocioId: contexto.negocioId, papel: contexto.papel, permissoes: contexto.permissoes, negocioSuspenso };
+}
+
+/**
+ * SPEC-019 (5.7, RN39): com o negócio suspenso, o membro vê tudo, mas nenhuma ação de módulo é executada
+ * (só as consultas dos formulários, que não gravam) e as telas de incluir, editar e excluir não abrem.
+ * O banco recusa a gravação também (gatilho he_negocio_suspenso, segunda barreira).
+ */
+function gravariaNaSuspensao(nivel: Extract<NivelDeAcesso, { tipo: "permissao" }>): boolean {
+  return nivel.origem === "acao" ? nivel.correcao !== "consulta" : nivel.acao !== "ver";
 }
 
 export function autorizar(contexto: ContextoComPapel | null, nivel: NivelDeAcesso): Autorizacao {
@@ -106,10 +125,16 @@ export function autorizar(contexto: ContextoComPapel | null, nivel: NivelDeAcess
 
   const membro = membroDo(contexto);
   if (!membro) return { ok: false, motivo: "SemNegocio" };
+  const suspenso = Boolean(contexto.negocioSuspenso);
   if (nivel.tipo === "dono") {
-    return membro.papel === "DONO" ? { ok: true, contexto, membro } : { ok: false, motivo: "SomenteDono" };
+    if (membro.papel !== "DONO") return { ok: false, motivo: "SomenteDono" };
+    // SPEC-019 (5.7): Configurações continuam abertas para ver; gravar, só as ações marcadas `naSuspensao`.
+    if (suspenso && ehAcao && !nivel.naSuspensao) return { ok: false, motivo: "NegocioSuspenso" };
+    return { ok: true, contexto, membro };
   }
-  if (membro.permissoes[nivel.modulo][nivel.acao]) return { ok: true, contexto, membro };
+  if (membro.permissoes[nivel.modulo][nivel.acao]) {
+    return suspenso && gravariaNaSuspensao(nivel) ? { ok: false, motivo: "NegocioSuspenso" } : { ok: true, contexto, membro };
+  }
   // SPEC-019 (5.3): no modo suporte, a tela de uma correção da lista (ex.: o formulário de editar item).
   const correcao = nivel.correcao === "consulta" ? undefined : nivel.correcao;
   if (contexto.suporte && correcaoPermitida(correcao, contexto.suporte.modulosComCorrecao) && moduloDaCorrecao(correcao) === nivel.modulo) {
@@ -131,6 +156,10 @@ function comOModulo(matriz: Matriz, modulo: Modulo): Matriz {
  */
 function autorizarNoSuporte(contexto: ContextoComPapel, nivel: NivelDeAcesso): Autorizacao {
   const suporte = contexto.suporte!;
+  // SPEC-019 (5.7, INV-003): no negócio suspenso, as correções são recusadas (o contexto já as tira da liberação).
+  if (contexto.negocioSuspenso && nivel.tipo === "permissao" && nivel.correcao && nivel.correcao !== "consulta") {
+    return { ok: false, motivo: "NegocioSuspenso" };
+  }
   if (nivel.tipo !== "permissao" || !suporte.modulosComCorrecao.includes(nivel.modulo)) return { ok: false, motivo: "SomenteLeitura" };
   const membro = membroDo(contexto);
   if (!membro) return { ok: false, motivo: "SemNegocio" };

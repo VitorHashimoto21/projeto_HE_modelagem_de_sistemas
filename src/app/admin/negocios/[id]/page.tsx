@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { Eye, Lock, LogIn, Siren } from "lucide-react";
+import { Eye, Lock, LogIn, OctagonPause, Siren } from "lucide-react";
 import { CartaoDoPedido } from "@/components/plataforma/pedido";
 import { RegistrarResultado } from "@/components/plataforma/registrar-resultado";
 import { SolicitarEmergencia } from "@/components/plataforma/solicitar-emergencia";
+import { ReativarNegocio, SuspenderNegocio } from "@/components/plataforma/suspender-negocio";
 import { TrocarPlano } from "@/components/plataforma/trocar-plano";
 import { SeloDaEmergencia } from "@/components/suporte/selo-da-emergencia";
+import { SeloDaSuspensao } from "@/components/suporte/selo-da-suspensao";
 import { ROTULO_REGIME } from "@/components/negocio/rotulos";
 import { AvisoDaPagina } from "@/components/ui/aviso";
 import { CabecalhoDePagina } from "@/components/ui/cabecalho-de-pagina";
@@ -20,6 +22,7 @@ import { ROTULO_PLANO } from "@/lib/dominio/planos";
 import { MENSAGENS_DA_EMERGENCIA, ROTULO_MOTIVO_DA_EMERGENCIA } from "@/lib/dominio/emergencia";
 import { MENSAGENS_DA_PLATAFORMA } from "@/lib/dominio/plataforma";
 import { dataHoraCompleta, dataHoraCurta, listaDeModulos, MENSAGENS_SUPORTE } from "@/lib/dominio/suporte";
+import { MENSAGENS_DA_SUSPENSAO, ROTULO_MOTIVO_DA_SUSPENSAO } from "@/lib/dominio/suspensao";
 import { acaoEntrarEmEmergencia } from "@/lib/plataforma/acoes";
 import { autenticadoresDaSessao } from "@/lib/plataforma/servidor";
 
@@ -31,7 +34,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 // e a entrada em modo suporte — habilitada só com liberação ativa, conferida de novo no servidor.
 // SPEC-019 (5.9, item 5): "Trocar plano", com o pedido pendente e os anteriores deste negócio; e o acesso de
 // emergência (5.6): solicitar só sem liberação ativa, o pedido pendente, "Entrar" só para quem pediu, e o
-// resultado que essa conta ainda deve.
+// resultado que essa conta ainda deve. A suspensão (5.7): "Suspender" ou "Reativar", com o histórico.
 export default async function NegocioNoPainel({ params, searchParams }: PageProps<"/admin/negocios/[id]">) {
   const { usuarioId } = await exigirAdministrador();
   const [{ id }, busca] = await Promise.all([params, searchParams]);
@@ -42,11 +45,12 @@ export default async function NegocioNoPainel({ params, searchParams }: PageProp
   const comCorrecao = (n.liberacao?.modulosComCorrecao.length ?? 0) > 0;
   // SPEC-019 (OPEN-003): entrar para corrigir e pedir, aprovar ou recusar pedem o código de novo; o
   // diálogo lista os autenticadores.
-  const [autenticadores, pedidos, administradores, semResultado] = await Promise.all([
+  const [autenticadores, pedidos, administradores, semResultado, suspensoes] = await Promise.all([
     autenticadoresDaSessao(),
     plataforma().pedidosDoNegocio(n.id, agora),
     plataforma().administradores(),
     suporte().emergencias({ semResultadoDe: usuarioId }),
+    plataforma().suspensoesDoNegocio(n.id),
   ]);
   const pedidosDePlano = pedidos.filter((p) => p.tipo === "PLANO");
   const pendente = pedidosDePlano.find((p) => p.situacao === "PENDENTE");
@@ -70,7 +74,7 @@ export default async function NegocioNoPainel({ params, searchParams }: PageProp
     ["Plano", ROTULO_PLANO[n.plano]],
     ["Criado em", dataBrasileira(n.criadoEm)],
     ["Membros", String(n.membros)],
-    ["Situação", n.encerrado ? "Encerrado" : "Ativo"],
+    ["Situação", n.encerrado ? "Encerrado" : n.suspensao ? `Suspenso desde ${dataBrasileira(n.suspensao.desde)}` : "Ativo"],
     ["Dono", n.dono ? `${n.dono.nome} (${n.dono.email})` : "—"],
   ];
 
@@ -112,6 +116,7 @@ export default async function NegocioNoPainel({ params, searchParams }: PageProp
               {comCorrecao && (
                 <p className="text-sm">
                   <span className="font-semibold">Corrigir:</span> {listaDeModulos(n.liberacao.modulosComCorrecao)}, só as ações da lista.
+                  {n.suspensao && ` ${MENSAGENS_DA_SUSPENSAO.correcoes}`}
                 </p>
               )}
               <p className="text-sm text-muted-foreground">
@@ -134,6 +139,57 @@ export default async function NegocioNoPainel({ params, searchParams }: PageProp
           )}
         </Superficie>
       </div>
+
+      <Superficie tom={n.suspensao ? "perigo" : "cartao"} aria-labelledby="titulo-suspensao">
+        <TituloDaSuperficie
+          id="titulo-suspensao"
+          titulo={
+            <span className="flex items-center gap-2">
+              <OctagonPause className="size-5 shrink-0 text-status-danger" aria-hidden="true" />
+              Suspensão
+            </span>
+          }
+          descricao="Uma conta de Administrador suspende, com o motivo e a descrição. O negócio fica somente leitura até a reativação, e o Dono é avisado."
+          acoes={
+            n.suspensao ? (
+              <ReativarNegocio negocioId={n.id} negocio={n.nome} autenticadores={autenticadores} disponivel />
+            ) : (
+              <SuspenderNegocio negocioId={n.id} negocio={n.nome} autenticadores={autenticadores} disponivel={!n.encerrado} />
+            )
+          }
+        />
+        <div className="space-y-4">
+          {n.encerrado && <p className="text-sm text-muted-foreground">{MENSAGENS_DA_SUSPENSAO.encerrado}</p>}
+          {n.suspensao && (
+            <div className="space-y-3">
+              <SeloDaSuspensao>Suspenso desde {dataHoraCompleta(n.suspensao.desde)}</SeloDaSuspensao>
+              <p className="text-sm break-words">
+                <span className="font-semibold">{ROTULO_MOTIVO_DA_SUSPENSAO[n.suspensao.motivo]}</span> · por {n.suspensao.por}
+              </p>
+              <p className="text-sm break-words whitespace-pre-line">{n.suspensao.descricao}</p>
+            </div>
+          )}
+          {!n.encerrado && !n.suspensao && <p className="text-sm text-muted-foreground">O negócio está ativo.</p>}
+          {suspensoes.length > 0 && (
+            <details className="group">
+              <summary className="cursor-pointer text-sm font-semibold text-primary hover:underline">
+                Histórico de suspensões ({suspensoes.length})
+              </summary>
+              <ul className="mt-3 divide-y">
+                {suspensoes.map((r) => (
+                  <li key={r.id} className="space-y-1 py-3 text-sm first:pt-0 last:pb-0">
+                    <p>
+                      <span className="font-semibold">{r.evento === "SUSPENSAO" ? "Suspenso" : "Reativado"}</span> em {dataHoraCompleta(r.criadoEm)} por {r.autor}
+                      {r.motivo && ` · ${ROTULO_MOTIVO_DA_SUSPENSAO[r.motivo]}`}
+                    </p>
+                    <p className="break-words text-muted-foreground">{r.descricao}</p>
+                  </li>
+                ))}
+              </ul>
+            </details>
+          )}
+        </div>
+      </Superficie>
 
       <Superficie aria-labelledby="titulo-plano">
         <TituloDaSuperficie

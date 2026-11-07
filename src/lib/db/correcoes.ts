@@ -8,6 +8,7 @@ import { competenciaBrasileira } from "@/lib/dominio/financeiro";
 import { MENSAGENS_FLUXO_FINANCEIRO } from "@/lib/financeiro/servicos";
 import { CORRECOES_PERMITIDAS, dentroDoPrazoDeDesfazer, MENSAGENS_DAS_CORRECOES as M, moduloDaCorrecao, type IdDaCorrecao } from "@/lib/dominio/correcoes";
 import { ROTULO_MODULO } from "@/lib/dominio/permissoes";
+import { MENSAGENS_DA_SUSPENSAO } from "@/lib/dominio/suspensao";
 import {
   CodigoEmUso,
   CodigoEmUsoAoReativar,
@@ -740,6 +741,12 @@ export function criarConsultasDeCorrecoes(base: PrismaClient) {
       await comNegocio(base, { negocioId, usuarioId: donoId }).$transaction(
         async (tx) => {
           const cliente = achatar(tx as unknown as ClienteDaTransacao);
+          // SPEC-019 (5.7, OPEN-018): no negócio suspenso, o desfazer é recusado como as demais gravações, e
+          // os 30 dias continuam contando. A trava do negócio faz uma suspensão simultânea esperar (e põe em fila
+          // dois desfazer do mesmo negócio, que podem gravar nele, como os parâmetros da Calculadora).
+          const negocio = await cliente.$queryRaw<{ suspenso: boolean }[]>`
+            SELECT "suspensoEm" IS NOT NULL AS "suspenso" FROM "Negocio" WHERE "id" = ${negocioId}::uuid FOR UPDATE`;
+          if (negocio[0]?.suspenso) throw new DesfazerRecusado(MENSAGENS_DA_SUSPENSAO.desfazer);
           // Trava a correção: dois cliques no "Desfazer" não passam juntos (o índice único também garante).
           const travada = await cliente.$queryRaw<{ id: string }[]>`
             SELECT "id" FROM "RegistroSuporte" WHERE "id" = ${correcaoId}::uuid AND "negocioId" = ${negocioId}::uuid AND "evento"::text = 'CORRECAO' FOR UPDATE`;

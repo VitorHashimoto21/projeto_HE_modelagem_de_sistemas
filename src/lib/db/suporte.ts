@@ -1,5 +1,5 @@
 import type { Prisma, PrismaClient } from "@/generated/prisma/client";
-import type { EventoSuporte, MotivoEmergencia, PlanoNegocio, RegimeTributario, TipoAcessoSuporte } from "@/generated/prisma/enums";
+import type { EventoSuporte, MotivoEmergencia, MotivoSuspensao, PlanoNegocio, RegimeTributario, TipoAcessoSuporte } from "@/generated/prisma/enums";
 import type { LiberacaoDoContexto } from "@/lib/auth/contexto";
 import { MOTIVO_CURTO_DA_EMERGENCIA } from "@/lib/dominio/emergencia";
 import type { Modulo } from "@/lib/dominio/permissoes";
@@ -28,6 +28,8 @@ export type NegocioNoPainel = {
   liberacao: { id: string; motivo: string; modulos: Modulo[]; modulosComCorrecao: Modulo[]; expiraEm: Date } | null;
   /** SPEC-019 (5.6): o acesso de emergência em andamento, se houver. */
   emergencia: EmergenciaAtiva | null;
+  /** SPEC-019 (5.7, 5.9): a suspensão em vigor, com quem suspendeu, o motivo e a descrição. */
+  suspensao: { desde: Date; motivo: MotivoSuspensao; descricao: string; por: string } | null;
 };
 
 /** Acesso de emergência em andamento (SPEC-019, 5.6): para as faixas, o painel e a ficha. */
@@ -165,7 +167,7 @@ export function criarConsultasDeSuporte(cliente: PrismaClient) {
           expiraEm: true,
           revogadoEm: true,
           motivoEmergencia: true,
-          negocio: { select: { nome: true, encerradoEm: true } },
+          negocio: { select: { nome: true, encerradoEm: true, suspensoEm: true, motivoSuspensao: true } },
           pedido: { select: { solicitadoPorId: true } },
         },
       });
@@ -194,6 +196,8 @@ export function criarConsultasDeSuporte(cliente: PrismaClient) {
           l.tipo === "EMERGENCIA" && l.motivoEmergencia && l.pedido
             ? { motivo: MOTIVO_CURTO_DA_EMERGENCIA[l.motivoEmergencia], solicitadoPorId: l.pedido.solicitadoPorId }
             : null,
+        // SPEC-019 (5.7): a suspensão do negócio; a liberação e a emergência continuam valendo para ver.
+        negocioSuspenso: l.negocio.suspensoEm && l.negocio.motivoSuspensao ? { desde: l.negocio.suspensoEm, motivo: l.negocio.motivoSuspensao } : null,
       };
     },
 
@@ -424,16 +428,25 @@ export function criarConsultasDeSuporte(cliente: PrismaClient) {
     // ---------------------------------------------------------------- Administrador (5.3, 5.5)
 
     /** Painel (INV-009): só os metadados da seção 5.3, com busca por nome do negócio ou e-mail do Dono. */
-    async listarNegocios(busca: string, pagina: number, agora: Date): Promise<{ negocios: NegocioNoPainel[]; total: number; paginas: number }> {
+    async listarNegocios(
+      busca: string,
+      pagina: number,
+      agora: Date,
+      situacao: "todos" | "suspensos" = "todos",
+    ): Promise<{ negocios: NegocioNoPainel[]; total: number; paginas: number }> {
       const termo = busca.trim().slice(0, 120);
-      const where = termo
-        ? {
-            OR: [
-              { nome: { contains: termo, mode: "insensitive" as const } },
-              { membros: { some: { papel: "DONO" as const, usuario: { email: { contains: termo.toLowerCase() } } } } },
-            ],
-          }
-        : {};
+      const where = {
+        ...(termo
+          ? {
+              OR: [
+                { nome: { contains: termo, mode: "insensitive" as const } },
+                { membros: { some: { papel: "DONO" as const, usuario: { email: { contains: termo.toLowerCase() } } } } },
+              ],
+            }
+          : {}),
+        // SPEC-019 (5.9): o filtro da situação "Suspenso".
+        ...(situacao === "suspensos" ? { suspensoEm: { not: null } } : {}),
+      };
       const [total, linhas] = await Promise.all([
         cliente.negocio.count({ where }),
         cliente.negocio.findMany({
@@ -597,6 +610,10 @@ const SELECAO_DO_PAINEL = (agora: Date) =>
     plano: true,
     createdAt: true,
     encerradoEm: true,
+    suspensoEm: true,
+    motivoSuspensao: true,
+    descricaoSuspensao: true,
+    suspensoPor: { select: { nome: true } },
     _count: { select: { membros: true } },
     membros: { where: { papel: "DONO" }, take: 1, select: { usuario: { select: { nome: true, email: true, excluidoEm: true } } } },
     // A liberação ativa e, à parte, a emergência em andamento (no máximo uma de cada).
@@ -615,6 +632,10 @@ type LinhaDoPainel = {
   plano: PlanoNegocio;
   createdAt: Date;
   encerradoEm: Date | null;
+  suspensoEm: Date | null;
+  motivoSuspensao: MotivoSuspensao | null;
+  descricaoSuspensao: string | null;
+  suspensoPor: { nome: string } | null;
   _count: { membros: number };
   membros: { usuario: { nome: string; email: string; excluidoEm: Date | null } }[];
   acessosSuporte: (LinhaDaEmergencia & { tipo: TipoAcessoSuporte; motivo: string; modulosComCorrecao: string[] })[];
@@ -635,6 +656,10 @@ function paraPainel(n: LinhaDoPainel): NegocioNoPainel {
     dono: dono && !dono.excluidoEm ? { nome: dono.nome, email: dono.email } : null,
     liberacao: l ? { id: l.id, motivo: l.motivo, modulos: modulosValidos(l.modulos), modulosComCorrecao: modulosValidos(l.modulosComCorrecao ?? []), expiraEm: l.expiraEm } : null,
     emergencia: e ? paraEmergencia(e) : null,
+    suspensao:
+      n.suspensoEm && n.motivoSuspensao
+        ? { desde: n.suspensoEm, motivo: n.motivoSuspensao, descricao: n.descricaoSuspensao ?? "", por: n.suspensoPor?.nome ?? "—" }
+        : null,
   };
 }
 

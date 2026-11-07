@@ -1,5 +1,5 @@
 import type { PrismaClient } from "@/generated/prisma/client";
-import type { PapelUsuario } from "@/generated/prisma/enums";
+import type { Filiacao } from "@/lib/auth/contexto";
 
 /**
  * Consultas do controle de acesso (SPEC-002). Ficam aqui, e não no cliente do
@@ -12,11 +12,16 @@ export function criarConsultasDeAcesso(cliente: PrismaClient) {
    * matriz customizada (SPEC-005, INV-004): null se não for membro ou se estiver suspenso
    * pela volta ao plano gratuito (SPEC-013, INV-006).
    */
-  const filiacao = (usuarioId: string, negocioId: string): Promise<{ papel: PapelUsuario; permissoesCustom: unknown } | null> =>
-    cliente.membroNegocio.findFirst({
+  // SPEC-019 (5.7): na mesma consulta, a suspensão do negócio pela plataforma (a faixa e as recusas).
+  const filiacao = async (usuarioId: string, negocioId: string): Promise<Filiacao | null> => {
+    const m = await cliente.membroNegocio.findFirst({
       where: { usuarioId, negocioId, suspensoEm: null, negocio: { encerradoEm: null } },
-      select: { papel: true, permissoesCustom: true },
+      select: { papel: true, permissoesCustom: true, negocio: { select: { suspensoEm: true, motivoSuspensao: true } } },
     });
+    if (!m) return null;
+    const { suspensoEm, motivoSuspensao } = m.negocio;
+    return { papel: m.papel, permissoesCustom: m.permissoesCustom, suspensao: suspensoEm && motivoSuspensao ? { desde: suspensoEm, motivo: motivoSuspensao } : null };
+  };
 
   return {
     /**

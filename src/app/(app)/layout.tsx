@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import { FaixaDoCaixaCompacta } from "@/components/estrutura/faixa-do-caixa";
 import { Navegacao } from "@/components/estrutura/navegacao";
 import { Minigrafico } from "@/components/graficos/minigrafico";
-import { FaixaDaEmergencia, FaixaDoModoSuporte, FaixaDoSuporteLiberado } from "@/components/suporte/faixas";
+import { FaixaDaEmergencia, FaixaDaSuspensao, FaixaDoModoSuporte, FaixaDoSuporteLiberado } from "@/components/suporte/faixas";
 import { AvisoDaUrl, AvisosFlutuantes } from "@/components/ui/avisos-flutuantes";
 import { exigirSessao } from "@/lib/auth/servidor";
 import { carregarFaixa, cartaoSeguro } from "@/lib/dashboard/servicos";
@@ -20,6 +20,7 @@ import { menuDoMembro, menuDoSuporte } from "@/lib/equipe/menu";
 // (5.3, OPEN-005) só é calculada para quem vê o Dashboard completo (INV-002).
 // SPEC-018: no modo suporte, o menu tem só os módulos liberados e a faixa do modo suporte fica
 // fixa no topo; para a equipe do negócio, a faixa do acesso liberado aparece enquanto ele valer.
+// SPEC-019 (5.7): com o negócio suspenso, a faixa da suspensão aparece para todos os membros.
 export default async function LayoutDaAplicacao({ children, gaveta }: LayoutProps<"/">) {
   const contexto = await exigirSessao();
   const modoSuporte = contexto.suporte ?? null;
@@ -57,11 +58,20 @@ export default async function LayoutDaAplicacao({ children, gaveta }: LayoutProp
             corrigir={modoSuporte.modulosComCorrecao}
             correcaoPendente={modoSuporte.correcaoPendente}
             emergencia={modoSuporte.emergencia}
+            suspenso={Boolean(contexto.negocioSuspenso)}
           />
         )}
+        {/* SPEC-019 (5.7): a faixa da suspensão para todos os membros, antes das do suporte. */}
+        {membro && !modoSuporte && contexto.negocioSuspenso && <FaixaDaSuspensao suspensao={contexto.negocioSuspenso} ehDono={membro.papel === "DONO"} />}
         {emergencia && <FaixaDaEmergencia acessoId={emergencia.id} motivo={MOTIVO_CURTO_DA_EMERGENCIA[emergencia.motivo]} expiraEm={emergencia.expiraEm} ehDono={membro?.papel === "DONO"} />}
         {liberacao && (
-          <FaixaDoSuporteLiberado modulos={liberacao.modulos} modulosComCorrecao={liberacao.modulosComCorrecao} expiraEm={liberacao.expiraEm} ehDono={membro?.papel === "DONO"} />
+          <FaixaDoSuporteLiberado
+            modulos={liberacao.modulos}
+            modulosComCorrecao={liberacao.modulosComCorrecao}
+            expiraEm={liberacao.expiraEm}
+            ehDono={membro?.papel === "DONO"}
+            suspenso={Boolean(contexto.negocioSuspenso)}
+          />
         )}
         {faixa?.ok && (
           <FaixaDoCaixaCompacta

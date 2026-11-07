@@ -7,6 +7,7 @@
 import { permissoesEfetivas, type Matriz, type Modulo, type Papel } from "@/lib/dominio/permissoes";
 import { sessaoAnteriorARedefinicao, type NivelDaSessao } from "@/lib/dominio/segundo-fator";
 import { matrizDoSuporte, modulosValidos, sessaoDoAdministradorValida, situacaoDaLiberacao } from "@/lib/dominio/suporte";
+import type { SuspensaoDoNegocio } from "@/lib/dominio/suspensao";
 
 /** Cookie do negócio ativo (definido pela troca de negócio da SPEC-004). */
 export const COOKIE_NEGOCIO_ATIVO = "he_negocio";
@@ -37,8 +38,11 @@ export async function resolverContexto(
     : { usuarioId, negocioId: null, negocioRecusado: true };
 }
 
-/** Filiação do usuário no negócio, lida do banco junto com a confirmação (SPEC-005, INV-004). */
-export type Filiacao = { papel: Papel; permissoesCustom: unknown };
+/**
+ * Filiação do usuário no negócio, lida do banco junto com a confirmação (SPEC-005, INV-004). SPEC-019 (5.7):
+ * com a suspensão do negócio pela plataforma, na mesma consulta.
+ */
+export type Filiacao = { papel: Papel; permissoesCustom: unknown; suspensao?: SuspensaoDoNegocio | null };
 
 /** Modo suporte ativo (SPEC-018, 5.5): liberação válida do Dono, lida do banco nesta requisição. */
 export type SuporteAtivo = {
@@ -80,6 +84,11 @@ export type ContextoComPapel = ContextoDaRequisicao & {
   segundoFatorPendente?: boolean;
   /** SPEC-019 (INV-002): último código verificado nesta sessão, para a reconfirmação de 10 min. */
   codigoVerificadoEm?: Date | null;
+  /**
+   * SPEC-019 (5.7, RN39): o negócio ativo está suspenso pela plataforma — somente leitura para os membros e
+   * para o suporte (as correções esperam a reativação). null sem negócio ativo ou sem suspensão.
+   */
+  negocioSuspenso?: SuspensaoDoNegocio | null;
 };
 
 /**
@@ -102,6 +111,7 @@ export async function resolverContextoComPapel(
     ...contexto,
     papel: f?.papel ?? null,
     permissoes: f ? permissoesEfetivas(f.papel, f.permissoesCustom) : null,
+    negocioSuspenso: f?.suspensao ?? null,
   };
 }
 
@@ -126,6 +136,8 @@ export type LiberacaoDoContexto = {
   revogadoEm: Date | null;
   /** SPEC-019 (5.6, INV-010): no acesso de emergência, o motivo curto e a conta que pediu (a única que entra). */
   emergencia?: { motivo: string; solicitadoPorId: string } | null;
+  /** SPEC-019 (5.7): a suspensão do negócio, se houver (a emergência e a liberação continuam valendo para ver). */
+  negocioSuspenso?: SuspensaoDoNegocio | null;
 };
 
 export type EntradaDoContexto = {
@@ -195,10 +207,12 @@ export async function resolverContextoDaRequisicao(e: EntradaDoContexto, deps: D
   }
 
   const modulos = modulosValidos(lida.modulos);
+  const negocioSuspenso = lida.negocioSuspenso ?? null;
   // SPEC-019 (5.3, INV-003): a correção vale da entrada com o código reconfirmado, nesta sessão, até a
   // saída, a expiração ou a revogação. Sem ela (cookie de outra sessão, ou antes de entrar), só leitura.
-  // SPEC-019 (INV-003): a emergência nunca corrige, seja o que for que o banco tenha.
-  const comCorrecao = lida.emergencia ? [] : modulosValidos(lida.modulosComCorrecao ?? []).filter((m) => modulos.includes(m));
+  // SPEC-019 (INV-003): a emergência nunca corrige, seja o que for que o banco tenha; nem o negócio suspenso
+  // (5.7): a liberação continua valendo para ver, e as correções voltam com a reativação.
+  const comCorrecao = lida.emergencia || negocioSuspenso ? [] : modulosValidos(lida.modulosComCorrecao ?? []).filter((m) => modulos.includes(m));
   const entrada = lida.entradaComCorrecaoEm ?? null;
   const correcaoLiberada = entrada !== null && e.autenticadoEm !== null && entrada.getTime() >= e.autenticadoEm.getTime();
   return {
@@ -216,5 +230,6 @@ export async function resolverContextoDaRequisicao(e: EntradaDoContexto, deps: D
       emergencia: lida.emergencia ? { motivo: lida.emergencia.motivo } : null,
     },
     suporteEncerrado: null,
+    negocioSuspenso,
   };
 }

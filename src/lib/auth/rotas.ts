@@ -11,6 +11,8 @@ export const ROTA_NOVA_SENHA = "/nova-senha";
 export const ROTA_LINK_INVALIDO = "/link-invalido";
 /** Área sem permissão (SPEC-005, 5.5). */
 export const ROTA_SEM_ACESSO = "/sem-acesso";
+/** SPEC-019 (5.7): a explicação da recusa no negócio suspenso pela plataforma (somente leitura). */
+export const ROTA_NEGOCIO_SUSPENSO = "/negocio-suspenso";
 /** Painel do Administrador da plataforma (SPEC-018, 5.3). */
 export const ROTA_ADMIN = "/admin";
 /** Novo aceite da política e dos termos (SPEC-018, RF78). */

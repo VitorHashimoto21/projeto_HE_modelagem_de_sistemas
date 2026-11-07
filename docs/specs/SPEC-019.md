@@ -8,7 +8,9 @@
 > - **etapa 3 — troca de plano e emergência**, em duas partes (decisão da equipe, 05/11/2026):
 >   - **3a — pedidos com duas pessoas, troca de plano pela plataforma e painel do Administrador:** implementada em 05/11/2026 e verificada em build local ([evidências](evidencias/SPEC-019/README.md#etapa-3a--pedidos-com-duas-pessoas-troca-de-plano-pela-plataforma-e-painel-05112026));
 >   - **3b — acesso de emergência:** implementada em 06/11/2026 e verificada em build local ([evidências](evidencias/SPEC-019/README.md#etapa-3b--acesso-de-emergência-06112026));
-> - **etapa 4 — suspensão, Política e Termos, e homologação (T17):** a implementar.
+> - **etapa 4 — suspensão, Política e Termos, e homologação**, em duas partes (decisão da equipe, 07/11/2026):
+>   - **4a — suspender e reativar o negócio:** implementada em 07/11/2026 e verificada em build local ([evidências](evidencias/SPEC-019/README.md#etapa-4a--suspender-e-reativar-o-negócio-07112026));
+>   - **4b — Política e Termos com novo aceite, exportação LGPD dos eventos novos, exclusão da conta de Administrador, modelo lógico de dados e homologação (T17):** a implementar.
 >
 > As notas da implementação estão depois da seção 9. As questões em aberto foram decididas pela equipe em entrevista (seção 13), pela opção recomendada, com quatro ajustes da equipe (prazos de 12 h e duas pessoas também na troca de plano):
 > - **2º fator obrigatório** para o Administrador, pelo MFA TOTP do Supabase Auth, com dois autenticadores, redefinição pelo workflow e o código pedido de novo antes das ações críticas;
@@ -665,6 +667,46 @@ Cobre a seção 5.6, o item 3 ("Emergências") e o "Solicitar acesso de emergên
 - **Resultado pendente:** vale em qualquer negócio. A conta com uma emergência sem resultado não pede outra em nenhum negócio.
 - **Motivo no acesso:** o campo `motivo` guarda o motivo da lista por extenso; o motivo curto aparece nas faixas.
 - **Fica para a etapa 4:** a suspensão (a emergência vale para negócio suspenso), a nova versão da Política e dos Termos, a exportação LGPD dos eventos novos e a homologação (T17).
+
+**Decisões da equipe sobre a etapa 3b (07/11/2026), depois da revisão da PR:** o comportamento implementado fica como está. Valem as quatro decisões acima: a saída encerra o acesso, a liberação feita depois do pedido recusa a aprovação, o resultado pendente vale em qualquer negócio e o motivo aparece por extenso no acesso e curto nas faixas.
+
+**Implementação — etapa 4a, suspender e reativar o negócio (07/11/2026):** [evidências](evidencias/SPEC-019/README.md#etapa-4a--suspender-e-reativar-o-negócio-07112026).
+
+Cobre a seção 5.7, a situação "Suspenso", o filtro e o "Suspender ou Reativar" da 5.9, e a parte da suspensão da 5.10. Também cobre os CA-04 (na suspensão), CA-14 e CA-21, o INV-008, a parte da suspensão do INV-003, o T08 e a parte da suspensão do T14. O roteiro no navegador teve 79 verificações, com a conta de Administrador, o Dono, uma colaboradora e uma pessoa convidada. Como foi feito:
+- **Banco:** a migração `20261107120000_suspensao_do_negocio` acrescenta:
+  - no `Negocio`, `suspensoEm`, `suspensoPorId`, `motivoSuspensao` (enum `MotivoSuspensao`: pedido do Dono, uso indevido, incidente de segurança e ordem judicial) e `descricaoSuspensao` (até 500 caracteres);
+  - os eventos `SUSPENSAO` e `REATIVACAO`, com o motivo e a descrição completa em `dados` (a descrição do registro tem 200 caracteres).
+
+  As checagens do banco repetem as regras:
+  - a suspensão tem tudo junto (quando, quem, o motivo e a descrição) ou nada;
+  - negócio encerrado não fica suspenso;
+  - os eventos da suspensão são do negócio, sem acesso nem pedido, e com os dados.
+- **Segunda barreira, no banco (INV-008):** o gatilho `he_negocio_suspenso` recusa inclusão, alteração e exclusão nas tabelas dos módulos de negócio suspenso, venha a gravação de onde vier. No próprio negócio, recusa a mudança de qualquer coluna, menos o plano e os campos da suspensão. Ficam de fora só as tabelas que a suspensão não trava: a equipe e os convites (troca de plano, exclusão de conta e LGPD), o histórico de planos, os acessos e o registro do suporte e os pedidos da plataforma. A lista fica em `GRAVAM_NA_SUSPENSAO` (`src/lib/db/modelos.ts`), e um teste confere as migrações contra ela. O cliente do negócio traduz a recusa no erro `NegocioSuspenso`.
+- **Primeira barreira, nas fábricas (RN39):** o contexto lê a suspensão na mesma consulta da filiação (membros) e da liberação (suporte). Com o negócio suspenso:
+  - as ações de módulo são recusadas, menos as consultas dos formulários;
+  - as telas de incluir, editar e excluir não abrem;
+  - as ações do Dono são recusadas, menos liberar e revogar o suporte, encerrar a emergência e o desfazer (que recusa com a explicação, OPEN-018);
+  - no suporte, as correções saem da liberação e a chamada direta é recusada.
+
+  A recusa leva a "Negócio suspenso" (`/negocio-suspenso`), com desde quando, o motivo e o que continua.
+- **Continuam:** ler tudo, exportar os dados e excluir a conta (a exclusão do Dono encerra o negócio e tira a suspensão), sair do negócio, liberar e revogar o suporte, a emergência e a troca de plano pela plataforma.
+- **Rotina e conferência (SPEC-009):** a rotina diária pula o negócio suspenso, e a conferência ao abrir o Financeiro e o Painel também. Ao reativar, a conferência gera as contas do período e recebe as parcelas vencidas, nas datas de vencimento.
+- **Convites:** o convite pendente não é aceito durante a suspensão e continua pendente até vencer. O link avisa, e "Convites para você" explica a recusa.
+- **Desfazer (CA-21):** recusado com "O negócio está suspenso. O desfazer volta quando ele for reativado, dentro dos 30 dias." O prazo continua contando.
+- **Suspender e reativar** (um Administrador): na ficha do negócio, numa gaveta. Suspender pede o motivo da lista e a descrição; reativar, a descrição. As duas são ações críticas, com o código de novo (CA-04). Negócio encerrado não é suspenso.
+- **Painel:** a lista mostra "Suspenso desde {data}" e tem o filtro "Suspensos". A ficha tem a seção "Suspensão", com o motivo, quem suspendeu, a descrição e o histórico das suspensões.
+- **Faixas:**
+  - todos os membros veem "Negócio suspenso pelo HE desde {data}: {motivo}. Fale com o suporte.", e o Dono tem também "Ver detalhes";
+  - no modo suporte, a faixa diz "somente leitura (negócio suspenso: sem correções até a reativação)";
+  - a faixa da liberação avisa que as correções liberadas esperam a reativação.
+- **Dono:** "Acessos do suporte" mostra as suspensões e as reativações na mesma linha do tempo, com o motivo, a descrição e quem fez. O Dono recebe o e-mail (com domínio) na suspensão e na reativação.
+
+**Decisões de implementação da etapa 4a (sem mudar o comportamento da Spec):**
+- **Botões que continuam na tela:** com o negócio suspenso, os botões de gravar continuam visíveis para os membros. A faixa avisa, e a recusa leva à explicação. Esconder cada botão exigiria rever todas as telas dos módulos.
+- **Ações de "ver" que gravam:** a fábrica recusa toda ação de módulo no negócio suspenso, inclusive as que exigem só "ver" (como criar subcategoria no formulário do item). Só as consultas marcadas passam.
+- **Exclusão da conta do Dono:** encerra o negócio suspenso e tira a suspensão junto, como a checagem do banco exige. A suspensão continua no registro.
+- **Entrada com correção na suspensão:** a liberação com correção ainda pede o código para entrar, mas as correções ficam recusadas até a reativação.
+- **Sem evento novo para convites:** a recusa do aceite não vai para o registro, porque nada muda no negócio.
 
 ---
 
