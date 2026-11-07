@@ -4,11 +4,13 @@ import { ChevronRight, Search, Store } from "lucide-react";
 import { ROTULO_REGIME } from "@/components/negocio/rotulos";
 import { NavegacaoDoPainel } from "@/components/plataforma/navegacao";
 import { SeloDaEmergencia } from "@/components/suporte/selo-da-emergencia";
+import { SeloDaSuspensao } from "@/components/suporte/selo-da-suspensao";
 import { AvisoDaPagina } from "@/components/ui/aviso";
 import { CabecalhoDePagina } from "@/components/ui/cabecalho-de-pagina";
 import { classeDoCampo } from "@/components/ui/classes";
 import { EstadoVazio } from "@/components/ui/estado-vazio";
 import { classeDoBotao } from "@/components/ui/estilos";
+import { Segmentos } from "@/components/ui/segmentos";
 import { Selo } from "@/components/ui/selo";
 import { Superficie } from "@/components/ui/superficie";
 import { exigirAdministrador } from "@/lib/auth/servidor";
@@ -19,12 +21,23 @@ import { dataHoraCurta, MENSAGENS_SUPORTE } from "@/lib/dominio/suporte";
 
 export const metadata: Metadata = { title: "Painel do administrador" };
 
-function SituacaoDoSuporte({ n }: { n: NegocioNoPainel }) {
-  if (n.encerrado) return <Selo tom="neutro">Encerrado</Selo>;
+function AcessoDoSuporte({ n }: { n: NegocioNoPainel }) {
   // SPEC-019 (5.6): a emergência em andamento aparece antes da liberação.
   if (n.emergencia) return <SeloDaEmergencia>Emergência até {dataHoraCurta(n.emergencia.expiraEm)}</SeloDaEmergencia>;
   if (n.liberacao) return <Selo tom="atencao">Liberado até {dataHoraCurta(n.liberacao.expiraEm)}</Selo>;
   return <span className="text-muted-foreground">Sem liberação</span>;
+}
+
+/** SPEC-019 (5.9): a situação do negócio — encerrado, suspenso (com o acesso do suporte ao lado) ou só o acesso. */
+function SituacaoDoSuporte({ n }: { n: NegocioNoPainel }) {
+  if (n.encerrado) return <Selo tom="neutro">Encerrado</Selo>;
+  if (!n.suspensao) return <AcessoDoSuporte n={n} />;
+  return (
+    <span className="inline-flex flex-wrap items-center gap-1.5">
+      <SeloDaSuspensao>Suspenso desde {dataBrasileira(n.suspensao.desde)}</SeloDaSuspensao>
+      {(n.emergencia || n.liberacao) && <AcessoDoSuporte n={n} />}
+    </span>
+  );
 }
 
 // Painel do Administrador da plataforma (SPEC-018, 5.3 — RF74, INV-009): os negócios só pelos
@@ -34,18 +47,22 @@ export default async function PainelDoAdministrador({ searchParams }: PageProps<
   const { usuarioId } = await exigirAdministrador();
   const busca = await searchParams;
   const termo = typeof busca.busca === "string" ? busca.busca : "";
+  // SPEC-019 (5.9): o filtro da situação "Suspenso".
+  const situacao = busca.situacao === "suspensos" ? "suspensos" : "todos";
   const pagina = Math.max(1, Number.parseInt(typeof busca.pagina === "string" ? busca.pagina : "1", 10) || 1);
   const agora = new Date();
-  const [{ negocios, total, paginas }, pendentes] = await Promise.all([suporte().listarNegocios(termo, pagina, agora), plataforma().pedidosPendentes(agora)]);
+  const [{ negocios, total, paginas }, pendentes] = await Promise.all([suporte().listarNegocios(termo, pagina, agora, situacao), plataforma().pedidosPendentes(agora)]);
   // SPEC-019 (5.9): os pedidos de outras contas aguardam uma decisão desta.
   const aguardando = pendentes.filter((p) => p.solicitadoPorId !== usuarioId).length;
-  const link = (p: number) => `/admin?${new URLSearchParams({ ...(termo ? { busca: termo } : {}), pagina: String(p) })}`;
+  const filtros = (s: "todos" | "suspensos") => ({ ...(termo ? { busca: termo } : {}), ...(s === "suspensos" ? { situacao: s } : {}) });
+  const link = (p: number) => `/admin?${new URLSearchParams({ ...filtros(situacao), pagina: String(p) })}`;
+  const linkDaSituacao = (s: "todos" | "suspensos") => `/admin${Object.keys(filtros(s)).length ? `?${new URLSearchParams(filtros(s))}` : ""}`;
 
   return (
     <div className="space-y-6">
       <CabecalhoDePagina
         titulo="Negócios da plataforma"
-        descricao={`${total} ${total === 1 ? "negócio" : "negócios"}. Só os dados de cadastro: para ver um negócio por dentro, o Dono precisa liberar o acesso do suporte.`}
+        descricao={`${total} ${total === 1 ? "negócio" : "negócios"}${situacao === "suspensos" ? (total === 1 ? " suspenso" : " suspensos") : ""}. Só os dados de cadastro: para ver um negócio por dentro, o Dono precisa liberar o acesso do suporte.`}
       />
 
       <NavegacaoDoPainel atual="negocios" aguardando={aguardando} />
@@ -65,6 +82,7 @@ export default async function PainelDoAdministrador({ searchParams }: PageProps<
       )}
 
       <form role="search" action="/admin" className="flex flex-wrap gap-2">
+        {situacao === "suspensos" && <input type="hidden" name="situacao" value="suspensos" />}
         <label htmlFor="busca" className="sr-only">
           Buscar por nome do negócio ou e-mail do Dono
         </label>
@@ -75,10 +93,18 @@ export default async function PainelDoAdministrador({ searchParams }: PageProps<
         </button>
       </form>
 
+      <Segmentos
+        rotulo="Situação dos negócios"
+        itens={[
+          { href: linkDaSituacao("todos"), rotulo: "Todos", ativo: situacao === "todos" },
+          { href: linkDaSituacao("suspensos"), rotulo: "Suspensos", ativo: situacao === "suspensos" },
+        ]}
+      />
+
       {negocios.length === 0 ? (
         <Superficie>
-          <EstadoVazio Icone={Store} titulo={termo ? "Nenhum negócio encontrado" : "Nenhum negócio cadastrado"}>
-            {termo ? "Confira o nome ou o e-mail e tente de novo." : "Os negócios aparecem aqui quando alguém se cadastra."}
+          <EstadoVazio Icone={Store} titulo={termo ? "Nenhum negócio encontrado" : situacao === "suspensos" ? "Nenhum negócio suspenso" : "Nenhum negócio cadastrado"}>
+            {termo ? "Confira o nome ou o e-mail e tente de novo." : situacao === "suspensos" ? "Os negócios suspensos pela plataforma aparecem aqui." : "Os negócios aparecem aqui quando alguém se cadastra."}
           </EstadoVazio>
         </Superficie>
       ) : (
@@ -91,7 +117,7 @@ export default async function PainelDoAdministrador({ searchParams }: PageProps<
                 <th scope="col" className="px-3 py-3 font-medium">Criado em</th>
                 <th scope="col" className="px-3 py-3 text-right font-medium">Membros</th>
                 <th scope="col" className="px-3 py-3 font-medium">Dono</th>
-                <th scope="col" className="px-6 py-3 font-medium">Acesso de suporte</th>
+                <th scope="col" className="px-6 py-3 font-medium">Situação e acesso de suporte</th>
               </tr>
             </thead>
             <tbody>

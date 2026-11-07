@@ -17,6 +17,8 @@ export async function dependenciasDaPlataforma(administradorId: string): Promise
     cancelar: p.cancelar,
     entrarNaEmergencia: s.entrarNaEmergencia,
     registrarResultado: s.registrarResultado,
+    suspender: p.suspender,
+    reativar: p.reativar,
     dono: s.donoDoNegocio,
     avisar,
     origem: await origemDaRequisicao(),

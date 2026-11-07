@@ -27,6 +27,8 @@ export const MODELOS = {
     classe: "ancora",
     relacoes: {
       planoAlteradoPor: { modelo: "Usuario", fk: "planoAlteradoPorId" },
+      // SPEC-019 (5.7): o Administrador que suspendeu.
+      suspensoPor: { modelo: "Usuario", fk: "suspensoPorId" },
       membros: { modelo: "MembroNegocio" },
       convites: { modelo: "Convite" },
       historicoPlanos: { modelo: "HistoricoPlano" },
@@ -269,6 +271,7 @@ export const MODELOS = {
       lancamentos: { modelo: "LancamentoFinanceiro" },
       convitesEnviados: { modelo: "Convite" },
       planosAlterados: { modelo: "Negocio" },
+      negociosSuspensos: { modelo: "Negocio" },
       trocasDePlano: { modelo: "HistoricoPlano" },
       acessosLiberados: { modelo: "AcessoSuporte" },
       acessosRevogados: { modelo: "AcessoSuporte" },
@@ -287,6 +290,20 @@ export const MODELOS = {
 } as const satisfies Record<string, DefinicaoModelo>;
 
 export type NomeModelo = keyof typeof MODELOS;
+
+/**
+ * SPEC-019 (5.7, INV-008): os modelos operacionais que continuam gravando com o negócio suspenso, e
+ * por quê. Nos demais, o gatilho he_negocio_suspenso do banco recusa toda inclusão, alteração e
+ * exclusão. O teste test/unit/modelos.test.ts confere as migrações contra esta lista.
+ */
+export const GRAVAM_NA_SUSPENSAO = {
+  MembroNegocio: "a troca de plano pela plataforma e a exclusão de conta (as ações da Equipe são recusadas)",
+  HistoricoPlano: "a troca de plano pela plataforma",
+  Convite: "a expiração, o cancelamento e a anonimização da LGPD (o aceite é recusado no serviço)",
+  AcessoSuporte: "a liberação, a revogação e a emergência",
+  RegistroSuporte: "o registro do suporte, com a própria suspensão",
+  PedidoPlataforma: "os pedidos de emergência e de plano",
+} as const satisfies Partial<Record<NomeModelo, string>>;
 
 export function definicaoDoModelo(modelo: string): DefinicaoModelo | undefined {
   return (MODELOS as Record<string, DefinicaoModelo>)[modelo];

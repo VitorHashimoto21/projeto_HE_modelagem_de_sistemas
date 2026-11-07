@@ -38,14 +38,14 @@ export { CnpjJaCadastrado } from "./negocios";
 export type { ConsultasDeNegocios, ResumoDoNegocio } from "./negocios";
 export type { ConsultasDaLgpd, ResumoDaExclusao } from "./lgpd";
 export type { ConsultasDePlanos, SituacaoDoPlano, TrocaDoHistorico } from "./planos";
-export type { AdministradorDaPlataforma, ConsultasDaPlataforma, PedidoDaPlataforma, ResultadoDaDecisao, ResultadoDoCancelamento, ResultadoDoPedido, ResultadoDoPedidoDeEmergencia } from "./plataforma";
+export type { AdministradorDaPlataforma, ConsultasDaPlataforma, PedidoDaPlataforma, ResultadoDaDecisao, ResultadoDoCancelamento, ResultadoDoPedido, ResultadoDoPedidoDeEmergencia, ResultadoDaSuspensao, SuspensaoNoRegistro } from "./plataforma";
 export type { ConsultasDeRelatorios } from "./relatorios";
 export type { ConsultasDeSuporte, EmergenciaAtiva, EmergenciaNoPainel, EventoDoRegistro, LiberacaoDoNegocio, NegocioNoPainel } from "./suporte";
 export { DesfazerRecusado } from "./correcoes";
 export type { ConsultasDeCorrecoes, CorrecaoDoNegocio, Estado } from "./correcoes";
 export { AcimaDoLimiteDoSimples, ParametroAusente } from "./parametros-fiscais";
 export type { ConsultasFiscais, Origem } from "./parametros-fiscais";
-export { ContextoDeNegocioAusente, NegocioDivergente, OperacaoForaDoContexto, SomenteLeituraNoSuporte } from "./erros";
+export { ContextoDeNegocioAusente, NegocioDivergente, NegocioSuspenso, OperacaoForaDoContexto, SomenteLeituraNoSuporte } from "./erros";
 export type { ClienteDoNegocio, ContextoDeNegocio } from "./cliente-do-negocio";
 
 /**
@@ -131,7 +131,9 @@ export function dashboard(contexto: ContextoDeNegocio) {
  * do negócio daquele negócio.
  */
 export async function negociosAtivos(): Promise<string[]> {
-  const lista = await prismaBase().negocio.findMany({ where: { encerradoEm: null }, select: { id: true }, orderBy: { createdAt: "asc" } });
+  // SPEC-019 (5.7, INV-008): o negócio suspenso fica de fora, como o encerrado; ao reativar, a conferência
+  // gera as contas do período e recebe as parcelas vencidas, nas datas de vencimento.
+  const lista = await prismaBase().negocio.findMany({ where: { encerradoEm: null, suspensoEm: null }, select: { id: true }, orderBy: { createdAt: "asc" } });
   return lista.map((n) => n.id);
 }
 

@@ -195,9 +195,18 @@ export function criarConsultasDaLgpd(cliente: PrismaClient) {
         ).map((v) => v.negocioId);
 
         if (donos.length) {
+          // SPEC-019 (5.7): excluir a conta continua valendo no negócio suspenso; o encerramento tira a suspensão
+          // (CHECK Negocio_encerrado_nao_suspenso), que fica no registro do suporte, e os registros do negócio ficam.
           await tx.negocio.updateMany({
             where: { id: { in: donos } },
-            data: { encerradoEm: agora, eliminarApos: new Date(`${dataDeEliminacao(diaLocal(agora))}T00:00:00Z`) },
+            data: {
+              encerradoEm: agora,
+              eliminarApos: new Date(`${dataDeEliminacao(diaLocal(agora))}T00:00:00Z`),
+              suspensoEm: null,
+              suspensoPorId: null,
+              motivoSuspensao: null,
+              descricaoSuspensao: null,
+            },
           });
           // SPEC-022 (INV-006): todos os dados pessoais dos clientes, não só nome e contato.
           await tx.cliente.updateMany({ where: { negocioId: { in: donos }, anonimizadoEm: null }, data: { ...DADOS_ANONIMOS, anonimizadoEm: agora } });

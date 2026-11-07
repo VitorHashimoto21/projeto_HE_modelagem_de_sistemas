@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
-import { ArrowLeftRight, LifeBuoy, Siren } from "lucide-react";
+import { ArrowLeftRight, LifeBuoy, OctagonPause, Play, Siren } from "lucide-react";
 import { CorrecoesDoSuporte } from "@/components/suporte/correcoes-do-suporte";
 import { EncerrarEmergencia } from "@/components/suporte/encerrar-emergencia";
 import { SeloDaEmergencia } from "@/components/suporte/selo-da-emergencia";
+import { SeloDaSuspensao } from "@/components/suporte/selo-da-suspensao";
 import { LiberarAcesso } from "@/components/suporte/liberar-acesso";
 import { RevogarAcesso } from "@/components/suporte/revogar-acesso";
 import { AvisoDaPagina } from "@/components/ui/aviso";
@@ -11,11 +12,21 @@ import { EstadoVazio } from "@/components/ui/estado-vazio";
 import { Selo, type TomDoSelo } from "@/components/ui/selo";
 import { Superficie } from "@/components/ui/superficie";
 import { exigirDono } from "@/lib/auth/servidor";
-import { correcoes as correcoesDoSuporte, plataforma, suporte, type CorrecaoDoNegocio, type EventoDoRegistro, type LiberacaoDoNegocio, type PedidoDaPlataforma } from "@/lib/db";
+import {
+  correcoes as correcoesDoSuporte,
+  plataforma,
+  suporte,
+  type CorrecaoDoNegocio,
+  type EventoDoRegistro,
+  type LiberacaoDoNegocio,
+  type PedidoDaPlataforma,
+  type SuspensaoNoRegistro,
+} from "@/lib/db";
 import { ROTULO_MOTIVO_DA_EMERGENCIA } from "@/lib/dominio/emergencia";
 import { ROTULO_MOTIVO_DA_TROCA, type SituacaoDoPedido } from "@/lib/dominio/plataforma";
 import { ROTULO_PLANO } from "@/lib/dominio/planos";
 import { dataHoraCompleta, dataHoraCurta, listaDeModulos, PRAZOS, situacaoDaLiberacao, type SituacaoDaLiberacao } from "@/lib/dominio/suporte";
+import { ROTULO_MOTIVO_DA_SUSPENSAO } from "@/lib/dominio/suspensao";
 
 export const metadata: Metadata = { title: "Acesso do suporte" };
 
@@ -98,6 +109,43 @@ function PedidoParaODono({ p }: { p: PedidoDaPlataforma }) {
   );
 }
 
+/**
+ * SPEC-019 (5.7, 5.10): a suspensão ou a reativação do negócio pela plataforma, com o motivo e a descrição
+ * completa, na linha do tempo do Dono.
+ */
+function SuspensaoParaODono({ r, vigente }: { r: SuspensaoNoRegistro; vigente: boolean }) {
+  const suspensao = r.evento === "SUSPENSAO";
+  return (
+    <Superficie tom={vigente ? "perigo" : "cartao"} aria-labelledby={`suspensao-${r.id}`}>
+      <div className="min-w-0 space-y-1">
+        <div className="flex flex-wrap items-center gap-2">
+          {suspensao ? <SeloDaSuspensao>{vigente ? "Em vigor" : "Suspensão"}</SeloDaSuspensao> : <Selo tom="ok">Reativado</Selo>}
+          <h2 id={`suspensao-${r.id}`} className="flex items-center gap-1.5 text-[15px] font-bold text-current">
+            {suspensao ? <OctagonPause className="size-4 shrink-0" aria-hidden="true" /> : <Play className="size-4 shrink-0" aria-hidden="true" />}
+            {suspensao ? "Negócio suspenso pela plataforma" : "Negócio reativado pela plataforma"}
+          </h2>
+        </div>
+        {suspensao && r.motivo && (
+          <p className="text-sm break-words">
+            <span className="font-semibold">Motivo:</span> {ROTULO_MOTIVO_DA_SUSPENSAO[r.motivo]}
+          </p>
+        )}
+        <p className="text-sm break-words whitespace-pre-line">
+          <span className="font-semibold">Descrição:</span> {r.descricao}
+        </p>
+        <p className="text-sm text-muted-foreground">
+          {suspensao ? "Suspenso" : "Reativado"} por {r.autor} (suporte do HE) em {dataHoraCompleta(r.criadoEm)}
+        </p>
+        {vigente && (
+          <p className="text-sm break-words">
+            Enquanto durar, você e a equipe veem tudo e exportam os dados, mas nada é gravado. Você continua podendo liberar o suporte para pedir ajuda.
+          </p>
+        )}
+      </div>
+    </Superficie>
+  );
+}
+
 /** Texto de cada evento do registro, do ponto de vista do Dono. */
 function textoDoEvento(e: EventoDoRegistro): string {
   switch (e.evento) {
@@ -130,20 +178,26 @@ function textoDoEvento(e: EventoDoRegistro): string {
 // revogar e acompanhar cada entrada, tela aberta e saída do suporte, com data, hora e nome.
 // SPEC-019 (5.10): o nível de cada módulo e as correções, com o antes, o depois e o "Desfazer".
 export default async function AcessoDoSuporte({ searchParams }: PageProps<"/negocio/suporte">) {
-  const { negocioId } = await exigirDono();
+  const { negocioId, negocioSuspenso } = await exigirDono();
   const agora = new Date();
-  const [liberacoes, correcoes, pedidos, { revogado, erro }] = await Promise.all([
+  const [liberacoes, correcoes, pedidos, suspensoes, { revogado, erro }] = await Promise.all([
     suporte().liberacoesDoNegocio(negocioId),
     correcoesDoSuporte().correcoesDoNegocio(negocioId, agora),
     plataforma().pedidosDoNegocio(negocioId, agora),
+    plataforma().suspensoesDoNegocio(negocioId),
     searchParams,
   ]);
-  // SPEC-019 (5.10): liberações, acessos de emergência e pedidos da plataforma numa só linha do tempo, da mais
-  // nova à mais antiga. O pedido de emergência aprovado aparece como o acesso que ele criou.
-  const linha: ({ tipo: "liberacao"; l: LiberacaoDoNegocio } | { tipo: "pedido"; p: PedidoDaPlataforma })[] = [
+  // SPEC-019 (5.10): liberações, acessos de emergência, pedidos da plataforma, suspensões e reativações numa só
+  // linha do tempo, da mais nova à mais antiga. O pedido de emergência aprovado aparece como o acesso que ele criou.
+  type ItemDaLinha = { tipo: "liberacao"; l: LiberacaoDoNegocio } | { tipo: "pedido"; p: PedidoDaPlataforma } | { tipo: "suspensao"; r: SuspensaoNoRegistro };
+  const quando = (i: ItemDaLinha) => (i.tipo === "liberacao" ? i.l.criadoEm : i.tipo === "pedido" ? i.p.criadoEm : i.r.criadoEm).getTime();
+  const linha: ItemDaLinha[] = [
     ...liberacoes.map((l) => ({ tipo: "liberacao" as const, l })),
     ...pedidos.filter((p) => !(p.tipo === "EMERGENCIA" && p.situacao === "APROVADO")).map((p) => ({ tipo: "pedido" as const, p })),
-  ].sort((a, b) => (b.tipo === "liberacao" ? b.l.criadoEm : b.p.criadoEm).getTime() - (a.tipo === "liberacao" ? a.l.criadoEm : a.p.criadoEm).getTime());
+    ...suspensoes.map((r) => ({ tipo: "suspensao" as const, r })),
+  ].sort((a, b) => quando(b) - quando(a));
+  // A suspensão em vigor é a mais recente, enquanto o negócio continua suspenso.
+  const suspensaoVigente = negocioSuspenso ? suspensoes.find((r) => r.evento === "SUSPENSAO")?.id : undefined;
   const ativa = liberacoes.find((l) => l.tipo === "LIBERACAO" && situacaoDaLiberacao(l, agora) === "ATIVA");
   const porLiberacao = new Map<string, CorrecaoDoNegocio[]>();
   for (const c of correcoes) if (c.acessoId) porLiberacao.set(c.acessoId, [...(porLiberacao.get(c.acessoId) ?? []), c]);
@@ -152,7 +206,7 @@ export default async function AcessoDoSuporte({ searchParams }: PageProps<"/nego
     <div className="space-y-6">
       <CabecalhoDePagina
         titulo="Acesso do suporte"
-        descricao="Quando precisar de ajuda, libere o suporte do HE para ver os módulos que você escolher, por um prazo, e, se quiser, corrigir alguns deles. Sem a sua liberação, o suporte só entra numa emergência aprovada por duas pessoas da equipe, somente leitura, e você vê tudo aqui desde o pedido. As trocas de plano feitas pela plataforma também aparecem aqui."
+        descricao="Quando precisar de ajuda, libere o suporte do HE para ver os módulos que você escolher, por um prazo, e, se quiser, corrigir alguns deles. Sem a sua liberação, o suporte só entra numa emergência aprovada por duas pessoas da equipe, somente leitura, e você vê tudo aqui desde o pedido. As trocas de plano, as suspensões e as reativações feitas pela plataforma também aparecem aqui."
         acoes={<LiberarAcesso substitui={Boolean(ativa)} />}
       />
 
@@ -166,12 +220,18 @@ export default async function AcessoDoSuporte({ searchParams }: PageProps<"/nego
           </EstadoVazio>
         </Superficie>
       ) : (
-        <ul className="space-y-4" aria-label="Liberações, acessos de emergência e pedidos da plataforma">
+        <ul className="space-y-4" aria-label="Liberações, acessos de emergência, pedidos e suspensões da plataforma">
           {linha.map((item) => {
             if (item.tipo === "pedido")
               return (
                 <li key={item.p.id}>
                   <PedidoParaODono p={item.p} />
+                </li>
+              );
+            if (item.tipo === "suspensao")
+              return (
+                <li key={item.r.id}>
+                  <SuspensaoParaODono r={item.r} vigente={item.r.id === suspensaoVigente} />
                 </li>
               );
             const l = item.l;

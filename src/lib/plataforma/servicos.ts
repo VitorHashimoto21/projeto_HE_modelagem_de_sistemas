@@ -1,4 +1,4 @@
-import type { ResultadoDaDecisao, ResultadoDoCancelamento, ResultadoDoPedido, ResultadoDoPedidoDeEmergencia } from "@/lib/db/plataforma";
+import type { ResultadoDaDecisao, ResultadoDaSuspensao, ResultadoDoCancelamento, ResultadoDoPedido, ResultadoDoPedidoDeEmergencia } from "@/lib/db/plataforma";
 import type { ResultadoDaEntradaNaEmergencia, ResultadoDoResultado } from "@/lib/db/suporte";
 import type { MensagemDeEmail } from "@/lib/integracoes/email";
 import {
@@ -20,6 +20,14 @@ import {
   type PedidoDePlano,
 } from "@/lib/dominio/plataforma";
 import { dataHoraCompleta, listaDeModulos, PRAZOS } from "@/lib/dominio/suporte";
+import {
+  MENSAGENS_DA_SUSPENSAO,
+  ROTULO_MOTIVO_DA_SUSPENSAO,
+  validarReativacao,
+  validarSuspensao,
+  type CampoDaSuspensao,
+  type DadosDaSuspensao,
+} from "@/lib/dominio/suspensao";
 
 /**
  * Fluxos dos pedidos da plataforma (SPEC-019, 5.6 e 5.8), sem framework: as Server Actions (já com o 2º
@@ -47,6 +55,14 @@ export type EstadoDaDecisao = { status: "ocioso" } | { status: "erro"; mensagem:
 
 export const DECISAO_INICIAL: EstadoDaDecisao = { status: "ocioso" };
 
+/** SPEC-019 (5.7): suspender e reativar, com os erros de cada campo. */
+export type EstadoDaSuspensao =
+  | { status: "ocioso" }
+  | { status: "erro"; mensagem?: string; erros?: Partial<Record<CampoDaSuspensao, string>> }
+  | { status: "ok"; mensagem: string };
+
+export const SUSPENSAO_INICIAL: EstadoDaSuspensao = { status: "ocioso" };
+
 type Dono = { nome: string; email: string; negocio: string };
 type Decisao = { aprovar: true } | { aprovar: false; motivo: string };
 
@@ -60,6 +76,8 @@ export type DependenciasDaPlataforma = {
   cancelar: (pedidoId: string, administradorId: string, agora: Date) => Promise<ResultadoDoCancelamento>;
   entrarNaEmergencia: (negocioId: string, administradorId: string, agora: Date) => Promise<ResultadoDaEntradaNaEmergencia>;
   registrarResultado: (acessoId: string, administradorId: string, resultado: string, agora: Date) => Promise<ResultadoDoResultado>;
+  suspender: (negocioId: string, administradorId: string, dados: DadosDaSuspensao, agora: Date) => Promise<ResultadoDaSuspensao>;
+  reativar: (negocioId: string, administradorId: string, descricao: string, agora: Date) => Promise<ResultadoDaSuspensao>;
   dono: (negocioId: string) => Promise<Dono | null>;
   /** E-mail depois da resposta (OPEN-008): a falha no envio nunca bloqueia nada. */
   avisar: (m: MensagemDeEmail) => void;
@@ -206,7 +224,78 @@ export async function registrarResultado(campos: Record<string, string | undefin
   return { status: "erro", mensagem };
 }
 
-// ---------------------------------------------------------------- e-mails ao Dono (5.6, 5.8 e 5.10)
+// ---------------------------------------------------------------- suspensão (5.7)
+
+const S = MENSAGENS_DA_SUSPENSAO;
+
+function mensagemDaSuspensao(erro: Extract<ResultadoDaSuspensao, { ok: false }>["erro"]): string {
+  return { NegocioInexistente: S.inexistente, NaoEAdministrador: S.inexistente, NegocioEncerrado: S.encerrado, JaSuspenso: S.jaSuspenso, NaoSuspenso: S.naoSuspenso }[erro];
+}
+
+/**
+ * Suspender (5.7): um Administrador, com o código reconfirmado (a ação é crítica), o motivo da lista e a
+ * descrição. O Dono vê na hora (a faixa e "Acessos do suporte") e recebe o e-mail, com domínio.
+ */
+export async function suspender(campos: Record<string, string | undefined>, deps: DependenciasDaPlataforma): Promise<EstadoDaSuspensao> {
+  const negocioId = campos.negocioId ?? "";
+  if (!UUID.test(negocioId)) return { status: "erro", mensagem: S.inexistente };
+  const v = validarSuspensao(campos);
+  if (!v.ok) return { status: "erro", erros: v.erros };
+  const agora = deps.agora();
+  const r = await deps.suspender(negocioId, deps.administradorId, v.dados, agora);
+  if (!r.ok) return { status: "erro", mensagem: mensagemDaSuspensao(r.erro) };
+  const dono = await deps.dono(negocioId);
+  if (dono) deps.avisar(emailDaSuspensao(dono, v.dados, agora, deps.origem));
+  return { status: "ok", mensagem: S.suspenso };
+}
+
+/** Reativar (5.7): um Administrador, com o código reconfirmado e uma descrição. A faixa some e a gravação volta. */
+export async function reativar(campos: Record<string, string | undefined>, deps: DependenciasDaPlataforma): Promise<EstadoDaSuspensao> {
+  const negocioId = campos.negocioId ?? "";
+  if (!UUID.test(negocioId)) return { status: "erro", mensagem: S.inexistente };
+  const v = validarReativacao(campos);
+  if (!v.ok) return { status: "erro", erros: { descricao: v.erro } };
+  const agora = deps.agora();
+  const r = await deps.reativar(negocioId, deps.administradorId, v.descricao, agora);
+  if (!r.ok) return { status: "erro", mensagem: mensagemDaSuspensao(r.erro) };
+  const dono = await deps.dono(negocioId);
+  if (dono) deps.avisar(emailDaReativacao(dono, v.descricao, agora, deps.origem));
+  return { status: "ok", mensagem: S.reativado };
+}
+
+// ---------------------------------------------------------------- e-mails ao Dono (5.6, 5.7, 5.8 e 5.10)
+
+function emailDaSuspensao(dono: Dono, d: DadosDaSuspensao, quando: Date, origem: string): MensagemDeEmail {
+  return {
+    para: dono.email,
+    assunto: `O ${dono.negocio} foi suspenso pela plataforma do HE`,
+    texto: [
+      `Olá, ${dono.nome}!`,
+      "",
+      `Em ${dataHoraCompleta(quando)}, o suporte do Health Enterprise suspendeu o negócio ${dono.negocio}.`,
+      `Motivo: ${ROTULO_MOTIVO_DA_SUSPENSAO[d.motivo]} — ${d.descricao}`,
+      "Enquanto durar a suspensão, você e a sua equipe continuam entrando e vendo todos os dados, mas nada é gravado: vendas, estoque, catálogo, financeiro e Configurações ficam somente leitura. Nada foi apagado.",
+      `Você pode exportar os seus dados em ${origem}/conta e continua podendo liberar o acesso do suporte em ${origem}/negocio/suporte, onde a suspensão também aparece.`,
+      "",
+      "Para entender o motivo ou pedir a reativação, fale com o suporte do HE.",
+    ].join("\n"),
+  };
+}
+
+function emailDaReativacao(dono: Dono, descricao: string, quando: Date, origem: string): MensagemDeEmail {
+  return {
+    para: dono.email,
+    assunto: `O ${dono.negocio} foi reativado`,
+    texto: [
+      `Olá, ${dono.nome}!`,
+      "",
+      `Em ${dataHoraCompleta(quando)}, o suporte do Health Enterprise reativou o negócio ${dono.negocio}. A gravação voltou para você e a sua equipe.`,
+      `Descrição: ${descricao}`,
+      "As contas das despesas fixas do período e as parcelas vencidas são conferidas ao abrir o Financeiro ou o Painel, nas datas de vencimento.",
+      `O registro da suspensão e da reativação fica em ${origem}/negocio/suporte.`,
+    ].join("\n"),
+  };
+}
 
 function emailDaTroca(dono: Dono, r: Extract<ResultadoDaDecisao, { tipo: "PLANO"; situacao: "APROVADO" }>, quando: Date, origem: string): MensagemDeEmail {
   const plano = ROTULO_PLANO[r.pedido.para];

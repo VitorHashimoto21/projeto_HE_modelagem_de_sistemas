@@ -19,6 +19,7 @@ import {
   ROTA_ADMIN,
   ROTA_ENTRAR,
   ROTA_MEUS_NEGOCIOS,
+  ROTA_NEGOCIO_SUSPENSO,
   ROTA_SEGUNDO_FATOR,
   ROTA_SEM_ACESSO,
   ROTA_SESSAO_EXPIRADA,
@@ -123,6 +124,8 @@ function destinoDaRecusa(motivo: MotivoDaRecusa, contexto: ContextoComPapel | nu
       return ROTA_SESSAO_EXPIRADA;
     case "SegundoFatorPendente":
       return ROTA_SEGUNDO_FATOR;
+    case "NegocioSuspenso":
+      return ROTA_NEGOCIO_SUSPENSO;
     case "SomenteDono":
     case "SemPermissao":
     case "SomenteLeitura":
@@ -213,8 +216,8 @@ export async function exigirAdministrador(): Promise<ContextoComPapel> {
  * autorizado; caso contrário, leva a "Meus negócios" (CA-11).
  */
 export async function exigirNegocio(): Promise<ContextoDeNegocio> {
-  const { negocioId, usuarioId, modoSuporte } = await exigirMembro();
-  return { negocioId, usuarioId, modoSuporte };
+  const { negocioId, usuarioId, modoSuporte, negocioSuspenso } = await exigirMembro();
+  return { negocioId, usuarioId, modoSuporte, negocioSuspenso };
 }
 
 /** Membro do negócio ativo, com papel e permissões efetivas (SPEC-005). */

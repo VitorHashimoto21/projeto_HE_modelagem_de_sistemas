@@ -54,6 +54,8 @@ export type ConviteDoLink = {
   papel: PapelUsuario;
   permissoesCustom: unknown;
   valido: boolean;
+  /** SPEC-019 (5.7): o negócio está suspenso; o aceite espera a reativação. */
+  suspenso?: boolean;
 };
 
 export function criarConsultasDeEquipe(cliente: PrismaClient) {
@@ -189,7 +191,7 @@ export function criarConsultasDeEquipe(cliente: PrismaClient) {
           papel: true,
           permissoesCustom: true,
           status: true,
-          negocio: { select: { nome: true, encerradoEm: true } },
+          negocio: { select: { nome: true, encerradoEm: true, suspensoEm: true } },
           convidadoPor: { select: { nome: true } },
         },
       });
@@ -203,6 +205,8 @@ export function criarConsultasDeEquipe(cliente: PrismaClient) {
         papel: c.papel,
         permissoesCustom: c.permissoesCustom,
         valido: c.status === "PENDENTE" && c.negocio.encerradoEm === null,
+        // SPEC-019 (5.7): o convite continua valendo, mas só pode ser aceito depois da reativação.
+        suspenso: c.negocio.suspensoEm !== null,
       };
     },
 
@@ -227,13 +231,16 @@ export function criarConsultasDeEquipe(cliente: PrismaClient) {
       usuarioId: string,
       email: string,
       agora: Date,
-    ): Promise<{ ok: true; negocioId: string } | { ok: false; erro: "ConviteInvalido" | "JaEhMembro" }> {
+    ): Promise<{ ok: true; negocioId: string } | { ok: false; erro: "ConviteInvalido" | "JaEhMembro" | "NegocioSuspenso" }> {
       return cliente.$transaction(async (tx) => {
         // Trava o negócio antes do convite, na mesma ordem de alterarPlano (SPEC-013, INV-004):
         // aceite e volta ao gratuito simultâneos se enfileiram, sem impasse.
         const alvo = await tx.convite.findUnique({ where: { id: conviteId }, select: { negocioId: true } });
         if (!alvo) return { ok: false, erro: "ConviteInvalido" };
-        await tx.$queryRaw`SELECT 1 FROM "Negocio" WHERE "id" = ${alvo.negocioId}::uuid FOR UPDATE`;
+        const negocio = await tx.$queryRaw<{ suspenso: boolean }[]>`
+          SELECT "suspensoEm" IS NOT NULL AS "suspenso" FROM "Negocio" WHERE "id" = ${alvo.negocioId}::uuid FOR UPDATE`;
+        // SPEC-019 (5.7): com o negócio suspenso, o convite pendente não é aceito (continua pendente até vencer).
+        if (negocio[0]?.suspenso) return { ok: false, erro: "NegocioSuspenso" };
         const marcado = await tx.convite.updateMany({
           where: { id: conviteId, email, status: "PENDENTE", expiraEm: { gt: agora }, negocio: { encerradoEm: null } },
           data: { status: "ACEITO", respondidoEm: agora },

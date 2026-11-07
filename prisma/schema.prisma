@@ -217,6 +217,8 @@ enum EventoSuporte {
   EMERGENCIA_RECUSADA // SPEC-019 (5.6): outra conta recusou, com o motivo
   EMERGENCIA_ENCERRADA // SPEC-019 (5.6): o Dono encerrou o acesso, ou quem pediu saiu
   EMERGENCIA_RESULTADO // SPEC-019 (5.6): quem pediu registrou o resultado
+  SUSPENSAO // SPEC-019 (5.7): um Administrador suspendeu o negócio (motivo e descrição em dados)
+  REATIVACAO // SPEC-019 (5.7): um Administrador reativou o negócio (descrição em dados)
 }
 
 // SPEC-019 (5.6): o acesso do suporte nasce da liberação do Dono ou, sem ela, de um pedido de
@@ -231,6 +233,14 @@ enum MotivoEmergencia {
   ORDEM_JUDICIAL // ordem judicial ou requisição de autoridade competente
   INCIDENTE // incidente de segurança ou falha que afeta os dados do negócio
   DONO_SEM_ACESSO // Dono sem acesso, a pedido de um membro
+}
+
+// SPEC-019 (5.7, RN39): motivos da suspensão do negócio, de uma lista fechada.
+enum MotivoSuspensao {
+  PEDIDO_DO_DONO // pedido do Dono
+  USO_INDEVIDO // uso indevido segundo os Termos
+  INCIDENTE_SEGURANCA // incidente de segurança
+  ORDEM_JUDICIAL // ordem judicial
 }
 
 // SPEC-019 (5.6, 5.8): pedidos que precisam de uma segunda conta de Administrador (INV-006).
@@ -278,6 +288,7 @@ model Usuario {
   lancamentos       LancamentoFinanceiro[] @relation("LancamentoRegistradoPor") // SPEC-009 (RNF05)
   convitesEnviados  Convite[]              @relation("ConviteEnviadoPor") // RF72
   planosAlterados   Negocio[]              @relation("PlanoAlteradoPor") // RF73
+  negociosSuspensos Negocio[]              @relation("NegocioSuspensoPor") // SPEC-019 (5.7)
   trocasDePlano     HistoricoPlano[] // SPEC-013 (OPEN-007): quem trocou o plano
   acessosLiberados  AcessoSuporte[]        @relation("AcessoLiberadoPor") // SPEC-018 (RF75)
   acessosRevogados  AcessoSuporte[]        @relation("AcessoRevogadoPor") // SPEC-018 (RF75)
@@ -325,7 +336,14 @@ model Negocio {
   encerradoEm  DateTime? // RN27: negócio encerrado após exclusão do único Dono (dados fiscais retidos 5 anos)
   eliminarApos DateTime? @db.Date // SPEC-014 (OPEN-005): data prevista de eliminação (encerramento + 5 anos)
 
+  // SPEC-019 (5.7, RN39): suspensão pela plataforma — somente leitura, nada apagado. O histórico fica no registro.
+  suspensoEm         DateTime?
+  suspensoPorId      String?          @db.Uuid
+  motivoSuspensao    MotivoSuspensao?
+  descricaoSuspensao String?          @db.VarChar(500)
+
   planoAlteradoPor Usuario? @relation("PlanoAlteradoPor", fields: [planoAlteradoPorId], references: [id])
+  suspensoPor      Usuario? @relation("NegocioSuspensoPor", fields: [suspensoPorId], references: [id], onDelete: Restrict)
 
   membros           MembroNegocio[]
   convites          Convite[]
