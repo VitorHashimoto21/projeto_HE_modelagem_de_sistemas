@@ -431,3 +431,54 @@ O banco recebeu a migração `20261107120000_suspensao_do_negocio`, que só acre
 ### Fica para a etapa 4b
 
 A nova versão da Política e dos Termos, com novo aceite (RF78), a exportação LGPD dos eventos novos e dos pedidos da plataforma, a exclusão da conta de Administrador sem o papel e os autenticadores, o modelo lógico de dados e a homologação (T17).
+
+## Etapa 4b — Política e Termos, exportação LGPD e exclusão da conta de Administrador (07/11/2026)
+
+Verificação em build de produção local, no mesmo ambiente das etapas anteriores, com a chave secreta falsa do Supabase. Os dados são fictícios:
+- o Dono e o negócio **HE Testing**;
+- as contas de Administrador `suporte@exemplo.com` (A) e `suporte2@exemplo.com` (B, que exclui a própria conta).
+
+Sem migração nova. A versão da Política e dos Termos passou a **2026-11-07** (`VERSAO_TERMOS`), e todos aceitam de novo.
+
+### Testes automatizados
+
+| # | Teste | Onde | Resultado |
+|---|---|---|---|
+| T11, RNF04 | O Dono exporta o registro do suporte com os dados de cada evento: o motivo e a descrição da suspensão, e o pedido de cada evento. Exporta também os pedidos da plataforma, com quem pediu, quem decidiu e o desfecho. A colaboradora não leva nada disso. A conta de Administrador leva só os eventos dela fora de negócio | `test/integracao/lgpd-plataforma.test.ts` | ✅ |
+| T11, INV-011 | Os eventos novos (suspensão, reativação, plano e emergência) não podem ser alterados nem apagados | idem | ✅ |
+| 5.11 | A exclusão da conta de Administrador retira o papel e os autenticadores, com os dois no registro; sem a chave, o papel sai e a credencial fica para a rotina; conta comum não chama a API | idem e `test/unit/lgpd.test.ts` | ✅ |
+| 5.11 | Os arquivos novos da exportação (`pedidos-plataforma.csv`, `eventos-da-conta.csv`) e o `LEIA-ME.txt` | `test/unit/lgpd.test.ts` | ✅ |
+| T16 | A Política e os Termos estão na versão de `VERSAO_TERMOS` | `test/unit/acesso.test.ts` | ✅ |
+| Workflow | O e-mail não entra pelo `env` nem pela linha de comando; o primeiro passo o mascara antes de repassá-lo | `test/unit/administradores-workflow.test.ts` | ✅ |
+
+**Suíte completa:** os números estão na PR, com lint, tipos, build de produção e a checagem do schema.
+
+### Roteiro no navegador (T16 e parte do T11 e do T14)
+
+42 verificações, todas aprovadas (`scratchpad/e2e19f/spec19f.mjs`).
+
+| Passo | Resultado | Captura |
+|---|---|---|
+| **Novo aceite** (T16): o Dono entra e vê "O que mudou nesta versão (2026-11-07)", com correções, emergência, suspensão e troca de plano; aceita e vai ao Painel; o aceite fica gravado | ✅ | `s19f_01_novo_aceite_*` |
+| **Política e Termos:** a Política na versão 2026-11-07, com as seções novas, o 2º fator e a exportação; os Termos com a seção 4-B e a suspensão no "Uso permitido" | ✅ | `s19f_02_politica_suporte_1440_claro.png` |
+| **A (2º fator e novo aceite)** suspende, reativa e pede a troca de plano | ✅ | — |
+| **Exportação** (T11): o `.zip` do Dono traz `registros-suporte.csv`, com a coluna `dados` (motivo e descrição da suspensão), e `pedidos-plataforma.csv`; o `LEIA-ME.txt` explica os dois | ✅ | — |
+| **B exclui a própria conta** (5.11): o autenticador sai do Supabase Auth, o papel sai, a credencial é removida na hora e o registro mostra "Papel de Administrador retirado" e "1 autenticador removido"; a lista de Administradores não mostra mais B | ✅ | `s19f_03_excluir_conta_admin_1440_claro.png`, `s19f_04_administradores_depois_1440_claro.png` |
+| Sem rolagem horizontal em 390 e 1440 px. Axe sem violações na tela do novo aceite, na Política e em Administradores, nos temas claro e escuro, em 390 e 1440 px | ✅ | todas |
+
+**Dados nas capturas:** as contas, os e-mails (`@exemplo.com`), o negócio e os nomes são fictícios.
+
+### Encontrado no roteiro
+
+- **Tabela da Política no celular:** em 390 px, a tabela "Quais dados tratamos" rola na horizontal, e o axe apontou que a área não recebia o foco do teclado. A área passou a ser focável, com nome e contorno de foco. Isso vale para todas as tabelas dos textos legais.
+
+### Decisões tomadas na implementação
+
+- **Eventos da conta na exportação:** só os da própria conta fora de negócio (papel e 2º fator), em `eventos-da-conta.csv`.
+- **Autenticadores antes da credencial:** a API de administração remove os fatores logo depois da exclusão; sem a chave, a credencial os leva depois.
+- **E-mail mascarado no workflow:** os logs novos mostram `***`; os logs antigos precisam ser apagados pela equipe (*Actions → Administradores → "⋯" → Delete all logs*).
+- **Imagem do modelo lógico:** não foi regerada aqui (o ambiente não roda o mermaid-cli). O bloco Mermaid, que o GitHub desenha, está atualizado.
+
+### Homologação (T17)
+
+O roteiro está em [`homologacao.md`](homologacao.md). Ao terminar, a equipe registra aqui a data, quem testou, o resultado de cada passo e as capturas (`homologacao/`).

@@ -43,6 +43,7 @@ const deps = (usuarioId = gisele, extra: Partial<DependenciasDaLgpd> = {}): Depe
   agora: new Date(),
   hoje: HOJE,
   removerCredencial: async () => "removida",
+  removerAutenticadores: async () => ({ status: "removidos", quantos: 0 }),
   sair: async () => undefined,
   ...extra,
 });

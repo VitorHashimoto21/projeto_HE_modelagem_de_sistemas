@@ -10,7 +10,9 @@
 >   - **3b — acesso de emergência:** implementada em 06/11/2026 e verificada em build local ([evidências](evidencias/SPEC-019/README.md#etapa-3b--acesso-de-emergência-06112026));
 > - **etapa 4 — suspensão, Política e Termos, e homologação**, em duas partes (decisão da equipe, 07/11/2026):
 >   - **4a — suspender e reativar o negócio:** implementada em 07/11/2026 e verificada em build local ([evidências](evidencias/SPEC-019/README.md#etapa-4a--suspender-e-reativar-o-negócio-07112026));
->   - **4b — Política e Termos com novo aceite, exportação LGPD dos eventos novos, exclusão da conta de Administrador, modelo lógico de dados e homologação (T17):** a implementar.
+>   - **4b — Política e Termos com novo aceite, exportação LGPD dos eventos novos, exclusão da conta de Administrador e modelo lógico de dados:** implementada em 07/11/2026 e verificada em build local ([evidências](evidencias/SPEC-019/README.md#etapa-4b--política-e-termos-exportação-lgpd-e-exclusão-da-conta-de-administrador-07112026));
+>
+> **Falta a homologação (T17)**, com o roteiro em [`evidencias/SPEC-019/homologacao.md`](evidencias/SPEC-019/homologacao.md).
 >
 > As notas da implementação estão depois da seção 9. As questões em aberto foram decididas pela equipe em entrevista (seção 13), pela opção recomendada, com quatro ajustes da equipe (prazos de 12 h e duas pessoas também na troca de plano):
 > - **2º fator obrigatório** para o Administrador, pelo MFA TOTP do Supabase Auth, com dois autenticadores, redefinição pelo workflow e o código pedido de novo antes das ações críticas;
@@ -708,6 +710,40 @@ Cobre a seção 5.7, a situação "Suspenso", o filtro e o "Suspender ou Reativa
 - **Entrada com correção na suspensão:** a liberação com correção ainda pede o código para entrar, mas as correções ficam recusadas até a reativação.
 - **Sem evento novo para convites:** a recusa do aceite não vai para o registro, porque nada muda no negócio.
 
+**Decisões da equipe sobre a etapa 4a (07/11/2026), depois da revisão da PR:** as decisões acima ficam como estão. A equipe as considerou a melhor forma: botões de gravar visíveis, com a faixa e a explicação; ações de "ver" que gravam recusadas na suspensão; e a entrada com correção pedindo o código, com as correções recusadas até a reativação.
+
+**Implementação — etapa 4b, Política e Termos, exportação LGPD e exclusão da conta de Administrador (07/11/2026):** [evidências](evidencias/SPEC-019/README.md#etapa-4b--política-e-termos-exportação-lgpd-e-exclusão-da-conta-de-administrador-07112026).
+
+Cobre a seção 5.11 e os T11 e T16. O roteiro no navegador teve 42 verificações, com o Dono e duas contas de Administrador. Como foi feito:
+- **Política e Termos (RF78, T16):** nova versão **2026-11-07** (`VERSAO_TERMOS`), com o novo aceite de todos.
+  - **A Política** descreve:
+    - as correções autorizadas pelo Dono;
+    - o acesso de emergência: os três motivos, as duas pessoas, o aviso desde o pedido, até 4 h e o resultado;
+    - a suspensão e os seus efeitos;
+    - a troca de plano pela plataforma;
+    - o 2º fator obrigatório da equipe de suporte;
+    - o que a exportação passa a trazer.
+  - **Os Termos** ganham a seção 4-B (suspensão do negócio) e falam da troca de plano pela plataforma nos Planos.
+  - **A tela "Atualizamos nossos termos"** resume as quatro mudanças.
+  - **Continua rascunho:** os dois textos esperam a revisão do grupo, junto da pendência dos textos legais.
+- **Exportação LGPD (T11):** nos negócios em que o titular é Dono, o registro do suporte passa a trazer:
+  - os dados de cada evento: o antes e o depois das correções, e o motivo e a descrição da suspensão;
+  - a correção desfeita e o pedido de cada evento.
+
+  Também entra `pedidos-plataforma.csv`, com quem pediu, quem decidiu e o desfecho. O `LEIA-ME.txt` explica os arquivos novos.
+- **Exclusão da conta de Administrador (5.11):** o papel sai na transação da exclusão, como já saía. Os autenticadores saem logo depois, pela API de administração do Supabase Auth, e ficam no registro ("N autenticadores removidos pela exclusão da conta"). Sem a chave secreta, ou com falha na API, a remoção da credencial (na hora ou pela rotina diária) apaga o usuário e os fatores dele.
+- **Workflow "Administradores":** o e-mail da conta não aparece mais no log. O repositório é público, e o GitHub mostrava as variáveis de cada passo. Agora o e-mail é lido do evento e mascarado no primeiro passo, e os demais passos mostram `***`.
+- **Modelo lógico de dados:** [`MODELO_LOGICO_BANCO.md`](../dominio_fluxogramas/MODELO_LOGICO_BANCO.md) atualizado até a SPEC-019, com as decisões de modelagem.
+  - **Entidades novas:** fornecedores, histórico de custo, histórico do plano, acesso e registro do suporte, e pedidos da plataforma.
+  - **Campos novos:** a suspensão e os campos de usuário, negócio, item e financeiro que faltavam.
+  - **Imagem:** a imagem exportada continua a da SPEC-013 e precisa ser regerada. O bloco Mermaid, que o GitHub desenha, é a referência.
+- **Homologação (T17):** o roteiro passo a passo, com a situação da configuração em 07/11/2026, está em [`evidencias/SPEC-019/homologacao.md`](evidencias/SPEC-019/homologacao.md).
+
+**Decisões de implementação da etapa 4b (sem mudar o comportamento da Spec):**
+- **Eventos da própria conta na exportação:** a conta de Administrador exporta também os eventos dela fora de negócio (papel e 2º fator), em `eventos-da-conta.csv`. Os eventos dela dentro dos negócios ficam com os negócios, que são de outros titulares.
+- **Autenticadores pela API, antes da credencial:** a exclusão remove os autenticadores mesmo se a remoção da credencial falhar, e o registro diz quantos saíram.
+- **Tabelas dos textos legais:** em telas estreitas, a tabela rola na horizontal e passou a receber o foco do teclado (o axe apontou na Política, em 390 px).
+
 ---
 
 ## 10. Requisitos não funcionais aplicáveis
@@ -805,6 +841,7 @@ Cobre a seção 5.7, a situação "Suspenso", o filtro e o "Suspender ou Reativa
    - troca de plano pedida por A e aprovada por B;
    - redefinição do 2º fator de uma das contas pelo workflow.
 5. Os e-mails ao Dono não chegam sem o domínio. As faixas e "Acessos do suporte" cobrem o aviso, como na SPEC-018.
+6. O roteiro detalhado, passo a passo e com o resultado esperado de cada um, está em [`evidencias/SPEC-019/homologacao.md`](evidencias/SPEC-019/homologacao.md) (etapa 4b).
 
 ---
 

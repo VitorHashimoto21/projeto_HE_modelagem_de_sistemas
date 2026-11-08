@@ -324,7 +324,7 @@ describe("CA-14 — o que continua e o que volta na reativação", () => {
   it("excluir a conta do Dono continua: o negócio é encerrado, a suspensão sai, e os registros ficam", async () => {
     await base.cliente.create({ data: { negocioId: negocio, nome: "Maria Cliente" } });
     await suspender();
-    expect(await lgpd.excluirConta(dono, new Date())).toEqual({ ok: true, negociosEncerrados: 2 });
+    expect(await lgpd.excluirConta(dono, new Date())).toEqual({ ok: true, negociosEncerrados: 2, administrador: false });
     const n = await base.negocio.findUniqueOrThrow({ where: { id: negocio } });
     expect(n.encerradoEm).toBeInstanceOf(Date);
     expect(n.suspensoEm).toBeNull();

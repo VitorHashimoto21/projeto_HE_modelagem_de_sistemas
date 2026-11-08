@@ -2,6 +2,8 @@
 # scripts/admin.ts no banco do ambiente escolhido, com o segredo DIRECT_URL do ambiente (o mesmo
 # das migrações). A credencial do banco não sai do GitHub, e o responsável registrado no banco é
 # o usuário do GitHub que disparou a execução. Em desenvolvimento, rode o script localmente.
+# SPEC-019 (5.11): o e-mail da conta nunca aparece no log (o repositório é público). Ele é lido do evento,
+# mascarado e só então passado aos passos seguintes, que mostram "***" no lugar dele.
 name: Administradores
 
 on:
@@ -40,8 +42,13 @@ jobs:
       SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
       ADMIN_RESPONSAVEL: ${{ github.actor }} (GitHub Actions)
       ACAO: ${{ inputs.acao }}
-      EMAIL: ${{ inputs.email }}
     steps:
+      - name: Mascarar o e-mail no log
+        run: |
+          EMAIL=$(jq -r '.inputs.email // ""' "$GITHUB_EVENT_PATH")
+          if [ -n "$EMAIL" ]; then echo "::add-mask::$EMAIL"; fi
+          echo "EMAIL=$EMAIL" >> "$GITHUB_ENV"
+
       - name: Verificar se o ambiente está configurado
         run: |
           if [ -z "$DIRECT_URL" ]; then
