@@ -482,3 +482,31 @@ Sem migração nova. A versão da Política e dos Termos passou a **2026-11-07**
 ### Homologação (T17)
 
 O roteiro está em [`homologacao.md`](homologacao.md). Ao terminar, a equipe registra aqui a data, quem testou, o resultado de cada passo e as capturas (`homologacao/`).
+
+## Correção da homologação — faixas que não atualizavam ao navegar (08/11/2026)
+
+**Problema (passo 5.3 do T17):** com o acesso de emergência aprovado, a faixa vermelha só aparecia para o Dono depois de atualizar a página, e só sumia do mesmo jeito depois do encerramento, mesmo navegando entre Catálogo, Estoque e as outras telas. O acesso em si estava certo: o servidor confere a liberação a cada página e ação, e a conta de suporte voltou ao painel quando o Dono encerrou. O que ficava para trás era só o aviso.
+
+**Causa:** as faixas ficam no layout da área do negócio, e o Next.js não recalcula o layout na navegação: só a página muda. Valia para tudo o que outra pessoa muda: a faixa da emergência, a da suspensão, a do suporte liberado e o menu (plano e permissões).
+
+**Correção:**
+- o servidor resume o que as faixas e o menu mostram numa assinatura (`src/lib/dominio/faixas.ts` e `src/lib/estrutura/faixas.ts`), e a rota `GET /api/faixas` devolve só essa assinatura, sem cache;
+- no layout, o `AtualizadorDasFaixas` confere a assinatura a cada navegação, ao voltar para a aba e a cada minuto com a aba visível, e atualiza o layout (`router.refresh()`) só quando ela mudou;
+- a conferência só lê: não registra tela no modo suporte nem grava nada;
+- junto: a página "Pedidos da plataforma" passou a citar o acesso de emergência na descrição e na lista vazia (os textos eram da etapa 3a).
+
+**Testes:** unidade (`test/unit/faixas.test.ts`, 4) e integração com o banco real (`test/integracao/faixas.test.ts`, 4: a assinatura muda na aprovação e no fim da emergência, na suspensão, na troca de plano e na liberação, volta à de antes quando o estado volta, e a leitura não registra nada). Roteiro no navegador com duas sessões, navegando pelo menu (sem recarregar a página), **25 verificações, todas aprovadas** (`scratchpad/e2e19g/spec19g.mjs`):
+
+| Passo | Antes (DEVELOP) | Depois |
+|---|---|---|
+| B aprova a emergência; o Dono vai ao Catálogo pelo menu: a faixa vermelha aparece, com "Encerrar acesso" | ✗ não aparece | ✅ em ~0,5 s |
+| A colaboradora navega: vê a faixa, sem "Encerrar acesso" | — | ✅ |
+| Parado no Catálogo, sem navegar: a faixa some sozinha depois que o suporte sai e encerra | — | ✅ em menos de 1 min |
+| A conferência de cada minuto do suporte, parado em Vendas, não registra tela | — | ✅ |
+| A suspende; o Dono volta para a aba: a faixa da suspensão aparece. Depois da reativação, some na navegação seguinte | — | ✅ |
+| `/api/faixas`: sem sessão leva ao login; com sessão, só a assinatura, sem cache, e a mesma enquanto nada muda | — | ✅ |
+| "Pedidos da plataforma" cita o acesso de emergência na descrição e na lista vazia | ✗ | ✅ |
+
+Capturas: `s19g_01_faixa_ao_navegar_1440_claro.png`, `s19g_01_faixa_ao_navegar_390_escuro.png` e `s19g_02_suspensao_ao_voltar_1440_claro.png`. Os dados são fictícios.
+
+**Na homologação:** depois do merge, conferir de novo o passo 5.3 sem atualizar a página: aprovar a emergência e, na tela do Dono, só navegar pelo menu; a faixa deve aparecer. Encerrar e esperar até 1 minuto parado (ou trocar de página): a faixa deve sumir.
