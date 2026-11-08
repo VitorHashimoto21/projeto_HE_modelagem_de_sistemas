@@ -1,5 +1,5 @@
 import { strToU8, zipSync } from "fflate";
-import type { ResultadoDaRemocao } from "@/lib/auth/credencial";
+import type { ResultadoDaRemocao, ResultadoDosAutenticadores } from "@/lib/auth/credencial";
 import type { ConsultasDaLgpd } from "@/lib/db/lgpd";
 import { arquivosDaExportacao, conferirConfirmacao, MENSAGENS_LGPD, nomeDoZip } from "@/lib/dominio/lgpd";
 
@@ -14,6 +14,8 @@ export type DependenciasDaLgpd = {
   agora: Date;
   hoje: string;
   removerCredencial: (usuarioId: string) => Promise<ResultadoDaRemocao>;
+  /** SPEC-019 (5.11): só para a conta de Administrador, pela API de administração do Supabase Auth. */
+  removerAutenticadores: (usuarioId: string) => Promise<ResultadoDosAutenticadores>;
   sair: () => Promise<void>;
 };
 
@@ -39,12 +41,20 @@ export async function excluirConta(campos: Record<string, string>, deps: Depende
   if (!resumo) return { status: "erro", mensagem: MENSAGENS_LGPD.jaExcluida };
   const c = conferirConfirmacao(campos, resumo.email);
   if (!c.ok) return { status: "erro", erros: c.erros };
+  let administrador = false;
   try {
     const r = await deps.lgpd.excluirConta(deps.usuarioId, deps.agora);
     if (!r.ok) return { status: "erro", mensagem: MENSAGENS_LGPD.jaExcluida };
+    administrador = r.administrador;
   } catch (e) {
     console.error("[lgpd] falha na exclusão:", e instanceof Error ? e.name : "erro");
     return { status: "erro", mensagem: MENSAGENS_LGPD.falhaInterna };
+  }
+  // SPEC-019 (5.11): a conta de Administrador perde o papel na transação e os autenticadores logo depois. Se
+  // a API falhar ou faltar a chave, a remoção da credencial (agora ou pela rotina) apaga o usuário e os fatores.
+  if (administrador) {
+    const a = await deps.removerAutenticadores(deps.usuarioId).catch(() => ({ status: "falha" }) as const);
+    if (a.status === "removidos") await deps.lgpd.registrarAutenticadoresRemovidos(deps.usuarioId, a.quantos, deps.agora);
   }
   // A conta já está bloqueada e anonimizada; a credencial e a sessão vêm depois (5.3).
   const credencial = await deps.removerCredencial(deps.usuarioId);

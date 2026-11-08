@@ -50,6 +50,8 @@ export type DadosDoTitular = {
   titular: Linha;
   vinculos: Linha[];
   convitesRecebidos: Linha[];
+  /** SPEC-019 (5.11): eventos da própria conta fora de negócio (papel de Administrador e 2º fator). */
+  eventosDaConta: Linha[];
   /** Negócios em que é o Dono: todos os dados (OPEN-004). */
   negociosComoDono: { negocio: Linha; tabelas: Tabelas }[];
   /** Negócios de outros Donos: só os registros feitos pelo titular (OPEN-004). */
@@ -95,8 +97,16 @@ Arquivos .csv (abrem no Excel ou no LibreOffice; ponto e vírgula, vírgula deci
   <tabela>.csv                 dados dos negócios em que você é o Dono
                                (coluna "negocio" indica de qual negócio é cada linha)
   outros-negocios-<tabela>.csv registros feitos por você em negócios de outros Donos
-  acessos-suporte.csv          acessos do suporte do HE que você liberou (motivo, módulos, prazo)
-  registros-suporte.csv        registro de cada entrada, tela aberta e saída do suporte
+  acessos-suporte.csv          acessos do suporte do HE: os que você liberou (motivo, módulos,
+                               prazo) e os de emergência (motivo, referência e resultado)
+  registros-suporte.csv        registro do suporte: cada entrada, tela aberta e saída, as
+                               correções (com o antes e o depois na coluna "dados"), os
+                               desfazimentos, as emergências, as suspensões e reativações
+                               e as trocas de plano pela plataforma
+  pedidos-plataforma.csv       pedidos da equipe do HE (troca de plano e emergência), com quem
+                               pediu, quem decidiu e o desfecho
+  eventos-da-conta.csv         eventos da sua conta fora de negócio (só nas contas da equipe
+                               do HE: papel de Administrador e 2º fator)
 
 Datas em ISO 8601 (UTC). Valores em reais com ponto decimal no JSON e vírgula no CSV.
 Identificadores (id, negocioId, usuarioId...) ligam as linhas entre as tabelas.
@@ -113,6 +123,7 @@ export function arquivosDaExportacao(d: DadosDoTitular): Record<string, string> 
     "vinculos.csv": csvDeLinhas(d.vinculos),
     "convites-recebidos.csv": csvDeLinhas(d.convitesRecebidos),
   };
+  if (d.eventosDaConta.length) arquivos["eventos-da-conta.csv"] = csvDeLinhas(d.eventosDaConta);
   if (d.negociosComoDono.length) arquivos["negocios.csv"] = csvDeLinhas(d.negociosComoDono.map((g) => g.negocio));
   for (const [tabela, linhas] of Object.entries(juntar(d.negociosComoDono))) arquivos[`${nomeDoArquivo(tabela)}.csv`] = csvDeLinhas(linhas);
   for (const [tabela, linhas] of Object.entries(juntar(d.registrosEmOutrosNegocios))) arquivos[`outros-negocios-${nomeDoArquivo(tabela)}.csv`] = csvDeLinhas(linhas);

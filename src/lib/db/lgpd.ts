@@ -26,7 +26,9 @@ export type ResumoDaExclusao = {
   deixar: { id: string; nome: string; papel: "GERENTE" | "COLABORADOR" }[];
 };
 
-export type ResultadoDaExclusao = { ok: true; negociosEncerrados: number } | { ok: false; erro: "JaExcluida" | "UsuarioNaoEncontrado" };
+export type ResultadoDaExclusao =
+  | { ok: true; negociosEncerrados: number; /** SPEC-019 (5.11): a conta era de Administrador (o papel saiu na transação). */ administrador: boolean }
+  | { ok: false; erro: "JaExcluida" | "UsuarioNaoEncontrado" };
 
 /** Valor serializável: datas em ISO 8601, Decimal e BigInt como texto, JSON como texto. */
 function valor(v: unknown): Valor {
@@ -96,7 +98,7 @@ export function criarConsultasDaLgpd(cliente: PrismaClient) {
       const negociosComoDono = await Promise.all(
         donos.map(async (negocioId) => {
           const f = { where: { negocioId } };
-          const [negocio, membros, convites, itens, subcategorias, materiais, movimentacoes, historicoPrecos, historicoCustos, vendas, itensVenda, pagamentos, parcelas, clientes, fornecedores, lancamentos, contas, despesasFixas, historicoPlano, acessosSuporte, registrosSuporte] =
+          const [negocio, membros, convites, itens, subcategorias, materiais, movimentacoes, historicoPrecos, historicoCustos, vendas, itensVenda, pagamentos, parcelas, clientes, fornecedores, lancamentos, contas, despesasFixas, historicoPlano, acessosSuporte, registrosSuporte, pedidosPlataforma] =
             await Promise.all([
               cliente.negocio.findUniqueOrThrow({ where: { id: negocioId } }),
               cliente.membroNegocio.findMany({ ...f, select: { id: true, papel: true, permissoesCustom: true, suspensoEm: true, usuarioId: true, usuario: { select: { nome: true, email: true } } } }),
@@ -122,7 +124,28 @@ export function criarConsultasDaLgpd(cliente: PrismaClient) {
               cliente.historicoPlano.findMany(f),
               // SPEC-018 (RNF04): acessos do suporte liberados e o registro de auditoria de cada um.
               cliente.acessoSuporte.findMany(f),
-              cliente.registroSuporte.findMany({ ...f, select: { id: true, acessoId: true, evento: true, modulo: true, descricao: true, criadoEm: true, usuario: { select: { nome: true } } } }),
+              // SPEC-019 (5.11, T11): com os dados de cada evento — o antes e o depois das correções, o motivo e a
+              // descrição da suspensão —, a correção desfeita e o pedido da plataforma de cada evento.
+              cliente.registroSuporte.findMany({
+                ...f,
+                select: { id: true, acessoId: true, evento: true, modulo: true, descricao: true, dados: true, correcaoId: true, pedidoId: true, criadoEm: true, usuario: { select: { nome: true } } },
+              }),
+              // SPEC-019 (5.11, T11): os pedidos da plataforma (troca de plano e emergência), com quem pediu e quem decidiu.
+              cliente.pedidoPlataforma.findMany({
+                ...f,
+                select: {
+                  id: true,
+                  tipo: true,
+                  situacao: true,
+                  dados: true,
+                  criadoEm: true,
+                  expiraEm: true,
+                  decididoEm: true,
+                  motivoDaRecusa: true,
+                  solicitadoPor: { select: { nome: true } },
+                  decididoPor: { select: { nome: true } },
+                },
+              }),
             ]);
           const tabelas: Tabelas = {
             membros: membros.map(({ usuario, ...m }) => linha({ ...m, nome: usuario.nome, email: usuario.email })),
@@ -145,6 +168,7 @@ export function criarConsultasDaLgpd(cliente: PrismaClient) {
             historicoPlano: linhas(historicoPlano),
             acessosSuporte: linhas(acessosSuporte),
             registrosSuporte: registrosSuporte.map(({ usuario, ...r }) => linha({ ...r, autor: usuario.nome })),
+            pedidosPlataforma: pedidosPlataforma.map(({ solicitadoPor, decididoPor, ...p }) => linha({ ...p, solicitadoPor: solicitadoPor.nome, decididoPor: decididoPor?.nome ?? null })),
           };
           return { negocio: linha(negocio), tabelas };
         }),
@@ -162,9 +186,17 @@ export function criarConsultasDaLgpd(cliente: PrismaClient) {
         }),
       );
 
+      // SPEC-019 (5.11): os eventos da própria conta, fora de negócio (papel de Administrador e 2º fator).
+      const eventosDaConta = await cliente.registroSuporte.findMany({
+        where: { usuarioId, negocioId: null },
+        orderBy: { criadoEm: "asc" },
+        select: { id: true, evento: true, descricao: true, criadoEm: true },
+      });
+
       return {
         geradoEm: agora.toISOString(),
         titular: linha(u),
+        eventosDaConta: linhas(eventosDaConta),
         vinculos: vinculos.map(({ negocio, ...v }) => linha({ ...v, negocio: negocio.nome })),
         convitesRecebidos: convitesRecebidos.map(({ negocio, ...c }) => linha({ ...c, negocio: negocio.nome })),
         negociosComoDono,
@@ -235,7 +267,21 @@ export function criarConsultasDaLgpd(cliente: PrismaClient) {
         await tx.$executeRaw`
           UPDATE "Convite" SET email = 'convite-' || id || ${`@${DOMINIO_ANONIMO}`} WHERE email = ${atual.email}`;
 
-        return { ok: true, negociosEncerrados: donos.length };
+        return { ok: true, negociosEncerrados: donos.length, administrador: atual.administradorEm !== null };
+      });
+    },
+
+    /** SPEC-019 (5.11): os autenticadores da conta de Administrador excluída saíram do Supabase Auth. */
+    async registrarAutenticadoresRemovidos(usuarioId: string, quantos: number, agora: Date): Promise<void> {
+      await cliente.registroSuporte.create({
+        data: {
+          negocioId: null,
+          acessoId: null,
+          usuarioId,
+          evento: "SEGUNDO_FATOR_REMOVIDO",
+          descricao: `${quantos === 1 ? "1 autenticador removido" : `${quantos} autenticadores removidos`} pela exclusão da conta`,
+          criadoEm: agora,
+        },
       });
     },
 

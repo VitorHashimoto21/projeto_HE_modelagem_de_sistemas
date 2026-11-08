@@ -12,7 +12,7 @@ export const metadata: Metadata = { title: "Atualizamos nossos termos", robots: 
 
 const link = "font-semibold text-primary underline-offset-2 hover:text-primary-hover hover:underline";
 
-// Novo aceite (SPEC-018, 5.7 — RF78, OPEN-011; versão da SPEC-022): quem aceitou uma versão anterior da política e dos
+// Novo aceite (SPEC-018, 5.7 — RF78, OPEN-011; versão da SPEC-019, 5.11): quem aceitou uma versão anterior da política e dos
 // termos só volta ao app depois de aceitar a vigente; até lá, pode abrir Minha conta (exportar os
 // dados ou excluir a conta) ou sair.
 export default async function AceiteDosTermos({ searchParams }: PageProps<"/aceite-dos-termos">) {
@@ -27,19 +27,22 @@ export default async function AceiteDosTermos({ searchParams }: PageProps<"/acei
         <div className="rounded-lg bg-muted px-4 py-4 text-sm text-foreground">
           <p className="font-semibold">O que mudou nesta versão ({VERSAO_TERMOS})</p>
           <ul className="mt-2 list-disc space-y-1.5 pl-5 text-muted-foreground">
-            {/* SPEC-026 (OPEN-012): a versão 2026-11-01 inclui o cadastro de fornecedores. */}
+            {/* SPEC-019 (5.11): a versão 2026-11-07 trata das correções, da emergência, da suspensão e da troca de plano pela plataforma. */}
             <li>
-              <strong className="text-foreground">Cadastro de fornecedores:</strong> o negócio pode guardar, no Financeiro, os dados de quem lhe vende (nome ou razão
-              social, CPF ou CNPJ, contato e endereço), para ligar as contas a pagar a cada fornecedor. O negócio é o responsável por esses dados e registra só o que
-              precisar.
+              <strong className="text-foreground">Correções pelo suporte:</strong> ao liberar o acesso, o Dono pode deixar o suporte do HE corrigir alguns módulos, só
+              nas ações de uma lista fechada. Cada correção aparece na hora em Acesso do suporte, com o antes e o depois, e pode ser desfeita em até 30 dias.
             </li>
             <li>
-              Só quem pode editar no Financeiro vê o cadastro completo dos fornecedores; o restante da equipe e o suporte veem os dados em parte. Excluir um fornecedor
-              apaga os dados dele, e as contas continuam registradas sem identificação.
+              <strong className="text-foreground">Acesso de emergência:</strong> sem a liberação do Dono, o suporte só entra por ordem judicial, incidente de segurança
+              ou Dono sem acesso, com a aprovação de duas pessoas da equipe. É somente leitura, por até 4 horas, e o Dono vê tudo desde o pedido e pode encerrar.
             </li>
             <li>
-              Quem vê o Financeiro passa a ver o nome do cliente ligado a uma conta a receber. Os demais dados do cliente continuam com as regras de Vendas. O CPF nunca
-              é enviado a outro serviço.
+              <strong className="text-foreground">Suspensão do negócio:</strong> o HE pode suspender um negócio por motivos de uma lista fechada. Ele fica somente
+              leitura, nada é apagado, e exportar os dados e excluir a conta continuam.
+            </li>
+            <li>
+              <strong className="text-foreground">Troca de plano pela plataforma:</strong> com a aprovação de duas pessoas da equipe, e o Dono é avisado. A exportação
+              dos seus dados passa a trazer esses registros.
             </li>
           </ul>
           <p className="mt-3">

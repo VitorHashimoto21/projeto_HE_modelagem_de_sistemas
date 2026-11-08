@@ -8,9 +8,10 @@ import { z } from "zod";
 /**
  * Versão vigente da política de privacidade e dos termos de uso (OPEN-005). Mudar a versão pede o novo
  * aceite de todos (SPEC-018, RF78): 2026-10-17, acesso de suporte; 2026-10-23, cadastro de clientes (SPEC-022);
- * 2026-11-01, cadastro de fornecedores (SPEC-026, OPEN-012).
+ * 2026-11-01, cadastro de fornecedores (SPEC-026, OPEN-012); 2026-11-07, correções, emergência, suspensão e troca
+ * de plano pela plataforma (SPEC-019, 5.11).
  */
-export const VERSAO_TERMOS = "2026-11-01";
+export const VERSAO_TERMOS = "2026-11-07";
 
 /** OPEN-004: mínimo de 8 caracteres, sem exigir símbolos. 72 é o limite do bcrypt do Supabase Auth. */
 export const SENHA_MINIMA = 8;

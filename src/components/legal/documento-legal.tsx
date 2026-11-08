@@ -38,8 +38,9 @@ export async function PaginaDocumentoLegal({ documento }: { documento: Documento
                   {children}
                 </Link>
               ),
+              // Em telas estreitas a tabela rola na horizontal: a área recebe o foco do teclado (WCAG 2.1.1).
               table: (p) => (
-                <div className="overflow-x-auto">
+                <div role="region" aria-label="Tabela" tabIndex={0} className="overflow-x-auto rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">
                   <table className="w-full border-collapse text-left text-sm" {...p} />
                 </div>
               ),

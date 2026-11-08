@@ -1,13 +1,15 @@
 # Termos de Uso — Health Enterprise
 
-> **RASCUNHO — versão 2026-11-01 — revisão do grupo pendente (SPEC-002, OPEN-003; acesso de suporte: SPEC-018; cadastro de clientes: SPEC-022; cadastro de fornecedores: SPEC-026).**
+> **RASCUNHO — versão 2026-11-07 — revisão do grupo pendente (SPEC-002, OPEN-003; acesso de suporte: SPEC-018; cadastro de clientes: SPEC-022; cadastro de fornecedores: SPEC-026; correções, emergência, suspensão e troca de plano pela plataforma: SPEC-019).**
 > Itens entre `[colchetes]` precisam ser preenchidos pelo grupo. Antes da produção, recomenda-se revisão jurídica.
 
-**Versão:** 2026-11-01 · **Vigência:** a partir da publicação
+**Versão:** 2026-11-07 · **Vigência:** a partir da publicação
 
-**O que mudou nesta versão:** a seção 4 passa a tratar também do **cadastro de fornecedores**, com os mesmos cuidados do cadastro de clientes; a seção 4-A diz que o suporte vê esses dados mascarados.
+**O que mudou nesta versão:** a seção 4-A passa a tratar das **correções** que o Dono pode autorizar e do **acesso de emergência**, com duas pessoas da equipe e aviso imediato ao Dono. A nova seção 4-B trata da **suspensão do negócio**, e a seção 6, da **troca de plano pela plataforma**. A seção 7 passa a apontar a suspensão.
 
-**Versão anterior (2026-10-23):** a seção 4 trata do cadastro completo de clientes (CPF ou CNPJ, endereço e contato), da consulta de CEP e CNPJ em base pública e da exclusão de um cliente; a seção 4-A passa a dizer que o suporte vê esses dados mascarados.
+**Versão anterior (2026-11-01):** a seção 4 passa a tratar também do **cadastro de fornecedores**, com os mesmos cuidados do cadastro de clientes; a seção 4-A diz que o suporte vê esses dados mascarados.
+
+**Versão de 2026-10-23:** a seção 4 trata do cadastro completo de clientes (CPF ou CNPJ, endereço e contato), da consulta de CEP e CNPJ em base pública e da exclusão de um cliente; a seção 4-A passa a dizer que o suporte vê esses dados mascarados.
 
 **Versão de 2026-10-17:** nova seção 4-A, sobre o acesso de suporte liberado pelo Dono.
 
@@ -40,10 +42,18 @@ O HE é um sistema web de gestão para microempreendedores e autônomos, com con
 
 ## 4-A. Acesso de suporte
 
-- Quando precisar de ajuda, o **Dono** pode liberar o suporte do HE para **ver** (sem alterar) os módulos que escolher do negócio, informando o motivo, por um prazo de até 7 dias. Sem essa liberação, o suporte não vê os dados do negócio.
-- O suporte vê os dados em modo **somente leitura**, com os dados dos clientes e dos fornecedores (nome, documento, contato e endereço) e os e-mails da equipe mascarados (os valores dos módulos liberados, como vendas e saldo, aparecem normalmente), e age em nome próprio, sem usar a sua conta ou a sua senha.
-- Cada acesso fica registrado e visível ao Dono, que pode revogá-lo a qualquer momento. Detalhes na seção 5 da Política de Privacidade.
+- Quando precisar de ajuda, o **Dono** pode liberar o suporte do HE para **ver** os módulos que escolher do negócio, informando o motivo, por um prazo de até 7 dias. Sem essa liberação, o suporte não vê os dados do negócio, salvo no acesso de emergência (abaixo).
+- O suporte vê os dados com os dados dos clientes e dos fornecedores (nome, documento, contato e endereço) e os e-mails da equipe mascarados (os valores dos módulos liberados, como vendas e saldo, aparecem normalmente), e age em nome próprio, sem usar a sua conta ou a sua senha.
+- **Correções:** o Dono pode marcar alguns módulos como "ver e corrigir", por até 12 horas. O suporte só faz as correções de uma lista fechada, cada uma registrada com o antes e o depois, e o Dono pode **desfazer** cada correção em até 30 dias. Vendas, clientes, fornecedores, equipe, Configurações, plano e LGPD nunca são alterados pelo suporte.
+- **Acesso de emergência:** sem a liberação, o suporte só entra por ordem judicial ou requisição de autoridade, por incidente de segurança ou falha que afeta os dados do negócio, ou com o Dono sem acesso, a pedido de um membro. É preciso o pedido de uma pessoa da equipe e a aprovação de outra. O acesso é somente leitura, por até 4 horas, o Dono vê tudo desde o pedido e pode encerrá-lo a qualquer momento.
+- Cada acesso, correção e emergência fica registrado e visível ao Dono, que pode revogar a liberação a qualquer momento. Detalhes na seção 5 da Política de Privacidade.
 - O HE **nunca pede a sua senha**, nem para o suporte.
+
+## 4-B. Suspensão do negócio
+
+- O HE pode **suspender** um negócio a pedido do Dono, por uso indevido segundo estes Termos, por incidente de segurança ou por ordem judicial, sempre com uma descrição do motivo.
+- Enquanto durar a suspensão, o negócio fica **somente leitura**: os membros entram e veem tudo, mas nada é gravado nos módulos nem em Configurações, e os convites pendentes esperam. **Nada é apagado.** Você continua podendo exportar os seus dados e excluir a sua conta, e o Dono continua podendo liberar o suporte para pedir ajuda.
+- O Dono é avisado na hora, no sistema e por e-mail, e também na reativação. Para entender o motivo ou pedir a reativação, fale com o suporte.
 
 ## 5. Calculadora de precificação e informações fiscais
 
@@ -56,6 +66,7 @@ O HE é um sistema web de gestão para microempreendedores e autônomos, com con
 - O plano gratuito oferece todos os módulos principais, sem limite de quantidade de produtos, vendas ou lançamentos, e permite o Dono e 1 colaborador.
 - O plano pago libera relatórios avançados e mais colaboradores. Valores e forma de cobrança serão informados antes da contratação.
 - Ao voltar para o plano gratuito, nenhum dado é apagado.
+- A equipe do HE pode trocar o plano de um negócio pela plataforma, como cortesia, para corrigir um plano errado ou para um teste combinado, sempre com a aprovação de duas pessoas da equipe. O Dono é avisado, e valem as mesmas regras da troca feita por ele.
 
 ## 7. Uso permitido
 
@@ -65,7 +76,7 @@ Você concorda em não:
 - tentar acessar dados de outros negócios ou contornar as permissões do sistema;
 - sobrecarregar, interferir ou tentar comprometer a segurança do serviço.
 
-O descumprimento pode levar à suspensão da conta.
+O descumprimento pode levar à suspensão do negócio (seção 4-B) ou da conta.
 
 ## 8. Disponibilidade
 
