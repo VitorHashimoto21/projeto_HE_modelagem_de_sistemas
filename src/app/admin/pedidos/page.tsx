@@ -27,7 +27,7 @@ export default async function PedidosDaPlataforma() {
     <div className="space-y-6">
       <CabecalhoDePagina
         titulo="Pedidos da plataforma"
-        descricao="A troca de plano pela plataforma só vale com a aprovação de outra conta de Administrador, em até 12 horas. Ninguém aprova o próprio pedido, e o código do autenticador é pedido de novo para pedir, aprovar e recusar."
+        descricao="A troca de plano pela plataforma e o acesso de emergência só valem com a aprovação de outra conta de Administrador, em até 12 horas. Ninguém aprova o próprio pedido, e o código do autenticador é pedido de novo para pedir, aprovar e recusar."
       />
       <NavegacaoDoPainel atual="pedidos" aguardando={aguardando} />
 
@@ -37,7 +37,7 @@ export default async function PedidosDaPlataforma() {
         <TituloDaSuperficie id="titulo-pendentes" titulo={`Pendentes (${pendentes.length})`} />
         {pendentes.length === 0 ? (
           <EstadoVazio Icone={Inbox} titulo="Nenhum pedido pendente">
-            Os pedidos de troca de plano aparecem aqui até alguém decidir, cancelar ou o prazo de 12 horas acabar.
+            Os pedidos de troca de plano e de acesso de emergência aparecem aqui até alguém decidir, cancelar ou o prazo de 12 horas acabar.
           </EstadoVazio>
         ) : (
           <ul className="divide-y">

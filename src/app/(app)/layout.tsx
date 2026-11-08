@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { AtualizadorDasFaixas } from "@/components/estrutura/atualizador-das-faixas";
 import { FaixaDoCaixaCompacta } from "@/components/estrutura/faixa-do-caixa";
 import { Navegacao } from "@/components/estrutura/navegacao";
 import { Minigrafico } from "@/components/graficos/minigrafico";
@@ -7,11 +8,12 @@ import { AvisoDaUrl, AvisosFlutuantes } from "@/components/ui/avisos-flutuantes"
 import { exigirSessao } from "@/lib/auth/servidor";
 import { carregarFaixa, cartaoSeguro } from "@/lib/dashboard/servicos";
 import { dependenciasDoDashboard } from "@/lib/dashboard/servidor";
-import { consultasDeAcesso, negocios, planos, suporte } from "@/lib/db";
+import { consultasDeAcesso, negocios } from "@/lib/db";
 import { MOTIVO_CURTO_DA_EMERGENCIA } from "@/lib/dominio/emergencia";
 import { reaisDeCentavos as reais } from "@/lib/dominio/venda";
 import { veDashboardCompleto } from "@/lib/dominio/permissoes";
 import { menuDoMembro, menuDoSuporte } from "@/lib/equipe/menu";
+import { carregarFaixas } from "@/lib/estrutura/faixas";
 
 // Área autenticada (SPEC-002, 5.5): a sessão é validada no servidor em toda página,
 // além do proxy (INV-005). Estrutura da SPEC-016 (5.2): menu lateral, trilho ou barra
@@ -21,6 +23,9 @@ import { menuDoMembro, menuDoSuporte } from "@/lib/equipe/menu";
 // SPEC-018: no modo suporte, o menu tem só os módulos liberados e a faixa do modo suporte fica
 // fixa no topo; para a equipe do negócio, a faixa do acesso liberado aparece enquanto ele valer.
 // SPEC-019 (5.7): com o negócio suspenso, a faixa da suspensão aparece para todos os membros.
+// Este layout não é recalculado ao navegar (o Next.js troca só a página): o AtualizadorDasFaixas
+// confere a assinatura das faixas e do menu e atualiza o layout quando outra pessoa muda o estado
+// (emergência, suspensão, liberação, plano, permissões) — correção da homologação da SPEC-019 (T17).
 export default async function LayoutDaAplicacao({ children, gaveta }: LayoutProps<"/">) {
   const contexto = await exigirSessao();
   const modoSuporte = contexto.suporte ?? null;
@@ -29,15 +34,13 @@ export default async function LayoutDaAplicacao({ children, gaveta }: LayoutProp
       ? { usuarioId: contexto.usuarioId, negocioId: contexto.negocioId, papel: contexto.papel, permissoes: contexto.permissoes, modoSuporte: modoSuporte !== null }
       : null;
   const comFaixa = membro !== null && veDashboardCompleto(membro.permissoes);
-  const agora = new Date();
-  const [perfil, meusNegocios, plano, faixa, liberacao, emergencia] = await Promise.all([
+  // Plano, liberação e emergência (5.6, INV-007) vêm de carregarFaixas, com a assinatura que o
+  // AtualizadorDasFaixas compara a cada navegação: este layout não é recalculado ao navegar.
+  const [perfil, meusNegocios, faixa, { plano, liberacao, emergencia, assinatura }] = await Promise.all([
     consultasDeAcesso().perfil(contexto.usuarioId),
     contexto.administrador ? Promise.resolve([]) : negocios().listarDoUsuario(contexto.usuarioId),
-    contexto.negocioId ? planos().planoDoNegocio(contexto.negocioId) : Promise.resolve(null),
     comFaixa ? cartaoSeguro("faixa", () => carregarFaixa(dependenciasDoDashboard(membro))) : Promise.resolve(null),
-    membro && !modoSuporte ? suporte().liberacaoAtiva(membro.negocioId, agora) : Promise.resolve(null),
-    // SPEC-019 (5.6, INV-007): todos os membros veem a faixa vermelha enquanto houver acesso de emergência.
-    membro && !modoSuporte ? suporte().emergenciaAtiva(membro.negocioId, agora) : Promise.resolve(null),
+    carregarFaixas(contexto, new Date()),
   ]);
   const menu = modoSuporte && contexto.permissoes ? menuDoSuporte(contexto.permissoes) : menuDoMembro(contexto.papel, contexto.permissoes, plano ?? "GRATUITO");
 
@@ -89,6 +92,7 @@ export default async function LayoutDaAplicacao({ children, gaveta }: LayoutProp
         <main className="mx-auto w-full max-w-[1280px] flex-1 px-4 pt-6 pb-28 sm:px-6 md:pb-10 lg:px-10 lg:pt-8">{children}</main>
       </div>
       {gaveta}
+      <AtualizadorDasFaixas assinatura={assinatura} />
       <AvisosFlutuantes />
       <Suspense fallback={null}>
         <AvisoDaUrl />
