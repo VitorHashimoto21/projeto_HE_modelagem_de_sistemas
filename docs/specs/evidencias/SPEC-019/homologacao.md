@@ -2,18 +2,22 @@
 
 Este roteiro cobre as etapas 1 a 4 da SPEC-019 no ambiente de **homologação** (a DEVELOP publicada pela Vercel). Ele vale como o T16 (Política e Termos com novo aceite) e o T17 (seção 12 da Spec). A homologação é uma só, no fim, com um único novo aceite dos termos.
 
-Para cada passo, marque o resultado e guarde as capturas em `docs/specs/evidencias/SPEC-019/homologacao/`, com o nome do passo (ex.: `homol_05_emergencia_faixa_1440_claro.png`). **Antes de salvar uma captura, cubra qualquer e-mail, nome ou dado pessoal real.** Os e-mails dos Administradores e dos Donos não devem aparecer.
+Para cada passo, marque o resultado e guarde as capturas em `docs/specs/evidencias/SPEC-019/homologacao/`. O nome segue o passo: `homol_<seção>-<passo>_<descrição>.png` (ex.: `homol_05-3_faixa_vermelha.png`); com mais de uma captura no mesmo passo, `a`, `b`… depois do passo (ex.: `homol_01-2a_politica.png`). Na seção 8, `homol_08_<tela>_<largura>_<tema>.png` (ex.: `homol_08_suspender_390_escuro.png`).
+
+**Antes de salvar uma captura, cubra qualquer e-mail, nome ou dado pessoal real.** Os e-mails dos Administradores e dos Donos não devem aparecer. **O QR code e o código de configuração do autenticador (passo 2.1) são o segredo do 2º fator:** cubra os dois antes de enviar a captura a qualquer lugar, inclusive ao chat, ou capture a tela depois de concluir o cadastro.
+
+Na Vercel, a homologação é o projeto **`he-homol`**: o ambiente que a Vercel chama de **Production** é a homologação (publica a `DEVELOP` em <https://he-homol.vercel.app>), e o **Preview** são os links dos PRs. Variável nova ou alterada só vale depois de uma publicação nova (*Deployments* → a última de Production → "⋯" → **Redeploy**).
 
 ## 0. Antes de começar
 
-| Item | Situação em 07/11/2026 | O que fazer |
+| Item | Situação em 08/11/2026 | O que fazer |
 |---|---|---|
-| MFA TOTP no Supabase de homologação | Ligado (conferido pela equipe) | Conferir em *Authentication → Multi-Factor*: "TOTP" habilitado. |
+| MFA TOTP no Supabase de homologação | Ligado (conferido pela equipe) | — |
 | `SUPABASE_URL` e `SUPABASE_SECRET_KEY` no ambiente `homologacao` do GitHub | Conferidos pela equipe | Usados só pelo `redefinir-2fator` do workflow "Administradores". |
-| `SUPABASE_SECRET_KEY` na Vercel (DEVELOP) | Conferir | Sem ela, a exclusão de conta não remove a credencial na hora (a rotina diária completa). |
-| Contas de Administrador | **Três** contas receberam o papel em homologação (18/10, 28/10 e 02/11) | Conferir em Painel → "Administradores". Se alguma não deveria ter o papel, rodar `retirar` para ela no workflow. Cada conta deve ser exclusiva do suporte e de uma pessoa diferente. |
-| Logs antigos do workflow "Administradores" | Mostram o e-mail completo (o repositório é público) | Em *Actions → Administradores*, abrir cada execução antiga e usar "⋯" → **"Delete all logs"**. As execuções novas mostram `***` no lugar do e-mail (etapa 4b). |
-| `EMISSOR_DO_AUTENTICADOR` na Vercel (opcional) | Não definido: o aplicativo autenticador mostra "Health Enterprise" | Para separar da produção, definir `HE Homologação` nas variáveis da DEVELOP e publicar de novo. |
+| `SUPABASE_SECRET_KEY` na Vercel (`he-homol`, Production e Preview) | Conferida pela equipe | — |
+| Contas de Administrador | **Três** contas, conferidas pela equipe: todas corretas | Use duas delas como Conta A e Conta B. Cada conta deve ser exclusiva do suporte e de uma pessoa diferente. |
+| Logs antigos do workflow "Administradores" | Apagados pela equipe | As execuções novas mostram `***` no lugar do e-mail (etapa 4b). |
+| `EMISSOR_DO_AUTENTICADOR` na Vercel | Não definido, por decisão da equipe: o aplicativo autenticador mostra "Health Enterprise" também na homologação | — |
 | Branch do workflow "Administradores" | — | Até a próxima versão chegar à `main`, rodar `redefinir-2fator` **a partir da DEVELOP** (a versão da `main` ainda não tem essa ação). |
 
 Pessoas e navegadores:
@@ -84,7 +88,7 @@ Os e-mails ao Dono não chegam enquanto não houver domínio. As faixas e "Acess
 |---|---|---|---|
 | 7.1 | Dono: exportar os dados | O `.zip` traz `registros-suporte.csv` (com a coluna `dados` das correções e da suspensão) e `pedidos-plataforma.csv` | |
 | 7.2 | B: rodar o workflow "Administradores" → `redefinir-2fator` para A (a partir da DEVELOP, ambiente `homologacao`) | O log mostra `***` no lugar do e-mail; a próxima entrada de A pede o cadastro de novo | |
-| 7.3 | (Opcional) Uma conta de Administrador só de teste exclui a própria conta em *Minha conta* | Sai da lista de "Administradores"; os autenticadores dela somem do Supabase (*Authentication → Users*) | |
+| 7.3 | (Opcional) Uma conta de Administrador só de teste, criada e com o papel concedido para este passo (nunca uma das três), exclui a própria conta em *Minha conta* | Sai da lista de "Administradores"; os autenticadores dela somem do Supabase (*Authentication → Users*) | |
 
 ## 8. Telas
 
