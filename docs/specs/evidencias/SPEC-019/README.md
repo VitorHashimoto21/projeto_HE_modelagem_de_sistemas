@@ -481,7 +481,7 @@ Sem migração nova. A versão da Política e dos Termos passou a **2026-11-07**
 
 ### Homologação (T17)
 
-O roteiro está em [`homologacao.md`](homologacao.md). Ao terminar, a equipe registra aqui a data, quem testou, o resultado de cada passo e as capturas (`homologacao/`).
+O roteiro está em [`homologacao.md`](homologacao.md). O registro está na seção [Homologação (T17)](#homologação-t17--08-e-09112026), no fim deste documento.
 
 ## Correção da homologação — faixas que não atualizavam ao navegar (08/11/2026)
 
@@ -510,3 +510,55 @@ O roteiro está em [`homologacao.md`](homologacao.md). Ao terminar, a equipe reg
 Capturas: `s19g_01_faixa_ao_navegar_1440_claro.png`, `s19g_01_faixa_ao_navegar_390_escuro.png` e `s19g_02_suspensao_ao_voltar_1440_claro.png`. Os dados são fictícios.
 
 **Na homologação:** depois do merge, conferir de novo o passo 5.3 sem atualizar a página: aprovar a emergência e, na tela do Dono, só navegar pelo menu; a faixa deve aparecer. Encerrar e esperar até 1 minuto parado (ou trocar de página): a faixa deve sumir.
+
+## Homologação (T17) — 08 e 09/11/2026
+
+**Quem testou:** Rafael Di Santi, no navegador Opera GX (computador) e no celular. **Onde:** na `DEVELOP` publicada em <https://he-homol.vercel.app>, depois do merge do PR #134 (etapa 4b) e, a partir do passo 5.3 repetido, do PR #135 (correção das faixas). **Contas:** um Dono com um negócio de teste, a Conta A e a Conta B de Administrador (duas das três concedidas pelo workflow) e uma conta de colaboradora. As capturas estão em [`homologacao/`](homologacao/), nomeadas pelo passo do roteiro.
+
+**Dados nas capturas:**
+- os nomes e os e-mails reais do Dono, da Conta B e dos Donos dos outros negócios foram cobertos (pela equipe ou antes de salvar), assim como os nomes dos negócios na lista do painel;
+- o QR code e o código de configuração do 2º fator (passo 2.1) foram cobertos pela equipe antes de enviar;
+- ficaram visíveis o nome da conta de suporte da Conta A ("… Suporte"), por decisão da equipe, e o nome do negócio de teste;
+- nos arquivos da exportação (7.1), as colunas com o negócio e os identificadores foram cobertas.
+
+**Configuração (seção 0 do roteiro):** MFA TOTP ligado; a chave secreta conferida na Vercel; as três contas de Administrador conferidas; os logs antigos do workflow apagados; o emissor do autenticador ficou o padrão ("Health Enterprise"), por decisão da equipe. O segredo `SUPABASE_URL` faltava no ambiente `homologacao` do GitHub e foi cadastrado no passo 7.2 (abaixo).
+
+| Passo | Resultado | Capturas (`homologacao/`) |
+|---|---|---|
+| **1.1–1.3** Novo aceite: "Atualizamos nossos termos", versão 2026-11-07, com o resumo das quatro mudanças; a Política e os Termos na versão nova, com as seções de correções, emergência e suspensão e a 4-B; depois do aceite, o app abre e o aceite não volta (nem ao recarregar ou reabrir o site) | ✅ | `homol_01-1_*`, `homol_01-2a…d_*`, `homol_01-3_*` |
+| **1.4** As Contas A e B aceitam a versão nova depois do código do autenticador | ✅ | `homol_01-4_aceite_administrador.png` (A); B confirmado pela equipe |
+| **2.1–2.2** Conta A sem autenticador: "Configure o 2º fator", QR code e código; depois do primeiro, "Cadastre um segundo autenticador" com "Agora não"; o painel avisa "Sua conta tem só um autenticador" | ✅ | `homol_02-1a/b_*`, `homol_02-2_*` |
+| **2.3** Conta B com dois autenticadores: painel sem o aviso; em "Administradores", 2 autenticadores | ✅ | `homol_02-3a…d_*` |
+| **2.4** Sair e entrar de novo: o código é pedido depois da senha | ✅ | `homol_02-4_pede_codigo.png` |
+| **3.1** Liberação com Catálogo, Estoque e Financeiro em "Ver e corrigir", 1 h: a gaveta lista o que o suporte poderá corrigir; a faixa da equipe diz "… e corrigir Catálogo, Estoque, Financeiro" | ✅ | `homol_03-1a…c_*` |
+| **3.2** "Entrar em modo suporte" pede o código de novo; a faixa âmbar diz "pode corrigir: Catálogo, Estoque, Financeiro" | ✅ | `homol_03-2a/b_*` |
+| **3.3–3.4** A corrige o custo de um item (R$ 5,50 → R$ 6,00); o Dono vê o antes e o depois e desfaz; aparece "Desfeita por …" e o custo volta a R$ 5,50 no Catálogo | ✅ | `homol_03-3a/b_*`, `homol_03-4_*` |
+| **4.1–4.3** Troca de plano pedida por A (para o Gratuito, porque o negócio já estava no Pago), com o código; "Aguardando outra pessoa" e "Cancelar pedido" para A, sem "Aprovar"; B aprova com o código (escolhendo o autenticador); o Dono vê o plano Gratuito "pela plataforma do HE", o aviso e o pedido em "Acesso do suporte" | ✅ | `homol_04-*` |
+| **5.1–5.2** Com a liberação revogada, A pede a emergência (código pedido); a ficha mostra "Aguardando outra pessoa", sem "Aprovar"; o Dono já vê o pedido em "Acesso do suporte" | ✅ | `homol_05-1_5-2a_*`, `homol_05-2b/c_*` |
+| **5.3** B aprova (código pedido); a faixa vermelha aparece para o Dono, com "Encerrar acesso" | ✅ depois do PR #135 | `homol_05-3a/b_*` (antes); `homol_05-3c/d_*` (depois) |
+| **5.4** A entra: faixa "Emergência · … · somente leitura", sem ações de gravar | ✅ | `homol_05-4_*` |
+| **5.5** O Dono encerra; A volta ao painel com "O Dono encerrou o acesso de emergência. Registre o resultado em Emergências."; A registra o resultado e o Dono o vê | ✅ | `homol_05-5a…c_*` |
+| **6.1** A suspende (motivo da lista e descrição; código pedido): a ficha mostra "Suspenso desde …" e o filtro "Suspensos" lista o negócio | ✅ | `homol_06-1a…c_*` |
+| **6.2–6.3** O Dono vê a faixa "Negócio suspenso pelo HE desde …: pedido do Dono. Fale com o suporte." com "Ver detalhes" e a suspensão em "Acesso do suporte"; gravar leva a "Este negócio está suspenso" | ✅ | `homol_06-2_*`, `homol_06-2b_*`, `homol_06-3_*` |
+| **6.4** Com o negócio suspenso, a exportação baixa o `.zip` | ✅ | `homol_06-4_*` |
+| **6.5** A reativa com a descrição: a faixa some, "Nova venda" volta, e o Dono vê a reativação e a suspensão em "Acesso do suporte" | ✅ | `homol_06-5a/b_*` |
+| **7.1** O `.zip` traz `registros-suporte.csv` (com a coluna `dados` preenchida na suspensão e na reativação) e `pedidos-plataforma.csv` (com os `dados` de cada pedido) | ✅ | `homol_07-1a…d_*` |
+| **7.2** `redefinir-2fator` para A, a partir da `DEVELOP`, no ambiente `homologacao`: o log mostra `EMAIL: ***`; a mensagem final confirma "1 autenticador removido"; a próxima entrada de A pede o cadastro de novo, e A cadastrou dois autenticadores | ✅ (com a ressalva do e-mail, abaixo) | `homol_07-2a…c_*` |
+| **7.3** Exclusão de uma conta de Administrador só de teste | — opcional, não feito (coberto no roteiro local da etapa 4b) | — |
+| **8** Telas no celular, nos temas claro e escuro: painel do Administrador, gavetas "Suspender", "Reativar" e "Liberar acesso", ficha do negócio, modo suporte e "Acesso do suporte" com a faixa da suspensão; nada passa da largura da tela. No computador, as capturas dos passos anteriores, nos dois temas | ✅ | `homol_08_*` |
+
+A largura de tablet (768 px) e a página do novo aceite no celular não foram capturadas na homologação; as duas estão cobertas pelos roteiros locais (`s19*_768_*` e `s19f_01_novo_aceite_390_escuro.png`).
+
+**Encontrado na homologação:**
+1. **Faixas que só atualizavam ao recarregar a página (5.3):** a faixa da emergência aprovada só aparecia para o Dono depois de atualizar a página, e só sumia do mesmo jeito. O layout da área do negócio não é recalculado na navegação. **Corrigido no PR #135** (seção acima) e conferido de novo: a faixa aparece e some sem recarregar.
+2. **Textos da página "Pedidos da plataforma":** a descrição e a lista vazia falavam só de troca de plano. **Corrigido no PR #135.**
+3. **Segredo `SUPABASE_URL` fora do ambiente `homologacao` (7.2):** o workflow parou em "Segredos SUPABASE_URL e SUPABASE_SECRET_KEY não definidos"; o log mostrou que só o `SUPABASE_URL` faltava entre os segredos. A equipe o cadastrou e o workflow rodou. O README (passo 9) passa a dizer que os dois são *segredos* do ambiente, não variáveis.
+4. **Parte do e-mail no log do workflow (7.2):** a variável aparece como `***`, mas a mensagem final do script mostra a primeira letra e o domínio do e-mail (o mascaramento das telas de suporte). **Fica para o PR de ajustes pós-homologação**, junto com a mensagem de erro dizendo qual segredo falta.
+5. **Busca do painel no celular (8):** o texto de exemplo "Nome do negócio ou e-mail do Dono" fica cortado. **PR de ajustes pós-homologação.**
+6. **Seletor de negócio desatualizado (8):** depois de trocar o negócio ativo por "Meus negócios", o seletor do topo continuou mostrando o negócio anterior, embora a página e a faixa fossem do negócio certo (o servidor usa o negócio certo). Vem da SPEC-016. **PR de ajustes pós-homologação.**
+
+**Decisões da equipe na homologação:** o emissor do autenticador fica "Health Enterprise" também na homologação; o nome da conta de suporte pode aparecer nas capturas; o 7.3 fica de fora; os itens 4 a 6 vão num PR logo depois do T17 e não bloqueiam a aprovação.
+
+**Fica registrado:** a conta de Administrador de 18/10 ainda não tem autenticador (cadastra na próxima entrada) e deve ter dois antes da produção, como as Contas A e B. O e-mail ao Dono prometido na Política e nos Termos depende do domínio próprio (pendência aberta).
+
+**Resultado:** **T17 aprovado em 09/11/2026.** SPEC-019 concluída em 09/11/2026; os ajustes 4 a 6 seguem no PR de ajustes pós-homologação.
