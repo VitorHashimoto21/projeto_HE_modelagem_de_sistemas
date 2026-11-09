@@ -13,7 +13,7 @@ Na Vercel, a homologação é o projeto **`he-homol`**: o ambiente que a Vercel 
 | Item | Situação em 08/11/2026 | O que fazer |
 |---|---|---|
 | MFA TOTP no Supabase de homologação | Ligado (conferido pela equipe) | — |
-| `SUPABASE_URL` e `SUPABASE_SECRET_KEY` no ambiente `homologacao` do GitHub | Conferidos pela equipe | Usados só pelo `redefinir-2fator` do workflow "Administradores". |
+| `SUPABASE_URL` e `SUPABASE_SECRET_KEY` no ambiente `homologacao` do GitHub | Conferidos pela equipe. No passo 7.2, o `SUPABASE_URL` não estava entre os **segredos** do ambiente; a equipe o cadastrou em 08/11/2026 | Usados só pelo `redefinir-2fator` do workflow "Administradores". Os dois são **segredos** do ambiente (*Environment secrets*), não variáveis. |
 | `SUPABASE_SECRET_KEY` na Vercel (`he-homol`, Production e Preview) | Conferida pela equipe | — |
 | Contas de Administrador | **Três** contas, conferidas pela equipe: todas corretas | Use duas delas como Conta A e Conta B. Cada conta deve ser exclusiva do suporte e de uma pessoa diferente. |
 | Logs antigos do workflow "Administradores" | Apagados pela equipe | As execuções novas mostram `***` no lugar do e-mail (etapa 4b). |
@@ -31,64 +31,64 @@ Os e-mails ao Dono não chegam enquanto não houver domínio. As faixas e "Acess
 
 | # | Passo | Esperado | ✓ |
 |---|---|---|---|
-| 1.1 | Entrar com o Dono | Abre "Atualizamos nossos termos", versão **2026-11-07**, com o resumo: correções, emergência, suspensão e troca de plano | |
-| 1.2 | Abrir a Política e os Termos pelos links | Versão 2026-11-07; a Política tem as seções "Correções autorizadas pelo Dono", "Acesso de emergência" e "Suspensão do negócio"; os Termos têm a seção 4-B | |
-| 1.3 | Aceitar | Volta ao app; o aceite não é pedido de novo | |
-| 1.4 | Entrar com A e com B | Cada uma aceita a nova versão depois do código do autenticador | |
+| 1.1 | Entrar com o Dono | Abre "Atualizamos nossos termos", versão **2026-11-07**, com o resumo: correções, emergência, suspensão e troca de plano | ✅ |
+| 1.2 | Abrir a Política e os Termos pelos links | Versão 2026-11-07; a Política tem as seções "Correções autorizadas pelo Dono", "Acesso de emergência" e "Suspensão do negócio"; os Termos têm a seção 4-B | ✅ |
+| 1.3 | Aceitar | Volta ao app; o aceite não é pedido de novo | ✅ |
+| 1.4 | Entrar com A e com B | Cada uma aceita a nova versão depois do código do autenticador | ✅ |
 
 ## 2. 2º fator (etapa 1)
 
 | # | Passo | Esperado | ✓ |
 |---|---|---|---|
-| 2.1 | Conta A sem autenticador: entrar | Vai para "Configurar o 2º fator", com o QR code e o código para digitar | |
-| 2.2 | Cadastrar o autenticador e digitar o código | Oferece cadastrar um segundo; "Agora não" leva ao painel com o aviso "Sua conta tem só um autenticador" | |
-| 2.3 | Repetir com B, cadastrando dois autenticadores | Painel sem o aviso; em "Administradores", B com 2 autenticadores | |
-| 2.4 | Sair e entrar de novo com A | Pede o código depois da senha | |
+| 2.1 | Conta A sem autenticador: entrar | Vai para "Configurar o 2º fator", com o QR code e o código para digitar | ✅ |
+| 2.2 | Cadastrar o autenticador e digitar o código | Oferece cadastrar um segundo; "Agora não" leva ao painel com o aviso "Sua conta tem só um autenticador" | ✅ |
+| 2.3 | Repetir com B, cadastrando dois autenticadores | Painel sem o aviso; em "Administradores", B com 2 autenticadores | ✅ |
+| 2.4 | Sair e entrar de novo com A | Pede o código depois da senha | ✅ |
 
 ## 3. Correções e desfazer (etapa 2)
 
 | # | Passo | Esperado | ✓ |
 |---|---|---|---|
-| 3.1 | Dono: *Configurações → Acesso do suporte* → liberar Catálogo em "Ver e corrigir", 1 h | A gaveta mostra o que o suporte poderá corrigir; a faixa da equipe diz "pode ver … e corrigir Catálogo" | |
-| 3.2 | A: ficha do negócio → "Entrar em modo suporte" | Pede o código de novo; a faixa âmbar diz "pode corrigir: Catálogo" | |
-| 3.3 | A: editar o custo de um item | Grava; o Dono vê a correção em "Acesso do suporte", com o antes e o depois | |
-| 3.4 | Dono: "Desfazer" | O custo volta; aparece "Desfeita por …" | |
+| 3.1 | Dono: *Configurações → Acesso do suporte* → liberar Catálogo em "Ver e corrigir", 1 h | A gaveta mostra o que o suporte poderá corrigir; a faixa da equipe diz "pode ver … e corrigir Catálogo" | ✅ |
+| 3.2 | A: ficha do negócio → "Entrar em modo suporte" | Pede o código de novo; a faixa âmbar diz "pode corrigir: Catálogo" | ✅ |
+| 3.3 | A: editar o custo de um item | Grava; o Dono vê a correção em "Acesso do suporte", com o antes e o depois | ✅ |
+| 3.4 | Dono: "Desfazer" | O custo volta; aparece "Desfeita por …" | ✅ |
 
 ## 4. Pedidos com duas pessoas e troca de plano (etapa 3a)
 
 | # | Passo | Esperado | ✓ |
 |---|---|---|---|
-| 4.1 | A: ficha → "Trocar plano" (para o pago, motivo "Teste") | Pede o código se passaram 10 min; o pedido fica pendente | |
-| 4.2 | A: em "Pedidos" | No próprio pedido, "Aguardando outra pessoa" e "Cancelar", sem "Aprovar" | |
-| 4.3 | B: "Aprovar" | Pede o código; o plano muda; o Dono vê o aviso na tela Plano e o pedido em "Acesso do suporte" | |
+| 4.1 | A: ficha → "Trocar plano" (para o pago, motivo "Teste") | Pede o código se passaram 10 min; o pedido fica pendente | ✅ (para o Gratuito) |
+| 4.2 | A: em "Pedidos" | No próprio pedido, "Aguardando outra pessoa" e "Cancelar", sem "Aprovar" | ✅ |
+| 4.3 | B: "Aprovar" | Pede o código; o plano muda; o Dono vê o aviso na tela Plano e o pedido em "Acesso do suporte" | ✅ |
 
 ## 5. Acesso de emergência (etapa 3b)
 
 | # | Passo | Esperado | ✓ |
 |---|---|---|---|
-| 5.1 | Dono revoga a liberação do passo 3 | "Solicitar acesso de emergência" fica disponível na ficha | |
-| 5.2 | A pede a emergência (incidente, 1 h, Vendas) | O Dono já vê o pedido em "Acesso do suporte"; A não consegue aprovar o próprio pedido | |
-| 5.3 | B aprova | Nasce o acesso; todos os membros veem a faixa vermelha; o Dono tem "Encerrar acesso" | |
-| 5.4 | A entra | Faixa vermelha "Emergência · … · somente leitura"; nenhuma ação de gravar | |
-| 5.5 | Dono encerra | A volta ao painel com o aviso; A registra o resultado em "Emergências"; o Dono vê o resultado | |
+| 5.1 | Dono revoga a liberação do passo 3 | "Solicitar acesso de emergência" fica disponível na ficha | ✅ |
+| 5.2 | A pede a emergência (incidente, 1 h, Vendas) | O Dono já vê o pedido em "Acesso do suporte"; A não consegue aprovar o próprio pedido | ✅ |
+| 5.3 | B aprova | Nasce o acesso; todos os membros veem a faixa vermelha; o Dono tem "Encerrar acesso" | ✅ (depois do PR #135) |
+| 5.4 | A entra | Faixa vermelha "Emergência · … · somente leitura"; nenhuma ação de gravar | ✅ |
+| 5.5 | Dono encerra | A volta ao painel com o aviso; A registra o resultado em "Emergências"; o Dono vê o resultado | ✅ |
 
 ## 6. Suspensão e reativação (etapa 4a)
 
 | # | Passo | Esperado | ✓ |
 |---|---|---|---|
-| 6.1 | A: ficha → "Suspender" (motivo da lista e descrição) | Pede o código se passaram 10 min; o painel mostra "Suspenso desde …" e o filtro "Suspensos" | |
-| 6.2 | Dono: abrir o Painel | Faixa "Negócio suspenso pelo HE desde …: … Fale com o suporte.", com "Ver detalhes" | |
-| 6.3 | Dono: tentar "Nova venda" e salvar um dado do negócio | Vai para "Este negócio está suspenso"; nada é gravado | |
-| 6.4 | Dono: *Minha conta* → exportar os dados | O `.zip` é baixado | |
-| 6.5 | A: "Reativar" com a descrição | A faixa some; a gravação volta; o Dono vê a suspensão e a reativação em "Acesso do suporte" | |
+| 6.1 | A: ficha → "Suspender" (motivo da lista e descrição) | Pede o código se passaram 10 min; o painel mostra "Suspenso desde …" e o filtro "Suspensos" | ✅ |
+| 6.2 | Dono: abrir o Painel | Faixa "Negócio suspenso pelo HE desde …: … Fale com o suporte.", com "Ver detalhes" | ✅ |
+| 6.3 | Dono: tentar "Nova venda" e salvar um dado do negócio | Vai para "Este negócio está suspenso"; nada é gravado | ✅ |
+| 6.4 | Dono: *Minha conta* → exportar os dados | O `.zip` é baixado | ✅ |
+| 6.5 | A: "Reativar" com a descrição | A faixa some; a gravação volta; o Dono vê a suspensão e a reativação em "Acesso do suporte" | ✅ |
 
 ## 7. Exportação, exclusão e redefinição (etapa 4b)
 
 | # | Passo | Esperado | ✓ |
 |---|---|---|---|
-| 7.1 | Dono: exportar os dados | O `.zip` traz `registros-suporte.csv` (com a coluna `dados` das correções e da suspensão) e `pedidos-plataforma.csv` | |
-| 7.2 | B: rodar o workflow "Administradores" → `redefinir-2fator` para A (a partir da DEVELOP, ambiente `homologacao`) | O log mostra `***` no lugar do e-mail; a próxima entrada de A pede o cadastro de novo | |
-| 7.3 | (Opcional) Uma conta de Administrador só de teste, criada e com o papel concedido para este passo (nunca uma das três), exclui a própria conta em *Minha conta* | Sai da lista de "Administradores"; os autenticadores dela somem do Supabase (*Authentication → Users*) | |
+| 7.1 | Dono: exportar os dados | O `.zip` traz `registros-suporte.csv` (com a coluna `dados` das correções e da suspensão) e `pedidos-plataforma.csv` | ✅ |
+| 7.2 | B: rodar o workflow "Administradores" → `redefinir-2fator` para A (a partir da DEVELOP, ambiente `homologacao`) | O log mostra `***` no lugar do e-mail; a próxima entrada de A pede o cadastro de novo | ✅ |
+| 7.3 | (Opcional) Uma conta de Administrador só de teste, criada e com o papel concedido para este passo (nunca uma das três), exclui a própria conta em *Minha conta* | Sai da lista de "Administradores"; os autenticadores dela somem do Supabase (*Authentication → Users*) | — (opcional, não feito) |
 
 ## 8. Telas
 
