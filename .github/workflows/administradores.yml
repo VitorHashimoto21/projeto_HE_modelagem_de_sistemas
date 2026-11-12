@@ -55,9 +55,21 @@ jobs:
             echo "::error title=Administradores::Segredo DIRECT_URL não definido para o ambiente ${{ inputs.ambiente }}."
             exit 1
           fi
-          if [ "$ACAO" = "redefinir-2fator" ] && { [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_SECRET_KEY" ]; }; then
-            echo "::error title=Administradores::Segredos SUPABASE_URL e SUPABASE_SECRET_KEY não definidos para o ambiente ${{ inputs.ambiente }}."
-            exit 1
+          # SPEC-019 (homologação, T17): diz qual segredo falta. Valem só os segredos do ambiente
+          # (Environment secrets); uma variável do ambiente com o mesmo nome não chega aqui.
+          if [ "$ACAO" = "redefinir-2fator" ]; then
+            FALTA=""
+            if [ -z "$SUPABASE_URL" ] && [ -z "$SUPABASE_SECRET_KEY" ]; then
+              FALTA="Faltam os segredos SUPABASE_URL e SUPABASE_SECRET_KEY"
+            elif [ -z "$SUPABASE_URL" ]; then
+              FALTA="Falta o segredo SUPABASE_URL"
+            elif [ -z "$SUPABASE_SECRET_KEY" ]; then
+              FALTA="Falta o segredo SUPABASE_SECRET_KEY"
+            fi
+            if [ -n "$FALTA" ]; then
+              echo "::error title=Administradores::$FALTA no ambiente ${{ inputs.ambiente }}. Cadastre em Settings → Environments → ${{ inputs.ambiente }} → Environment secrets (variáveis do ambiente não valem)."
+              exit 1
+            fi
           fi
 
       - uses: actions/checkout@v4

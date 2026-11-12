@@ -185,7 +185,10 @@ function SeletorNaEstrutura({ negocios, ativo, compacto }: { negocios: Props["ne
       <label htmlFor={compacto ? "seletor-negocio-celular" : "seletor-negocio"} className="sr-only">
         Negócio ativo
       </label>
+      {/* `key`: o select não acompanha a troca de `defaultValue` depois de montado. Trocado o negócio ativo
+          por outro caminho ("Meus negócios"), ele mostrava o anterior (homologação da SPEC-019, T17). */}
       <select
+        key={ativo ?? ""}
         id={compacto ? "seletor-negocio-celular" : "seletor-negocio"}
         name="negocioId"
         defaultValue={ativo ?? ""}

@@ -18,7 +18,7 @@
 import "dotenv/config";
 import { criarPrismaClient } from "@/lib/db/criar-cliente";
 import { criarConsultasDeSuporte } from "@/lib/db/suporte";
-import { mascararEmail } from "@/lib/dominio/suporte";
+import { contaNasMensagens, MENSAGENS_DO_ADMINISTRADOR as M, segredosQueFaltam } from "@/lib/dominio/administradores";
 import { apiDeAdministracaoDoSupabase, MENSAGENS_DA_REDEFINICAO, redefinirSegundoFator } from "@/lib/suporte/redefinir-segundo-fator";
 
 const noActions = process.env.GITHUB_ACTIONS === "true";
@@ -45,13 +45,13 @@ async function principal() {
   if (!url) falhar("Defina DIRECT_URL ou DATABASE_URL (veja o .env.example).");
   const supabaseUrl = (process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || "").trim();
   const chaveSecreta = (process.env.SUPABASE_SECRET_KEY ?? "").trim();
-  if (acao === "redefinir-2fator" && (!supabaseUrl || !chaveSecreta)) {
-    falhar("Defina SUPABASE_URL e SUPABASE_SECRET_KEY do ambiente (segredos do ambiente no GitHub) para redefinir o 2º fator.");
-  }
+  const faltam = acao === "redefinir-2fator" ? segredosQueFaltam(supabaseUrl, chaveSecreta) : null;
+  if (faltam) falhar(`${faltam} do ambiente (segredos do ambiente no GitHub) para redefinir o 2º fator.`);
 
   const cliente = criarPrismaClient(url);
   const consultas = criarConsultasDeSuporte(cliente);
-  const conta = mascararEmail(email.trim().toLowerCase());
+  // SPEC-019 (5.11): no GitHub Actions, nenhuma parte do e-mail vai para o log público.
+  const conta = contaNasMensagens(email, noActions);
   try {
     if (acao === "conceder") {
       const r = await consultas.concederPapel(email, responsavel, new Date());
@@ -59,15 +59,15 @@ async function principal() {
         if (r.erro === "ContaComVinculo") falhar(`A conta participa de ${r.negocios?.length ?? 0} negócio(s). Use uma conta exclusiva para o suporte.`);
         falhar(MENSAGENS[r.erro]);
       }
-      console.log(r.jaEra ? `A conta ${conta} já é administradora desde ${r.desde.toISOString().slice(0, 10)}. Nada mudou.` : `Pronto: ${conta} agora é administradora (concedido por ${responsavel}).`);
+      console.log(r.jaEra ? M.jaEra(conta, r.desde.toISOString().slice(0, 10)) : M.concedido(conta, responsavel));
     } else if (acao === "redefinir-2fator") {
       const r = await redefinirSegundoFator(email, responsavel, new Date(), { consultas, api: apiDeAdministracaoDoSupabase(supabaseUrl, chaveSecreta) });
       if (!r.ok) falhar(MENSAGENS_DA_REDEFINICAO[r.erro]);
-      console.log(`Pronto: 2º fator de ${conta} redefinido por ${responsavel} (${r.removidos} autenticador(es) removido(s)). As sessões abertas antes disso deixaram de valer, e o próximo login pede o cadastro de novo.`);
+      console.log(M.redefinido(conta, responsavel, r.removidos));
     } else {
       const r = await consultas.retirarPapel(email, responsavel, new Date());
       if (!r.ok) falhar(MENSAGENS[r.erro]);
-      console.log(r.naoEra ? `A conta ${conta} não era administradora. Nada mudou.` : `Pronto: ${conta} não é mais administradora (retirado por ${responsavel}).`);
+      console.log(r.naoEra ? M.naoEra(conta) : M.retirado(conta, responsavel));
     }
   } finally {
     await cliente.$disconnect();
