@@ -750,7 +750,7 @@ Cobre a seção 5.11 e os T11 e T16. O roteiro no navegador teve 42 verificaçõ
 - **Faixas que só atualizavam ao recarregar a página (5.3):** a faixa da emergência aprovada ou encerrada por outra pessoa só mudava para o Dono depois de atualizar a página, porque o Next.js não recalcula o layout na navegação. **Corrigido no PR #135:** o servidor resume o estado das faixas e do menu numa assinatura (`GET /api/faixas`), e o layout confere a assinatura a cada navegação, ao voltar para a aba e a cada minuto, e só se atualiza quando ela muda. A conferência só lê: não registra tela no modo suporte. Vale também para a faixa da suspensão, a do suporte liberado e o menu (plano e permissões).
 - **Textos de "Pedidos da plataforma":** passaram a citar o acesso de emergência (PR #135).
 - **Configuração:** o `SUPABASE_URL` faltava entre os **segredos** do ambiente `homologacao`; o README (passo 9) passa a dizer que os dois são segredos do ambiente, não variáveis.
-- **Ajustes pós-homologação (feitos no PR #137, 12/11/2026; [registro](evidencias/SPEC-019/README.md#ajustes-pós-homologação-12112026)):**
+- **Ajustes pós-homologação (feitos no PR #137 e conferidos na homologação em 12/11/2026; [registro](evidencias/SPEC-019/README.md#ajustes-pós-homologação-12112026)):**
   - a mensagem final do script do workflow "Administradores" mostrava a primeira letra e o domínio do e-mail; no GitHub Actions, ela não mostra mais nenhuma parte dele ("a conta informada");
   - a mensagem de erro do workflow diz qual segredo falta e onde cadastrá-lo;
   - no celular, o texto de exemplo da busca do painel ficava cortado; passou a "Negócio ou e-mail do Dono";
