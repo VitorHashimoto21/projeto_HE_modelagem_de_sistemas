@@ -1,6 +1,6 @@
 # SPEC-019 — Suporte com edição, emergência, ações de plataforma e 2º fator
 
-> **Status:** ✅ **Concluída em 09/11/2026** — implementada nas etapas abaixo, verificada em build local e homologada (T17, 08 e 09/11/2026; [registro](evidencias/SPEC-019/README.md#homologação-t17--08-e-09112026)). A homologação encontrou as faixas que só atualizavam ao recarregar a página, corrigidas no PR #135; três ajustes pequenos seguem num PR logo depois (ver "Notas da homologação", depois da seção 9).
+> **Status:** ✅ **Concluída em 09/11/2026** — implementada nas etapas abaixo, verificada em build local e homologada (T17, 08 e 09/11/2026; [registro](evidencias/SPEC-019/README.md#homologação-t17--08-e-09112026)). A homologação encontrou as faixas que só atualizavam ao recarregar a página, corrigidas no PR #135; os ajustes pequenos que ela apontou foram feitos no PR #137, em 12/11/2026 (ver "Notas da homologação", depois da seção 9).
 >
 > **Aprovada em 28/10/2026 e revisada em 01/11/2026** (OPEN-015 a OPEN-018, ver "Revisão antes da implementação" abaixo). **Implementada por etapas** (decisão da equipe, 02/11/2026):
 > - **etapa 1 — 2º fator do Administrador:** implementada em 02/11/2026 e verificada em build local ([evidências](evidencias/SPEC-019/README.md));
@@ -734,7 +734,7 @@ Cobre a seção 5.11 e os T11 e T16. O roteiro no navegador teve 42 verificaçõ
 
   Também entra `pedidos-plataforma.csv`, com quem pediu, quem decidiu e o desfecho. O `LEIA-ME.txt` explica os arquivos novos.
 - **Exclusão da conta de Administrador (5.11):** o papel sai na transação da exclusão, como já saía. Os autenticadores saem logo depois, pela API de administração do Supabase Auth, e ficam no registro ("N autenticadores removidos pela exclusão da conta"). Sem a chave secreta, ou com falha na API, a remoção da credencial (na hora ou pela rotina diária) apaga o usuário e os fatores dele.
-- **Workflow "Administradores":** o e-mail da conta não aparece mais no log. O repositório é público, e o GitHub mostrava as variáveis de cada passo. Agora o e-mail é lido do evento e mascarado no primeiro passo, e os demais passos mostram `***`. A homologação mostrou que a mensagem final do script ainda traz a primeira letra e o domínio do e-mail; o ajuste vai no PR pós-homologação.
+- **Workflow "Administradores":** o e-mail da conta não aparece mais no log. O repositório é público, e o GitHub mostrava as variáveis de cada passo. Agora o e-mail é lido do evento e mascarado no primeiro passo, e os demais passos mostram `***`. A homologação mostrou que a mensagem final do script ainda trazia a primeira letra e o domínio do e-mail; desde o PR #137, no GitHub Actions ela diz só "a conta informada".
 - **Modelo lógico de dados:** [`MODELO_LOGICO_BANCO.md`](../dominio_fluxogramas/MODELO_LOGICO_BANCO.md) atualizado até a SPEC-019, com as decisões de modelagem.
   - **Entidades novas:** fornecedores, histórico de custo, histórico do plano, acesso e registro do suporte, e pedidos da plataforma.
   - **Campos novos:** a suspensão e os campos de usuário, negócio, item e financeiro que faltavam.
@@ -750,11 +750,11 @@ Cobre a seção 5.11 e os T11 e T16. O roteiro no navegador teve 42 verificaçõ
 - **Faixas que só atualizavam ao recarregar a página (5.3):** a faixa da emergência aprovada ou encerrada por outra pessoa só mudava para o Dono depois de atualizar a página, porque o Next.js não recalcula o layout na navegação. **Corrigido no PR #135:** o servidor resume o estado das faixas e do menu numa assinatura (`GET /api/faixas`), e o layout confere a assinatura a cada navegação, ao voltar para a aba e a cada minuto, e só se atualiza quando ela muda. A conferência só lê: não registra tela no modo suporte. Vale também para a faixa da suspensão, a do suporte liberado e o menu (plano e permissões).
 - **Textos de "Pedidos da plataforma":** passaram a citar o acesso de emergência (PR #135).
 - **Configuração:** o `SUPABASE_URL` faltava entre os **segredos** do ambiente `homologacao`; o README (passo 9) passa a dizer que os dois são segredos do ambiente, não variáveis.
-- **Ajustes pós-homologação (não bloqueiam; PR logo depois do T17):**
-  - a mensagem final do script do workflow "Administradores" ainda mostra a primeira letra e o domínio do e-mail; no GitHub Actions, ela não vai mostrar nenhuma parte dele;
-  - a mensagem de erro do workflow vai dizer qual segredo falta;
-  - no celular, o texto de exemplo da busca do painel fica cortado e vai ser encurtado;
-  - o seletor de negócio (SPEC-016) continuava mostrando o negócio anterior depois da troca por "Meus negócios"; vai acompanhar o negócio ativo.
+- **Ajustes pós-homologação (feitos no PR #137, 12/11/2026; [registro](evidencias/SPEC-019/README.md#ajustes-pós-homologação-12112026)):**
+  - a mensagem final do script do workflow "Administradores" mostrava a primeira letra e o domínio do e-mail; no GitHub Actions, ela não mostra mais nenhuma parte dele ("a conta informada");
+  - a mensagem de erro do workflow diz qual segredo falta e onde cadastrá-lo;
+  - no celular, o texto de exemplo da busca do painel ficava cortado; passou a "Negócio ou e-mail do Dono";
+  - o seletor de negócio (SPEC-016) continuava mostrando o negócio anterior depois da troca por "Meus negócios"; agora acompanha o negócio ativo.
 
 ---
 
@@ -906,7 +906,7 @@ A SPEC-019 estará concluída quando:
 - [x] os testes derivados (T01 a T17) estiverem aprovados, com o CI verde no PR (T17 em 09/11/2026);
 - [x] os RNFs aplicáveis (RNF01, RNF02, RNF03, RNF04, RNF05, RNF12) tiverem sido verificados como descrito na seção 10;
 - [x] as questões OPEN-001 a OPEN-014 tiverem sido decididas e registradas (28/10/2026), com a baseline ajustada (RF73–RF77, RF82–RF86, RN30–RN32, RN37–RN39, RNF12, ADR-008), e as OPEN-015 a OPEN-018, na revisão de 01/11/2026 (RN37 com os fornecedores);
-- [x] não existir divergência conhecida entre a implementação e esta Spec (os ajustes pós-homologação não mudam o comportamento da Spec: a mensagem do workflow, o texto de exemplo da busca e o seletor de negócio da SPEC-016);
+- [x] não existir divergência conhecida entre a implementação e esta Spec (os ajustes pós-homologação, feitos no PR #137, não mudam o comportamento da Spec: a mensagem do workflow, o texto de exemplo da busca e o seletor de negócio da SPEC-016);
 - [x] toda divergência em relação à baseline tiver sido explicitamente analisada e registrada nos documentos (seção 9).
 
 **Regra fundamental:** a implementação obedece a esta Spec aprovada. Se surgir conflito entre código, Spec e documentos de modelagem, o comportamento não é alterado em silêncio: a divergência é registrada com a proposta de (1) corrigir a implementação ou (2) alterar a baseline, e a decisão é da equipe.

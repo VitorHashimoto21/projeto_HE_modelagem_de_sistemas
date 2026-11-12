@@ -553,12 +553,61 @@ A largura de tablet (768 px) e a página do novo aceite no celular não foram ca
 1. **Faixas que só atualizavam ao recarregar a página (5.3):** a faixa da emergência aprovada só aparecia para o Dono depois de atualizar a página, e só sumia do mesmo jeito. O layout da área do negócio não é recalculado na navegação. **Corrigido no PR #135** (seção acima) e conferido de novo: a faixa aparece e some sem recarregar.
 2. **Textos da página "Pedidos da plataforma":** a descrição e a lista vazia falavam só de troca de plano. **Corrigido no PR #135.**
 3. **Segredo `SUPABASE_URL` fora do ambiente `homologacao` (7.2):** o workflow parou em "Segredos SUPABASE_URL e SUPABASE_SECRET_KEY não definidos"; o log mostrou que só o `SUPABASE_URL` faltava entre os segredos. A equipe o cadastrou e o workflow rodou. O README (passo 9) passa a dizer que os dois são *segredos* do ambiente, não variáveis.
-4. **Parte do e-mail no log do workflow (7.2):** a variável aparece como `***`, mas a mensagem final do script mostra a primeira letra e o domínio do e-mail (o mascaramento das telas de suporte). **Fica para o PR de ajustes pós-homologação**, junto com a mensagem de erro dizendo qual segredo falta.
-5. **Busca do painel no celular (8):** o texto de exemplo "Nome do negócio ou e-mail do Dono" fica cortado. **PR de ajustes pós-homologação.**
-6. **Seletor de negócio desatualizado (8):** depois de trocar o negócio ativo por "Meus negócios", o seletor do topo continuou mostrando o negócio anterior, embora a página e a faixa fossem do negócio certo (o servidor usa o negócio certo). Vem da SPEC-016. **PR de ajustes pós-homologação.**
+4. **Parte do e-mail no log do workflow (7.2):** a variável aparece como `***`, mas a mensagem final do script mostra a primeira letra e o domínio do e-mail (o mascaramento das telas de suporte). **Corrigido no PR #137** ([ajustes pós-homologação](#ajustes-pós-homologação-12112026)), junto com a mensagem de erro dizendo qual segredo falta.
+5. **Busca do painel no celular (8):** o texto de exemplo "Nome do negócio ou e-mail do Dono" fica cortado. **Corrigido no PR #137.**
+6. **Seletor de negócio desatualizado (8):** depois de trocar o negócio ativo por "Meus negócios", o seletor do topo continuou mostrando o negócio anterior, embora a página e a faixa fossem do negócio certo (o servidor usa o negócio certo). Vem da SPEC-016. **Corrigido no PR #137.**
 
-**Decisões da equipe na homologação:** o emissor do autenticador fica "Health Enterprise" também na homologação; o nome da conta de suporte pode aparecer nas capturas; o 7.3 fica de fora; os itens 4 a 6 vão num PR logo depois do T17 e não bloqueiam a aprovação.
+**Decisões da equipe na homologação:** o emissor do autenticador fica "Health Enterprise" também na homologação; o nome da conta de suporte pode aparecer nas capturas; o 7.3 fica de fora; os itens 4 a 6 vão num PR logo depois do T17 (PR #137) e não bloqueiam a aprovação.
 
 **Fica registrado:** a conta de Administrador de 18/10 ainda não tem autenticador (cadastra na próxima entrada) e deve ter dois antes da produção, como as Contas A e B. O e-mail ao Dono prometido na Política e nos Termos depende do domínio próprio (pendência aberta).
 
-**Resultado:** **T17 aprovado em 09/11/2026.** SPEC-019 concluída em 09/11/2026; os ajustes 4 a 6 seguem no PR de ajustes pós-homologação.
+**Resultado:** **T17 aprovado em 09/11/2026.** SPEC-019 concluída em 09/11/2026; os ajustes 4 a 6 foram feitos no PR #137 (seção abaixo).
+
+## Ajustes pós-homologação (12/11/2026)
+
+PR #137, com os itens 4 a 6 encontrados na homologação. Nenhum deles muda o comportamento da Spec.
+
+**1. Mensagem do workflow "Administradores" sem nenhuma parte do e-mail (item 4):**
+- **Problema:** a variável já aparecia como `***`, mas a mensagem final do script usava o mascaramento das telas do suporte ("r***@dominio"). Esse mascaramento mostra a primeira letra e o domínio, e o log do GitHub Actions é público.
+- **Correção:** no GitHub Actions, a mensagem diz só "a conta informada" (ex.: "Pronto: a conta informada agora é administradora (concedido por …)"). No terminal da equipe, continua o e-mail mascarado, para conferir a conta. As frases saíram do script para `src/lib/dominio/administradores.ts`, onde são testadas.
+
+**2. O erro diz qual segredo falta (item 3):**
+- **Problema:** no `redefinir-2fator`, o workflow dizia "Segredos SUPABASE_URL e SUPABASE_SECRET_KEY não definidos" mesmo quando faltava só um.
+- **Correção:** agora diz qual falta: "Falta o segredo SUPABASE_URL no ambiente homologacao.", o mesmo para o outro, ou "Faltam os segredos … e …" quando faltam os dois.
+- **Onde cadastrar:** a mensagem também diz onde cadastrar (*Settings → Environments → (ambiente) → Environment secrets*) e lembra que variáveis do ambiente não valem.
+- **Fora do workflow:** o script faz a mesma conferência quando roda direto.
+
+**3. Texto de exemplo da busca do painel do Administrador (item 5):** "Nome do negócio ou e-mail do Dono" passou a "Negócio ou e-mail do Dono". O rótulo para leitores de tela continua "Buscar por nome do negócio ou e-mail do Dono".
+
+**4. Seletor de negócio (item 6, da SPEC-016):**
+- **Por que acontecia:** o seletor do topo, no computador e no celular, é uma lista com valor inicial. Depois de montada, ela não acompanha a troca desse valor, e o layout não é recriado na navegação. Trocado o negócio por "Meus negócios", a página ia para o negócio novo, e o seletor continuava no anterior.
+- **Correção:** o seletor é recriado quando o negócio ativo muda (`key`).
+- **Sem risco aos dados:** o servidor sempre usou o negócio certo; o erro era só no que o seletor mostrava.
+
+**Testes:**
+- `test/unit/administradores-mensagens.test.ts` (4 testes):
+  - no Actions, nenhuma arroba, domínio ou primeira letra;
+  - no terminal, o e-mail mascarado;
+  - as frases;
+  - qual segredo falta.
+- `test/unit/administradores-workflow.test.ts` (+4 testes): o passo "Verificar se o ambiente está configurado" roda no bash com cada combinação de segredos. Contra o workflow antigo, o teste "sem um deles, diz qual" falha.
+- **Suítes completas:** lint, 709 testes de unidade e 419 de integração, e o build de produção.
+
+**Roteiro no navegador** (build local, `scratchpad/e2e19h/spec19h.mjs`): **16 verificações, todas aprovadas**. Para conferir que o roteiro pega o defeito, ele também rodou num build sem a correção do seletor; ali, as verificações do seletor falharam.
+
+| Verificação | Sem a correção | Com a correção |
+|---|---|---|
+| O Dono troca de negócio por "Meus negócios" (1440 e 390 px): a página é do negócio novo, e o seletor também mostra o negócio novo | ✗ o seletor mostra o anterior | ✅ |
+| O texto de exemplo da busca cabe no campo (360, 390 e 1440 px) | ✗ 232 px, num campo de 174 px em 360 e de 204 px em 390 | ✅ 173 px |
+| O rótulo para leitores de tela continua completo | — | ✅ |
+| axe no painel do Administrador, 390 px, temas claro e escuro | — | ✅ nenhuma violação |
+| Sem rolagem horizontal nas capturas | — | ✅ |
+
+**Capturas** (os dados são fictícios):
+- `s19h_01a_seletor_antes_390_claro.png`: sem a correção. A página é da Papelaria Fictícia, e o seletor mostra "HE Testing".
+- `s19h_01b_seletor_depois_390_claro.png`: com a correção.
+- `s19h_02_busca_do_painel_390_claro.png`.
+
+**Depois do merge (equipe):**
+- rodar o workflow "Administradores" → `conceder` para uma das contas que já são administradoras, a partir da `DEVELOP`, no ambiente `homologacao`. A mensagem deve ser "A conta informada já é administradora desde … Nada mudou.", sem nenhuma parte do e-mail. A conta não muda;
+- apagar os logs da execução do `redefinir-2fator` de 08/11/2026, que mostram a primeira letra e o domínio do e-mail.

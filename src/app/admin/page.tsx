@@ -86,7 +86,7 @@ export default async function PainelDoAdministrador({ searchParams }: PageProps<
         <label htmlFor="busca" className="sr-only">
           Buscar por nome do negócio ou e-mail do Dono
         </label>
-        <input id="busca" name="busca" type="search" defaultValue={termo} placeholder="Nome do negócio ou e-mail do Dono" className={`${classeDoCampo()} max-w-md flex-1`} />
+        <input id="busca" name="busca" type="search" defaultValue={termo} placeholder="Negócio ou e-mail do Dono" className={`${classeDoCampo()} max-w-md flex-1`} />
         <button type="submit" className={classeDoBotao("secundario")}>
           <Search aria-hidden="true" />
           Buscar
