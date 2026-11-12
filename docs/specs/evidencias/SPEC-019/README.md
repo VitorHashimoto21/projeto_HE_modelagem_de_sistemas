@@ -614,4 +614,7 @@ PR #137, com os itens 4 a 6 encontrados na homologação. Nenhum deles muda o co
   - `conceder` de novo, na mesma conta: "A conta informada já é administradora desde … Nada mudou.";
   - antes disso, `conceder` de uma conta que participava de um negócio: recusado com "A conta participa de 1 negócio(s). Use uma conta exclusiva para o suporte." A regra da conta exclusiva continua valendo.
 - **Logs de 08/11/2026:** a equipe apagou os logs da execução do `redefinir-2fator` (as duas tentativas). A API do GitHub não encontra mais os logs dessa execução.
-- **Quarta conta de Administrador:** a conta concedida em 12/11/2026 é de outra pessoa da equipe e já tem dois autenticadores. Os dois autenticadores de cada conta devem ficar em lugares diferentes: um no celular e o outro em outro aparelho ou num gerenciador de senhas, nunca os dois no mesmo aplicativo do mesmo celular. O segundo existe para entrar se o celular sumir.
+- **Contas de Administrador na homologação:** ficam três contas, a Conta A, a Conta B e a de 12/11/2026.
+  - A conta concedida em 12/11/2026 é de outra pessoa da equipe. Ela tem autenticadores no celular e em outro aparelho.
+  - A conta de 18/10, concedida antes da SPEC-019, não é mais administradora: é uma conta comum, sem negócio (informado pela equipe em 12/11/2026).
+  - Os dois autenticadores de cada conta devem ficar em lugares diferentes: um no celular e o outro em outro aparelho ou num gerenciador de senhas, nunca os dois no mesmo aplicativo do mesmo celular. O segundo existe para entrar se o celular sumir.
