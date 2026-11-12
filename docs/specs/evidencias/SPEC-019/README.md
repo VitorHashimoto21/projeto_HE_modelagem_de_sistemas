@@ -612,9 +612,11 @@ PR #137, com os itens 4 a 6 encontrados na homologação. Nenhum deles muda o co
 - **Workflow "Administradores":** rodou da `DEVELOP`, no ambiente `homologacao`, e nenhuma parte do e-mail apareceu no log. Mostrou só `EMAIL: ***` e "a conta informada":
   - `conceder` de uma conta nova: "Pronto: a conta informada agora é administradora (…)";
   - `conceder` de novo, na mesma conta: "A conta informada já é administradora desde … Nada mudou.";
-  - antes disso, `conceder` de uma conta que participava de um negócio: recusado com "A conta participa de 1 negócio(s). Use uma conta exclusiva para o suporte." A regra da conta exclusiva continua valendo.
+  - antes disso, `conceder` de uma conta que participava de um negócio: recusado com "A conta participa de 1 negócio(s). Use uma conta exclusiva para o suporte." A regra da conta exclusiva continua valendo;
+  - `retirar` de uma conta que não era administradora: "A conta informada não era administradora. Nada mudou."
 - **Logs de 08/11/2026:** a equipe apagou os logs da execução do `redefinir-2fator` (as duas tentativas). A API do GitHub não encontra mais os logs dessa execução.
-- **Contas de Administrador na homologação:** ficam três contas, a Conta A, a Conta B e a de 12/11/2026.
-  - A conta concedida em 12/11/2026 é de outra pessoa da equipe. Ela tem autenticadores no celular e em outro aparelho.
-  - A conta de 18/10, concedida antes da SPEC-019, não é mais administradora: é uma conta comum, sem negócio (informado pela equipe em 12/11/2026).
-  - Os dois autenticadores de cada conta devem ficar em lugares diferentes: um no celular e o outro em outro aparelho ou num gerenciador de senhas, nunca os dois no mesmo aplicativo do mesmo celular. O segundo existe para entrar se o celular sumir.
+- **Contas de Administrador na homologação:** são quatro, identificadas pela coluna "Desde" da aba Administradores:
+  - a Conta A (desde 28/10/2026) e a Conta B (desde 01/11/2026), usadas na homologação pela mesma pessoa;
+  - a conta de 18/10/2026 e a de 12/11/2026, de outra pessoa da equipe. Em 12/11/2026, as duas ficaram com autenticadores em dispositivos diferentes;
+  - uma pessoa com duas contas só é aceita na homologação, como o roteiro permite. Na produção, é uma conta por pessoa;
+  - os dois autenticadores de cada conta devem ficar em lugares diferentes: um no celular e o outro em outro aparelho ou num gerenciador de senhas, nunca os dois no mesmo aplicativo do mesmo celular. O segundo existe para entrar se o celular sumir.
