@@ -608,6 +608,10 @@ PR #137, com os itens 4 a 6 encontrados na homologação. Nenhum deles muda o co
 - `s19h_01b_seletor_depois_390_claro.png`: com a correção.
 - `s19h_02_busca_do_painel_390_claro.png`.
 
-**Depois do merge (equipe):**
-- rodar o workflow "Administradores" → `conceder` para uma das contas que já são administradoras, a partir da `DEVELOP`, no ambiente `homologacao`. A mensagem deve ser "A conta informada já é administradora desde … Nada mudou.", sem nenhuma parte do e-mail. A conta não muda;
-- apagar os logs da execução do `redefinir-2fator` de 08/11/2026, que mostram a primeira letra e o domínio do e-mail.
+**Conferido na homologação em 12/11/2026, depois do merge:**
+- **Workflow "Administradores":** rodou da `DEVELOP`, no ambiente `homologacao`, e nenhuma parte do e-mail apareceu no log. Mostrou só `EMAIL: ***` e "a conta informada":
+  - `conceder` de uma conta nova: "Pronto: a conta informada agora é administradora (…)";
+  - `conceder` de novo, na mesma conta: "A conta informada já é administradora desde … Nada mudou.";
+  - antes disso, `conceder` de uma conta que participava de um negócio: recusado com "A conta participa de 1 negócio(s). Use uma conta exclusiva para o suporte." A regra da conta exclusiva continua valendo.
+- **Logs de 08/11/2026:** a equipe apagou os logs da execução do `redefinir-2fator` (as duas tentativas). A API do GitHub não encontra mais os logs dessa execução.
+- **Quarta conta de Administrador:** a conta concedida em 12/11/2026 é de outra pessoa da equipe e já tem dois autenticadores. Os dois autenticadores de cada conta devem ficar em lugares diferentes: um no celular e o outro em outro aparelho ou num gerenciador de senhas, nunca os dois no mesmo aplicativo do mesmo celular. O segundo existe para entrar se o celular sumir.

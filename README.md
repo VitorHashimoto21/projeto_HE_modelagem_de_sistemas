@@ -142,7 +142,7 @@ Cada ambiente tem variáveis e credenciais próprias (RNF11); chaves de serviço
 - [ ] Ambiente `producao` no GitHub com o segredo `DIRECT_URL`; segredo `BACKUP_PROD_DATABASE_URL`
 - [ ] Domínio próprio e variáveis de *Production* na Vercel apontando só para o `he-prod`
 - [ ] Supabase Auth do `he-prod` configurado como no passo 5, com domínio verificado no Resend e as URLs de produção
-- [ ] MFA TOTP habilitado no `he-prod` e os segredos `SUPABASE_URL` e `SUPABASE_SECRET_KEY` no ambiente `producao` do GitHub, como *segredos* e não variáveis (passo 9); pelo menos duas contas de Administrador, de pessoas diferentes, cada uma com dois autenticadores
+- [ ] MFA TOTP habilitado no `he-prod` e os segredos `SUPABASE_URL` e `SUPABASE_SECRET_KEY` no ambiente `producao` do GitHub, como *segredos* e não variáveis (passo 9); pelo menos duas contas de Administrador, de pessoas diferentes, cada uma com dois autenticadores em lugares diferentes: um no celular e o outro em outro aparelho ou num gerenciador de senhas, nunca os dois no mesmo aplicativo do mesmo celular
 - [ ] Revisão do RLS e dos segredos: nenhuma credencial de produção fora do ambiente de produção
 
 ## Backup
