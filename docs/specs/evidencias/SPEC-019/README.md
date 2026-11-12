@@ -615,8 +615,7 @@ PR #137, com os itens 4 a 6 encontrados na homologação. Nenhum deles muda o co
   - antes disso, `conceder` de uma conta que participava de um negócio: recusado com "A conta participa de 1 negócio(s). Use uma conta exclusiva para o suporte." A regra da conta exclusiva continua valendo;
   - `retirar` de uma conta que não era administradora: "A conta informada não era administradora. Nada mudou."
 - **Logs de 08/11/2026:** a equipe apagou os logs da execução do `redefinir-2fator` (as duas tentativas). A API do GitHub não encontra mais os logs dessa execução.
-- **Contas de Administrador na homologação:** são quatro, identificadas pela coluna "Desde" da aba Administradores:
-  - a Conta A (desde 28/10/2026) e a Conta B (desde 01/11/2026), usadas na homologação pela mesma pessoa;
-  - a conta de 18/10/2026 e a de 12/11/2026, de outra pessoa da equipe. Em 12/11/2026, as duas ficaram com autenticadores em dispositivos diferentes;
-  - uma pessoa com duas contas só é aceita na homologação, como o roteiro permite. Na produção, é uma conta por pessoa;
-  - os dois autenticadores de cada conta devem ficar em lugares diferentes: um no celular e o outro em outro aparelho ou num gerenciador de senhas, nunca os dois no mesmo aplicativo do mesmo celular. O segundo existe para entrar se o celular sumir.
+- **Contas de Administrador na homologação** (conferidas em 12/11/2026): são quatro, identificadas pela coluna "Desde" da aba Administradores.
+  - **A conta de 18/10/2026 e a de 12/11/2026** são de uma pessoa da equipe. Cada uma tem um autenticador fora do celular principal.
+  - **A Conta A (desde 28/10/2026) e a Conta B (desde 01/11/2026)** são da pessoa que fez a homologação. Os dois autenticadores de cada conta estão no mesmo celular: os da A num celular, os da B em outro. Foram cadastrados assim para testar, com uma pessoa usando duas contas, o que não acontece no uso real. A equipe aceitou essas contas de teste assim. Se um desses celulares sumir, a conta volta pelo `redefinir-2fator`.
+  - **Na produção**, cada pessoa usa uma conta só, com os dois autenticadores em lugares diferentes: um no celular e o outro em outro aparelho ou num gerenciador de senhas, nunca os dois no mesmo aplicativo do mesmo celular. O segundo existe para entrar se o celular sumir.
