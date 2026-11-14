@@ -55,6 +55,7 @@ Toda a especificação do produto está documentada na pasta [`docs/`](./docs):
 | [`specs/`](./docs/specs) | `SPEC-001.md`, … | Specs individuais aprovadas para implementação, uma por arquivo |
 | [`legal/`](./docs/legal) | [`politica-de-privacidade.md`](./docs/legal/politica-de-privacidade.md), [`termos-de-uso.md`](./docs/legal/termos-de-uso.md) | Rascunhos da política de privacidade e dos termos de uso (revisão do grupo pendente) |
 | [`guia_issues/`](./docs/guia_issues) | [`issues_guide.md`](./docs/guia_issues/issues_guide.md) | Issues do GitHub com critérios de aceitação em EARS e testes |
+| [`qualidade/`](./docs/qualidade) | [`DIVIDAS_TECNICAS.md`](./docs/qualidade/DIVIDAS_TECNICAS.md) | Registro das dívidas técnicas: tipo, quadrante, prioridade e como pagar |
 
 As imagens renderizadas dos diagramas ficam em [`docs/img/`](./docs/img) e são geradas a partir dos blocos Mermaid; ao alterar um diagrama, gere a imagem novamente (ex.: `npx @mermaid-js/mermaid-cli -i diagrama.mmd -o docs/img/nome.png`). A versão editável do diagrama de domínio está em [`docs/dominio_fluxogramas/modelo_dominio.drawio`](./docs/dominio_fluxogramas/modelo_dominio.drawio) (abrir em [app.diagrams.net](https://app.diagrams.net)).
 
@@ -204,6 +205,7 @@ A tabela NCM oficial em vigor fica em [`docs/prisma_base/tabela_ncm.json`](docs/
 │   ├── dominio_fluxogramas/
 │   ├── definicoes_arquitetura/
 │   ├── guia_issues/
+│   ├── qualidade/
 │   ├── prisma_base/
 │   └── img/
 └── README.md
@@ -211,10 +213,11 @@ A tabela NCM oficial em vigor fica em [`docs/prisma_base/tabela_ncm.json`](docs/
 
 ## Contribuição
 
-1. Cada spec/issue é desenvolvida em uma branch própria, criada a partir da `DEVELOP`.
+1. Cada spec/issue é desenvolvida em uma branch própria (`feat/`, `fix/` ou `docs/`), criada a partir da `DEVELOP`.
 2. Commits referenciam a spec ou issue correspondente.
-3. Pull Requests são abertos para a `DEVELOP`; a `main` recebe apenas versões estáveis vindas da `DEVELOP`.
+3. Pull Requests são abertos para a `DEVELOP`, seguindo o [modelo de PR](./.github/pull_request_template.md); a `main` recebe apenas versões estáveis vindas da `DEVELOP` (branch `release/…`). Usa-se merge, nunca rebase ou force-push, e o merge é sempre de uma pessoa do grupo.
 4. Alterações em requisitos, drivers ou ADRs exigem revisão do grupo.
+5. As regras do projeto para pessoas e agentes de IA (fluxo SDD, testes, segurança, dívida técnica) estão em [`AGENTS.md`](./AGENTS.md); dívidas técnicas conhecidas ficam no [registro](./docs/qualidade/DIVIDAS_TECNICAS.md).
 
 ## Licença
 
