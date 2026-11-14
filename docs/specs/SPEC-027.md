@@ -140,6 +140,7 @@ Os trechos entre chaves dependem das OPENs.
 | Devolução parcial ao fornecedor e nota de devolução | Fora; a nota de devolução entra com a Spec da nota fiscal (pendência "Dados do emitente"). |
 | Importar o XML da nota fiscal de entrada | Fora: evolução, junto com a Spec da nota fiscal. |
 | Pedido de compra, cotação e sugestão de compra pelo estoque mínimo | Fora: evolução. |
+| O caminho inverso: um lançamento ou uma conta do Financeiro virar entrada de estoque | Fora (combinado com a equipe em 01/11/2026): a entrada acontece pela compra, que gera o financeiro. |
 | Compra de serviços ou de material de consumo sem estoque | Conta a pagar ou lançamento do Financeiro (SPEC-009 e SPEC-026), salvo se a OPEN-003 for (b). |
 | Relatório de compras nos Relatórios | OPEN-010. |
 | Crédito de impostos (ICMS, IPI) na compra | Fora: o custo é o valor pago; o Simples e o MEI não usam crédito de imposto no HE. |
