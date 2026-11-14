@@ -24,16 +24,16 @@
     "postinstall": "prisma generate"
   },
   "dependencies": {
-    "@prisma/adapter-pg": "7.10.0",
-    "@prisma/client": "7.10.0",
+    "@prisma/adapter-pg": "7.10.1",
+    "@prisma/client": "7.10.1",
     "@supabase/ssr": "0.12.7",
     "@supabase/supabase-js": "2.117.2",
     "class-variance-authority": "0.7.1",
     "clsx": "2.1.1",
     "cn": "^0.4.0",
-    "fflate": "0.8.2",
+    "fflate": "0.8.3",
     "lucide-react": "1.48.0",
-    "next": "16.3.8",
+    "next": "16.4.6",
     "pdf-lib": "1.17.1",
     "pg": "8.23.1",
     "radix-ui": "^1.6.7",
@@ -44,7 +44,7 @@
     "server-only": "0.0.1",
     "sonner": "2.0.8",
     "tailwind-merge": "3.7.0",
-    "zod": "4.6.5"
+    "zod": "4.6.7"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
@@ -54,8 +54,8 @@
     "@types/react-dom": "^19",
     "dotenv": "18.0.5",
     "eslint": "^9",
-    "eslint-config-next": "16.3.8",
-    "prisma": "7.10.0",
+    "eslint-config-next": "16.4.6",
+    "prisma": "7.10.1",
     "tailwindcss": "^4",
     "tsx": "4.23.15",
     "typescript": "^5",
