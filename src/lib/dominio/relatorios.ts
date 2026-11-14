@@ -55,6 +55,8 @@ export function lerPeriodo(p: { periodo?: string; de?: string; ate?: string }, h
 export type LinhaVendida = {
   itemId: string;
   nome: string;
+  /** SPEC-024 (5.3): o código interno atual do item, ou null. */
+  codigo: string | null;
   arquivado: boolean;
   quantidade: number;
   faturamentoCentavos: number;

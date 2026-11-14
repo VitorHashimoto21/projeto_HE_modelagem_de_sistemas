@@ -27,16 +27,20 @@ export const MODELOS = {
     classe: "ancora",
     relacoes: {
       planoAlteradoPor: { modelo: "Usuario", fk: "planoAlteradoPorId" },
+      // SPEC-019 (5.7): o Administrador que suspendeu.
+      suspensoPor: { modelo: "Usuario", fk: "suspensoPorId" },
       membros: { modelo: "MembroNegocio" },
       convites: { modelo: "Convite" },
       historicoPlanos: { modelo: "HistoricoPlano" },
       acessosSuporte: { modelo: "AcessoSuporte" },
       registrosSuporte: { modelo: "RegistroSuporte" },
+      pedidosPlataforma: { modelo: "PedidoPlataforma" },
       itens: { modelo: "Item" },
       subcategorias: { modelo: "Subcategoria" },
       materiaisServico: { modelo: "MaterialServico" },
       movimentacoes: { modelo: "MovimentacaoEstoque" },
       historicoPrecos: { modelo: "HistoricoPreco" },
+      historicoCustos: { modelo: "HistoricoCusto" },
       vendas: { modelo: "Venda" },
       itensVenda: { modelo: "ItemVenda" },
       pagamentos: { modelo: "Pagamento" },
@@ -44,6 +48,7 @@ export const MODELOS = {
       lancamentos: { modelo: "LancamentoFinanceiro" },
       contas: { modelo: "ContaPagarReceber" },
       clientes: { modelo: "Cliente" },
+      fornecedores: { modelo: "Fornecedor" },
       despesasFixas: { modelo: "DespesaFixa" },
     },
   },
@@ -61,6 +66,8 @@ export const MODELOS = {
     relacoes: {
       negocio: { modelo: "Negocio", fk: "negocioId" },
       usuario: { modelo: "Usuario", fk: "usuarioId" },
+      // SPEC-019 (5.8): a troca pela plataforma aponta o pedido aprovado.
+      pedido: { modelo: "PedidoPlataforma", fk: "pedidoId" },
     },
   },
   Convite: {
@@ -75,6 +82,16 @@ export const MODELOS = {
     relacoes: {
       negocio: { modelo: "Negocio", fk: "negocioId" },
       vendas: { modelo: "Venda" },
+      contas: { modelo: "ContaPagarReceber" },
+    },
+  },
+  // SPEC-026: fornecedores do negócio.
+  Fornecedor: {
+    classe: "operacional",
+    relacoes: {
+      negocio: { modelo: "Negocio", fk: "negocioId" },
+      contas: { modelo: "ContaPagarReceber" },
+      despesasFixas: { modelo: "DespesaFixa" },
     },
   },
   Item: {
@@ -84,6 +101,7 @@ export const MODELOS = {
       subcategoria: { modelo: "Subcategoria", fk: "subcategoriaId" },
       movimentacoes: { modelo: "MovimentacaoEstoque" },
       historicoPrecos: { modelo: "HistoricoPreco" },
+      historicoCustos: { modelo: "HistoricoCusto" },
       materiais: { modelo: "MaterialServico" },
       usadoEm: { modelo: "MaterialServico" },
       itensVenda: { modelo: "ItemVenda" },
@@ -122,11 +140,21 @@ export const MODELOS = {
       usuario: { modelo: "Usuario", fk: "usuarioId" },
     },
   },
+  // SPEC-025 (RN41): custo do item ao longo do tempo, para o inventário numa data.
+  HistoricoCusto: {
+    classe: "operacional",
+    relacoes: {
+      negocio: { modelo: "Negocio", fk: "negocioId" },
+      item: { modelo: "Item", fk: "itemId" },
+      usuario: { modelo: "Usuario", fk: "usuarioId" },
+    },
+  },
   DespesaFixa: {
     classe: "operacional",
     relacoes: {
       negocio: { modelo: "Negocio", fk: "negocioId" },
       contas: { modelo: "ContaPagarReceber" },
+      fornecedor: { modelo: "Fornecedor", fk: "fornecedorId" },
     },
   },
   Venda: {
@@ -185,6 +213,8 @@ export const MODELOS = {
       negocio: { modelo: "Negocio", fk: "negocioId" },
       parcela: { modelo: "Parcela", fk: "parcelaId" },
       despesaFixa: { modelo: "DespesaFixa", fk: "despesaFixaId" },
+      fornecedor: { modelo: "Fornecedor", fk: "fornecedorId" },
+      cliente: { modelo: "Cliente", fk: "clienteId" },
       lancamentos: { modelo: "LancamentoFinanceiro" },
     },
   },
@@ -198,6 +228,8 @@ export const MODELOS = {
       negocio: { modelo: "Negocio", fk: "negocioId" },
       liberadoPor: { modelo: "Usuario", fk: "liberadoPorId" },
       revogadoPor: { modelo: "Usuario", fk: "revogadoPorId" },
+      // SPEC-019 (5.6): a emergência aponta o pedido aprovado.
+      pedido: { modelo: "PedidoPlataforma", fk: "pedidoId" },
       registros: { modelo: "RegistroSuporte" },
     },
   },
@@ -207,6 +239,23 @@ export const MODELOS = {
       negocio: { modelo: "Negocio", fk: "negocioId" },
       acesso: { modelo: "AcessoSuporte", fk: "acessoId" },
       usuario: { modelo: "Usuario", fk: "usuarioId" },
+      // SPEC-019 (5.5): o desfazer aponta a correção desfeita.
+      correcao: { modelo: "RegistroSuporte", fk: "correcaoId" },
+      desfeitas: { modelo: "RegistroSuporte" },
+      // SPEC-019 (5.8): os eventos de pedido apontam o pedido.
+      pedido: { modelo: "PedidoPlataforma", fk: "pedidoId" },
+    },
+  },
+  // SPEC-019 (5.6, 5.8): pedidos que precisam de uma segunda conta de Administrador.
+  PedidoPlataforma: {
+    classe: "operacional",
+    relacoes: {
+      negocio: { modelo: "Negocio", fk: "negocioId" },
+      solicitadoPor: { modelo: "Usuario", fk: "solicitadoPorId" },
+      decididoPor: { modelo: "Usuario", fk: "decididoPorId" },
+      registros: { modelo: "RegistroSuporte" },
+      trocasDePlano: { modelo: "HistoricoPlano" },
+      acessoEmergencia: { modelo: "AcessoSuporte" },
     },
   },
 
@@ -216,15 +265,19 @@ export const MODELOS = {
       membroEm: { modelo: "MembroNegocio" },
       movimentacoes: { modelo: "MovimentacaoEstoque" },
       historicoPrecos: { modelo: "HistoricoPreco" },
+      historicoCustos: { modelo: "HistoricoCusto" },
       vendasCanceladas: { modelo: "Venda" },
       vendasRegistradas: { modelo: "Venda" },
       lancamentos: { modelo: "LancamentoFinanceiro" },
       convitesEnviados: { modelo: "Convite" },
       planosAlterados: { modelo: "Negocio" },
+      negociosSuspensos: { modelo: "Negocio" },
       trocasDePlano: { modelo: "HistoricoPlano" },
       acessosLiberados: { modelo: "AcessoSuporte" },
       acessosRevogados: { modelo: "AcessoSuporte" },
       registrosSuporte: { modelo: "RegistroSuporte" },
+      pedidosFeitos: { modelo: "PedidoPlataforma" },
+      pedidosDecididos: { modelo: "PedidoPlataforma" },
     },
   },
   FaixaTributaria: { classe: "global", relacoes: {} },
@@ -232,9 +285,25 @@ export const MODELOS = {
   ParametroMei: { classe: "global", relacoes: {} },
   ParametroFatorR: { classe: "global", relacoes: {} },
   MargemPadraoCategoria: { classe: "global", relacoes: {} },
+  Ncm: { classe: "global", relacoes: {} }, // SPEC-021: tabela NCM oficial
+  TabelaNcm: { classe: "global", relacoes: {} }, // SPEC-021: versão da tabela carregada
 } as const satisfies Record<string, DefinicaoModelo>;
 
 export type NomeModelo = keyof typeof MODELOS;
+
+/**
+ * SPEC-019 (5.7, INV-008): os modelos operacionais que continuam gravando com o negócio suspenso, e
+ * por quê. Nos demais, o gatilho he_negocio_suspenso do banco recusa toda inclusão, alteração e
+ * exclusão. O teste test/unit/modelos.test.ts confere as migrações contra esta lista.
+ */
+export const GRAVAM_NA_SUSPENSAO = {
+  MembroNegocio: "a troca de plano pela plataforma e a exclusão de conta (as ações da Equipe são recusadas)",
+  HistoricoPlano: "a troca de plano pela plataforma",
+  Convite: "a expiração, o cancelamento e a anonimização da LGPD (o aceite é recusado no serviço)",
+  AcessoSuporte: "a liberação, a revogação e a emergência",
+  RegistroSuporte: "o registro do suporte, com a própria suspensão",
+  PedidoPlataforma: "os pedidos de emergência e de plano",
+} as const satisfies Partial<Record<NomeModelo, string>>;
 
 export function definicaoDoModelo(modelo: string): DefinicaoModelo | undefined {
   return (MODELOS as Record<string, DefinicaoModelo>)[modelo];

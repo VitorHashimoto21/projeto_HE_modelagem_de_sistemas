@@ -48,7 +48,7 @@ Toda a especificação do produto está documentada na pasta [`docs/`](./docs):
 | [`dominio_fluxogramas/`](./docs/dominio_fluxogramas) | [`FLUXOGRAMAS.md`](./docs/dominio_fluxogramas/FLUXOGRAMAS.md) | Todos os fluxogramas em texto puro (Mermaid), para leitura por ferramentas/IA sem depender de imagem |
 | [`dominio_fluxogramas/`](./docs/dominio_fluxogramas) | [`DIAGRAMAS_COMPORTAMENTAIS.md`](./docs/dominio_fluxogramas/DIAGRAMAS_COMPORTAMENTAIS.md) | Diagramas de sequência (calculadora, venda, cancelamento/troca) e de estados das contas |
 | [`dominio_fluxogramas/`](./docs/dominio_fluxogramas) | [`MODELO_LOGICO_BANCO.md`](./docs/dominio_fluxogramas/MODELO_LOGICO_BANCO.md) | Modelo lógico do banco (diagrama ER) |
-| [`prisma_base/`](./docs/prisma_base) | [`parametros_fiscais_seed.json`](./docs/prisma_base/parametros_fiscais_seed.json) | Parâmetros fiscais iniciais (o schema do banco está em [`prisma/schema.prisma`](./prisma/schema.prisma)) |
+| [`prisma_base/`](./docs/prisma_base) | [`parametros_fiscais_seed.json`](./docs/prisma_base/parametros_fiscais_seed.json), [`tabela_ncm.json`](./docs/prisma_base/tabela_ncm.json) | Parâmetros fiscais iniciais e a tabela NCM oficial (o schema do banco está em [`prisma/schema.prisma`](./prisma/schema.prisma)) |
 | [`definicoes_arquitetura/`](./docs/definicoes_arquitetura) | `drivers-arquiteturais-he.md`, `adrs-he.md` | Drivers arquiteturais e ADRs (ADR-001 a ADR-006) |
 | [`design/`](./docs/design) | [`IDENTIDADE_VISUAL.md`](./docs/design/IDENTIDADE_VISUAL.md) | Identidade visual: logo, favicon, cores (tokens claro/escuro com contraste verificado), tipografia, semáforo, componentes base e login revisado |
 | [`docs/`](./docs) | [`MAPA_DE_SPECS.md`](./docs/MAPA_DE_SPECS.md), [`Prompt_SDD_Specs.pdf`](./docs/Prompt_SDD_Specs.pdf) | Mapa ordenado das Specs (com as decisões da baseline) e prompt de apoio do SDD |
@@ -128,7 +128,12 @@ Cada ambiente tem variáveis e credenciais próprias (RNF11); chaves de serviço
    - *Authentication → Emails → SMTP Settings*: Resend como SMTP (host `smtp.resend.com`, porta `465`, usuário `resend`, senha = API key do Resend, remetente `onboarding@resend.dev`). Sem domínio próprio, o Resend só entrega para o e-mail do dono da conta Resend (OPEN-002).
    - **Vercel:** cadastrar `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (*Project Settings → API Keys* do Supabase) para *Production* e *Preview*. Opcional: `RESEND_API_KEY` e `EMAIL_REMETENTE` para o aviso de "você já tem conta" e para o e-mail do convite de equipe (SPEC-005). Sem elas, o convite funciona pelo link copiável mostrado ao Dono.
 6. **Rotina diária do Financeiro (SPEC-009):** na Vercel, cadastrar `CRON_SECRET` (*Sensitive*, ao menos 16 caracteres, por exemplo `openssl rand -hex 32`). O agendamento está em `vercel.json` (todo dia às 06:00 de Brasília): a Vercel chama `/api/rotinas/diaria` com esse segredo para gerar as contas das despesas fixas e receber as parcelas do cartão vencidas. Sem o segredo, a rotina recusa as chamadas, e as contas só são geradas quando alguém abre o Financeiro ou o Painel. Para acompanhar as execuções: *Project → Settings → Cron Jobs*.
-7. **Exclusão de conta (SPEC-014):** no Supabase, *Project Settings → API Keys → Secret keys*, criar uma chave secreta; na Vercel, cadastrar `SUPABASE_SECRET_KEY` (*Sensitive*, só *Production* e *Preview*). Ela é usada só no servidor para apagar a credencial de quem exclui a conta. Sem ela, a conta é bloqueada e anonimizada do mesmo jeito, e a remoção da credencial fica pendente: a rotina diária tenta de novo assim que a chave existir.
+7. **Consultas de CNPJ e CEP (ADR-006; SPEC-004 e SPEC-022):** usam a BrasilAPI pública, sem chave. Não é preciso cadastrar nada. `BRASILAPI_URL` é opcional e serve só para apontar os testes locais para um serviço falso (deixe vazia na Vercel).
+8. **Exclusão de conta (SPEC-014):** no Supabase, *Project Settings → API Keys → Secret keys*, criar uma chave secreta; na Vercel, cadastrar `SUPABASE_SECRET_KEY` (*Sensitive*, só *Production* e *Preview*). Ela é usada só no servidor para apagar a credencial de quem exclui a conta. Sem ela, a conta é bloqueada e anonimizada do mesmo jeito, e a remoção da credencial fica pendente: a rotina diária tenta de novo assim que a chave existir.
+9. **2º fator do Administrador (SPEC-019):**
+   - **Supabase:** em *Authentication → Multi-Factor*, conferir o **TOTP (App Authenticator)** habilitado. Ele costuma vir ligado. Desligado, nenhum Administrador entra, porque o sistema falha fechado; os usuários dos negócios não são afetados.
+   - **GitHub:** no ambiente `homologacao` (e, na produção, no `producao`), cadastrar como **segredos** do ambiente (*Environment secrets*, não *Environment variables*: o workflow só lê segredos) o `SUPABASE_URL` (a URL do projeto, em *Project Settings → Data API*) e o `SUPABASE_SECRET_KEY` (a mesma chave secreta do passo 8). Eles servem só para a ação `redefinir-2fator` do workflow **Administradores**, que apaga os autenticadores de quem perdeu todos. Rode essa ação sempre por outra pessoa da equipe.
+   - **Vercel (opcional):** `EMISSOR_DO_AUTENTICADOR` com o nome que aparece no aplicativo autenticador, como `HE Homologação`. Vazio, aparece "Health Enterprise".
 
 ### Checklist de produção (quando for publicar)
 
@@ -137,6 +142,7 @@ Cada ambiente tem variáveis e credenciais próprias (RNF11); chaves de serviço
 - [ ] Ambiente `producao` no GitHub com o segredo `DIRECT_URL`; segredo `BACKUP_PROD_DATABASE_URL`
 - [ ] Domínio próprio e variáveis de *Production* na Vercel apontando só para o `he-prod`
 - [ ] Supabase Auth do `he-prod` configurado como no passo 5, com domínio verificado no Resend e as URLs de produção
+- [ ] MFA TOTP habilitado no `he-prod` e os segredos `SUPABASE_URL` e `SUPABASE_SECRET_KEY` no ambiente `producao` do GitHub, como *segredos* e não variáveis (passo 9); pelo menos duas contas de Administrador, de pessoas diferentes (uma conta por pessoa), cada uma com dois autenticadores em lugares diferentes: um no celular e o outro em outro aparelho ou num gerenciador de senhas, nunca os dois no mesmo aplicativo do mesmo celular
 - [ ] Revisão do RLS e dos segredos: nenhuma credencial de produção fora do ambiente de produção
 
 ## Backup
@@ -167,6 +173,15 @@ As faixas do Simples Nacional, a tabela CNAE → Anexo, o DAS e o limite do MEI,
 3. Abra um PR: o CI valida o arquivo e roda a carga num banco descartável. No merge, a carga chega à homologação (`DEVELOP`) e depois à produção (`main`).
 
 **Todo janeiro:** atualizar `parametroMei` com o DAS calculado sobre o novo salário mínimo (5% do salário mínimo + R$ 1,00 de ICMS e/ou R$ 5,00 de ISS). Enquanto isso não acontece, o CI e a carga mostram um aviso.
+
+### Tabela NCM
+
+A tabela NCM oficial em vigor fica em [`docs/prisma_base/tabela_ncm.json`](docs/prisma_base/tabela_ncm.json), no JSON do Classif (Portal Único Siscomex), sem edição manual (SPEC-021, ADR-004). O cadastro dos produtos busca e confere o NCM nela.
+
+- `npm run ncm:validar` — confere o arquivo, sem banco (só códigos de 8 dígitos, caminho, vigência e ato).
+- `npm run ncm:carregar` — grava no banco só o que mudou, numa única transação (rodar de novo diz "Nada a mudar"). Roda sozinha no workflow **Migrações**, depois da carga fiscal.
+
+**Como atualizar:** baixe o JSON novo no Classif (por exemplo, numa resolução nova ou na edição SH 2028), troque o arquivo e abra um PR. A carga não apaga códigos: o que saiu do arquivo recebe como fim o dia anterior à atualização, e os produtos que o usam passam a mostrar o aviso de revisão. Nenhum item muda sozinho.
 
 ## Estrutura
 ```text

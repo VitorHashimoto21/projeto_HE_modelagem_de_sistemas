@@ -9,6 +9,7 @@ import {
   type Categoria,
   type TipoDeLancamento,
 } from "@/lib/dominio/financeiro";
+import { ehForma, MAX_NUMERO_DOCUMENTO, type FormaDoPagamento } from "@/lib/dominio/contas";
 
 /**
  * Validação do Financeiro (SPEC-009, 5.7). Roda no navegador e no servidor; "hoje" é o dia
@@ -28,15 +29,21 @@ export const MENSAGENS_FINANCEIRO = {
   vencimentoObrigatorio: "Informe o vencimento",
   vencimentoInvalido: "Use uma data válida",
   diaInvalido: "Use um dia de 1 a 31",
+  // SPEC-026
+  formaObrigatoria: "Escolha a forma do pagamento.",
+  numeroDocumentoLongo: `Use no máximo ${MAX_NUMERO_DOCUMENTO} caracteres`,
+  pessoaInvalida: "Escolha uma opção da lista",
 } as const;
 
 export type Validacao<T> = { ok: true; dados: T } | { ok: false; erros: ErrosDeCampo };
 
 export type DadosDoLancamento = { tipo: TipoDeLancamento; valorCentavos: number; categoria: Categoria; descricao: string; dia: string };
 export type DadosDoSaldoInicial = { valorCentavos: number; dia: string };
-export type DadosDaConta = { tipo: "PAGAR" | "RECEBER"; descricao: string; categoria: Categoria; valorCentavos: number; vencimento: string };
-export type DadosDoPagamento = { valorCentavos: number; dia: string };
-export type DadosDaDespesa = { descricao: string; valorCentavos: number; diaVencimento: number; categoria: Categoria };
+/** SPEC-026 (5.4): o fornecedor (a pagar) ou o cliente (a receber) e o nº do documento, opcionais. */
+export type DadosDoVinculo = { pessoaId: string | null; numeroDocumento: string | null };
+export type DadosDaConta = { tipo: "PAGAR" | "RECEBER"; descricao: string; categoria: Categoria; valorCentavos: number; vencimento: string } & DadosDoVinculo;
+export type DadosDoPagamento = { valorCentavos: number; dia: string; forma: FormaDoPagamento };
+export type DadosDaDespesa = { descricao: string; valorCentavos: number; diaVencimento: number; categoria: Categoria; fornecedorId: string | null };
 
 const DIA = /^\d{4}-\d{2}-\d{2}$/;
 const diaValido = (d: string) => {
@@ -78,6 +85,25 @@ function lerData(texto: string | undefined, hoje: string, erros: ErrosDeCampo): 
   return dia;
 }
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Fornecedor ou cliente escolhido na lista (vazio = sem). A existência é conferida no banco. */
+function lerPessoa(texto: string | undefined, erros: ErrosDeCampo, campo = "pessoa"): string | null {
+  const id = (texto ?? "").trim();
+  if (!id) return null;
+  if (!UUID.test(id)) {
+    erros[campo] = MENSAGENS_FINANCEIRO.pessoaInvalida;
+    return null;
+  }
+  return id.toLowerCase();
+}
+
+function lerNumeroDocumento(texto: string | undefined, erros: ErrosDeCampo): string | null {
+  const n = (texto ?? "").trim().replace(/\s+/g, " ");
+  if (n.length > MAX_NUMERO_DOCUMENTO) erros.numeroDocumento = MENSAGENS_FINANCEIRO.numeroDocumentoLongo;
+  return n || null;
+}
+
 const resultado = <T>(erros: ErrosDeCampo, dados: () => T): Validacao<T> =>
   Object.keys(erros).length ? { ok: false, erros } : { ok: true, dados: dados() };
 
@@ -113,7 +139,19 @@ export function validarConta(campos: Record<string, string>, hoje: string): Vali
   const ano = Number(hoje.slice(0, 4));
   if (!vencimento) erros.vencimento = MENSAGENS_FINANCEIRO.vencimentoObrigatorio;
   else if (!diaValido(vencimento) || Math.abs(Number(vencimento.slice(0, 4)) - ano) > 10) erros.vencimento = MENSAGENS_FINANCEIRO.vencimentoInvalido;
-  return resultado(erros, () => ({ tipo: tipo as "PAGAR" | "RECEBER", descricao, categoria, valorCentavos: valorCentavos!, vencimento }));
+  const vinculo = lerVinculo(campos, erros);
+  return resultado(erros, () => ({ tipo: tipo as "PAGAR" | "RECEBER", descricao, categoria, valorCentavos: valorCentavos!, vencimento, ...vinculo }));
+}
+
+function lerVinculo(campos: Record<string, string>, erros: ErrosDeCampo): DadosDoVinculo {
+  return { pessoaId: lerPessoa(campos.pessoa, erros), numeroDocumento: lerNumeroDocumento(campos.numeroDocumento, erros) };
+}
+
+/** Correção do fornecedor ou cliente e do nº do documento (SPEC-026, 5.4, item 5), em qualquer conta. */
+export function validarVinculo(campos: Record<string, string>): Validacao<DadosDoVinculo> {
+  const erros: ErrosDeCampo = {};
+  const vinculo = lerVinculo(campos, erros);
+  return resultado(erros, () => vinculo);
 }
 
 /** Pagamento ou recebimento (5.3): o limite do restante é conferido no banco. */
@@ -121,7 +159,10 @@ export function validarPagamento(campos: Record<string, string>, hoje: string): 
   const erros: ErrosDeCampo = {};
   const valorCentavos = lerValor(campos.valor, erros);
   const dia = lerData(campos.data, hoje, erros);
-  return resultado(erros, () => ({ valorCentavos: valorCentavos!, dia }));
+  // SPEC-026 (OPEN-008): a forma é obrigatória.
+  const forma = (campos.forma ?? "").trim();
+  if (!ehForma(forma)) erros.forma = MENSAGENS_FINANCEIRO.formaObrigatoria;
+  return resultado(erros, () => ({ valorCentavos: valorCentavos!, dia, forma: forma as FormaDoPagamento }));
 }
 
 /** Dia de vencimento da despesa fixa: inteiro de 1 a 31. */
@@ -140,5 +181,6 @@ export function validarDespesa(campos: Record<string, string>): Validacao<DadosD
   const dia = validarDiaVencimento(campos);
   if (!dia.ok) Object.assign(erros, dia.erros);
   const categoria = lerCategoria(campos.categoria || "OUTROS", erros);
-  return resultado(erros, () => ({ descricao, valorCentavos: valorCentavos!, diaVencimento: (dia as { dados: number }).dados, categoria }));
+  const fornecedorId = lerPessoa(campos.fornecedor, erros, "fornecedor");
+  return resultado(erros, () => ({ descricao, valorCentavos: valorCentavos!, diaVencimento: (dia as { dados: number }).dados, categoria, fornecedorId }));
 }

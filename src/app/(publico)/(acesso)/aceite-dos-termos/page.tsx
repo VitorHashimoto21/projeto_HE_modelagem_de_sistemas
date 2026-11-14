@@ -12,7 +12,7 @@ export const metadata: Metadata = { title: "Atualizamos nossos termos", robots: 
 
 const link = "font-semibold text-primary underline-offset-2 hover:text-primary-hover hover:underline";
 
-// Novo aceite (SPEC-018, 5.7 — RF78, OPEN-011): quem aceitou uma versão anterior da política e dos
+// Novo aceite (SPEC-018, 5.7 — RF78, OPEN-011; versão da SPEC-019, 5.11): quem aceitou uma versão anterior da política e dos
 // termos só volta ao app depois de aceitar a vigente; até lá, pode abrir Minha conta (exportar os
 // dados ou excluir a conta) ou sair.
 export default async function AceiteDosTermos({ searchParams }: PageProps<"/aceite-dos-termos">) {
@@ -27,12 +27,23 @@ export default async function AceiteDosTermos({ searchParams }: PageProps<"/acei
         <div className="rounded-lg bg-muted px-4 py-4 text-sm text-foreground">
           <p className="font-semibold">O que mudou nesta versão ({VERSAO_TERMOS})</p>
           <ul className="mt-2 list-disc space-y-1.5 pl-5 text-muted-foreground">
+            {/* SPEC-019 (5.11): a versão 2026-11-07 trata das correções, da emergência, da suspensão e da troca de plano pela plataforma. */}
             <li>
-              <strong className="text-foreground">Acesso do suporte:</strong> quando você precisar de ajuda, o Dono pode liberar o suporte do HE para ver (sem alterar) os
-              módulos escolhidos, por um prazo de até 7 dias.
+              <strong className="text-foreground">Correções pelo suporte:</strong> ao liberar o acesso, o Dono pode deixar o suporte do HE corrigir alguns módulos, só
+              nas ações de uma lista fechada. Cada correção aparece na hora em Acesso do suporte, com o antes e o depois, e pode ser desfeita em até 30 dias.
             </li>
-            <li>O suporte nunca entra sem essa liberação, vê nomes e contatos de clientes mascarados e não tem acesso à sua senha.</li>
-            <li>Cada tela que o suporte abre fica registrada, e o Dono acompanha e pode revogar o acesso a qualquer momento.</li>
+            <li>
+              <strong className="text-foreground">Acesso de emergência:</strong> sem a liberação do Dono, o suporte só entra por ordem judicial, incidente de segurança
+              ou Dono sem acesso, com a aprovação de duas pessoas da equipe. É somente leitura, por até 4 horas, e o Dono vê tudo desde o pedido e pode encerrar.
+            </li>
+            <li>
+              <strong className="text-foreground">Suspensão do negócio:</strong> o HE pode suspender um negócio por motivos de uma lista fechada. Ele fica somente
+              leitura, nada é apagado, e exportar os dados e excluir a conta continuam.
+            </li>
+            <li>
+              <strong className="text-foreground">Troca de plano pela plataforma:</strong> com a aprovação de duas pessoas da equipe, e o Dono é avisado. A exportação
+              dos seus dados passa a trazer esses registros.
+            </li>
           </ul>
           <p className="mt-3">
             Textos completos:{" "}

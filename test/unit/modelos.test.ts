@@ -1,6 +1,6 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { MODELOS, relacoesEntreOperacionais } from "@/lib/db/modelos";
+import { GRAVAM_NA_SUSPENSAO, MODELOS, relacoesEntreOperacionais } from "@/lib/db/modelos";
 
 type CampoSchema = { nome: string; tipo: string; fk?: string };
 
@@ -60,5 +60,19 @@ describe("classificação dos modelos", () => {
       const ultima = definicoes.at(-1)?.[1] ?? "";
       expect(ultima, `${modelo}.${fk} sem gatilho he_mesmo_negocio`).toContain(`'${destino}', '${fk}'`);
     }
+  });
+
+  it("negócio suspenso: as tabelas dos módulos têm o gatilho que recusa gravar (SPEC-019, INV-008)", () => {
+    const pastas = readdirSync("prisma/migrations").filter((p) => /^\d+_/.test(p)).sort();
+    const migracoes = pastas.map((p) => readFileSync(`prisma/migrations/${p}/migration.sql`, "utf8")).join("\n");
+    // A lista do laço que cria o gatilho (a última, se uma migração posterior a refizer).
+    const lista = [...migracoes.matchAll(/FOREACH tabela IN ARRAY ARRAY\[([^\]]*)\][^$]*?he_recusar_no_negocio_suspenso/g)].at(-1)?.[1] ?? "";
+    const comGatilho = new Set([...lista.matchAll(/'(\w+)'/g)].map((m) => m[1]));
+    for (const [modelo, def] of Object.entries(MODELOS)) {
+      if (def.classe !== "operacional") continue;
+      const livre = Object.hasOwn(GRAVAM_NA_SUSPENSAO, modelo);
+      expect(comGatilho.has(modelo), `${modelo}: ${livre ? "grava na suspensão e não deveria ter o gatilho" : "sem o gatilho he_negocio_suspenso"}`).toBe(!livre);
+    }
+    expect(migracoes).toMatch(/CREATE TRIGGER he_negocio_suspenso BEFORE UPDATE ON "Negocio"/);
   });
 });

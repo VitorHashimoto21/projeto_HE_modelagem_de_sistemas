@@ -8,7 +8,7 @@ import { MENSAGENS_LGPD } from "@/lib/dominio/lgpd";
 export const metadata: Metadata = { title: "Entrar" };
 
 export default async function Entrar({ searchParams }: PageProps<"/entrar">) {
-  const { proximo, email, excluida, sessao } = await searchParams;
+  const { proximo, email, excluida, sessao, senha } = await searchParams;
   return (
     <>
       {excluida && (
@@ -20,6 +20,12 @@ export default async function Entrar({ searchParams }: PageProps<"/entrar">) {
         <div className="mb-6">
           {/* SPEC-018 (RNF12): a sessão do Administrador vale 8 h desde a entrada. */}
           <Aviso tipo="erro">Sua sessão de administrador expirou. Entre novamente.</Aviso>
+        </div>
+      )}
+      {senha === "alterada" && (
+        <div className="mb-6">
+          {/* SPEC-019 (OPEN-017): a conta com 2º fator entra de novo depois da nova senha. */}
+          <Aviso tipo="sucesso">Senha alterada. Entre com a senha nova.</Aviso>
         </div>
       )}
       <TituloDeAcesso titulo="Bem-vindo de volta" subtitulo="Acesse sua conta para continuar" />

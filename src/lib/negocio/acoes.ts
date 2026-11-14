@@ -48,3 +48,17 @@ export const acaoDefinirDiasCobertura = acaoDoDono(async ({ negocioId }, _: Esta
   revalidatePath("/estoque", "layout");
   return { status: "salvo" };
 });
+
+export type EstadoDaNotaFiscal = { status: "ocioso" } | { status: "salvo"; emite: boolean } | { status: "erro"; mensagem: string };
+
+/**
+ * "Emito nota fiscal de produtos" (SPEC-021, OPEN-005): só o Dono. Ligada, o NCM fica obrigatório
+ * nos produtos físicos e produto sem NCM sai da venda (RN35). Desligar não apaga nenhum NCM.
+ */
+export const acaoDefinirNotaFiscal = acaoDoDono(async ({ negocioId }, _: EstadoDaNotaFiscal, form: FormData): Promise<EstadoDaNotaFiscal> => {
+  const valor = form.get("emiteNotaDeProduto");
+  if (valor !== "1" && valor !== "0") return { status: "erro", mensagem: "Escolha se o negócio emite nota fiscal de produtos." };
+  await negocios().definirNotaFiscalDeProduto(negocioId, valor === "1");
+  revalidatePath("/", "layout");
+  return { status: "salvo", emite: valor === "1" };
+});

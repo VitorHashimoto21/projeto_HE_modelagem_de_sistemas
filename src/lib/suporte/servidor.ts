@@ -9,7 +9,7 @@ import { enviarEmail, type MensagemDeEmail } from "@/lib/integracoes/email";
 import type { DependenciasDoAdministrador, DependenciasDoDono } from "./servicos";
 
 /** E-mail depois da resposta (OPEN-009): a falha no envio nunca bloqueia nada. */
-const avisar = (m: MensagemDeEmail) => after(() => enviarEmail(m, "suporte").then(() => undefined));
+export const avisar = (m: MensagemDeEmail) => after(() => enviarEmail(m, "suporte").then(() => undefined));
 
 export async function dependenciasDoDono(membro: ContextoDoMembro): Promise<DependenciasDoDono> {
   const s = suporte();
@@ -23,8 +23,10 @@ export async function dependenciasDoAdministrador(administradorId: string): Prom
     agora: () => new Date(),
     liberacaoAtiva: (negocioId) => s.liberacaoAtiva(negocioId, new Date()),
     entrar: s.entrar,
-    liberacao: s.liberacaoDoContexto,
+    liberacao: (acessoId) => s.liberacaoDoContexto(acessoId),
     sair: s.sair,
+    encerrarEmergencia: s.encerrarEmergencia,
+    correcoesDaVisita: s.correcoesDaVisita,
     dono: s.donoDoNegocio,
     avisar,
     origem: await origemDaRequisicao(),

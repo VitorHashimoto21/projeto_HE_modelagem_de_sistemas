@@ -10,6 +10,7 @@ const dados: DadosDoTitular = {
   titular: { id: "u1", nome: "Gisele", email: "gisele@exemplo.com", consentimentoLgpdEm: "2026-10-01T10:00:00.000Z" },
   vinculos: [{ negocioId: "n1", papel: "DONO", negocio: "Studio" }],
   convitesRecebidos: [],
+  eventosDaConta: [],
   negociosComoDono: [
     {
       negocio: { id: "n1", nome: "Studio" },
@@ -51,6 +52,30 @@ describe("T01 — valores anônimos, confirmação e montagem", () => {
   });
 });
 
+// SPEC-019 (5.11, T11): os eventos da conta (só nas contas da equipe do HE) e as tabelas novas dos negócios.
+describe("SPEC-019 — exportação com os eventos novos", () => {
+  it("os eventos da conta saem em eventos-da-conta.csv; os pedidos da plataforma, em pedidos-plataforma.csv", () => {
+    const comEventos: DadosDoTitular = {
+      ...dados,
+      eventosDaConta: [{ id: "r1", evento: "SEGUNDO_FATOR_CADASTRADO", descricao: "Cadastrou o autenticador Celular", criadoEm: "2026-11-02T10:00:00.000Z" }],
+      negociosComoDono: [
+        {
+          ...dados.negociosComoDono[0],
+          tabelas: {
+            ...dados.negociosComoDono[0].tabelas,
+            pedidosPlataforma: [{ id: "p1", tipo: "PLANO", situacao: "APROVADO", solicitadoPor: "Ana Suporte", decididoPor: "Bruno Suporte" }],
+          },
+        },
+      ],
+    };
+    const a = arquivosDaExportacao(comEventos);
+    expect(a["eventos-da-conta.csv"]).toContain("r1;SEGUNDO_FATOR_CADASTRADO;Cadastrou o autenticador Celular");
+    expect(a["pedidos-plataforma.csv"]).toContain("Studio;p1;PLANO;APROVADO;Ana Suporte;Bruno Suporte");
+    expect(a["LEIA-ME.txt"]).toContain("pedidos-plataforma.csv");
+    expect(arquivosDaExportacao(dados)["eventos-da-conta.csv"]).toBeUndefined();
+  });
+});
+
 describe("T02 — .zip válido", () => {
   it("o .zip abre e traz os arquivos com o mesmo conteúdo", () => {
     const a = arquivosDaExportacao(dados);
@@ -72,11 +97,13 @@ describe("fluxo da exclusão com dublês", () => {
       hoje: "2026-10-11",
       lgpd: {
         resumoDaExclusao: async () => ({ email: "gisele@exemplo.com", encerrar: [], deixar: [] }),
-        excluirConta: async () => (chamadas.push("excluir"), { ok: true as const, negociosEncerrados: 0 }),
+        excluirConta: async () => (chamadas.push("excluir"), { ok: true as const, negociosEncerrados: 0, administrador: false }),
         marcarCredencialRemovida: async (id: string) => void chamadas.push(`marcar:${id}`),
+        registrarAutenticadoresRemovidos: async (id: string, quantos: number) => void chamadas.push(`registrar:${id}:${quantos}`),
         credenciaisPendentes: async () => ["u1", "u2"],
       } as unknown as DependenciasDaLgpd["lgpd"],
       removerCredencial: async () => (chamadas.push("remover"), "removida" as const),
+      removerAutenticadores: async () => (chamadas.push("autenticadores"), { status: "removidos" as const, quantos: 2 }),
       sair: async () => void chamadas.push("sair"),
       ...extra,
     };
@@ -97,5 +124,25 @@ describe("fluxo da exclusão com dublês", () => {
     expect(d.chamadas).toEqual(["excluir", "sair"]);
     const r = deps({ removerCredencial: async (id) => (id === "u1" ? "removida" : "falha") });
     expect(await removerCredenciaisPendentes(r)).toEqual({ removidas: 1, pendentes: 1 });
+  });
+
+  // SPEC-019 (5.11): a conta de Administrador perde o papel (na transação) e os autenticadores, antes da credencial.
+  it("conta de Administrador: os autenticadores saem e ficam no registro; conta comum não chama a API", async () => {
+    const comum = deps();
+    await excluirConta({ email: "gisele@exemplo.com", ciencia: "on" }, comum);
+    expect(comum.chamadas).not.toContain("autenticadores");
+
+    const admin = deps();
+    const lgpdAdmin = { ...admin.lgpd, excluirConta: async () => (admin.chamadas.push("excluir"), { ok: true as const, negociosEncerrados: 0, administrador: true }) };
+    expect(await excluirConta({ email: "gisele@exemplo.com", ciencia: "on" }, { ...admin, lgpd: lgpdAdmin as DependenciasDaLgpd["lgpd"] })).toEqual({ status: "excluida", credencial: "removida" });
+    expect(admin.chamadas).toEqual(["excluir", "autenticadores", "registrar:u1:2", "remover", "marcar:u1", "sair"]);
+
+    // Sem a chave ou com falha na API: nada registrado; a credencial (que apaga os fatores) segue o fluxo de sempre.
+    for (const falha of [async () => ({ status: "sem-chave" as const }), async () => ({ status: "falha" as const }), async () => Promise.reject(new Error("rede"))]) {
+      const d = deps({ removerAutenticadores: falha });
+      const l = { ...d.lgpd, excluirConta: async () => (d.chamadas.push("excluir"), { ok: true as const, negociosEncerrados: 0, administrador: true }) };
+      expect(await excluirConta({ email: "gisele@exemplo.com", ciencia: "on" }, { ...d, lgpd: l as DependenciasDaLgpd["lgpd"] })).toEqual({ status: "excluida", credencial: "removida" });
+      expect(d.chamadas).toEqual(["excluir", "remover", "marcar:u1", "sair"]);
+    }
   });
 });

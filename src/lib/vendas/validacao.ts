@@ -35,9 +35,6 @@ export const MENSAGENS_VENDA = {
   parcelasInvalidas: `Use de 1 a ${MAX_PARCELAS} parcelas, só no crédito`,
   dataInvalida: `Use uma data entre hoje e ${DIAS_RETROATIVOS} dias atrás`,
   clienteInvalido: "Cliente inválido",
-  nomeObrigatorio: "Informe o nome do cliente",
-  nomeLongo: "Use no máximo 120 caracteres",
-  contatoLongo: "Use no máximo 120 caracteres",
   motivoObrigatorio: "Escolha o motivo do cancelamento",
   detalheObrigatorio: 'Descreva o motivo quando escolher "Outro"',
   detalheLongo: "Use no máximo 200 caracteres",
@@ -210,17 +207,6 @@ function lerAjustes(l: Record<string, unknown>, itemId: string, erros: ErrosDeCa
     ajustePreco = { precoCentavos: paraCentavos(preco), motivo };
   }
   return { materiais, ajustePreco };
-}
-
-/** Cadastro rápido de cliente (OPEN-005). */
-export function validarCliente(campos: Record<string, string>): Validacao<{ nome: string; contato: string | null }> {
-  const nome = (campos.nome ?? "").trim().replace(/\s+/g, " ");
-  const contato = (campos.contato ?? "").trim() || null;
-  const erros: ErrosDeCampo = {};
-  if (!nome) erros.nome = MENSAGENS_VENDA.nomeObrigatorio;
-  else if (nome.length > 120) erros.nome = MENSAGENS_VENDA.nomeLongo;
-  if (contato && contato.length > 120) erros.contato = MENSAGENS_VENDA.contatoLongo;
-  return Object.keys(erros).length ? { ok: false, erros } : { ok: true, dados: { nome, contato } };
 }
 
 export type DadosDoCancelamento = {

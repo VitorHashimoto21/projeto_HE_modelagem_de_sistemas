@@ -1,6 +1,6 @@
 import "server-only";
 import { adaptadorDoServidor } from "@/lib/auth/servidor";
-import { removerCredencial } from "@/lib/auth/credencial";
+import { removerAutenticadores, removerCredencial } from "@/lib/auth/credencial";
 import { lgpd } from "@/lib/db";
 import { hoje } from "@/lib/dominio/datas";
 import type { DependenciasDaLgpd } from "./servicos";
@@ -13,6 +13,7 @@ export function dependenciasDaLgpd(usuarioId: string): DependenciasDaLgpd {
     agora: new Date(),
     hoje: hoje(),
     removerCredencial,
+    removerAutenticadores,
     sair: async () => (await adaptadorDoServidor()).sair("local"),
   };
 }

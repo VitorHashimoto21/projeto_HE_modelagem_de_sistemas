@@ -1,5 +1,6 @@
 import { Prisma, type PrismaClient } from "@/generated/prisma/client";
-import { ContextoDeNegocioAusente, NegocioDivergente, OperacaoForaDoContexto, SomenteLeituraNoSuporte } from "./erros";
+import { ContextoDeNegocioAusente, NegocioDivergente, NegocioSuspenso, OperacaoForaDoContexto, SomenteLeituraNoSuporte } from "./erros";
+import type { SuspensaoDoNegocio } from "@/lib/dominio/suspensao";
 import { definicaoDoModelo, ehOperacional } from "./modelos";
 
 /**
@@ -11,7 +12,8 @@ import { definicaoDoModelo, ehOperacional } from "./modelos";
  * - o negocioId nunca é alterado;
  * - registros de outro negócio se comportam como inexistentes;
  * - o gatilho do banco (migração de isolamento) recusa ligações entre negócios diferentes (INV-005);
- * - no modo suporte (SPEC-018), só leituras: qualquer escrita é recusada (INV-002, segunda barreira).
+ * - no modo suporte (SPEC-018), só leituras: qualquer escrita é recusada (INV-002, segunda barreira);
+ * - no negócio suspenso (SPEC-019, INV-008), o gatilho do banco recusa a gravação nos módulos (NegocioSuspenso).
  */
 
 export type ContextoDeNegocio = {
@@ -19,6 +21,11 @@ export type ContextoDeNegocio = {
   usuarioId?: string;
   /** SPEC-018: contexto do Administrador em modo suporte — somente leitura e dados pessoais mascarados. */
   modoSuporte?: boolean;
+  /**
+   * SPEC-019 (5.7): o negócio está suspenso. A recusa da gravação é do banco (gatilho he_negocio_suspenso);
+   * isto só evita trabalho que gravaria, como a conferência do Financeiro ao abrir a tela.
+   */
+  negocioSuspenso?: SuspensaoDoNegocio | null;
 };
 
 type Dados = Record<string, unknown>;
@@ -53,6 +60,7 @@ function erroDoBanco(erro: unknown): never {
   if (mensagem.includes("he_negocio_imutavel")) {
     throw new NegocioDivergente("o negocioId de um registro não pode ser alterado.");
   }
+  if (mensagem.includes("he_negocio_suspenso")) throw new NegocioSuspenso();
   throw erro;
 }
 

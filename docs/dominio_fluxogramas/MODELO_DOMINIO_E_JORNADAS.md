@@ -25,6 +25,7 @@ classDiagram
         +atividadeMei  so MEI
         +impostoPercentualManual  so Autonomo
         +diasCoberturaEstoque  padrao 7
+        +emiteNotaDeProduto  padrao falso
         +encerradoEm  LGPD
         +taxaCartaoMedia
         +margemLucroMeta
@@ -93,6 +94,17 @@ classDiagram
         +quantidadeEstoque
         +estoqueMinimo
         +unidadeMedida
+        +ncm  opcional, 8 digitos
+    }
+
+    class Ncm {
+        <<referencia global>>
+        +codigo  8 digitos
+        +descricao
+        +caminho
+        +vigenteDesde
+        +vigenteAte  opcional
+        +ato
     }
 
     class Servico {
@@ -123,8 +135,18 @@ classDiagram
     }
 
     class Cliente {
-        +nome
-        +contato
+        +tipo  PessoaFisica | Empresa
+        +nome  nome ou razao social
+        +nomeFantasia  so empresa
+        +documento  CPF ou CNPJ, opcional
+        +situacaoIe  so empresa
+        +inscricaoEstadual
+        +inscricaoMunicipal
+        +nomeContato  so empresa
+        +email
+        +telefone
+        +endereco  CEP, logradouro, numero, complemento, bairro, municipio, UF
+        +completoParaNota()  calculado
     }
 
     class Venda {
@@ -190,6 +212,7 @@ classDiagram
     Subcategoria "N" --> "1" Categoria : fica dentro de
     Item "N" --> "0..1" Subcategoria : pode ter
     Item "1" --> "N" HistoricoPreco : acumula
+    ProdutoFisico "N" ..> "0..1" Ncm : classificado pelo codigo
 
     Servico "1" --> "N" MaterialServico : consome
     MaterialServico "N" --> "1" ProdutoFisico : referencia
@@ -220,6 +243,10 @@ classDiagram
 | `Parcela` | Vencimentos gerados mensalmente a partir da data da `Venda`, limitado a 12 parcelas (RF27, RF28); diferença de centavos na 1ª parcela (RN11). Não tem status próprio: a situação é a da `ContaPagarReceber` (RN22). |
 | `ContaPagarReceber` | Cada pagamento/recebimento (total ou parcial) gera um `LancamentoFinanceiro` com a categoria da conta (RN22). |
 | `Subcategoria` | Criada pelo próprio negócio dentro de uma categoria fixa, com nome único na categoria; só organiza o catálogo: a margem sugerida continua pela categoria (RF79, RN33). O item tem no máximo uma, opcional e da mesma categoria; excluir a subcategoria deixa os itens sem ela (SPEC-020). |
+| `ProdutoFisico.ncm` | Código da mercadoria na nota fiscal, conferido na tabela `Ncm` vigente ao ser informado ou trocado. Não é chave estrangeira: o código fica no produto mesmo depois de sair da tabela, com aviso de revisão. Opcional, mas obrigatório quando o `Negocio` emite nota fiscal de produtos; não muda preço, margem nem estoque (RF08, RN34, SPEC-021). |
+| `Negocio.emiteNotaDeProduto` | Só o Dono altera; nasce desligada. Ligada, o NCM é obrigatório no cadastro e na edição de produto físico, e produto físico sem NCM fica fora da venda e da troca (RF80, RN35). |
+| `Ncm` | Tabela oficial do Siscomex, global (sem negócio), carregada de arquivo versionado como os parâmetros fiscais (ADR-004). A carga nunca apaga códigos: o que sai do arquivo recebe data de fim (SPEC-021). |
+| `Cliente` | Pessoa física ou empresa; só o nome (a razão social, na empresa) é obrigatório. O documento é validado pelos dígitos verificadores, aceita CNPJ com letras e é único entre os clientes ativos do negócio. O selo "completo para nota" é calculado a cada leitura e nunca bloqueia a venda. Excluir apaga o cliente sem vendas e anonimiza o que tem vendas, sem mudar nenhuma venda. Quem não pode editar vendas recebe documento, e-mail, telefone e endereço mascarados (RF22, RF81, RN36, SPEC-022). |
 | `Item.precoAtual` | Opcional; definido por confirmação na Calculadora ou manual, sempre com `HistoricoPreco` (RF64). Item sem preço não pode ser vendido (RN23). |
 | `ItemVenda.custoUnitarioNaVenda` | Base do CMV% usado no ponto de equilíbrio e na meta (RF55, RF56, RF62). |
 | `Negocio` (dados fiscais) | CNPJ, CNAE e regime obtidos da Receita (RF58); um Anexo do Simples por negócio (RN24); MEI usa DAS como despesa fixa (RF60). |
@@ -365,7 +392,7 @@ flowchart TD
 
 ## Próximos ajustes sugeridos
 
-- [ ] Validar se `Cliente` deveria ter campos adicionais (histórico de compras, contato via WhatsApp) para uma futura fase.
+- [x] ~~Validar se `Cliente` deveria ter campos adicionais~~ — feito na SPEC-022: documento, inscrições, contato, endereço e as compras no detalhe do cliente.
 - [x] ~~Confirmar se `LancamentoFinanceiro` deve se relacionar 1:1 ou 1:N com `Venda`~~ — definido como 1:N.
 - [ ] Ajustar a jornada do Colaborador conforme as permissões granulares reais forem desenhadas nas telas.
 - [ ] Adicionar jornada de "primeiro acesso" (onboarding) separada, já que ela provavelmente difere do fluxo recorrente mostrado acima.

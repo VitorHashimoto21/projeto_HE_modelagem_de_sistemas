@@ -11,7 +11,8 @@ export const metadata: Metadata = { title: "Editar item" };
 
 // Edição do item (SPEC-006, 5.3): Catálogo — editar. O tipo e o preço não mudam aqui.
 export default async function EditarItem({ params, searchParams }: PageProps<"/catalogo/[id]/editar">) {
-  const membro = await exigirPermissao("catalogo", "editar");
+  // SPEC-019 (5.4): no modo suporte, também com o Catálogo em "ver e corrigir".
+  const membro = await exigirPermissao("catalogo", "editar", "catalogo.editarItem");
   const [{ id }, p] = await Promise.all([params, searchParams]);
   // O retorno do detalhe segue pela edição (SPEC-020, correção da homologação T12).
   const retorno = retornoSeguro(p.voltar, "") || null;
@@ -20,7 +21,12 @@ export default async function EditarItem({ params, searchParams }: PageProps<"/c
     if (e instanceof ItemNaoEncontrado) notFound();
     throw e;
   });
-  const [disponiveis, subcategorias] = await Promise.all([c.opcoesDeMaterial(id), c.subcategorias()]);
+  const [disponiveis, subcategorias, sugestoesNcm, exigeNcm] = await Promise.all([
+    c.opcoesDeMaterial(id),
+    c.subcategorias(),
+    c.sugestoesDeNcm(id),
+    c.emiteNotaDeProduto(),
+  ]);
   // Materiais arquivados que já estão no serviço continuam na lista (OPEN-006).
   const jaVinculados = item.materiaisDoServico
     .filter((m) => !disponiveis.some((d) => d.id === m.materialId))
@@ -33,12 +39,16 @@ export default async function EditarItem({ params, searchParams }: PageProps<"/c
         opcoes={[...disponiveis, ...jaVinculados]}
         subcategorias={subcategorias}
         voltar={retorno}
+        exigeNcm={exigeNcm}
+        sugestoesNcm={sugestoesNcm}
         valores={{
           id: item.id,
           tipo: item.tipo,
           nome: item.nome,
+          codigo: item.codigo,
           categoria: item.categoria,
           subcategoriaId: item.subcategoria?.id ?? null,
+          ncm: item.ncm,
           unidadeMedida: item.unidadeMedida,
           custoBase: item.custoBase,
           comissaoPercentual: item.comissaoPercentual,

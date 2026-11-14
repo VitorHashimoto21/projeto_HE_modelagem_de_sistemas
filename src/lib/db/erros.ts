@@ -28,3 +28,14 @@ export class SomenteLeituraNoSuporte extends Error {
     this.name = "SomenteLeituraNoSuporte";
   }
 }
+
+/**
+ * SPEC-019 (5.7, INV-008): o negócio está suspenso pela plataforma e o banco recusou a gravação (gatilho
+ * he_negocio_suspenso). Leitura e exportação continuam; nada é apagado.
+ */
+export class NegocioSuspenso extends Error {
+  constructor() {
+    super("Negócio suspenso: a gravação foi recusada (somente leitura até a reativação).");
+    this.name = "NegocioSuspenso";
+  }
+}

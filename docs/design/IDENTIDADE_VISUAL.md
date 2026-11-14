@@ -117,13 +117,16 @@ Escalas de 50 a 950 nas famílias **Verde**, **Âmbar** e **Neutro** — a fonte
 | 3 | `#2a78d6` | `#3987e5` |
 | 4 | `#d55181` | `#d55181` |
 | 5 | `#4a3aa7` | `#9085e9` |
+| 6 (SPEC-023) | `#8e0374` | `#9c43b9` |
 | Contexto (`chart-neutro`) | `#84948d` | `#647770` |
 
 Validada nos dois temas (daltonismo, visão normal, luminosidade, contraste ≥ 3:1 com o cartão). A série de contexto serve para "o resto" quando poucos itens estão em destaque.
 
+**Série 6 (SPEC-023, aprovada em 26/10/2026):** a barra "Para onde vai cada venda" da Calculadora passa a ter seis partes (custo, despesas fixas, maquininha, comissão, imposto e margem). A 6ª cor (ameixa) foi escolhida na implementação (29/10/2026) com o validador da paleta, nos dois temas: todas as verificações passam com as seis cores. Como as partes zeradas somem da barra, ela foi medida também contra cada uma das outras cinco, e não só contra a vizinha: visão normal ΔE ≥ 16,7 no claro e ≥ 15,4 no escuro; daltonismo ΔE ≥ 9,4 no claro e ≥ 7,7 no escuro (contra o azul, na faixa de 6 a 8, permitida porque a barra tem os nomes escritos e o espaço de 2 px entre as partes); contraste ≥ 3:1 com o cartão.
+
 ### 5.2 Regras (todas)
 
-- Cores **sempre na mesma ordem**, seguindo a entidade (um filtro não repinta o que sobra); no máximo 5 séries.
+- Cores **sempre na mesma ordem**, seguindo a entidade (um filtro não repinta o que sobra); no máximo 6 séries (eram 5 até a SPEC-023).
 - **Um único eixo vertical.** Entradas e saídas aparecem acima e abaixo da linha do zero — a posição separa, a cor só reforça.
 - Valores e rótulos na cor do texto, nunca na cor da série; legenda com 2 ou mais séries; rótulo direto só onde importa (ex.: o menor saldo da projeção).
 - **Balão** com o valor ao passar o mouse, tocar ou focar pelo teclado (um quadro acima do gráfico, região viva para leitores de tela); área de toque maior que a marca.

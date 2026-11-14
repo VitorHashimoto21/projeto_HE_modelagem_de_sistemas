@@ -116,6 +116,34 @@ export function calcularPreco(c: ComponentesDoPreco): PrecoCalculado {
 /** "Arredondar para cima" ao próximo real inteiro — nunca abaixo do sugerido (OPEN-004). */
 export const arredondarParaCimaAoReal = (centavos: number) => Math.ceil(centavos / 100) * 100;
 
+/** O preço sugerido em reais, parcela por parcela (SPEC-023, 5.1). */
+export type PartesDoPreco = { custoDoItem: number; despesasFixas: number; maquininha: number; comissao: number; imposto: number; margem: number };
+
+/**
+ * Cada parcela é arredondar(preço × % ÷ 100), em centavos; o custo do item é o que sobra, com os
+ * poucos centavos do arredondamento. A soma é sempre o preço e nenhuma parte é negativa (INV-002):
+ * se o custo for de poucos centavos e o arredondamento passar do preço, a maior parcela devolve a diferença.
+ */
+export function partesDoPrecoEmReais(precoCentavos: number, c: Omit<ComponentesDoPreco, "custoCentavos">): PartesDoPreco {
+  const parte = (percentual: number) => Math.round((precoCentavos * percentual) / 100);
+  const partes = { despesasFixas: parte(c.despesasFixas), maquininha: parte(c.taxaCartao), comissao: parte(c.comissao), imposto: parte(c.imposto), margem: parte(c.margem) };
+  const chaves = Object.keys(partes) as (keyof typeof partes)[];
+  let excesso = chaves.reduce((s, k) => s + partes[k], 0) - precoCentavos;
+  while (excesso > 0) {
+    const maior = chaves.reduce((m, k) => (partes[k] > partes[m] ? k : m));
+    const tira = Math.min(excesso, partes[maior]);
+    partes[maior] -= tira;
+    excesso -= tira;
+  }
+  return { custoDoItem: precoCentavos - Object.values(partes).reduce((s, v) => s + v, 0), ...partes };
+}
+
+/** Comissão em reais no preço oficial (SPEC-023, 5.4); null sem preço ou sem comissão. */
+export function comissaoNoPreco(precoCentavos: number | null, comissaoPercentual: number | null): number | null {
+  if (precoCentavos === null || !comissaoPercentual || comissaoPercentual <= 0) return null;
+  return Math.round((precoCentavos * comissaoPercentual) / 100);
+}
+
 /** Quanto a maquininha fica das vendas no cartão (crédito + débito), pela taxa média (RF51). */
 export const custoDaMaquininha = (cartaoCentavos: number, taxaCartao: number) => Math.round((cartaoCentavos * taxaCartao) / 100);
 

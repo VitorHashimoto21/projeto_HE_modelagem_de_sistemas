@@ -220,6 +220,10 @@ describe("cálculo e confirmação", () => {
       54.77, 54.77, 32, 23, 15, 5, 6,
     ]);
     expect(h.memoriaCalculo).toMatchObject({ versao: 1, precoSugeridoCentavos: 5477, regime: "AUTONOMO", rbt12: { origem: "estimado" }, item: { custoTotalCentavos: 2300 } });
+    // SPEC-023 (T04, INV-005): os reais das parcelas são só de exibição; a memória gravada mantém os mesmos campos.
+    expect(Object.keys(h.memoriaCalculo as object).sort()).toEqual(
+      ["versao", "dia", "item", "rbt12", "faturamentoMedioCentavos", "despesasFixas", "despesasFixasPercentual", "taxaCartao", "comissao", "regime", "anexoEfetivo", "imposto", "margem", "soma", "precoExatoCentavos", "precoSugeridoCentavos"].sort(),
+    );
     expect(Number((await base.item.findUniqueOrThrow({ where: { id } })).precoAtual)).toBe(54.77);
 
     // Mesmo preço também é registrado; arredondado para cima ao real guarda o exato.

@@ -1,4 +1,5 @@
 import type { CategoriaItem, MotivoSaidaManual, TipoMovimentacao } from "@/generated/prisma/enums";
+import { codigoExatoPrimeiro } from "@/lib/dominio/catalogo";
 import { diaLocal, intervaloDoDia } from "@/lib/dominio/datas";
 import {
   emAlerta,
@@ -10,8 +11,10 @@ import {
   type ResumoDoConsumo,
   type Situacao,
 } from "@/lib/dominio/estoque";
+import { custoNaData, quantidadeNaData, type ProdutoNaData, type RegistroDeCusto } from "@/lib/dominio/inventario";
 import { condicaoDaBusca, condicaoDaSubcategoria, ItemNaoEncontrado, type SubcategoriaDoItem } from "./catalogo";
 import type { ClienteDoNegocio } from "./cliente-do-negocio";
+import { autorDoHistorico } from "./autor";
 
 /**
  * Estoque do negócio ativo (SPEC-007). Leituras e escritas pelo cliente do negócio; as
@@ -122,6 +125,8 @@ export type FiltroDoEstoque = { busca?: string; categoria?: CategoriaItem; subca
 export type ProdutoEmEstoque = {
   id: string;
   nome: string;
+  /** SPEC-024: código interno, ou null. */
+  codigo: string | null;
   categoria: CategoriaItem;
   subcategoria: SubcategoriaDoItem;
   unidadeMedida: string;
@@ -198,6 +203,7 @@ export function criarConsultasDoEstoque(cliente: ClienteDoNegocio, negocioId: st
     i: {
       id: string;
       nome: string;
+      codigo: string | null;
       categoria: CategoriaItem;
       subcategoria: SubcategoriaDoItem;
       unidadeMedida: string;
@@ -215,6 +221,7 @@ export function criarConsultasDoEstoque(cliente: ClienteDoNegocio, negocioId: st
     return {
       id: i.id,
       nome: i.nome,
+      codigo: i.codigo,
       categoria: i.categoria,
       subcategoria: i.subcategoria,
       unidadeMedida: i.unidadeMedida,
@@ -229,6 +236,7 @@ export function criarConsultasDoEstoque(cliente: ClienteDoNegocio, negocioId: st
   const camposDoProduto = {
     id: true,
     nome: true,
+    codigo: true,
     categoria: true,
     subcategoria: { select: { id: true, nome: true } },
     unidadeMedida: true,
@@ -263,7 +271,11 @@ export function criarConsultasDoEstoque(cliente: ClienteDoNegocio, negocioId: st
         resumos(hoje),
         diasCobertura(),
       ]);
-      const lista = itens.map((i) => montar(i, mapa.get(i.id) ?? VAZIO, dias, hoje));
+      // SPEC-024 (5.4): o produto com o código exato da busca vem primeiro.
+      const lista = codigoExatoPrimeiro(
+        itens.map((i) => montar(i, mapa.get(i.id) ?? VAZIO, dias, hoje)),
+        filtro.busca,
+      );
       if (filtro.situacao === "baixo") return lista.filter((p) => emAlerta(p.situacao));
       if (filtro.situacao === "sem-estoque") return lista.filter((p) => p.situacao === "SEM_ESTOQUE");
       return lista;
@@ -288,7 +300,7 @@ export function criarConsultasDoEstoque(cliente: ClienteDoNegocio, negocioId: st
         orderBy: { registradoEm: "desc" },
         skip: (atual - 1) * MOVIMENTACOES_POR_PAGINA,
         take: MOVIMENTACOES_POR_PAGINA,
-        include: { usuario: { select: { nome: true } } },
+        include: { usuario: { select: { nome: true, administradorEm: true } } },
       });
       const r = mapa.get(id) ?? VAZIO;
       return {
@@ -305,7 +317,7 @@ export function criarConsultasDoEstoque(cliente: ClienteDoNegocio, negocioId: st
           quantidade: num(m.quantidade)!,
           saldoAnterior: num(m.saldoAnterior)!,
           saldoPosterior: num(m.saldoPosterior)!,
-          usuario: m.usuario.nome,
+          usuario: autorDoHistorico(m.usuario),
           data: m.data,
           registradoEm: m.registradoEm,
           observacao: m.observacao,
@@ -345,6 +357,51 @@ export function criarConsultasDoEstoque(cliente: ClienteDoNegocio, negocioId: st
       if (!item) return null;
       const [mapa, dias] = await Promise.all([resumos(hoje, id), diasCobertura()]);
       return montar(item, mapa.get(id) ?? VAZIO, dias, hoje);
+    },
+
+    /**
+     * Produtos físicos (ativos e arquivados) na data do inventário (SPEC-025, 5.4): a quantidade sai
+     * do saldo atual e das movimentações com ocorrência depois do fim do dia, somadas no banco
+     * (RNF06); o custo, do histórico de custo vigente até o fim do dia (5.1). Os dados de
+     * identificação (código, nome, unidade, NCM) são os atuais do item.
+     */
+    async inventario(data: string): Promise<ProdutoNaData[]> {
+      const fim = intervaloDoDia(data).fim;
+      const [itens, posteriores, historico] = await Promise.all([
+        cliente.item.findMany({
+          where: { tipo: "PRODUTO_FISICO" },
+          select: { id: true, codigo: true, nome: true, arquivadoEm: true, unidadeMedida: true, ncm: true, quantidadeEstoque: true, custoBase: true },
+        }),
+        cliente.$queryRaw<{ itemId: string; entradas: unknown; saidas: unknown }[]>`
+          SELECT "itemId",
+                 COALESCE(SUM(quantidade) FILTER (WHERE tipo IN ('ENTRADA', 'ENTRADA_ESTORNO')), 0) AS entradas,
+                 COALESCE(SUM(quantidade) FILTER (WHERE tipo IN ('SAIDA_VENDA', 'SAIDA_MANUAL')), 0) AS saidas
+          FROM "MovimentacaoEstoque"
+          WHERE "negocioId" = ${negocioId}::uuid AND "data" >= ${fim}
+          GROUP BY "itemId"`,
+        cliente.historicoCusto.findMany({ select: { itemId: true, custo: true, vigenteDesde: true } }),
+      ]);
+      const depois = new Map(posteriores.map((l) => [l.itemId, { entradas: num(l.entradas)!, saidas: num(l.saidas)! }]));
+      const custos = new Map<string, RegistroDeCusto[]>();
+      for (const h of historico) {
+        const lista = custos.get(h.itemId) ?? [];
+        lista.push({ custoCentavos: Math.round(num(h.custo)! * 100), vigenteDesde: h.vigenteDesde });
+        custos.set(h.itemId, lista);
+      }
+      return itens.map((i) => {
+        const custo = custoNaData(custos.get(i.id) ?? [], fim, Math.round(num(i.custoBase)! * 100));
+        return {
+          itemId: i.id,
+          codigo: i.codigo,
+          nome: i.nome,
+          arquivado: i.arquivadoEm !== null,
+          unidade: i.unidadeMedida,
+          ncm: i.ncm,
+          quantidade: quantidadeNaData(num(i.quantidadeEstoque)!, depois.get(i.id) ?? { entradas: 0, saidas: 0 }),
+          custoCentavos: custo.custoCentavos,
+          custoDoInicio: custo.doInicio,
+        };
+      });
     },
   };
 }

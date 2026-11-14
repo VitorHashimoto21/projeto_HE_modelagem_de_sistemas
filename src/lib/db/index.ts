@@ -7,6 +7,8 @@ import { criarConsultasDoEstoque } from "./estoque";
 import { criarConsultasFinanceiras } from "./financeiro";
 import { criarConsultasDePrecificacao } from "./precificacao";
 import { criarConsultasDeVendas } from "./vendas";
+import { criarConsultasDeClientes, visaoDoCliente } from "./clientes";
+import { criarConsultasDeFornecedores, visaoDoFornecedor } from "./fornecedores";
 import { criarConsultasDeEquipe } from "./equipe";
 import { criarConsultasDeNegocios } from "./negocios";
 import { criarConsultasDaLgpd } from "./lgpd";
@@ -14,11 +16,18 @@ import { criarConsultasDePlanos } from "./planos";
 import { criarConsultasDeRelatorios } from "./relatorios";
 import { criarConsultasFiscais } from "./parametros-fiscais";
 import { criarConsultasDeSuporte } from "./suporte";
+import { criarConsultasDeCorrecoes, transacaoDaCorrecao } from "./correcoes";
+import { criarConsultasDaPlataforma } from "./plataforma";
 import { prismaBase } from "./prisma";
+import type { Matriz } from "@/lib/dominio/permissoes";
 
 export type { ConsultasDeAcesso } from "./acesso";
 export type { ConsultasDoDashboard, VendasDoDia } from "./dashboard";
-export type { ConsultasDeVendas, DetalheDaVenda, ItemVendavel, VendaResumida } from "./vendas";
+export type { ClienteDaVenda, ConsultasDeVendas, DetalheDaVenda, ItemVendavel, VendaResumida } from "./vendas";
+export { ClienteNaoEncontrado, DocumentoRepetido, FILTRO_INCOMPLETOS, LIMITE_DA_LISTA, LIMITE_DE_COMPRAS } from "./clientes";
+export type { ClienteDaLista, CompraDoCliente, ConsultasDeClientes, DetalheDoCliente, ValoresDoCliente, Visao } from "./clientes";
+export { DocumentoDoFornecedorRepetido, FornecedorNaoEncontrado, LIMITE_DE_CONTAS_DO_FORNECEDOR, LIMITE_DE_FORNECEDORES } from "./fornecedores";
+export type { ConsultasDeFornecedores, ContaDoFornecedor, DetalheDoFornecedor, FornecedorDaLista, OpcaoDePessoa, ValoresDoFornecedor } from "./fornecedores";
 export type { ConsultasDePrecificacao, ItemCalculavel, ParametrosDePrecificacao } from "./precificacao";
 export type { ConsultasFinanceiras, ContaExibida, DespesaExibida, DetalheDaConta, FluxoDeCaixa, LancamentoExibido } from "./financeiro";
 export type { ConsultasDoEstoque, DetalheDoEstoque, ProdutoEmEstoque } from "./estoque";
@@ -28,12 +37,15 @@ export type { ConsultasDeEquipe, ConvitePendente, EquipeDoNegocio, MembroDaEquip
 export { CnpjJaCadastrado } from "./negocios";
 export type { ConsultasDeNegocios, ResumoDoNegocio } from "./negocios";
 export type { ConsultasDaLgpd, ResumoDaExclusao } from "./lgpd";
-export type { ConsultasDePlanos, SituacaoDoPlano } from "./planos";
+export type { ConsultasDePlanos, SituacaoDoPlano, TrocaDoHistorico } from "./planos";
+export type { AdministradorDaPlataforma, ConsultasDaPlataforma, PedidoDaPlataforma, ResultadoDaDecisao, ResultadoDoCancelamento, ResultadoDoPedido, ResultadoDoPedidoDeEmergencia, ResultadoDaSuspensao, SuspensaoNoRegistro } from "./plataforma";
 export type { ConsultasDeRelatorios } from "./relatorios";
-export type { ConsultasDeSuporte, EventoDoRegistro, LiberacaoDoNegocio, NegocioNoPainel } from "./suporte";
+export type { ConsultasDeSuporte, EmergenciaAtiva, EmergenciaNoPainel, EventoDoRegistro, LiberacaoDoNegocio, NegocioNoPainel } from "./suporte";
+export { DesfazerRecusado } from "./correcoes";
+export type { ConsultasDeCorrecoes, CorrecaoDoNegocio, Estado } from "./correcoes";
 export { AcimaDoLimiteDoSimples, ParametroAusente } from "./parametros-fiscais";
 export type { ConsultasFiscais, Origem } from "./parametros-fiscais";
-export { ContextoDeNegocioAusente, NegocioDivergente, OperacaoForaDoContexto, SomenteLeituraNoSuporte } from "./erros";
+export { ContextoDeNegocioAusente, NegocioDivergente, NegocioSuspenso, OperacaoForaDoContexto, SomenteLeituraNoSuporte } from "./erros";
 export type { ClienteDoNegocio, ContextoDeNegocio } from "./cliente-do-negocio";
 
 /**
@@ -42,6 +54,10 @@ export type { ClienteDoNegocio, ContextoDeNegocio } from "./cliente-do-negocio";
  * A partir da SPEC-002, o contexto vem da sessão autenticada.
  */
 export function clienteDoNegocio(contexto: ContextoDeNegocio | null | undefined) {
+  // SPEC-019 (5.3): durante uma correção do suporte, as funções do módulo usam a transação única da
+  // correção, que grava também o evento com o antes e o depois (INV-004). Só para o mesmo negócio.
+  const correcao = transacaoDaCorrecao.getStore();
+  if (correcao && contexto?.negocioId === correcao.negocioId) return correcao.cliente;
   return comNegocio(prismaBase(), contexto);
 }
 
@@ -60,9 +76,28 @@ export function vendas(contexto: ContextoDeNegocio) {
   return criarConsultasDeVendas(clienteDoNegocio(contexto), contexto.negocioId, { mascararClientes: contexto.modoSuporte === true });
 }
 
-/** Financeiro do negócio ativo (SPEC-009): sempre pelo cliente do negócio. */
+/**
+ * Clientes do negócio ativo (SPEC-022): a visão sai das permissões (OPEN-002). Quem tem
+ * Vendas — editar vê tudo; quem só vê recebe os dados mascarados; o suporte, inclusive o nome.
+ */
+export function clientes(contexto: ContextoDeNegocio & { permissoes: Matriz }) {
+  return criarConsultasDeClientes(clienteDoNegocio(contexto), contexto.negocioId, visaoDoCliente(contexto));
+}
+
+/**
+ * Financeiro do negócio ativo (SPEC-009): sempre pelo cliente do negócio. No modo suporte, o nome
+ * do fornecedor e do cliente das contas sai mascarado (SPEC-026, OPEN-011).
+ */
 export function financeiro(contexto: ContextoDeNegocio) {
-  return criarConsultasFinanceiras(clienteDoNegocio(contexto), contexto.negocioId);
+  return criarConsultasFinanceiras(clienteDoNegocio(contexto), contexto.negocioId, { mascararNomes: contexto.modoSuporte === true });
+}
+
+/**
+ * Fornecedores do negócio ativo (SPEC-026): a visão sai das permissões do Financeiro (OPEN-005).
+ * Quem pode editar vê tudo; quem só vê recebe os dados mascarados; o suporte, inclusive o nome.
+ */
+export function fornecedores(contexto: ContextoDeNegocio & { permissoes: Matriz }) {
+  return criarConsultasDeFornecedores(clienteDoNegocio(contexto), contexto.negocioId, visaoDoFornecedor(contexto));
 }
 
 /** Dados da Calculadora de precificação (SPEC-010): sempre pelo cliente do negócio. */
@@ -96,7 +131,9 @@ export function dashboard(contexto: ContextoDeNegocio) {
  * do negócio daquele negócio.
  */
 export async function negociosAtivos(): Promise<string[]> {
-  const lista = await prismaBase().negocio.findMany({ where: { encerradoEm: null }, select: { id: true }, orderBy: { createdAt: "asc" } });
+  // SPEC-019 (5.7, INV-008): o negócio suspenso fica de fora, como o encerrado; ao reativar, a conferência
+  // gera as contas do período e recebe as parcelas vencidas, nas datas de vencimento.
+  const lista = await prismaBase().negocio.findMany({ where: { encerradoEm: null, suspensoEm: null }, select: { id: true }, orderBy: { createdAt: "asc" } });
   return lista.map((n) => n.id);
 }
 
@@ -118,6 +155,16 @@ export function equipe() {
 /** Acesso de suporte (SPEC-018): liberações do Dono, painel do Administrador e registro de auditoria. */
 export function suporte() {
   return criarConsultasDeSuporte(prismaBase());
+}
+
+/** Correções do suporte e o desfazer do Dono (SPEC-019, 5.3 a 5.5). */
+export function correcoes() {
+  return criarConsultasDeCorrecoes(prismaBase());
+}
+
+/** Pedidos da plataforma com duas pessoas e a lista de Administradores (SPEC-019, 5.8 e 5.9). */
+export function plataforma() {
+  return criarConsultasDaPlataforma(prismaBase());
 }
 
 /** Parâmetros fiscais oficiais (SPEC-003): somente leitura, com a versão vigente na data. */

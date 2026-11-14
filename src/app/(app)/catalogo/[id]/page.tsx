@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Archive, ArchiveRestore, Calculator, Pencil } from "lucide-react";
+import { Archive, ArchiveRestore, Calculator, Pencil, TriangleAlert } from "lucide-react";
 import { FormularioPreco } from "@/components/catalogo/formularios";
 import { numero, reais, ROTULO_CATEGORIA, ROTULO_ORIGEM, ROTULO_TIPO, rotuloUnidade } from "@/components/catalogo/rotulos";
 import { SeloDeSituacao } from "@/components/estoque/situacao";
@@ -13,15 +13,27 @@ import { Superficie, TituloDaSuperficie } from "@/components/ui/superficie";
 import { exigirPermissao } from "@/lib/auth/servidor";
 import { acaoArquivarItem } from "@/lib/catalogo/acoes";
 import { MENSAGENS_DO_ARQUIVAMENTO } from "@/lib/catalogo/servicos";
+import { codigoEmUsoAoReativar } from "@/lib/catalogo/validacao";
 import { catalogo, estoque } from "@/lib/db";
-import { ItemNaoEncontrado } from "@/lib/db/catalogo";
+import { ItemNaoEncontrado, type NcmDoItem } from "@/lib/db/catalogo";
 import { hoje } from "@/lib/dominio/datas";
+import { formatarNcm } from "@/lib/dominio/ncm";
 import { pode } from "@/lib/dominio/permissoes";
+import { corrige } from "@/lib/dominio/correcoes";
+import { comissaoNoPreco } from "@/lib/dominio/precificacao";
+import { reaisDeCentavos } from "@/lib/dominio/venda";
 import { comRetorno, retornoSeguro, rotuloDoRetorno } from "@/lib/estrutura/retorno";
 
 export const metadata: Metadata = { title: "Item do catálogo" };
 
 const quando = new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short", timeZone: "America/Sao_Paulo" });
+
+/** SPEC-023 (5.4): a comissão em reais no preço oficial; sem preço ou sem comissão, só o percentual. */
+function textoDaComissao(percentual: number | null, precoAtual: number | null) {
+  const centavos = comissaoNoPreco(precoAtual === null ? null : Math.round(precoAtual * 100), percentual);
+  const texto = `${numero(percentual ?? 0)}%`;
+  return centavos === null ? texto : `${texto} (${reaisDeCentavos(centavos)} no preço atual)`;
+}
 
 function Linha({ rotulo, valor }: { rotulo: string; valor: React.ReactNode }) {
   return (
@@ -29,6 +41,22 @@ function Linha({ rotulo, valor }: { rotulo: string; valor: React.ReactNode }) {
       <dt className="text-sm text-muted-foreground">{rotulo}</dt>
       <dd className="text-sm font-medium break-words text-foreground sm:text-right">{valor}</dd>
     </div>
+  );
+}
+
+/** NCM no detalhe (SPEC-021, 5.4): código, descrição da tabela e o aviso quando saiu da tabela vigente. */
+function ValorDoNcm({ ncm }: { ncm: NcmDoItem }) {
+  return (
+    <span className="flex flex-col items-start gap-0.5 sm:items-end sm:text-right">
+      <span className="tabular-nums">{formatarNcm(ncm.codigo)}</span>
+      {ncm.descricao && <span className="text-xs font-normal text-muted-foreground">{ncm.descricao}</span>}
+      {!ncm.vigente && (
+        <span className="inline-flex items-center gap-1 text-xs font-semibold text-status-warn">
+          <TriangleAlert aria-hidden="true" className="size-3.5" />
+          NCM fora da tabela vigente — revise o código.
+        </span>
+      )}
+    </span>
   );
 }
 
@@ -42,9 +70,14 @@ export default async function DetalheDoItem({ params, searchParams }: PageProps<
     if (e instanceof ItemNaoEncontrado) notFound();
     throw e;
   });
-  const podeEditar = pode(membro.permissoes, "catalogo", "editar");
-  const podeArquivar = pode(membro.permissoes, "catalogo", "excluir");
-  const resultado = typeof busca.resultado === "string" ? MENSAGENS_DO_ARQUIVAMENTO[busca.resultado] : undefined;
+  // SPEC-019 (5.3, item 2): no modo suporte com o Catálogo em "ver e corrigir", só os botões da lista.
+  const podeEditar = pode(membro.permissoes, "catalogo", "editar") || corrige(membro, "catalogo.editarItem");
+  const podeDefinirPreco = pode(membro.permissoes, "catalogo", "editar") || corrige(membro, "catalogo.definirPreco");
+  const podeArquivar = pode(membro.permissoes, "catalogo", "excluir") || corrige(membro, "catalogo.arquivarItem");
+  const doArquivamento = typeof busca.resultado === "string" ? MENSAGENS_DO_ARQUIVAMENTO[busca.resultado] : undefined;
+  // SPEC-024 (5.2): a reativação recusada pelo código mostra o código do item.
+  const resultado =
+    busca.resultado === "codigo-em-uso" && doArquivamento && item.codigo ? { ...doArquivamento, texto: codigoEmUsoAoReativar(item.codigo) } : doArquivamento;
   // Situação do estoque (SPEC-007, RF21) para quem também pode ver o Estoque.
   const verEstoque = pode(membro.permissoes, "estoque", "ver");
   const situacao = item.tipo === "PRODUTO_FISICO" && verEstoque ? await estoque(membro).situacaoDoProduto(item.id, hoje()) : null;
@@ -108,7 +141,7 @@ export default async function DetalheDoItem({ params, searchParams }: PageProps<
               </Link>
             )}
           </Superficie>
-          {podeEditar && !item.arquivado && (
+          {podeDefinirPreco && !item.arquivado && (
             <Superficie aria-labelledby="titulo-novo-preco">
               <TituloDaSuperficie id="titulo-novo-preco" titulo="Definir o preço" />
               <FormularioPreco itemId={item.id} />
@@ -134,12 +167,15 @@ export default async function DetalheDoItem({ params, searchParams }: PageProps<
           <Superficie aria-labelledby="titulo-dados">
             <TituloDaSuperficie id="titulo-dados" titulo="Dados do item" />
             <dl>
+              <Linha rotulo="Código" valor={item.codigo ?? "—"} />
               <Linha rotulo="Categoria" valor={ROTULO_CATEGORIA[item.categoria]} />
               <Linha rotulo="Subcategoria" valor={item.subcategoria?.nome ?? "—"} />
               <Linha rotulo="Unidade de medida" valor={rotuloUnidade(item.unidadeMedida)} />
+              {/* SPEC-021 (5.4): o NCM do produto, com a descrição da tabela e o aviso quando saiu dela. */}
+              {item.tipo === "PRODUTO_FISICO" && <Linha rotulo="NCM" valor={item.ncm ? <ValorDoNcm ncm={item.ncm} /> : "—"} />}
               <Linha rotulo={item.tipo === "SERVICO" ? "Custo próprio" : "Custo"} valor={reais(item.custoBase)} />
               {item.tipo === "SERVICO" && item.materiaisDoServico.length > 0 && <Linha rotulo="Custo total (com materiais)" valor={reais(item.custoTotal)} />}
-              <Linha rotulo="Comissão" valor={`${numero(item.comissaoPercentual ?? 0)}%`} />
+              <Linha rotulo="Comissão" valor={textoDaComissao(item.comissaoPercentual, item.precoAtual)} />
               {item.tipo === "PRODUTO_FISICO" && (
                 <>
                   <Linha rotulo="Em estoque" valor={`${numero(item.quantidadeEstoque)} ${rotuloUnidade(item.unidadeMedida)}`} />

@@ -9,7 +9,17 @@ import type { Tabela } from "./tabelas";
 
 export const csvDaTabela = (t: Tabela) => gerarCsv(t.colunas.map((c) => c.titulo), [...t.linhas, t.totais]);
 
-export type CabecalhoDoPdf = { negocio: string; periodo: string; geradoEm: string };
+export type CabecalhoDoPdf = {
+  negocio: string;
+  periodo: string;
+  geradoEm: string;
+  /** Rótulo do período no cabeçalho; o inventário (SPEC-025) usa "Posição". */
+  rotuloDoPeriodo?: string;
+  /** Texto quando não há linhas. */
+  vazio?: string;
+  /** Notas impressas depois do total (SPEC-025, 5.5). */
+  notas?: string[];
+};
 
 // Caracteres fora do latin-1 que a codificação WinAnsi das fontes padrão aceita.
 const WIN_ANSI_EXTRA = new Set("€‚ƒ„…†‡ˆ‰Š‹ŒŽ‘’“”•–—˜™š›œžŸ");
@@ -71,14 +81,15 @@ export async function pdfDaTabela(t: Tabela, c: CabecalhoDoPdf): Promise<Uint8Ar
     escrever(c.negocio, MARGEM, y, negrito, 14);
     y -= 18;
     escrever(t.titulo, MARGEM, y, fonte, 11);
-    escrever(`Período: ${c.periodo} · Gerado em ${c.geradoEm}`, LARGURA - MARGEM - fonte.widthOfTextAtSize(textoParaPdf(`Período: ${c.periodo} · Gerado em ${c.geradoEm}`), 9), y, fonte, 9, COR_SUAVE);
+    const periodo = `${c.rotuloDoPeriodo ?? "Período"}: ${c.periodo} · Gerado em ${c.geradoEm}`;
+    escrever(periodo, LARGURA - MARGEM - fonte.widthOfTextAtSize(textoParaPdf(periodo), 9), y, fonte, 9, COR_SUAVE);
     y -= 24;
     linhaDaTabela(t.colunas.map((col) => col.titulo), negrito);
   };
 
   novaPagina();
   if (t.linhas.length === 0) {
-    escrever("Nenhum registro no período.", MARGEM, y, fonte, TAMANHO, COR_SUAVE);
+    escrever(c.vazio ?? "Nenhum registro no período.", MARGEM, y, fonte, TAMANHO, COR_SUAVE);
     y -= LINHA;
   }
   for (const l of t.linhas) {
@@ -87,6 +98,17 @@ export async function pdfDaTabela(t: Tabela, c: CabecalhoDoPdf): Promise<Uint8Ar
   }
   if (y < MARGEM + 2 * LINHA) novaPagina();
   linhaDaTabela(t.totais, negrito);
+  if (c.notas?.length) {
+    y -= LINHA / 2;
+    for (const nota of c.notas) {
+      if (y < MARGEM + LINHA) {
+        pagina = doc.addPage([LARGURA, ALTURA]);
+        y = ALTURA - MARGEM;
+      }
+      escrever(caber(textoParaPdf(nota), fonte, TAMANHO, LARGURA - 2 * MARGEM), MARGEM, y, fonte, TAMANHO, COR_SUAVE);
+      y -= LINHA;
+    }
+  }
 
   const paginas = doc.getPages();
   paginas.forEach((p, i) => {

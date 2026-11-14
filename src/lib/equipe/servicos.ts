@@ -3,6 +3,7 @@ import type { ErrosDeCampo } from "@/lib/auth/validacao";
 import type { ConsultasDeEquipe, MembroDaEquipe } from "@/lib/db/equipe";
 import { dataBrasileira } from "@/lib/dominio/datas";
 import { permissoesEfetivas, resumoDaMatriz, ROTULO_PAPEL, validarMatriz, matrizDoFormulario, matrizParaGravar } from "@/lib/dominio/permissoes";
+import { MENSAGENS_DA_SUSPENSAO } from "@/lib/dominio/suspensao";
 import type { MensagemDeEmail } from "@/lib/integracoes/email";
 import { formatoDeTokenValido, gerarToken, hashDoToken, validadeDoConvite } from "./token";
 import { mascararEmail, validarConvite, type PapelDoConvite } from "./validacao";
@@ -223,6 +224,8 @@ export type ConviteParaAceitar =
       emailMascarado: string;
       /** Só para quem é dono do e-mail convidado (ou sem sessão, para preencher o cadastro). */
       email: string;
+      /** SPEC-019 (5.7): o negócio está suspenso pelo HE; o aceite espera a reativação. */
+      suspenso?: boolean;
     };
 
 /** Lê o convite do link: inválido se desconhecido, cancelado, expirado, aceito ou de negócio encerrado. */
@@ -238,12 +241,13 @@ export async function lerConvite(token: string, deps: Pick<DependenciasDaEquipe,
     permissoes: resumoDaMatriz(permissoesEfetivas(c.papel, c.permissoesCustom)),
     emailMascarado: mascararEmail(c.email),
     email: c.email,
+    suspenso: c.suspenso === true,
   };
 }
 
 export type ResultadoDoAceite =
   | { status: "aceito"; negocioId: string }
-  | { status: "erro"; motivo: "SemSessao" | "ConviteInvalido" | "EmailDiferente" | "JaEhMembro"; mensagem: string };
+  | { status: "erro"; motivo: "SemSessao" | "ConviteInvalido" | "EmailDiferente" | "JaEhMembro" | "NegocioSuspenso"; mensagem: string };
 
 /**
  * Aceitar (5.3): pelo token do link ou pelo id em "Convites para você". Só a conta com o
@@ -278,9 +282,10 @@ export async function aceitarConvite(
 
   const r = await deps.consultas.aceitar(conviteId, deps.usuarioId, email, agora);
   if (!r.ok) {
-    return r.erro === "JaEhMembro"
-      ? { status: "erro", motivo: "JaEhMembro", mensagem: M.jaFazParte }
-      : { status: "erro", motivo: "ConviteInvalido", mensagem: M.conviteInvalido };
+    if (r.erro === "JaEhMembro") return { status: "erro", motivo: "JaEhMembro", mensagem: M.jaFazParte };
+    // SPEC-019 (5.7): o convite continua pendente; o aceite volta com a reativação, se ainda estiver no prazo.
+    if (r.erro === "NegocioSuspenso") return { status: "erro", motivo: "NegocioSuspenso", mensagem: MENSAGENS_DA_SUSPENSAO.convite };
+    return { status: "erro", motivo: "ConviteInvalido", mensagem: M.conviteInvalido };
   }
   await deps.definirNegocioAtivo(r.negocioId);
   return { status: "aceito", negocioId: r.negocioId };

@@ -6,14 +6,16 @@ import type { Matriz } from "@/lib/dominio/permissoes";
 import { acaoAlterarPapel, acaoAlterarPermissoes, acaoRemoverMembro } from "@/lib/equipe/acoes";
 import { ACAO_INICIAL } from "@/lib/equipe/servicos";
 import { classeDoCampo } from "@/components/ui/classes";
+import { enviarSemReiniciar } from "@/components/ui/envio";
 import { MatrizDePermissoes } from "./matriz-de-permissoes";
 import { classeDoBotao } from "@/components/ui/estilos";
 
 /** Trocar o papel (5.4): a matriz customizada é limpa e vale a predefinição do novo papel. */
 export function FormularioPapel({ membroId, papel }: { membroId: string; papel: "GERENTE" | "COLABORADOR" }) {
-  const [estado, executar] = useActionState(acaoAlterarPapel, ACAO_INICIAL);
+  const [estado, executar, enviando] = useActionState(acaoAlterarPapel, ACAO_INICIAL);
   return (
-    <form action={executar} className="space-y-4">
+    // Pela transição: o papel escolhido continua no campo se o servidor recusar.
+    <form onSubmit={(e) => enviarSemReiniciar(e, executar)} className="space-y-4">
       <input type="hidden" name="membroId" value={membroId} />
       {estado.status !== "ocioso" && <Aviso tipo={estado.status === "ok" ? "sucesso" : "erro"}>{estado.mensagem}</Aviso>}
       <div>
@@ -28,7 +30,9 @@ export function FormularioPapel({ membroId, papel }: { membroId: string; papel: 
           Ao trocar o papel, as permissões personalizadas são apagadas e passam a valer as permissões padrão do novo papel.
         </p>
       </div>
-      <BotaoEnviar enviando="Salvando…">Salvar papel</BotaoEnviar>
+      <BotaoEnviar enviando="Salvando…" pendente={enviando}>
+        Salvar papel
+      </BotaoEnviar>
     </form>
   );
 }

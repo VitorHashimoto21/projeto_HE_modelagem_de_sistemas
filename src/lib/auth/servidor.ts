@@ -7,6 +7,7 @@ import { cache } from "react";
 import { consultasDeAcesso, suporte, type ContextoDeNegocio } from "@/lib/db";
 import { ambiente } from "@/lib/env";
 import { criarAdaptadorSupabase } from "./adaptador-supabase";
+import type { IdDaCorrecao } from "@/lib/dominio/correcoes";
 import type { Acao, Modulo } from "@/lib/dominio/permissoes";
 import { descreverTela } from "@/lib/dominio/suporte";
 import { autorizar, type ContextoDoMembro, type MotivoDaRecusa, type NivelDeAcesso } from "./autorizacao";
@@ -18,6 +19,8 @@ import {
   ROTA_ADMIN,
   ROTA_ENTRAR,
   ROTA_MEUS_NEGOCIOS,
+  ROTA_NEGOCIO_SUSPENSO,
+  ROTA_SEGUNDO_FATOR,
   ROTA_SEM_ACESSO,
   ROTA_SESSAO_EXPIRADA,
 } from "./rotas";
@@ -92,13 +95,15 @@ export const obterContexto = cache(async (): Promise<ContextoComPapel | null> =>
       negocioDoCookie: loja.get(COOKIE_NEGOCIO_ATIVO)?.value,
       suporteDoCookie: loja.get(COOKIE_SUPORTE)?.value,
       autenticadoEm: sessao?.autenticadoEm ?? null,
+      nivelDaSessao: sessao?.nivel ?? null,
+      codigoEm: sessao?.codigoEm ?? null,
       agora: new Date(),
       versaoDosTermos: VERSAO_TERMOS,
     },
     {
       filiacao: (u, n) => acesso.filiacao(u, n),
       conta: (u) => acesso.estadoDaConta(u),
-      liberacao: (id) => suporte().liberacaoDoContexto(id),
+      liberacao: (id, administradorId) => suporte().liberacaoDoContexto(id, administradorId),
     },
   );
 });
@@ -117,9 +122,14 @@ function destinoDaRecusa(motivo: MotivoDaRecusa, contexto: ContextoComPapel | nu
       return ROTA_ACEITE_DOS_TERMOS;
     case "SessaoExpirada":
       return ROTA_SESSAO_EXPIRADA;
+    case "SegundoFatorPendente":
+      return ROTA_SEGUNDO_FATOR;
+    case "NegocioSuspenso":
+      return ROTA_NEGOCIO_SUSPENSO;
     case "SomenteDono":
     case "SemPermissao":
     case "SomenteLeitura":
+    case "ForaDaListaDeCorrecoes":
     case "SomenteAdministrador":
       return ROTA_SEM_ACESSO;
   }
@@ -155,6 +165,32 @@ export async function exigirSessao(): Promise<ContextoComPapel> {
   const contexto = await obterContexto();
   if (!contexto) redirect(ROTA_ENTRAR);
   if (contexto.sessaoExpirada) redirect(ROTA_SESSAO_EXPIRADA);
+  // SPEC-019 (INV-001): conta de Administrador sem o código vai às telas do 2º fator.
+  if (contexto.administrador && contexto.segundoFatorPendente) redirect(ROTA_SEGUNDO_FATOR);
+  return contexto;
+}
+
+/**
+ * Telas do 2º fator (SPEC-019, 5.1): só a conta de Administrador, com ou sem o código verificado.
+ * A sessão vencida (8 h ou 2º fator redefinido) ainda leva ao login de novo.
+ */
+export async function exigirSegundoFator(): Promise<ContextoComPapel> {
+  return (await exigirNivel({ tipo: "segundoFator" })).contexto!;
+}
+
+/**
+ * Nova senha pelo link de recuperação (SPEC-002, 5.4; SPEC-019, OPEN-017): basta a sessão aberta
+ * pelo link. A sessão da recuperação não tem o login com senha, então as regras da sessão do
+ * Administrador não se aplicam aqui; depois da troca, a conta com 2º fator entra de novo.
+ */
+export async function exigirSessaoDaRecuperacao(): Promise<ContextoComPapel> {
+  const contexto = await obterContexto();
+  if (!contexto) redirect(ROTA_ENTRAR);
+  // A sessão de um login com senha que já venceu (8 h ou 2º fator redefinido) não troca a senha:
+  // só a sessão do link de recuperação, que não tem o login com senha, fica liberada aqui.
+  if (contexto.administrador && contexto.sessaoExpirada && (await (await adaptadorDoServidor()).sessaoAtual())?.autenticadoEm) {
+    redirect(ROTA_SESSAO_EXPIRADA);
+  }
   return contexto;
 }
 
@@ -180,8 +216,8 @@ export async function exigirAdministrador(): Promise<ContextoComPapel> {
  * autorizado; caso contrário, leva a "Meus negócios" (CA-11).
  */
 export async function exigirNegocio(): Promise<ContextoDeNegocio> {
-  const { negocioId, usuarioId, modoSuporte } = await exigirMembro();
-  return { negocioId, usuarioId, modoSuporte };
+  const { negocioId, usuarioId, modoSuporte, negocioSuspenso } = await exigirMembro();
+  return { negocioId, usuarioId, modoSuporte, negocioSuspenso };
 }
 
 /** Membro do negócio ativo, com papel e permissões efetivas (SPEC-005). */
@@ -206,6 +242,6 @@ export async function exigirDono(): Promise<ContextoDoMembro> {
 }
 
 /** Páginas e ações de módulo: exige a permissão (módulo, ação) no negócio ativo (5.5). */
-export async function exigirPermissao(modulo: Modulo, acao: Acao): Promise<ContextoDoMembro> {
-  return (await exigirNivel({ tipo: "permissao", modulo, acao })).membro!;
+export async function exigirPermissao(modulo: Modulo, acao: Acao, correcao?: IdDaCorrecao): Promise<ContextoDoMembro> {
+  return (await exigirNivel({ tipo: "permissao", modulo, acao, correcao })).membro!;
 }

@@ -65,7 +65,7 @@ beforeEach(async () => {
   usuario = await novoUsuario("Gisele");
   ativo = null;
   resultadoDaConsulta = { ok: true, dados: dadosMei() };
-  consulta = { consultar: vi.fn(async () => resultadoDaConsulta) };
+  consulta = { consultar: vi.fn(async () => resultadoDaConsulta), consultarEmpresa: vi.fn(async () => ({ ok: false as const, erro: "Indisponivel" as const })) };
 });
 
 afterAll(async () => {

@@ -3,6 +3,7 @@
 import { useActionState, useState, type FormEvent } from "react";
 import { Aviso, MensagemDeCampo } from "@/components/acesso/campos";
 import { classeDoCampo } from "@/components/ui/classes";
+import { enviarSemReiniciar } from "@/components/ui/envio";
 import { classeDoBotao } from "@/components/ui/estilos";
 import { Superficie, TituloDaSuperficie } from "@/components/ui/superficie";
 import { camposDoFormulario, type ErrosDeCampo } from "@/lib/auth/validacao";
@@ -98,12 +99,13 @@ export function FormularioParametros({ atuais }: { atuais: ParametrosExibidos })
   const t = lerNumero(ticket);
   const sugerido = c && t && c > 0 && t > 0 ? faturamentoSugerido(c, Math.round(t * 100)) : null;
 
+  /** Envio pela transição, para não perder o que foi digitado quando o servidor recusa. */
   function aoEnviar(e: FormEvent<HTMLFormElement>) {
-    const v = validarParametros(camposDoFormulario(new FormData(e.currentTarget)));
-    if (!v.ok) {
-      e.preventDefault();
-      setLocais(v.erros);
-    } else setLocais({});
+    enviarSemReiniciar(e, executar, (dados) => {
+      const v = validarParametros(camposDoFormulario(dados));
+      setLocais(v.ok ? {} : v.erros);
+      return v.ok;
+    });
   }
   const campo = (nome: keyof ParametrosExibidos, rotulo: string, props: { dica?: string; placeholder?: string; onChange?: (v: string) => void } = {}) => (
     <Campo id={nome} rotulo={rotulo} erro={erros[nome]} dica={props.dica}>
@@ -125,7 +127,7 @@ export function FormularioParametros({ atuais }: { atuais: ParametrosExibidos })
   );
 
   return (
-    <form action={executar} onSubmit={aoEnviar} noValidate className="space-y-6">
+    <form onSubmit={aoEnviar} noValidate className="space-y-6">
       {estado.status === "salvo" && <Aviso tipo="sucesso">{estado.mensagem}</Aviso>}
       <Superficie aria-labelledby="titulo-cartao">
         <TituloDaSuperficie id="titulo-cartao" titulo="Vendas no cartão" />

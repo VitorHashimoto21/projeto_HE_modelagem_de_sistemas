@@ -2,9 +2,9 @@
 
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { useActionState, useRef, useState, type FormEvent } from "react";
+import { startTransition, useActionState, useEffect, useRef, useState, type FormEvent } from "react";
 import type { CategoriaItem, TipoItem } from "@/generated/prisma/enums";
-import { Aviso, BotaoEnviar, MensagemDeCampo } from "@/components/acesso/campos";
+import { Aviso, MensagemDeCampo } from "@/components/acesso/campos";
 import { avisar } from "@/components/ui/avisar";
 import { Package, Plus, Sparkles } from "lucide-react";
 import { classeDoCampo } from "@/components/ui/classes";
@@ -14,8 +14,10 @@ import { acaoCriarItem, acaoDefinirPreco, acaoEditarItem } from "@/lib/catalogo/
 import { ITEM_INICIAL, PRECO_INICIAL, type EstadoDoItem } from "@/lib/catalogo/servicos";
 import { CATEGORIAS, validarItem, validarPreco } from "@/lib/catalogo/validacao";
 import { camposDoFormulario, type ErrosDeCampo } from "@/lib/auth/validacao";
-import { custoTotal, lerNumero, UNIDADES } from "@/lib/dominio/catalogo";
+import { custoTotal, lerNumero, MAX_CODIGO, UNIDADES } from "@/lib/dominio/catalogo";
 import { comRetorno } from "@/lib/estrutura/retorno";
+import { cn } from "@/lib/utils";
+import { CampoNcm, type NcmConhecido } from "./campo-ncm";
 import { numero, reais, ROTULO_CATEGORIA, ROTULO_TIPO, rotuloUnidade } from "./rotulos";
 import type { OpcaoDeSubcategoria } from "./subcategorias";
 
@@ -29,8 +31,12 @@ export type ValoresDoItem = {
   id?: string;
   tipo?: TipoItem;
   nome?: string;
+  /** SPEC-024: o código interno gravado. */
+  codigo?: string | null;
   categoria?: string;
   subcategoriaId?: string | null;
+  /** SPEC-021: o NCM gravado, com a descrição e se ainda está na tabela vigente. */
+  ncm?: NcmConhecido | null;
   unidadeMedida?: string;
   custoBase?: number;
   comissaoPercentual?: number | null;
@@ -169,21 +175,30 @@ function Materiais({
   );
 }
 
+export type SugestoesDeNcm = Record<string, { ncm: string; descricao: string; itens: number }>;
+
 /**
  * Cadastro e edição do item (SPEC-006, 5.1–5.3). Na edição o tipo é fixo (INV-002). A subcategoria
  * (SPEC-020, 5.2) lista só as da categoria escolhida e volta a "Sem subcategoria" quando ela muda.
+ * O produto físico tem o NCM (SPEC-021), obrigatório quando o negócio emite nota fiscal de produtos.
  */
 export function FormularioItem({
   valores,
   opcoes,
   subcategorias,
   voltar = null,
+  exigeNcm = false,
+  sugestoesNcm = {},
 }: {
   valores?: ValoresDoItem;
   opcoes: OpcaoDeMaterial[];
   subcategorias: OpcaoDeSubcategoria[];
   /** Para onde voltar depois (a lista filtrada de origem); segue para o detalhe ao salvar. */
   voltar?: string | null;
+  /** SPEC-021 (RN35): o negócio emite nota fiscal de produtos. */
+  exigeNcm?: boolean;
+  /** SPEC-021 (OPEN-004): por subcategoria, o NCM mais usado pelos outros itens dela. */
+  sugestoesNcm?: SugestoesDeNcm;
 }) {
   const editando = !!valores?.id;
   const [categoria, setCategoria] = useState(valores?.categoria ?? "");
@@ -196,7 +211,7 @@ export function FormularioItem({
   const daCategoria = [...subcategorias, ...criadas.filter((c) => !subcategorias.some((s) => s.id === c.id))]
     .filter((s) => s.categoria === categoria)
     .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
-  const [estado, executar] = useActionState<EstadoDoItem, FormData>(editando ? acaoEditarItem : acaoCriarItem, ITEM_INICIAL);
+  const [estado, executar, enviando] = useActionState<EstadoDoItem, FormData>(editando ? acaoEditarItem : acaoCriarItem, ITEM_INICIAL);
   const [tipo, setTipo] = useState<TipoItem | null>(valores?.tipo ?? null);
   const [usaMateriais, setUsaMateriais] = useState((valores?.materiais?.length ?? 0) > 0);
   const [linhas, setLinhas] = useState<Linha[]>(
@@ -216,6 +231,8 @@ export function FormularioItem({
   );
   const porId = new Map(opcoes.map((o) => [o.id, o]));
   const [custoDigitado, setCustoDigitado] = useState(valores?.custoBase !== undefined ? numero(valores.custoBase) : "");
+  // SPEC-024: controlado, para passar para maiúsculas enquanto a pessoa digita (é como fica gravado).
+  const [codigoDigitado, setCodigoDigitado] = useState(valores?.codigo ?? "");
   const custoDosMateriais = custoTotal(
     lerNumero(custoDigitado) ?? 0,
     tipo === "SERVICO" && usaMateriais
@@ -223,15 +240,18 @@ export function FormularioItem({
       : [],
   );
 
+  /**
+   * Envio pela transição, e não pelo `action` do formulário: assim o React não volta os campos ao valor
+   * inicial quando o servidor recusa (ex.: nome ou código em uso), e a pessoa não perde o que digitou.
+   * Mesmo padrão do formulário de clientes (SPEC-022).
+   */
   function aoEnviar(e: FormEvent<HTMLFormElement>) {
-    const v = validarItem(
-      camposDoFormulario(new FormData(e.currentTarget)),
-      editando ? { tipo: "editar", tipoDoItem: valores!.tipo! } : { tipo: "criar" },
-    );
-    if (!v.ok) {
-      e.preventDefault();
-      setLocais(v.erros);
-    } else setLocais({});
+    e.preventDefault();
+    const dados = new FormData(e.currentTarget);
+    const v = validarItem(camposDoFormulario(dados), editando ? { tipo: "editar", tipoDoItem: valores!.tipo! } : { tipo: "criar" }, { exigeNcm });
+    if (!v.ok) return setLocais(v.erros);
+    setLocais({});
+    startTransition(() => executar(dados));
   }
 
   if (!tipo) {
@@ -266,7 +286,7 @@ export function FormularioItem({
     <div className="space-y-5">
       {estado.status === "erro" && estado.mensagem && <Aviso tipo="erro">{estado.mensagem}</Aviso>}
       <Superficie as="div">
-      <form action={executar} onSubmit={aoEnviar} noValidate className="space-y-5">
+      <form onSubmit={aoEnviar} noValidate className="space-y-5">
         {editando && <input type="hidden" name="itemId" value={valores!.id} />}
         <input type="hidden" name="tipo" value={tipo} />
         <input type="hidden" name="materiais" value={materiaisJson} />
@@ -287,6 +307,29 @@ export function FormularioItem({
         <MensagemDeCampo id="tipo-erro" erro={erros.tipo} />
 
         <CampoTexto nome="nome" rotulo="Nome" defaultValue={valores?.nome} maxLength={120} erro={erros.nome} limpar={limpar} />
+
+        {/* SPEC-024 (5.1): opcional, digitado pelo negócio; aparece em maiúsculas, como é gravado (5.2). */}
+        <CampoTexto
+          nome="codigo"
+          rotulo="Código (opcional)"
+          ajuda={`Um código seu para achar o item, como o da etiqueta. Até ${MAX_CODIGO} caracteres.`}
+          value={codigoDigitado}
+          maxLength={MAX_CODIGO}
+          autoComplete="off"
+          autoCapitalize="characters"
+          spellCheck={false}
+          onChange={(e) => {
+            const campo = e.currentTarget;
+            const posicao = campo.selectionStart;
+            setCodigoDigitado(campo.value.toUpperCase());
+            limpar("codigo");
+            // Mantém o cursor onde estava ao passar para maiúsculas.
+            requestAnimationFrame(() => posicao !== null && campo.setSelectionRange(posicao, posicao));
+          }}
+          className={cn(classeDoCampo(erros.codigo), "sm:max-w-64")}
+          erro={erros.codigo}
+          limpar={limpar}
+        />
 
         <div className="grid gap-5 sm:grid-cols-2">
           <div>
@@ -377,6 +420,20 @@ export function FormularioItem({
           <MensagemDeCampo id="subcategoriaId-erro" erro={erros.subcategoriaId} />
         </div>
 
+        {tipo === "PRODUTO_FISICO" && (
+          <CampoNcm
+            gravado={valores?.ncm ?? null}
+            obrigatorio={exigeNcm}
+            sugestao={
+              subcategoriaId && sugestoesNcm[subcategoriaId]
+                ? { ...sugestoesNcm[subcategoriaId], subcategoria: daCategoria.find((s) => s.id === subcategoriaId)?.nome ?? "esta subcategoria" }
+                : null
+            }
+            erro={erros.ncm}
+            limpar={() => limpar("ncm")}
+          />
+        )}
+
         <div className="grid gap-5 sm:grid-cols-2">
           <CampoTexto
             nome="custoBase"
@@ -449,7 +506,9 @@ export function FormularioItem({
         )}
 
         <div className="flex flex-wrap items-center gap-3 border-t pt-5">
-          <BotaoEnviar enviando="Salvando…" largura="automatica">{editando ? "Salvar alterações" : "Cadastrar item"}</BotaoEnviar>
+          <button type="submit" disabled={enviando} className={classeDoBotao("principal", "lg")}>
+            {enviando ? "Salvando…" : editando ? "Salvar alterações" : "Cadastrar item"}
+          </button>
           <Link href={editando ? comRetorno(`/catalogo/${valores!.id}`, voltar) : (voltar ?? "/catalogo")} className={classeDoBotao("fantasma")}>
             Cancelar
           </Link>
@@ -478,8 +537,13 @@ export function FormularioItem({
 
 /** Preço oficial manual (5.4). */
 export function FormularioPreco({ itemId }: { itemId: string }) {
-  const [estado, executar] = useActionState(acaoDefinirPreco, PRECO_INICIAL);
+  const [estado, executar, enviando] = useActionState(acaoDefinirPreco, PRECO_INICIAL);
   const [erroLocal, setErroLocal] = useState<string | null>(null);
+  const formulario = useRef<HTMLFormElement>(null);
+  // O campo só é limpo quando o preço foi gravado; recusado, o valor digitado fica (envio pela transição).
+  useEffect(() => {
+    if (estado.status === "salvo") formulario.current?.reset();
+  }, [estado]);
   const [visto, setVisto] = useState(estado);
   if (estado !== visto) {
     setVisto(estado);
@@ -496,13 +560,13 @@ export function FormularioPreco({ itemId }: { itemId: string }) {
         </p>
       )}
       <form
-        action={executar}
+        ref={formulario}
         onSubmit={(e) => {
-          const v = validarPreco(camposDoFormulario(new FormData(e.currentTarget)));
-          if (!v.ok) {
-            e.preventDefault();
-            setErroLocal(v.erros.preco ?? null);
-          }
+          e.preventDefault();
+          const dados = new FormData(e.currentTarget);
+          const v = validarPreco(camposDoFormulario(dados));
+          if (!v.ok) return setErroLocal(v.erros.preco ?? null);
+          startTransition(() => executar(dados));
         }}
         noValidate
         className="flex flex-wrap items-start gap-3"
@@ -524,8 +588,8 @@ export function FormularioPreco({ itemId }: { itemId: string }) {
           />
           <MensagemDeCampo id="preco-erro" erro={erro} />
         </div>
-        <button type="submit" className={classeDoBotao("principal")}>
-          Definir preço
+        <button type="submit" disabled={enviando} className={classeDoBotao("principal")}>
+          {enviando ? "Salvando…" : "Definir preço"}
         </button>
       </form>
     </div>

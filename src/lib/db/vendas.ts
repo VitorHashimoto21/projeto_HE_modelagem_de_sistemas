@@ -1,7 +1,8 @@
 import type { FormaPagamento, StatusConta, StatusVenda, TipoItem, TipoMovimentacao } from "@/generated/prisma/enums";
 import { custoTotal } from "@/lib/dominio/catalogo";
 import { intervaloDoDia } from "@/lib/dominio/datas";
-import { mascararContato, mascararNome } from "@/lib/dominio/suporte";
+import { faltandoParaNota, nomeDeExibicao } from "@/lib/dominio/cliente";
+import { mascararNome } from "@/lib/dominio/suporte";
 import {
   acertoDoCancelamento,
   custoUnitarioComMateriais,
@@ -28,7 +29,7 @@ import { EstoqueInsuficiente, instanteDaOcorrencia, movimentar } from "./estoque
  */
 
 export class ItemNaoVendavel extends Error {
-  constructor(public readonly nome: string, public readonly motivo: "sem-preco" | "arquivado" | "inexistente") {
+  constructor(public readonly nome: string, public readonly motivo: "sem-preco" | "sem-ncm" | "arquivado" | "inexistente") {
     super("Item não pode ser vendido.");
     this.name = "ItemNaoVendavel";
   }
@@ -130,6 +131,8 @@ export type OpcoesDaVenda = { podeAjustarPreco?: boolean };
 export type ItemVendavel = {
   id: string;
   nome: string;
+  /** SPEC-024: código interno (busca e Enter na Nova venda e na troca), ou null. */
+  codigo: string | null;
   tipo: TipoItem;
   unidadeMedida: string;
   preco: number;
@@ -158,6 +161,8 @@ export type DetalheDaVenda = VendaResumida & {
   itensVenda: {
     itemId: string;
     nome: string;
+    /** SPEC-024 (5.3): o código atual do item (a venda não guarda cópia, como o nome). */
+    codigo: string | null;
     unidadeMedida: string;
     quantidade: number;
     precoUnitario: number;
@@ -201,10 +206,15 @@ export type PreviaDoCancelamento = {
   status: StatusVenda;
   valorTotalCentavos: number;
   trocaDe: { id: string; numero: number } | null;
+  /** Cliente da venda, se ainda ativo: a troca já começa com ele (SPEC-022, 5.10, item 4). */
+  clienteId: string | null;
   devolucoes: { itemId: string; nome: string; unidadeMedida: string; quantidade: number }[];
   contasAbertas: { quantidade: number; restanteCentavos: number };
   recebidoCentavos: number;
 };
+
+/** Cliente no seletor da venda (SPEC-022, 5.10): nome de exibição e o que falta para a nota. */
+export type ClienteDaVenda = { id: string; nome: string; faltando: string[] };
 
 export function criarConsultasDeVendas(cliente: ClienteDoNegocio, negocioId: string, opcoes: { mascararClientes?: boolean } = {}) {
   /** SPEC-018 (INV-006): no modo suporte, nome e contato do cliente saem do servidor mascarados. */
@@ -214,12 +224,16 @@ export function criarConsultasDeVendas(cliente: ClienteDoNegocio, negocioId: str
    * os ajustes da SPEC-017: preço cobrado (exige `podeAjustarPreco`) e materiais usados.
    */
   async function prepararVenda(c: DadosDoCarrinho, opcoes: OpcoesDaVenda = {}): Promise<{ linhas: LinhaPreparada[]; total: number }> {
+    // SPEC-021 (RN35): com a nota fiscal de produtos ligada, produto físico sem NCM não entra (o estado
+    // do negócio é lido aqui, na gravação, e não o que estava na tela).
+    const negocio = await cliente.negocio.findFirst({ select: { emiteNotaDeProduto: true } });
     const itens = await cliente.item.findMany({
       where: { id: { in: c.linhas.map((l) => l.itemId) } },
       select: {
         id: true,
         nome: true,
         tipo: true,
+        ncm: true,
         precoAtual: true,
         custoBase: true,
         arquivadoEm: true,
@@ -232,6 +246,7 @@ export function criarConsultasDeVendas(cliente: ClienteDoNegocio, negocioId: str
       if (!i) throw new ItemNaoVendavel("Item", "inexistente");
       if (i.arquivadoEm) throw new ItemNaoVendavel(i.nome, "arquivado");
       if (i.precoAtual === null) throw new ItemNaoVendavel(i.nome, "sem-preco");
+      if (negocio?.emiteNotaDeProduto && i.tipo === "PRODUTO_FISICO" && i.ncm === null) throw new ItemNaoVendavel(i.nome, "sem-ncm");
       if (l.ajustePreco && !opcoes.podeAjustarPreco) throw new AjusteDePrecoSemPermissao();
       const precoOficialCentavos = paraCentavos(num(i.precoAtual)!);
       const precoCentavos = l.ajustePreco?.precoCentavos ?? precoOficialCentavos;
@@ -405,13 +420,35 @@ export function criarConsultasDeVendas(cliente: ClienteDoNegocio, negocioId: str
   }
 
   return {
-    /** Itens que podem entrar na venda: não arquivados e com preço oficial (RN23). */
+    /** SPEC-021: opção "Emito nota fiscal de produtos" (condição do aviso de cliente incompleto, SPEC-022 5.4). */
+    async emiteNotaDeProduto(): Promise<boolean> {
+      const negocio = await cliente.negocio.findFirst({ select: { emiteNotaDeProduto: true } });
+      return negocio?.emiteNotaDeProduto ?? false;
+    },
+
+    /** SPEC-021 (5.6): produtos físicos com preço que estão fora da venda por falta de NCM (opção ligada). */
+    async foraDaVendaPorFaltaDeNcm(): Promise<number> {
+      const negocio = await cliente.negocio.findFirst({ select: { emiteNotaDeProduto: true } });
+      if (!negocio?.emiteNotaDeProduto) return 0;
+      return cliente.item.count({ where: { arquivadoEm: null, precoAtual: { not: null }, tipo: "PRODUTO_FISICO", ncm: null } });
+    },
+
+    /**
+     * Itens que podem entrar na venda: não arquivados e com preço oficial (RN23). Com a nota fiscal de
+     * produtos ligada, também sem os produtos físicos sem NCM (SPEC-021, RN35).
+     */
     async itensVendaveis(): Promise<ItemVendavel[]> {
+      const negocio = await cliente.negocio.findFirst({ select: { emiteNotaDeProduto: true } });
       const itens = await cliente.item.findMany({
-        where: { arquivadoEm: null, precoAtual: { not: null } },
+        where: {
+          arquivadoEm: null,
+          precoAtual: { not: null },
+          ...(negocio?.emiteNotaDeProduto ? { OR: [{ tipo: "SERVICO" as const }, { ncm: { not: null } }] } : {}),
+        },
         select: {
           id: true,
           nome: true,
+          codigo: true,
           tipo: true,
           unidadeMedida: true,
           precoAtual: true,
@@ -425,6 +462,7 @@ export function criarConsultasDeVendas(cliente: ClienteDoNegocio, negocioId: str
       return itens.map((i) => ({
         id: i.id,
         nome: i.nome,
+        codigo: i.codigo,
         tipo: i.tipo,
         unidadeMedida: i.unidadeMedida,
         preco: num(i.precoAtual)!,
@@ -441,18 +479,34 @@ export function criarConsultasDeVendas(cliente: ClienteDoNegocio, negocioId: str
       }));
     },
 
-    async clientes(): Promise<{ id: string; nome: string; contato: string | null }[]> {
+    /**
+     * Seletor de cliente da venda (SPEC-022, 5.10): só o nome de exibição e o que falta para a
+     * nota (aviso da 5.4), sem dado pessoal; anonimizados ficam fora (INV-011).
+     */
+    async clientes(): Promise<ClienteDaVenda[]> {
       const lista = await cliente.cliente.findMany({
         where: { anonimizadoEm: null },
-        select: { id: true, nome: true, contato: true },
+        select: {
+          id: true,
+          tipo: true,
+          nome: true,
+          nomeFantasia: true,
+          documento: true,
+          situacaoIe: true,
+          inscricaoEstadual: true,
+          cep: true,
+          logradouro: true,
+          numero: true,
+          bairro: true,
+          municipio: true,
+          uf: true,
+        },
         orderBy: { nome: "asc" },
         take: 1000,
       });
-      return opcoes.mascararClientes ? lista.map((c) => ({ ...c, nome: mascararNome(c.nome), contato: c.contato && mascararContato(c.contato) })) : lista;
-    },
-
-    async criarCliente(nome: string, contato: string | null) {
-      return cliente.cliente.create({ data: { negocioId, nome, contato }, select: { id: true, nome: true, contato: true } });
+      return lista
+        .map((c) => ({ id: c.id, nome: opcoes.mascararClientes ? mascararNome(nomeDeExibicao(c)) : nomeDeExibicao(c), faltando: faltandoParaNota(c) }))
+        .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
     },
 
     /**
@@ -490,6 +544,7 @@ export function criarConsultasDeVendas(cliente: ClienteDoNegocio, negocioId: str
           status: true,
           valorTotal: true,
           vendaOrigem: { select: { id: true, numero: true } },
+          cliente: { select: { id: true, anonimizadoEm: true } },
           movimentacoes: { where: { tipo: "SAIDA_VENDA" }, select: { itemId: true, quantidade: true, item: { select: { nome: true, unidadeMedida: true } } } },
         },
       });
@@ -512,6 +567,7 @@ export function criarConsultasDeVendas(cliente: ClienteDoNegocio, negocioId: str
         status: v.status,
         valorTotalCentavos: paraCentavos(num(v.valorTotal)!),
         trocaDe: v.vendaOrigem,
+        clienteId: v.cliente && !v.cliente.anonimizadoEm ? v.cliente.id : null,
         devolucoes: [...devolucoes.values()],
         contasAbertas: { quantidade: contas.quantidade, restanteCentavos: paraCentavos(num(contas.restante)!) },
         recebidoCentavos: r,
@@ -670,7 +726,7 @@ export function criarConsultasDeVendas(cliente: ClienteDoNegocio, negocioId: str
           vendaOrigem: { select: { id: true, numero: true } },
           vendaTroca: { select: { id: true, numero: true } },
           lancamentos: { where: { estorno: true }, select: { valor: true, descricao: true } },
-          itens: { include: { item: { select: { nome: true, unidadeMedida: true } } } },
+          itens: { include: { item: { select: { nome: true, codigo: true, unidadeMedida: true } } } },
           pagamentos: { include: { detalheParcelas: { include: { conta: { select: { status: true, valorPago: true } } }, orderBy: { numero: "asc" } } } },
           movimentacoes: { include: { item: { select: { nome: true } } }, orderBy: { registradoEm: "asc" } },
         },
@@ -691,6 +747,7 @@ export function criarConsultasDeVendas(cliente: ClienteDoNegocio, negocioId: str
         itensVenda: v.itens.map((i) => ({
           itemId: i.itemId,
           nome: i.item.nome,
+          codigo: i.item.codigo,
           unidadeMedida: i.item.unidadeMedida,
           quantidade: num(i.quantidade)!,
           precoUnitario: num(i.precoUnitario)!,

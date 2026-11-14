@@ -50,3 +50,8 @@ jobs:
       - name: Carregar os parâmetros fiscais
         if: steps.config.outputs.pular != 'true'
         run: npm run fiscal:carregar
+
+      # SPEC-021 (5.1): a tabela NCM oficial, também idempotente; nunca apaga códigos nem muda itens.
+      - name: Carregar a tabela NCM
+        if: steps.config.outputs.pular != 'true'
+        run: npm run ncm:carregar

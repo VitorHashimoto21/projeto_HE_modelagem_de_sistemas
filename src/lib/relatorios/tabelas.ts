@@ -1,6 +1,8 @@
 import type { ContaExportada, LancamentoExportado, VendaExportada } from "@/lib/db/relatorios";
 import { diaLocal } from "@/lib/dominio/datas";
 import { CATEGORIAS } from "@/lib/dominio/financeiro";
+import { rotuloDaForma } from "@/lib/dominio/contas";
+import { observacaoDaLinha, siglaDaUnidade, type Inventario } from "@/lib/dominio/inventario";
 import { diaBrasileiro, quantidadeParaPlanilha as qtd, valorParaPlanilha as valor, type Rentabilidade } from "@/lib/dominio/relatorios";
 import { FORMAS_DE_PAGAMENTO } from "@/lib/dominio/venda";
 
@@ -79,27 +81,37 @@ export function tabelaDeContas(contas: ContaExportada[]): Tabela {
   const somar = (tipo: "PAGAR" | "RECEBER") => contas.filter((c) => c.tipo === tipo).reduce((s, c) => s + restante(c), 0);
   return {
     titulo: "Contas a pagar e a receber",
+    // SPEC-026 (5.7): fornecedor ou cliente, nº do documento e os pagamentos (data, forma e valor).
+    // Larguras medidas na fonte do PDF: os títulos, "Recebida em parte" e um pagamento cabem inteiros;
+    // descrições longas e mais de um pagamento são cortados no PDF e ficam completos no CSV.
     colunas: [
-      { titulo: "Tipo", largura: 0.09 },
-      { titulo: "Descrição", largura: 0.3 },
-      { titulo: "Categoria", largura: 0.13 },
-      { titulo: "Vencimento", largura: 0.1 },
-      { titulo: "Situação", largura: 0.13 },
-      { titulo: "Total", largura: 0.08, numero: true },
-      { titulo: "Pago", largura: 0.08, numero: true },
-      { titulo: "Restante", largura: 0.09, numero: true },
+      { titulo: "Tipo", largura: 0.06 },
+      { titulo: "Descrição", largura: 0.11 },
+      { titulo: "Fornecedor/Cliente", largura: 0.11 },
+      { titulo: "Nº do documento", largura: 0.1 },
+      { titulo: "Categoria", largura: 0.08 },
+      { titulo: "Vencimento", largura: 0.07 },
+      { titulo: "Situação", largura: 0.1 },
+      { titulo: "Total", largura: 0.065, numero: true },
+      { titulo: "Pago", largura: 0.065, numero: true },
+      { titulo: "Restante", largura: 0.07, numero: true },
+      { titulo: "Pagamentos", largura: 0.17 },
     ],
     linhas: contas.map((c) => [
       c.tipo === "PAGAR" ? "A pagar" : "A receber",
       c.descricao ?? "",
+      c.pessoa ?? "",
+      c.numeroDocumento ?? "",
       CATEGORIAS[c.categoria],
       dia(c.vencimento),
       SITUACAO_CONTA[c.tipo][c.status],
       valor(c.totalCentavos),
       valor(c.pagoCentavos),
       valor(restante(c)),
+      c.pagamentos.map((p) => `${dia(p.data)} ${rotuloDaForma(p.forma)} ${valor(p.valorCentavos)}`).join(" + "),
     ]),
-    totais: ["", `A receber ${valor(somar("RECEBER"))} · A pagar ${valor(somar("PAGAR"))}`, "", "", "", "", "", ""],
+    // O que falta receber e pagar em células separadas, para caberem no PDF (SPEC-026).
+    totais: ["Total", `A receber ${valor(somar("RECEBER"))}`, `A pagar ${valor(somar("PAGAR"))}`, "", "", "", "", "", "", "", ""],
   };
 }
 
@@ -107,16 +119,19 @@ export function tabelaDeRentabilidade(r: Rentabilidade): Tabela {
   const pct = (p: number | null) => (p === null ? "" : `${String(p).replace(".", ",")}%`);
   return {
     titulo: "Rentabilidade por item",
+    // SPEC-024 (5.3): o código interno atual do item, em coluna própria.
     colunas: [
-      { titulo: "Item", largura: 0.3 },
-      { titulo: "Quantidade", largura: 0.11, numero: true },
-      { titulo: "Faturamento", largura: 0.13, numero: true },
-      { titulo: "Custo", largura: 0.13, numero: true },
-      { titulo: "Margem", largura: 0.13, numero: true },
+      { titulo: "Código", largura: 0.1 },
+      { titulo: "Item", largura: 0.24 },
+      { titulo: "Quantidade", largura: 0.1, numero: true },
+      { titulo: "Faturamento", largura: 0.12, numero: true },
+      { titulo: "Custo", largura: 0.12, numero: true },
+      { titulo: "Margem", largura: 0.12, numero: true },
       { titulo: "Margem %", largura: 0.1, numero: true },
       { titulo: "Observação", largura: 0.1 },
     ],
     linhas: r.itens.map((i) => [
+      i.codigo ?? "",
       i.nome + (i.arquivado ? " (arquivado)" : ""),
       qtd(i.quantidade),
       valor(i.faturamentoCentavos),
@@ -125,6 +140,38 @@ export function tabelaDeRentabilidade(r: Rentabilidade): Tabela {
       pct(i.margemPercentual),
       i.linhasSemCusto ? "sem custo" : "",
     ]),
-    totais: ["Total", qtd(r.totais.quantidade), valor(r.totais.faturamentoCentavos), valor(r.totais.custoCentavos), valor(r.totais.margemCentavos), pct(r.totais.margemPercentual), ""],
+    totais: ["Total", "", qtd(r.totais.quantidade), valor(r.totais.faturamentoCentavos), valor(r.totais.custoCentavos), valor(r.totais.margemCentavos), pct(r.totais.margemPercentual), ""],
+  };
+}
+
+/**
+ * Inventário do estoque numa data (SPEC-025, 5.3 e 5.5): as colunas pedidas pela contabilidade e
+ * a observação de cada linha. Custo e valor ficam vazios sem custo (OPEN-006).
+ */
+export function tabelaDoInventario(inv: Inventario): Tabela {
+  return {
+    titulo: "Inventário do estoque",
+    colunas: [
+      // A observação cabe inteira no PDF mesmo com as duas marcas juntas (quantidade negativa e custo do início).
+      { titulo: "Código", largura: 0.08 },
+      { titulo: "Descrição", largura: 0.23 },
+      { titulo: "Unidade", largura: 0.06 },
+      { titulo: "NCM", largura: 0.08 },
+      { titulo: "Quantidade", largura: 0.08, numero: true },
+      { titulo: "Custo unitário", largura: 0.09, numero: true },
+      { titulo: "Valor total", largura: 0.08, numero: true },
+      { titulo: "Observação", largura: 0.3 },
+    ],
+    linhas: inv.linhas.map((l) => [
+      l.codigo ?? "",
+      l.nome + (l.arquivado ? " (arquivado)" : ""),
+      siglaDaUnidade(l.unidade),
+      l.ncm ?? "",
+      qtd(l.quantidade),
+      l.valorCentavos === null ? "" : valor(l.custoCentavos),
+      l.valorCentavos === null ? "" : valor(l.valorCentavos),
+      observacaoDaLinha(l),
+    ]),
+    totais: ["Total", "", "", "", "", "", valor(inv.totalCentavos), ""],
   };
 }

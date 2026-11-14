@@ -168,6 +168,8 @@ export default async function Relatorios({ searchParams }: PageProps<"/relatorio
                       </Selo>
                     )}
                   </p>
+                  {/* SPEC-024 (5.3): o código atual do item. */}
+                  {i.codigo && <p className="text-xs text-muted-foreground">Código {i.codigo}</p>}
                   {i.linhasSemCusto > 0 && (
                     <p className="text-xs text-status-warn">
                       <span aria-hidden="true">▲ </span>custo não informado em {i.linhasSemCusto} {i.linhasSemCusto === 1 ? "venda" : "vendas"}
@@ -202,10 +204,13 @@ export default async function Relatorios({ searchParams }: PageProps<"/relatorio
               </li>
             </ul>
             <div className="-mx-6 hidden overflow-x-auto px-6 sm:block">
-              <table className="w-full min-w-[640px] text-left text-sm">
+              <table className="w-full min-w-[720px] text-left text-sm">
                 <caption className="sr-only">Rentabilidade por item no período</caption>
                 <thead>
                   <tr className="border-b text-muted-foreground">
+                    <th scope="col" className="py-2 pr-3 font-medium">
+                      Código
+                    </th>
                     <th scope="col" className="py-2 font-medium">
                       Item
                     </th>
@@ -229,6 +234,7 @@ export default async function Relatorios({ searchParams }: PageProps<"/relatorio
                 <tbody>
                   {rent.itens.map((i) => (
                     <tr key={i.itemId} className="border-b last:border-b-0">
+                      <td className="py-2 pr-3 whitespace-nowrap text-muted-foreground">{i.codigo ?? "—"}</td>
                       <td className="py-2 pr-3">
                         <span className="font-medium text-foreground">{i.nome}</span>
                         {i.arquivado && (
@@ -252,7 +258,7 @@ export default async function Relatorios({ searchParams }: PageProps<"/relatorio
                 </tbody>
                 <tfoot>
                   <tr className="border-t-2 font-semibold">
-                    <th scope="row" className="py-2 text-left">
+                    <th scope="row" colSpan={2} className="py-2 text-left">
                       Total
                     </th>
                     <td className="py-2 text-right tabular-nums">{rent.totais.quantidade.toLocaleString("pt-BR", { maximumFractionDigits: 3 })}</td>

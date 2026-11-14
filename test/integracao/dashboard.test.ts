@@ -210,7 +210,7 @@ describe("projeção de caixa", () => {
     expect(dasDoMes).toBeGreaterThan(0);
     await conta("RECEBER", "300", vencimentoNaCompetencia(somarMeses(MES, 1), 10));
     const c = await base.contaPagarReceber.findFirstOrThrow({ where: { negocioId: negocioA, tipo: "RECEBER" } });
-    expect(await financeiro.registrarPagamento(c.id, { valor: "100", data: HOJE }, depsFin())).toMatchObject({ status: "salvo" });
+    expect(await financeiro.registrarPagamento(c.id, { valor: "100", data: HOJE, forma: "PIX" }, depsFin())).toMatchObject({ status: "salvo" });
 
     const dasDoProximo = await fin().dasVigente(vencimentoNaCompetencia(somarMeses(MES, 1), 20)); // muda em janeiro
     const p = await dash.carregarProjecao(deps());

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Star } from "lucide-react";
+import { Building2, Star } from "lucide-react";
 import { Aviso } from "@/components/acesso/campos";
 import { AvisoDaPagina } from "@/components/ui/aviso";
 import { CabecalhoDePagina } from "@/components/ui/cabecalho-de-pagina";
@@ -9,8 +9,10 @@ import { classeDaSuperficie, classeDoBotao } from "@/components/ui/estilos";
 import { exigirDono } from "@/lib/auth/servidor";
 import { planos } from "@/lib/db";
 import { dataBrasileira } from "@/lib/dominio/datas";
+import { ROTULO_MOTIVO_DA_TROCA } from "@/lib/dominio/plataforma";
 import { ROTULO_PAPEL } from "@/lib/dominio/permissoes";
 import { FUNCIONALIDADES_DO_PAGO, INCLUIDO_NOS_DOIS, ROTULO_FUNCIONALIDADE, ROTULO_PLANO } from "@/lib/dominio/planos";
+import { dataHoraCurta } from "@/lib/dominio/suporte";
 import { acaoAlterarPlano } from "@/lib/planos/acoes";
 
 export const metadata: Metadata = { title: "Plano" };
@@ -29,6 +31,9 @@ export default async function Plano({ searchParams }: PageProps<"/negocio/plano"
   const ativos = s.colaboradores.filter((c) => c.suspensoEm === null);
   const suspensos = s.colaboradores.length - ativos.length;
   const pago = s.plano === "PAGO";
+  // SPEC-019 (5.8, item 5): a última troca, se foi pela plataforma, aparece em destaque para o Dono.
+  const ultima = s.historico[0];
+  const pelaPlataforma = ultima?.plataforma ? ultima : null;
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
@@ -44,10 +49,21 @@ export default async function Plano({ searchParams }: PageProps<"/negocio/plano"
           {ROTULO_PLANO[s.plano]}
         </h2>
         <p className="mt-2 text-sm text-estrutura-suave">
-          {s.alteradoEm ? `Desde ${dataBrasileira(s.alteradoEm)}${s.alteradoPor ? `, por ${s.alteradoPor}` : ""}.` : "Desde o cadastro do negócio."}
+          {s.alteradoEm
+            ? `Desde ${dataBrasileira(s.alteradoEm)}${pelaPlataforma ? ", pela plataforma do HE" : s.alteradoPor ? `, por ${s.alteradoPor}` : ""}.`
+            : "Desde o cadastro do negócio."}
           {suspensos > 0 && ` ${suspensos} ${suspensos === 1 ? "colaborador está" : "colaboradores estão"} sem acesso pelo limite do plano gratuito.`}
         </p>
       </section>
+
+      {pelaPlataforma?.plataforma && (
+        <AvisoDaPagina tom="info">
+          O plano mudou para {ROTULO_PLANO[pelaPlataforma.para].toLowerCase()} em {dataHoraCurta(pelaPlataforma.em)} pela plataforma do HE, numa troca aprovada por duas pessoas da
+          equipe.
+          {pelaPlataforma.plataforma.motivo && ` Motivo: ${ROTULO_MOTIVO_DA_TROCA[pelaPlataforma.plataforma.motivo].toLowerCase()}`}
+          {` — ${pelaPlataforma.plataforma.descricao.replace(/[.!?]+$/, "")}.`} <Link href="/negocio/suporte">Ver em Acessos do suporte</Link>
+        </AvisoDaPagina>
+      )}
 
       <section aria-label="O que cada plano inclui" className="grid gap-4 sm:grid-cols-2">
         <div className={cartao}>
@@ -168,6 +184,35 @@ export default async function Plano({ searchParams }: PageProps<"/negocio/plano"
               </Link>
             </div>
           </form>
+        </section>
+      )}
+
+      {s.historico.length > 0 && (
+        <section aria-labelledby="titulo-historico" className={cartao}>
+          <h2 id="titulo-historico" className="text-[17px] font-bold text-card-foreground">
+            Histórico do plano
+          </h2>
+          <ol className="mt-3 space-y-3 border-l-2 border-border pl-4">
+            {s.historico.map((t) => (
+              <li key={t.id} className="text-sm">
+                <p className="font-semibold text-foreground">
+                  {ROTULO_PLANO[t.de]} → {ROTULO_PLANO[t.para]}
+                  <span className="ml-2 font-normal text-muted-foreground tabular-nums">{dataHoraCurta(t.em)}</span>
+                </p>
+                {t.plataforma ? (
+                  <p className="flex items-start gap-1.5 break-words text-muted-foreground">
+                    <Building2 className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
+                    <span>
+                      Pela plataforma do HE ({t.por}, suporte do HE)
+                      {t.plataforma.motivo && ` · ${ROTULO_MOTIVO_DA_TROCA[t.plataforma.motivo]}`}: {t.plataforma.descricao}
+                    </span>
+                  </p>
+                ) : (
+                  <p className="text-muted-foreground">Por {t.por}</p>
+                )}
+              </li>
+            ))}
+          </ol>
         </section>
       )}
     </div>

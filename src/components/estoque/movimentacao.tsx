@@ -16,8 +16,9 @@ export type TipoDeMovimentacao = "entrada" | "saida";
 
 const TITULO = { entrada: "Registrar entrada", saida: "Registrar saída manual" } as const;
 
-async function carregar(id: string) {
-  const membro = await exigirPermissao("estoque", "criar");
+async function carregar(id: string, tipo: TipoDeMovimentacao) {
+  // SPEC-019 (5.4): no modo suporte, também com o Estoque em "ver e corrigir".
+  const membro = await exigirPermissao("estoque", "criar", tipo === "entrada" ? "estoque.registrarEntrada" : "estoque.registrarSaida");
   const dia = hoje();
   const produto = await estoque(membro).situacaoDoProduto(id, dia);
   if (!produto) notFound();
@@ -26,7 +27,7 @@ async function carregar(id: string) {
 }
 
 export async function MovimentacaoEmPagina({ id, tipo }: { id: string; tipo: TipoDeMovimentacao }) {
-  const { produto, dia, unidade, descricao } = await carregar(id);
+  const { produto, dia, unidade, descricao } = await carregar(id, tipo);
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       <CabecalhoDePagina voltar={{ href: `/estoque/${produto.id}`, rotulo: produto.nome }} titulo={TITULO[tipo]} descricao={descricao} />
@@ -38,6 +39,6 @@ export async function MovimentacaoEmPagina({ id, tipo }: { id: string; tipo: Tip
 }
 
 export async function MovimentacaoEmGaveta({ id, tipo }: { id: string; tipo: TipoDeMovimentacao }) {
-  const { produto, dia, unidade, descricao } = await carregar(id);
+  const { produto, dia, unidade, descricao } = await carregar(id, tipo);
   return <MovimentacaoNaGaveta titulo={TITULO[tipo]} descricao={descricao} itemId={produto.id} tipo={tipo} hoje={dia} unidade={unidade} />;
 }

@@ -1,12 +1,14 @@
 "use client";
 
-import { useActionState, useEffect, useMemo, useState } from "react";
+import { useActionState, useMemo, useState } from "react";
+import dynamic from "next/dynamic";
+import Link from "next/link";
 import { Minus, Plus, Search, Trash2, UserPlus } from "lucide-react";
 import { Aviso, MensagemDeCampo } from "@/components/acesso/campos";
 import { classeDoCampo } from "@/components/ui/classes";
-import { classeDoBotao } from "@/components/ui/estilos";
+import { classeDoBotao, classeDoLink } from "@/components/ui/estilos";
 import { Superficie, TituloDaSuperficie } from "@/components/ui/superficie";
-import { lerNumero } from "@/lib/dominio/catalogo";
+import { codigoExatoPrimeiro, itemPeloCodigo, lerNumero, normalizarCodigo } from "@/lib/dominio/catalogo";
 import { somarDias } from "@/lib/dominio/estoque";
 import {
   acertoDoCancelamento,
@@ -23,13 +25,16 @@ import {
   type FormaDePagamento,
 } from "@/lib/dominio/venda";
 import { cn } from "@/lib/utils";
-import { acaoCadastrarCliente, acaoRegistrarVenda, acaoTrocarVenda } from "@/lib/vendas/acoes";
-import { VENDA_INICIAL, type EstadoDoCliente } from "@/lib/vendas/servicos";
+import type { ClienteDaVenda } from "@/lib/db/vendas";
+import { acaoRegistrarVenda, acaoTrocarVenda } from "@/lib/vendas/acoes";
+import { VENDA_INICIAL } from "@/lib/vendas/servicos";
 import { GavetaDeMateriais, GavetaDePreco, type MaterialDaLinha } from "./ajustes-da-linha";
 
 export type ItemDaFrente = {
   id: string;
   nome: string;
+  /** SPEC-024: código interno (busca e Enter com o código exato). */
+  codigo: string | null;
   tipo: "PRODUTO_FISICO" | "SERVICO";
   unidade: string;
   preco: number;
@@ -38,7 +43,6 @@ export type ItemDaFrente = {
   /** Custo próprio (só para quem ajusta preço: aviso de preço abaixo do custo — SPEC-017, OPEN-007). */
   custoBase?: number | null;
 };
-type Cliente = { id: string; nome: string; contato: string | null };
 /** SPEC-017: materiais usados na linha (total, OPEN-002) e preço cobrado com motivo; null = padrão do catálogo. */
 type Linha = { itemId: string; quantidade: string; materiais?: Record<string, string> | null; ajuste?: { preco: string; motivo: string } | null };
 /** `auto`: com um só pagamento, o valor acompanha o total até a pessoa editar o campo. */
@@ -46,6 +50,9 @@ type Pagamento = { chave: number; forma: FormaDePagamento; valor: string; parcel
 
 /** Modo troca (SPEC-011, OPEN-004): a venda original, o limite e o que já foi recebido. */
 export type TrocaDaFrente = { vendaId: string; numero: number; limiteCentavos: number; recebidoCentavos: number };
+
+// SPEC-022 (5.10): o formulário completo do cliente só é baixado quando a pessoa abre "Novo cliente".
+const FormularioCliente = dynamic(() => import("@/components/clientes/formulario-cliente").then((m) => m.FormularioCliente), { ssr: false });
 
 const MAX_NA_LISTA = 30;
 const reaisCampo = (centavos: number) => (centavos / 100).toFixed(2).replace(".", ",");
@@ -64,23 +71,35 @@ export function FrenteDeCaixa({
   hoje,
   troca,
   podeAjustarPreco = false,
+  emiteNotaDeProduto = false,
+  podeEditarClientes = false,
+  clienteInicial = null,
 }: {
   itens: ItemDaFrente[];
-  clientes: Cliente[];
+  clientes: ClienteDaVenda[];
   hoje: string;
   troca?: TrocaDaFrente;
   /** SPEC-017 (OPEN-005): Vendas — editar. Na troca não há ajustes (OPEN-008). */
   podeAjustarPreco?: boolean;
+  /** SPEC-022 (5.4, item 4): com a nota fiscal de produtos ligada, avisa quando o cliente está incompleto. */
+  emiteNotaDeProduto?: boolean;
+  /** Vendas — editar: o aviso traz o link "Completar". */
+  podeEditarClientes?: boolean;
+  /** Na troca, o cliente da venda original (SPEC-022, 5.10, item 4); ainda pode ser trocado. */
+  clienteInicial?: string | null;
 }) {
   // Na troca, a ação é a de cancelar e trocar; os estados de erro têm a mesma forma e o sucesso redireciona.
   const [estado, executar, enviando] = useActionState(troca ? (acaoTrocarVenda as unknown as typeof acaoRegistrarVenda) : acaoRegistrarVenda, VENDA_INICIAL);
   // Identificador do carrinho = id da venda: reenviar o mesmo carrinho não cria outra venda (INV-009).
   const [carrinhoId] = useState(() => crypto.randomUUID());
   const [busca, setBusca] = useState("");
+  /** SPEC-024 (5.4): o código digitado com Enter que não é de nenhum item à venda. */
+  const [codigoSemItem, setCodigoSemItem] = useState<string | null>(null);
   const [linhas, setLinhas] = useState<Linha[]>([]);
   const [clientes, setClientes] = useState(clientesIniciais);
-  const [clienteId, setClienteId] = useState("");
+  const [clienteId, setClienteId] = useState(clienteInicial ?? "");
   const [novoCliente, setNovoCliente] = useState(false);
+  const faltando = emiteNotaDeProduto ? (clientes.find((c) => c.id === clienteId)?.faltando ?? []) : [];
   const [dia, setDia] = useState(hoje);
   const [pagamentos, setPagamentos] = useState<Pagamento[]>(troca ? [] : [{ chave: 1, forma: "PIX", valor: "", parcelas: 1, auto: true }]);
   const [recebido, setRecebido] = useState("");
@@ -93,7 +112,13 @@ export function FrenteDeCaixa({
 
   const porId = useMemo(() => new Map(itens.map((i) => [i.id, i])), [itens]);
   const termo = busca.trim().toLowerCase();
-  const filtrados = termo ? itens.filter((i) => i.nome.toLowerCase().includes(termo)) : itens;
+  // SPEC-024 (5.4): pelo nome ou pelo código interno, com o código exato primeiro.
+  const filtrados = termo
+    ? codigoExatoPrimeiro(
+        itens.filter((i) => i.nome.toLowerCase().includes(termo) || !!i.codigo?.toLowerCase().includes(termo)),
+        busca,
+      )
+    : itens;
   const naLista = filtrados.slice(0, MAX_NA_LISTA);
 
   const linhasCalc = linhas.map((l) => {
@@ -161,6 +186,20 @@ export function FrenteDeCaixa({
         : [...ls, { itemId: id, quantidade: "1" }],
     );
     setBusca("");
+    setCodigoSemItem(null);
+  }
+  /**
+   * Enter na busca (SPEC-024, 5.4, INV-005): o código exato de um item à venda o adiciona, como o toque
+   * (também com o leitor de código de barras, que digita o código e o Enter). Nunca envia a venda.
+   * Sem item com o código, o texto fica selecionado: a próxima leitura o substitui, em vez de se juntar a ele.
+   */
+  function enterNaBusca(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key !== "Enter" || e.nativeEvent.isComposing) return;
+    e.preventDefault();
+    const item = itemPeloCodigo(busca, itens);
+    if (item) return adicionar(item.id);
+    setCodigoSemItem(normalizarCodigo(busca) || null);
+    e.currentTarget.select();
   }
   function mudarQuantidade(idx: number, passo: number) {
     const atual = lerNumero(linhas[idx].quantidade) ?? 0;
@@ -257,8 +296,12 @@ export function FrenteDeCaixa({
                 id="busca-item"
                 type="search"
                 value={busca}
-                onChange={(e) => setBusca(e.target.value)}
-                placeholder={itens.length ? "Ex.: manicure" : "Nenhum item com preço oficial no catálogo"}
+                onChange={(e) => {
+                  setBusca(e.target.value);
+                  setCodigoSemItem(null);
+                }}
+                onKeyDown={enterNaBusca}
+                placeholder={itens.length ? "Nome ou código, ex.: manicure" : "Nenhum item com preço oficial no catálogo"}
                 disabled={!itens.length}
                 autoComplete="off"
                 className={cn(classeDoCampo(), "h-12 rounded-full pl-11 text-base sm:text-sm")}
@@ -281,6 +324,7 @@ export function FrenteDeCaixa({
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-[15px] font-bold text-foreground">{i.nome}</span>
                         <span className={cn("block text-xs font-semibold", semSaldo ? "text-status-warn" : "text-muted-foreground")}>
+                          {i.codigo && `${i.codigo} · `}
                           {i.saldo === null ? "Serviço" : semSaldo ? "Sem estoque" : `${quantos(i.saldo)} em estoque`}
                         </span>
                       </span>
@@ -299,10 +343,17 @@ export function FrenteDeCaixa({
               })}
             </ul>
           )}
-          {termo && filtrados.length === 0 && <p className="border-t px-5 py-4 text-sm text-muted-foreground">Nenhum item encontrado. Só aparecem itens com preço oficial.</p>}
+          {codigoSemItem ? (
+            <p role="status" className="border-t px-5 py-4 text-sm text-muted-foreground">
+              Nenhum item à venda com o código {codigoSemItem}.
+            </p>
+          ) : (
+            termo &&
+            filtrados.length === 0 && <p className="border-t px-5 py-4 text-sm text-muted-foreground">Nenhum item encontrado. Só aparecem itens com preço oficial.</p>
+          )}
           {filtrados.length > MAX_NA_LISTA && (
             <p className="border-t px-5 py-3 text-xs text-muted-foreground">
-              Mostrando {MAX_NA_LISTA} de {filtrados.length}. Busque pelo nome para achar os outros.
+              Mostrando {MAX_NA_LISTA} de {filtrados.length}. Busque pelo nome ou pelo código para achar os outros.
             </p>
           )}
         </Superficie>
@@ -416,7 +467,6 @@ export function FrenteDeCaixa({
                 {clientes.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.nome}
-                    {c.contato ? `, ${c.contato}` : ""}
                   </option>
                 ))}
               </select>
@@ -424,11 +474,32 @@ export function FrenteDeCaixa({
                 <UserPlus aria-hidden="true" />
                 Novo cliente
               </button>
+              {faltando.length > 0 && (
+                <p role="status" className="w-full rounded-lg bg-status-warn-bg px-4 py-3 text-sm text-status-warn">
+                  <span aria-hidden="true">▲ </span>
+                  Faltam dados para a nota fiscal deste cliente: {faltando.join(", ")}.
+                  {podeEditarClientes && (
+                    <>
+                      {" "}
+                      <Link
+                        href={`/vendas/clientes/${clienteId}/editar`}
+                        target="_blank"
+                        rel="noopener"
+                        aria-label="Completar o cadastro do cliente (abre em outra aba)"
+                        className={classeDoLink("text-status-warn underline")}
+                      >
+                        Completar
+                      </Link>
+                    </>
+                  )}
+                </p>
+              )}
             </div>
           ) : (
-            <NovoCliente
+            <FormularioCliente
+              modo="venda"
               aoCriar={(c) => {
-                setClientes((cs) => [...cs, c].sort((a, b) => a.nome.localeCompare(b.nome)));
+                setClientes((cs) => [...cs, c].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")));
                 setClienteId(c.id);
                 setNovoCliente(false);
               }}
@@ -657,48 +728,5 @@ export function FrenteDeCaixa({
         </Superficie>
       </aside>
     </div>
-  );
-}
-
-function NovoCliente({ aoCriar, aoCancelar }: { aoCriar: (c: Cliente) => void; aoCancelar: () => void }) {
-  const [estado, executar, enviando] = useActionState<EstadoDoCliente, FormData>(acaoCadastrarCliente, { status: "ocioso" });
-  useEffect(() => {
-    if (estado.status === "criado") aoCriar(estado.cliente);
-    // aoCriar muda a cada renderização do pai; o efeito só deve rodar quando o estado muda.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [estado]);
-  const erros = estado.status === "erro" ? estado.erros : {};
-  return (
-    <form action={executar} className="space-y-3">
-      <div>
-        <label htmlFor="nome-cliente" className={rotulo}>
-          Nome
-        </label>
-        <input
-          id="nome-cliente"
-          name="nome"
-          maxLength={120}
-          aria-invalid={erros.nome ? true : undefined}
-          aria-describedby={erros.nome ? "nome-cliente-erro" : undefined}
-          className={classeDoCampo(erros.nome)}
-        />
-        <MensagemDeCampo id="nome-cliente-erro" erro={erros.nome} />
-      </div>
-      <div>
-        <label htmlFor="contato-cliente" className={rotulo}>
-          Contato <span className="font-normal text-muted-foreground">(opcional: telefone ou e-mail)</span>
-        </label>
-        <input id="contato-cliente" name="contato" maxLength={120} className={classeDoCampo(erros.contato)} />
-        <MensagemDeCampo id="contato-cliente-erro" erro={erros.contato} />
-      </div>
-      <div className="flex flex-wrap gap-3">
-        <button type="submit" disabled={enviando} className={classeDoBotao("principal")}>
-          Cadastrar cliente
-        </button>
-        <button type="button" onClick={aoCancelar} className={classeDoBotao("secundario")}>
-          Cancelar
-        </button>
-      </div>
-    </form>
   );
 }

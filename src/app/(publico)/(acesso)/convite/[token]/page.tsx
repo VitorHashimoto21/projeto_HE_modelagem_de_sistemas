@@ -8,6 +8,7 @@ import { acaoSair } from "@/lib/auth/acoes";
 import { obterContexto } from "@/lib/auth/servidor";
 import { equipe } from "@/lib/db";
 import { ROTULO_PAPEL } from "@/lib/dominio/permissoes";
+import { MENSAGENS_DA_SUSPENSAO } from "@/lib/dominio/suspensao";
 import { lerConvite } from "@/lib/equipe/servicos";
 
 export const metadata: Metadata = { title: "Convite", robots: { index: false } };
@@ -50,6 +51,9 @@ export default async function Convite({ params }: PageProps<"/convite/[token]">)
           </ul>
         </details>
 
+        {/* SPEC-019 (5.7): o convite continua pendente, mas o aceite espera a reativação. */}
+        {convite.suspenso && <AvisoDaPagina tom="atencao">{MENSAGENS_DA_SUSPENSAO.convite}</AvisoDaPagina>}
+
         {!conta ? (
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground">
@@ -72,7 +76,7 @@ export default async function Convite({ params }: PageProps<"/convite/[token]">)
           // SPEC-018 (INV-004): a conta de Administrador não participa de equipes.
           <AvisoDaPagina tom="atencao">Esta é uma conta de Administrador da plataforma, que não participa de equipes. Entre com outra conta para aceitar o convite.</AvisoDaPagina>
         ) : conta.email.toLowerCase() === convite.email ? (
-          <AceitarConvite token={token} />
+          !convite.suspenso && <AceitarConvite token={token} />
         ) : (
           <div className="space-y-4">
             <AvisoDaPagina tom="atencao">Este convite foi enviado para outro e-mail ({convite.emailMascarado}). Entre com essa conta para aceitar.</AvisoDaPagina>

@@ -1,0 +1,4 @@
+﻿Tipo;Descrição;Fornecedor/Cliente;Nº do documento;Categoria;Vencimento;Situação;Total;Pago;Restante;Pagamentos
+A pagar;Internet — 10/2026;;;Outros;15/10/2026;Paga;120,00;120,00;0,00;17/10/2026 Não informada 120,00
+A pagar;Luz — 10/2026;;;Outros;20/10/2026;Paga em parte;180,00;100,00;80,00;01/11/2026 Pix 100,00
+Total;A receber 0,00;A pagar 80,00;;;;;;;;

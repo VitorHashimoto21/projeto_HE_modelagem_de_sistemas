@@ -1,0 +1,5 @@
+Tipo;Descrição;Fornecedor/Cliente;Nº do documento;Categoria;Vencimento;Situação;Total;Pago;Restante;Pagamentos
+A pagar;Aluguel de outubro;Bia Costureira;Recibo 55;Outros;10/10/2026;Paga;900,00;900,00;0,00;10/10/2026 Não informada 900,00
+A pagar;Embalagens de novembro;Embalagens Exemplo;NF 1234;Fornecedores;01/11/2026;Paga em parte;250,00;100,00;150,00;01/11/2026 Pix 100,00
+A pagar;Cartões de visita;Gráfica Exemplo;;Outros;01/11/2026;A pagar;80,00;0,00;80,00;
+Total;A receber 0,00;A pagar 230,00;;;;;;;;

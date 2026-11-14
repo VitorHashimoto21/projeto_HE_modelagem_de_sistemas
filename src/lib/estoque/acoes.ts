@@ -11,7 +11,8 @@ import type { EstadoDoEstoque } from "./servicos";
 
 // Server Actions do estoque (SPEC-007). A fábrica exige a permissão do módulo Estoque
 // (SPEC-005, OPEN-001): criar → entrada e saída; editar → mínimo manual. O negócio vem do
-// contexto validado e "hoje" do relógio do servidor, nunca do formulário.
+// contexto validado e "hoje" do relógio do servidor, nunca do formulário. As três são correções que
+// o suporte pode fazer com o Estoque em "ver e corrigir" (SPEC-019, 5.4).
 
 const deps = (m: ContextoDoMembro): servicos.DependenciasDoEstoque => {
   const agora = new Date();
@@ -37,12 +38,15 @@ async function atualizar<T>(fluxo: Promise<T>): Promise<T> {
 
 export const acaoRegistrarEntrada = acaoComPermissao("estoque", "criar", async (membro, _: EstadoDoEstoque, form: FormData) =>
   atualizar(servicos.registrarMovimentacao(texto(form, "itemId"), "entrada", camposDoFormulario(form), deps(membro))),
+  "estoque.registrarEntrada",
 );
 
 export const acaoRegistrarSaida = acaoComPermissao("estoque", "criar", async (membro, _: EstadoDoEstoque, form: FormData) =>
   atualizar(servicos.registrarMovimentacao(texto(form, "itemId"), "saida", camposDoFormulario(form), deps(membro))),
+  "estoque.registrarSaida",
 );
 
 export const acaoDefinirMinimo = acaoComPermissao("estoque", "editar", async (membro, _: EstadoDoEstoque, form: FormData) =>
   atualizar(servicos.definirMinimo(texto(form, "itemId"), camposDoFormulario(form), deps(membro))),
+  "estoque.definirMinimo",
 );

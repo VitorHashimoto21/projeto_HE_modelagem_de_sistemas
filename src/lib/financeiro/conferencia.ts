@@ -11,6 +11,9 @@ import { hoje } from "@/lib/dominio/datas";
 export async function conferirFinanceiro(contexto: ContextoDeNegocio): Promise<void> {
   // SPEC-018 (INV-002): no modo suporte nada é gravado; a rotina diária completa a conferência.
   if (contexto.modoSuporte) return;
+  // SPEC-019 (5.7, INV-008): negócio suspenso também não grava; ao reativar, a conferência gera as contas do
+  // período e recebe as parcelas vencidas, nas datas de vencimento.
+  if (contexto.negocioSuspenso) return;
   try {
     await financeiro({ negocioId: contexto.negocioId, usuarioId: contexto.usuarioId }).conferir(hoje());
   } catch (e) {

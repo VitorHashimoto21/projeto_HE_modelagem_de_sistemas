@@ -4,7 +4,7 @@ import { somarDias } from "@/lib/dominio/estoque";
 import { PREDEFINICOES, pode } from "@/lib/dominio/permissoes";
 import { dividirEmParcelas, subtotalEmCentavos, totalEmCentavos, troco, vencimentoDaParcela } from "@/lib/dominio/venda";
 import { menuDoMembro } from "@/lib/equipe/menu";
-import { MENSAGENS_VENDA as M, validarCarrinho, validarCliente } from "@/lib/vendas/validacao";
+import { MENSAGENS_VENDA as M, validarCarrinho } from "@/lib/vendas/validacao";
 
 // SPEC-008 — testes unitários (seção 12).
 
@@ -83,14 +83,11 @@ describe("T02 — validação do carrinho (CA-05)", () => {
     expect(validarCarrinho({ ...valido, dia: somarDias(HOJE, -7), linhas: [{ itemId: ITEM2, quantidade: 1 }], pagamentos: [{ forma: "CREDITO", valor: 36, parcelas: 12 }] }, HOJE).ok).toBe(true);
   });
 
-  it("cliente rápido: nome obrigatório e normalizado", () => {
-    expect(validarCliente({ nome: "  Ana   Maria ", contato: "" })).toEqual({ ok: true, dados: { nome: "Ana Maria", contato: null } });
-    expect(validarCliente({ nome: " " })).toMatchObject({ ok: false, erros: { nome: M.nomeObrigatorio } });
-  });
 });
 
 describe("T13 — permissões da venda (SPEC-005)", () => {
-  const acoes = readFileSync("src/lib/vendas/acoes.ts", "utf-8");
+  // SPEC-022: o cadastro do cliente saiu de vendas/acoes.ts para clientes/acoes.ts (mesma permissão).
+  const acoes = readFileSync("src/lib/vendas/acoes.ts", "utf-8") + readFileSync("src/lib/clientes/acoes.ts", "utf-8");
   it.each(["acaoRegistrarVenda", "acaoCadastrarCliente"])("%s exige Vendas — criar", (nome) => {
     expect(acoes).toMatch(new RegExp(`export const ${nome} = acaoComPermissao\\("vendas", "criar"`));
   });

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ChevronRight, Package, Plus, Search } from "lucide-react";
+import { ChevronRight, ClipboardList, Package, Plus, Search } from "lucide-react";
 import { FiltroDeCategoria } from "@/components/catalogo/filtro-de-categoria";
 import { ROTULO_CATEGORIA, rotuloUnidade } from "@/components/catalogo/rotulos";
 import { quantidade, SeloDeSituacao } from "@/components/estoque/situacao";
@@ -17,6 +17,7 @@ import { CATEGORIAS } from "@/lib/catalogo/validacao";
 import { estoque } from "@/lib/db";
 import { hoje } from "@/lib/dominio/datas";
 import { emAlerta } from "@/lib/dominio/estoque";
+import { podeVerInventario } from "@/lib/estoque/inventario";
 import { comRetorno } from "@/lib/estrutura/retorno";
 import { cn } from "@/lib/utils";
 
@@ -58,7 +59,19 @@ export default async function Estoque({ searchParams }: PageProps<"/estoque">) {
 
   return (
     <div className="space-y-6">
-      <CabecalhoDePagina titulo="Estoque" descricao="Os produtos físicos do catálogo, com o saldo e o mínimo de cada um." />
+      <CabecalhoDePagina
+        titulo="Estoque"
+        descricao="Os produtos físicos do catálogo, com o saldo e o mínimo de cada um."
+        acoes={
+          // SPEC-025 (5.2, 5.6): quem vê o Estoque e o Catálogo; nunca no modo suporte.
+          !membro.modoSuporte && podeVerInventario(membro.permissoes) ? (
+            <Link href="/estoque/inventario" className={classeDoBotao("secundario")}>
+              <ClipboardList aria-hidden="true" />
+              Inventário
+            </Link>
+          ) : undefined
+        }
+      />
 
       {totalAlertas > 0 && situacao !== "baixo" && (
         <AvisoDaPagina tom="atencao">
@@ -79,7 +92,7 @@ export default async function Estoque({ searchParams }: PageProps<"/estoque">) {
         <form method="get" className="flex flex-wrap gap-2" role="search">
           {situacao && <input type="hidden" name="situacao" value={situacao} />}
           <label className="sr-only" htmlFor="busca">
-            Buscar por nome ou subcategoria
+            Buscar por nome, código, subcategoria ou NCM
           </label>
           <div className="relative min-w-0 flex-1 basis-52">
             <Search aria-hidden="true" className="pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -128,6 +141,7 @@ export default async function Estoque({ searchParams }: PageProps<"/estoque">) {
                   <div className="min-w-0 flex-1 basis-48">
                     <p className="truncate text-[15px] font-bold text-foreground">{pr.nome}</p>
                     <p className="text-xs text-muted-foreground">
+                      {pr.codigo && `${pr.codigo} · `}
                       {ROTULO_CATEGORIA[pr.categoria]}
                       {pr.subcategoria && ` › ${pr.subcategoria.nome}`}, mínimo {pr.minimo ? `${quantidade(pr.minimo.valor)} (${pr.minimo.origem})` : "não definido"}
                     </p>

@@ -11,6 +11,7 @@ import {
 } from "@/lib/auth/acoes";
 import { ESTADO_INICIAL } from "@/lib/auth/servicos";
 import { esquemaCadastro, esquemaEmail, esquemaEntrar, esquemaNovaSenha, SENHA_MINIMA } from "@/lib/auth/validacao";
+import { classeDoCampo } from "@/components/ui/classes";
 import { Aviso, BotaoEnviar, Campo, CampoSenha, MensagemDeCampo } from "./campos";
 import { useFormulario } from "./use-formulario";
 
@@ -207,7 +208,11 @@ export function FormularioEsqueciASenha() {
 }
 
 /** Nova senha pelo link de recuperação (5.4, CA-10). */
-export function FormularioNovaSenha() {
+/**
+ * Nova senha (5.4). SPEC-019 (OPEN-017): com `autenticadores`, a conta tem 2º fator e digita o código
+ * do aplicativo (e escolhe o autenticador, se tiver mais de um) antes de salvar.
+ */
+export function FormularioNovaSenha({ autenticadores = [] }: { autenticadores?: { id: string; nome: string }[] }) {
   const { estado, executar, erros, aoEnviar, limparErro } = useFormulario(acaoDefinirNovaSenha, esquemaNovaSenha);
 
   return (
@@ -237,7 +242,33 @@ export function FormularioNovaSenha() {
           erro={erros.confirmacao}
           onChange={() => limparErro("confirmacao")}
         />
-        <BotaoEnviar enviando="Salvando…">Salvar e entrar</BotaoEnviar>
+        {autenticadores.length > 1 && (
+          <div>
+            <label htmlFor="fator" className="mb-1.5 block text-sm font-medium text-foreground">
+              Autenticador
+            </label>
+            <select id="fator" name="fator" defaultValue={autenticadores[0].id} className={classeDoCampo()}>
+              {autenticadores.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.nome}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+        {autenticadores.length > 0 && (
+          <Campo
+            nome="codigo"
+            rotulo="Código do autenticador"
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            maxLength={7}
+            placeholder="6 números"
+            erro={erros.codigo}
+            onChange={() => limparErro("codigo")}
+          />
+        )}
+        <BotaoEnviar enviando="Salvando…">{autenticadores.length > 0 ? "Salvar" : "Salvar e entrar"}</BotaoEnviar>
       </form>
     </div>
   );

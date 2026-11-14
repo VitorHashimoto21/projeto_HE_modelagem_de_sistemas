@@ -124,7 +124,7 @@
 | O que mais deixa lucro | Painel (OPEN-007), Relatórios | Barras horizontais ordenadas; os 3 primeiros em destaque, o resto em cinza |
 | Tendência do saldo | Faixa do caixa | Minigráfico |
 | Fluxo do mês | Financeiro | Barras acima/abaixo do zero por dia (entradas e saídas) |
-| Para onde vai cada venda | Calculadora | Barra empilhada com as parcelas do próprio cálculo (custo, despesas fixas, taxa, comissão, imposto, margem) — nota N2 |
+| Para onde vai cada venda | Calculadora | Barra empilhada com as parcelas do próprio cálculo (custo, despesas fixas, taxa, comissão, imposto, margem) — nota N2. **Divergência encontrada em 26/10/2026:** a implementação juntou taxa e comissão numa parte só ("Maquininha e comissão"); corrigida pela [SPEC-023](SPEC-023.md) (opção 1, corrigir a implementação), com uma 6ª cor na paleta |
 | Parte de cada despesa fixa | Financeiro (despesas fixas) | Barra empilhada com a parte de cada despesa no total do mês — nota N2 |
 | Saldo × mínimo | Estoque (detalhe do produto) | Régua do saldo em relação ao estoque mínimo em vigor — nota N2 |
 

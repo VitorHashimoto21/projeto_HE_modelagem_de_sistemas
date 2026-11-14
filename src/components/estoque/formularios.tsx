@@ -3,6 +3,7 @@
 import { useActionState, useEffect, useState, type FormEvent } from "react";
 import { Aviso, MensagemDeCampo } from "@/components/acesso/campos";
 import { classeDoCampo } from "@/components/ui/classes";
+import { enviarSemReiniciar } from "@/components/ui/envio";
 import { classeDoBotao } from "@/components/ui/estilos";
 import { camposDoFormulario, type ErrosDeCampo } from "@/lib/auth/validacao";
 import { MOTIVOS_SAIDA, somarDias } from "@/lib/dominio/estoque";
@@ -23,15 +24,16 @@ function useFormularioDoEstoque(acao: Acao, validar: (campos: Record<string, str
     setLocais(null);
   }
   const erros = locais ?? (estado.status === "erro" ? (estado.erros ?? {}) : {});
+  /** Envio pela transição, para não perder o que foi digitado quando o servidor recusa (ex.: saída maior que o saldo). */
   function aoEnviar(e: FormEvent<HTMLFormElement>) {
-    const v = validar(camposDoFormulario(new FormData(e.currentTarget)));
-    if (!v.ok) {
-      e.preventDefault();
-      setLocais(v.erros ?? {});
-    } else setLocais({});
+    enviarSemReiniciar(e, executar, (dados) => {
+      const v = validar(camposDoFormulario(dados));
+      setLocais(v.ok ? {} : (v.erros ?? {}));
+      return v.ok;
+    });
   }
   const limpar = (campo: string) => erros[campo] && setLocais({ ...erros, [campo]: undefined });
-  return { estado, executar, enviando, erros, aoEnviar, limpar };
+  return { estado, enviando, erros, aoEnviar, limpar };
 }
 
 function Campo({ id, rotulo, erro, children }: { id: string; rotulo: string; erro?: string; children: React.ReactNode }) {
@@ -63,7 +65,7 @@ export function FormularioMovimentacao({
   /** Na gaveta: fecha e confirma com o aviso flutuante em vez de limpar para o próximo. */
   aoSalvar?: (mensagem: string) => void;
 }) {
-  const { estado, executar, enviando, erros, aoEnviar, limpar } = useFormularioDoEstoque(
+  const { estado, enviando, erros, aoEnviar, limpar } = useFormularioDoEstoque(
     tipo === "entrada" ? acaoRegistrarEntrada : acaoRegistrarSaida,
     (c) => validarMovimentacao(c, tipo, hoje),
   );
@@ -89,7 +91,7 @@ export function FormularioMovimentacao({
     <div className="space-y-3">
       {estado.status === "salvo" && !aoSalvar && <Aviso tipo="sucesso">{estado.mensagem}</Aviso>}
       {estado.status === "erro" && estado.mensagem && <Aviso tipo="erro">{estado.mensagem}</Aviso>}
-      <form key={chave} action={executar} onSubmit={aoEnviar} noValidate className="space-y-4">
+      <form key={chave} onSubmit={aoEnviar} noValidate className="space-y-4">
         <input type="hidden" name="itemId" value={itemId} />
         <div className="grid gap-4 sm:grid-cols-2">
           <Campo id={`${p}quantidade`} rotulo={`Quantidade (${unidade})`} erro={erros.quantidade}>
@@ -164,12 +166,12 @@ export function FormularioMovimentacao({
 
 /** Mínimo manual (5.3): vazio remove e volta à sugestão. */
 export function FormularioMinimo({ itemId, atual }: { itemId: string; atual: number | null }) {
-  const { estado, executar, enviando, erros, aoEnviar, limpar } = useFormularioDoEstoque(acaoDefinirMinimo, validarMinimo);
+  const { estado, enviando, erros, aoEnviar, limpar } = useFormularioDoEstoque(acaoDefinirMinimo, validarMinimo);
   return (
     <div className="space-y-3">
       {estado.status === "salvo" && <Aviso tipo="sucesso">{estado.mensagem}</Aviso>}
       {estado.status === "erro" && estado.mensagem && <Aviso tipo="erro">{estado.mensagem}</Aviso>}
-      <form action={executar} onSubmit={aoEnviar} noValidate className="flex flex-wrap items-start gap-3">
+      <form onSubmit={aoEnviar} noValidate className="flex flex-wrap items-start gap-3">
         <input type="hidden" name="itemId" value={itemId} />
         <div className="min-w-0 flex-1">
           <label htmlFor="estoqueMinimo" className="sr-only">
@@ -201,7 +203,7 @@ export function FormularioDiasCobertura({ atual }: { atual: number }) {
   const [estado, executar, enviando] = useActionState<EstadoDosDiasDeCobertura, FormData>(acaoDefinirDiasCobertura, { status: "ocioso" });
   const erro = estado.status === "erro" ? estado.mensagem : undefined;
   return (
-    <form action={executar} noValidate className="space-y-3">
+    <form onSubmit={(e) => enviarSemReiniciar(e, executar)} noValidate className="space-y-3">
       {estado.status === "salvo" && <Aviso tipo="sucesso">Dias de cobertura salvos.</Aviso>}
       <div>
         <label htmlFor="diasCoberturaEstoque" className="text-sm font-medium text-foreground">

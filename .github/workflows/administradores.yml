@@ -2,6 +2,8 @@
 # scripts/admin.ts no banco do ambiente escolhido, com o segredo DIRECT_URL do ambiente (o mesmo
 # das migrações). A credencial do banco não sai do GitHub, e o responsável registrado no banco é
 # o usuário do GitHub que disparou a execução. Em desenvolvimento, rode o script localmente.
+# SPEC-019 (5.11): o e-mail da conta nunca aparece no log (o repositório é público). Ele é lido do evento,
+# mascarado e só então passado aos passos seguintes, que mostram "***" no lugar dele.
 name: Administradores
 
 on:
@@ -10,7 +12,7 @@ on:
       acao:
         description: "Ação"
         type: choice
-        options: [conceder, retirar]
+        options: [conceder, retirar, redefinir-2fator]
         required: true
       email:
         description: "E-mail da conta (exclusiva para o suporte, já cadastrada)"
@@ -34,15 +36,40 @@ jobs:
     environment: ${{ inputs.ambiente }}
     env:
       DIRECT_URL: ${{ secrets.DIRECT_URL }}
+      # SPEC-019 (OPEN-002): só para redefinir-2fator; a chave secreta fica no ambiente e chega ao
+      # script por variável, nunca no comando.
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
       ADMIN_RESPONSAVEL: ${{ github.actor }} (GitHub Actions)
       ACAO: ${{ inputs.acao }}
-      EMAIL: ${{ inputs.email }}
     steps:
+      - name: Mascarar o e-mail no log
+        run: |
+          EMAIL=$(jq -r '.inputs.email // ""' "$GITHUB_EVENT_PATH")
+          if [ -n "$EMAIL" ]; then echo "::add-mask::$EMAIL"; fi
+          echo "EMAIL=$EMAIL" >> "$GITHUB_ENV"
+
       - name: Verificar se o ambiente está configurado
         run: |
           if [ -z "$DIRECT_URL" ]; then
             echo "::error title=Administradores::Segredo DIRECT_URL não definido para o ambiente ${{ inputs.ambiente }}."
             exit 1
+          fi
+          # SPEC-019 (homologação, T17): diz qual segredo falta. Valem só os segredos do ambiente
+          # (Environment secrets); uma variável do ambiente com o mesmo nome não chega aqui.
+          if [ "$ACAO" = "redefinir-2fator" ]; then
+            FALTA=""
+            if [ -z "$SUPABASE_URL" ] && [ -z "$SUPABASE_SECRET_KEY" ]; then
+              FALTA="Faltam os segredos SUPABASE_URL e SUPABASE_SECRET_KEY"
+            elif [ -z "$SUPABASE_URL" ]; then
+              FALTA="Falta o segredo SUPABASE_URL"
+            elif [ -z "$SUPABASE_SECRET_KEY" ]; then
+              FALTA="Falta o segredo SUPABASE_SECRET_KEY"
+            fi
+            if [ -n "$FALTA" ]; then
+              echo "::error title=Administradores::$FALTA no ambiente ${{ inputs.ambiente }}. Cadastre em Settings → Environments → ${{ inputs.ambiente }} → Environment secrets (variáveis do ambiente não valem)."
+              exit 1
+            fi
           fi
 
       - uses: actions/checkout@v4

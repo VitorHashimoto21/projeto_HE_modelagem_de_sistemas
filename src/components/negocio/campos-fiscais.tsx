@@ -136,7 +136,8 @@ export function CamposFiscais({
             <input
               id="cnpj"
               name="cnpj"
-              inputMode="numeric"
+              autoCapitalize="characters"
+              spellCheck={false}
               defaultValue={valores.cnpj ? formatarCnpj(valores.cnpj) : ""}
               placeholder="00.000.000/0000-00"
               aria-invalid={erros.cnpj ? true : undefined}

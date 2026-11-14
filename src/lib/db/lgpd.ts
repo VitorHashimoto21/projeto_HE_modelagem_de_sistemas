@@ -1,7 +1,6 @@
 import { Prisma, type PrismaClient } from "@/generated/prisma/client";
 import { diaLocal } from "@/lib/dominio/datas";
 import {
-  CLIENTE_ANONIMO,
   dataDeEliminacao,
   DIAS_ATE_LIMPAR_CONVITE,
   DOMINIO_ANONIMO,
@@ -12,6 +11,8 @@ import {
   type Tabelas,
   type Valor,
 } from "@/lib/dominio/lgpd";
+import { DADOS_ANONIMOS } from "./clientes";
+import { FORNECEDOR_SEM_DADOS } from "./fornecedores";
 
 /**
  * LGPD (SPEC-014). Fora do cliente do negócio, como as consultas de acesso: a exportação e
@@ -25,7 +26,9 @@ export type ResumoDaExclusao = {
   deixar: { id: string; nome: string; papel: "GERENTE" | "COLABORADOR" }[];
 };
 
-export type ResultadoDaExclusao = { ok: true; negociosEncerrados: number } | { ok: false; erro: "JaExcluida" | "UsuarioNaoEncontrado" };
+export type ResultadoDaExclusao =
+  | { ok: true; negociosEncerrados: number; /** SPEC-019 (5.11): a conta era de Administrador (o papel saiu na transação). */ administrador: boolean }
+  | { ok: false; erro: "JaExcluida" | "UsuarioNaoEncontrado" };
 
 /** Valor serializável: datas em ISO 8601, Decimal e BigInt como texto, JSON como texto. */
 function valor(v: unknown): Valor {
@@ -95,7 +98,7 @@ export function criarConsultasDaLgpd(cliente: PrismaClient) {
       const negociosComoDono = await Promise.all(
         donos.map(async (negocioId) => {
           const f = { where: { negocioId } };
-          const [negocio, membros, convites, itens, subcategorias, materiais, movimentacoes, historicoPrecos, vendas, itensVenda, pagamentos, parcelas, clientes, lancamentos, contas, despesasFixas, historicoPlano, acessosSuporte, registrosSuporte] =
+          const [negocio, membros, convites, itens, subcategorias, materiais, movimentacoes, historicoPrecos, historicoCustos, vendas, itensVenda, pagamentos, parcelas, clientes, fornecedores, lancamentos, contas, despesasFixas, historicoPlano, acessosSuporte, registrosSuporte, pedidosPlataforma] =
             await Promise.all([
               cliente.negocio.findUniqueOrThrow({ where: { id: negocioId } }),
               cliente.membroNegocio.findMany({ ...f, select: { id: true, papel: true, permissoesCustom: true, suspensoEm: true, usuarioId: true, usuario: { select: { nome: true, email: true } } } }),
@@ -106,18 +109,43 @@ export function criarConsultasDaLgpd(cliente: PrismaClient) {
               cliente.materialServico.findMany(f),
               cliente.movimentacaoEstoque.findMany(f),
               cliente.historicoPreco.findMany(f),
+              // SPEC-025 (RNF04): histórico de custo dos itens.
+              cliente.historicoCusto.findMany(f),
               cliente.venda.findMany(f),
               cliente.itemVenda.findMany(f),
               cliente.pagamento.findMany(f),
               cliente.parcela.findMany(f),
               cliente.cliente.findMany(f),
+              // SPEC-026 (RNF04): fornecedores; as contas e as despesas trazem a referência (fornecedorId).
+              cliente.fornecedor.findMany(f),
               cliente.lancamentoFinanceiro.findMany(f),
               cliente.contaPagarReceber.findMany(f),
               cliente.despesaFixa.findMany(f),
               cliente.historicoPlano.findMany(f),
               // SPEC-018 (RNF04): acessos do suporte liberados e o registro de auditoria de cada um.
               cliente.acessoSuporte.findMany(f),
-              cliente.registroSuporte.findMany({ ...f, select: { id: true, acessoId: true, evento: true, modulo: true, descricao: true, criadoEm: true, usuario: { select: { nome: true } } } }),
+              // SPEC-019 (5.11, T11): com os dados de cada evento — o antes e o depois das correções, o motivo e a
+              // descrição da suspensão —, a correção desfeita e o pedido da plataforma de cada evento.
+              cliente.registroSuporte.findMany({
+                ...f,
+                select: { id: true, acessoId: true, evento: true, modulo: true, descricao: true, dados: true, correcaoId: true, pedidoId: true, criadoEm: true, usuario: { select: { nome: true } } },
+              }),
+              // SPEC-019 (5.11, T11): os pedidos da plataforma (troca de plano e emergência), com quem pediu e quem decidiu.
+              cliente.pedidoPlataforma.findMany({
+                ...f,
+                select: {
+                  id: true,
+                  tipo: true,
+                  situacao: true,
+                  dados: true,
+                  criadoEm: true,
+                  expiraEm: true,
+                  decididoEm: true,
+                  motivoDaRecusa: true,
+                  solicitadoPor: { select: { nome: true } },
+                  decididoPor: { select: { nome: true } },
+                },
+              }),
             ]);
           const tabelas: Tabelas = {
             membros: membros.map(({ usuario, ...m }) => linha({ ...m, nome: usuario.nome, email: usuario.email })),
@@ -127,17 +155,20 @@ export function criarConsultasDaLgpd(cliente: PrismaClient) {
             materiaisServico: linhas(materiais),
             movimentacoesEstoque: linhas(movimentacoes),
             historicoPrecos: linhas(historicoPrecos),
+            historicoCustos: linhas(historicoCustos),
             vendas: linhas(vendas),
             itensVenda: linhas(itensVenda),
             pagamentos: linhas(pagamentos),
             parcelas: linhas(parcelas),
             clientes: linhas(clientes),
+            fornecedores: linhas(fornecedores),
             lancamentosFinanceiros: linhas(lancamentos),
             contasPagarReceber: linhas(contas),
             despesasFixas: linhas(despesasFixas),
             historicoPlano: linhas(historicoPlano),
             acessosSuporte: linhas(acessosSuporte),
             registrosSuporte: registrosSuporte.map(({ usuario, ...r }) => linha({ ...r, autor: usuario.nome })),
+            pedidosPlataforma: pedidosPlataforma.map(({ solicitadoPor, decididoPor, ...p }) => linha({ ...p, solicitadoPor: solicitadoPor.nome, decididoPor: decididoPor?.nome ?? null })),
           };
           return { negocio: linha(negocio), tabelas };
         }),
@@ -155,9 +186,17 @@ export function criarConsultasDaLgpd(cliente: PrismaClient) {
         }),
       );
 
+      // SPEC-019 (5.11): os eventos da própria conta, fora de negócio (papel de Administrador e 2º fator).
+      const eventosDaConta = await cliente.registroSuporte.findMany({
+        where: { usuarioId, negocioId: null },
+        orderBy: { criadoEm: "asc" },
+        select: { id: true, evento: true, descricao: true, criadoEm: true },
+      });
+
       return {
         geradoEm: agora.toISOString(),
         titular: linha(u),
+        eventosDaConta: linhas(eventosDaConta),
         vinculos: vinculos.map(({ negocio, ...v }) => linha({ ...v, negocio: negocio.nome })),
         convitesRecebidos: convitesRecebidos.map(({ negocio, ...c }) => linha({ ...c, negocio: negocio.nome })),
         negociosComoDono,
@@ -188,11 +227,23 @@ export function criarConsultasDaLgpd(cliente: PrismaClient) {
         ).map((v) => v.negocioId);
 
         if (donos.length) {
+          // SPEC-019 (5.7): excluir a conta continua valendo no negócio suspenso; o encerramento tira a suspensão
+          // (CHECK Negocio_encerrado_nao_suspenso), que fica no registro do suporte, e os registros do negócio ficam.
           await tx.negocio.updateMany({
             where: { id: { in: donos } },
-            data: { encerradoEm: agora, eliminarApos: new Date(`${dataDeEliminacao(diaLocal(agora))}T00:00:00Z`) },
+            data: {
+              encerradoEm: agora,
+              eliminarApos: new Date(`${dataDeEliminacao(diaLocal(agora))}T00:00:00Z`),
+              suspensoEm: null,
+              suspensoPorId: null,
+              motivoSuspensao: null,
+              descricaoSuspensao: null,
+            },
           });
-          await tx.cliente.updateMany({ where: { negocioId: { in: donos } }, data: { nome: CLIENTE_ANONIMO, contato: null, anonimizadoEm: agora } });
+          // SPEC-022 (INV-006): todos os dados pessoais dos clientes, não só nome e contato.
+          await tx.cliente.updateMany({ where: { negocioId: { in: donos }, anonimizadoEm: null }, data: { ...DADOS_ANONIMOS, anonimizadoEm: agora } });
+          // SPEC-026 (RN27 alterada): os fornecedores também, com as contas mantidas sem identificação.
+          await tx.fornecedor.updateMany({ where: { negocioId: { in: donos }, anonimizadoEm: null }, data: { ...FORNECEDOR_SEM_DADOS, anonimizadoEm: agora } });
           // SPEC-018 (5.4.6): negócio encerrado não fica com acesso de suporte liberado; o registro fica (RN32).
           const liberacoes = await tx.acessoSuporte.findMany({ where: { negocioId: { in: donos }, revogadoEm: null, expiraEm: { gt: agora } }, select: { id: true, negocioId: true } });
           if (liberacoes.length) {
@@ -216,7 +267,21 @@ export function criarConsultasDaLgpd(cliente: PrismaClient) {
         await tx.$executeRaw`
           UPDATE "Convite" SET email = 'convite-' || id || ${`@${DOMINIO_ANONIMO}`} WHERE email = ${atual.email}`;
 
-        return { ok: true, negociosEncerrados: donos.length };
+        return { ok: true, negociosEncerrados: donos.length, administrador: atual.administradorEm !== null };
+      });
+    },
+
+    /** SPEC-019 (5.11): os autenticadores da conta de Administrador excluída saíram do Supabase Auth. */
+    async registrarAutenticadoresRemovidos(usuarioId: string, quantos: number, agora: Date): Promise<void> {
+      await cliente.registroSuporte.create({
+        data: {
+          negocioId: null,
+          acessoId: null,
+          usuarioId,
+          evento: "SEGUNDO_FATOR_REMOVIDO",
+          descricao: `${quantos === 1 ? "1 autenticador removido" : `${quantos} autenticadores removidos`} pela exclusão da conta`,
+          criadoEm: agora,
+        },
       });
     },
 

@@ -36,11 +36,12 @@ async function usuario(nome: string, email: string, extra: Record<string, unknow
 /** Contexto como a aplicação o monta nesta requisição (servidor.ts → obterContexto). */
 const contexto = (usuarioId: string, suporteDoCookie?: string, negocioDoCookie?: string) =>
   resolverContextoDaRequisicao(
-    { usuarioId, negocioDoCookie, suporteDoCookie, autenticadoEm: new Date(Date.now() - 60_000), agora: new Date(), versaoDosTermos: VERSAO },
+    // SPEC-019: a sessão do Administrador já com o código verificado (aal2).
+    { usuarioId, negocioDoCookie, suporteDoCookie, autenticadoEm: new Date(Date.now() - 60_000), nivelDaSessao: "aal2", codigoEm: new Date(Date.now() - 30_000), agora: new Date(), versaoDosTermos: VERSAO },
     { filiacao: (u, n) => acesso.filiacao(u, n), conta: (u) => acesso.estadoDaConta(u), liberacao: (id) => suporte.liberacaoDoContexto(id) },
   );
 
-const LIBERAR = { motivo: "Vendas de ontem não aparecem no caixa", modulos: ["vendas" as const, "estoque" as const], prazo: "24h" as const };
+const LIBERAR: { motivo: string; modulos: ("vendas" | "estoque")[]; modulosComCorrecao: ("vendas" | "estoque")[]; prazo: "24h" } = { motivo: "Vendas de ontem não aparecem no caixa", modulos: ["vendas" as const, "estoque" as const], modulosComCorrecao: [], prazo: "24h" as const };
 
 beforeEach(async () => {
   const tabelas = await base.$queryRaw<{ tablename: string }[]>`
@@ -92,11 +93,14 @@ describe("T05 — painel: só metadados (INV-009, CA-01)", () => {
     await suporte.liberar(negocio, dono, LIBERAR, agora());
     const { negocios, total } = await suporte.listarNegocios("", 1, agora());
     expect(total).toBe(2);
-    const campos: (keyof NegocioNoPainel)[] = ["id", "nome", "regime", "plano", "criadoEm", "membros", "encerrado", "dono", "liberacao"];
+    // SPEC-019 (5.6): o acesso de emergência em andamento, um dado do próprio acesso (nada de dentro do negócio).
+    // SPEC-019 (5.7, 5.9): a suspensão, um metadado do próprio negócio (quando, quem, o motivo e a descrição).
+    const campos: (keyof NegocioNoPainel)[] = ["id", "nome", "regime", "plano", "criadoEm", "membros", "encerrado", "dono", "liberacao", "emergencia", "suspensao"];
     for (const n of negocios) expect(Object.keys(n).sort()).toEqual([...campos].sort());
     const salao = negocios.find((n) => n.id === negocio)!;
     expect(salao).toMatchObject({ membros: 1, encerrado: false, dono: { nome: "Rafael Dono", email: "dono@exemplo.com" }, liberacao: { motivo: LIBERAR.motivo, modulos: ["estoque", "vendas"] } });
-    expect(Object.keys(salao.liberacao!).sort()).toEqual(["expiraEm", "id", "modulos", "motivo"]);
+    // SPEC-019 (5.3): a ficha mostra também os módulos em correção, um dado da própria liberação.
+    expect(Object.keys(salao.liberacao!).sort()).toEqual(["expiraEm", "id", "modulos", "modulosComCorrecao", "motivo"]);
 
     expect((await suporte.listarNegocios("salão", 1, agora())).negocios.map((n) => n.id)).toEqual([negocio]);
     expect((await suporte.listarNegocios("DONO@exemplo", 1, agora())).total).toBe(2);
@@ -150,14 +154,16 @@ describe("T07 — modo suporte: somente leitura e clientes mascarados (INV-002, 
   });
 
   it("vendas: nome do cliente mascarado só no modo suporte", async () => {
-    const cliente = await base.cliente.create({ data: { negocioId: negocio, nome: "Maria Silva", contato: "(11) 98888-1234" } });
+    const cliente = await base.cliente.create({ data: { negocioId: negocio, nome: "Maria Silva", telefone: "11988881234" } });
     await base.venda.create({ data: { negocioId: negocio, numero: 1, clienteId: cliente.id, data: new Date(), valorTotal: 50, registradaPorId: dono } });
     const { inicio, fim } = intervaloDoDia(hojeLocal());
     const doSuporte = criarConsultasDeVendas(comNegocio(base, { negocioId: negocio, modoSuporte: true }), negocio, { mascararClientes: true });
     const doDono = criarConsultasDeVendas(comNegocio(base, { negocioId: negocio }), negocio);
     expect((await doSuporte.listar(inicio, fim)).vendas[0].cliente).toBe("M*** S***");
     expect((await doDono.listar(inicio, fim)).vendas[0].cliente).toBe("Maria Silva");
-    expect(await doSuporte.clientes()).toEqual([{ id: cliente.id, nome: "M*** S***", contato: "•••34" }]);
+    // SPEC-022: o seletor da venda leva só o nome (mascarado no suporte) e o que falta para a nota.
+    expect(await doSuporte.clientes()).toEqual([{ id: cliente.id, nome: "M*** S***", faltando: ["CPF", "endereço"] }]);
+    expect(JSON.stringify(await doSuporte.clientes())).not.toContain("1234");
   });
 });
 

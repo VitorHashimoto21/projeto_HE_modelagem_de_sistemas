@@ -6,6 +6,7 @@ import { Superficie } from "@/components/ui/superficie";
 import { FormularioParametros } from "@/components/calculadora/formularios";
 import { exigirPermissao } from "@/lib/auth/servidor";
 import { precificacao } from "@/lib/db";
+import { corrige } from "@/lib/dominio/correcoes";
 import { pode } from "@/lib/dominio/permissoes";
 import { reaisDeCentavos } from "@/lib/dominio/venda";
 
@@ -27,6 +28,8 @@ function Linha({ rotulo, valor }: { rotulo: string; valor: string }) {
 // "editar" para alterar.
 export default async function Parametros() {
   const membro = await exigirPermissao("calculadora", "ver");
+  // SPEC-019 (5.4): o suporte com a Calculadora em "ver e corrigir" salva os parâmetros.
+  const podeEditar = pode(membro.permissoes, "calculadora", "editar") || corrige(membro, "calculadora.salvarParametros");
   const p = await precificacao(membro).parametros();
   const atuais = {
     taxaCartao: decimal(p.taxaCartao),
@@ -53,7 +56,7 @@ export default async function Parametros() {
           </>
         }
       />
-      {pode(membro.permissoes, "calculadora", "editar") ? (
+      {podeEditar ? (
         <FormularioParametros atuais={atuais} />
       ) : (
         <Superficie>

@@ -1,13 +1,17 @@
 import type { AuthError, SupabaseClient } from "@supabase/supabase-js";
 import type {
   AdaptadorDeAutenticacao,
+  FatorDoUsuario,
   ResultadoCadastro,
+  ResultadoDaRemocaoDoFator,
+  ResultadoDoCadastroDoFator,
+  ResultadoDoCodigo,
   ResultadoEntrar,
   ResultadoEnvio,
   ResultadoNovaSenha,
   SessaoAtual,
 } from "./adaptador";
-import { autenticadoEmDasClaims } from "@/lib/dominio/suporte";
+import { instantesDasClaims } from "@/lib/dominio/segundo-fator";
 
 /**
  * Adaptador do Supabase Auth (ADR-003). Traduz os erros do Supabase para os erros
@@ -26,13 +30,36 @@ function erroDeEnvio(e: AuthError | null): ResultadoEnvio {
   return { ok: false, erro: "FalhaInterna" };
 }
 
+/**
+ * O SDK entrega o QR code como "data:image/svg+xml;utf-8," seguido do SVG cru. Um "#" no SVG (uma cor,
+ * por exemplo) corta a imagem no navegador; codificado, o mesmo SVG sempre aparece.
+ */
+export function qrCodeComoImagem(qrCode: string): string {
+  const prefixo = "data:image/svg+xml;utf-8,";
+  return qrCode.startsWith(prefixo) ? `data:image/svg+xml;charset=utf-8,${encodeURIComponent(qrCode.slice(prefixo.length))}` : qrCode;
+}
+
 export function criarAdaptadorSupabase(supabase: SupabaseClient): AdaptadorDeAutenticacao {
   async function sessaoAtual(): Promise<SessaoAtual | null> {
     // getClaims valida o JWT (assinatura e validade) no servidor — nunca confiar só no cookie.
     const { data, error } = await supabase.auth.getClaims();
     if (error || !data?.claims?.sub) return null;
-    // SPEC-018 (RNF12): o "amr" guarda o momento da entrada e não muda na renovação da sessão.
-    return { usuarioId: data.claims.sub, autenticadoEm: autenticadoEmDasClaims(data.claims as Record<string, unknown>) };
+    // SPEC-018 (RNF12) e SPEC-019 (5.1): o "amr" guarda o momento do login com senha e o do último
+    // código, e não muda na renovação da sessão; o "aal" diz se o código já foi verificado.
+    const s = instantesDasClaims(data.claims as Record<string, unknown>);
+    return { usuarioId: data.claims.sub, autenticadoEm: s.senhaEm, nivel: s.nivel, codigoEm: s.codigoEm };
+  }
+
+  async function fatores(): Promise<FatorDoUsuario[]> {
+    const { data, error } = await supabase.auth.mfa.listFactors();
+    if (error || !data) {
+      if (error) console.error("[auth] falha ao listar os autenticadores:", error.code ?? error.status);
+      return [];
+    }
+    return data.all
+      .filter((f) => f.factor_type === "totp")
+      .map((f) => ({ id: f.id, nome: f.friendly_name ?? "Autenticador", criadoEm: new Date(f.created_at), verificado: f.status === "verified" }))
+      .sort((a, b) => a.criadoEm.getTime() - b.criadoEm.getTime());
   }
 
   return {
@@ -102,6 +129,8 @@ export function criarAdaptadorSupabase(supabase: SupabaseClient): AdaptadorDeAut
       if (!error) return { ok: true };
       if (error.code === "same_password") return { ok: false, erro: "MesmaSenha" };
       if (error.code === "weak_password") return { ok: false, erro: "SenhaRecusada" };
+      // SPEC-019 (OPEN-017): conta com 2º fator só troca a senha numa sessão aal2.
+      if (error.code === "insufficient_aal") return { ok: false, erro: "SegundoFatorNecessario" };
       if (error.code === "session_not_found" || error.code === "session_expired" || error.status === 401) {
         return { ok: false, erro: "SemSessao" };
       }
@@ -114,5 +143,52 @@ export function criarAdaptadorSupabase(supabase: SupabaseClient): AdaptadorDeAut
     },
 
     sessaoAtual,
+
+    fatores,
+
+    async iniciarCadastroDoFator(nome, emissor): Promise<ResultadoDoCadastroDoFator> {
+      // Um cadastro não concluído (QR code gerado e código nunca digitado) não serve para nada:
+      // sai antes do novo, para não acumular fatores pendentes no Supabase.
+      for (const f of await fatores()) {
+        if (!f.verificado) await supabase.auth.mfa.unenroll({ factorId: f.id });
+      }
+      const { data, error } = await supabase.auth.mfa.enroll({ factorType: "totp", friendlyName: nome, issuer: emissor });
+      if (error || !data) {
+        if (error?.code === "mfa_factor_name_conflict") return { ok: false, erro: "NomeRepetido" };
+        if (error?.code === "too_many_enrolled_mfa_factors") return { ok: false, erro: "MuitosFatores" };
+        if (error?.code === "insufficient_aal") return { ok: false, erro: "SegundoFatorNecessario" };
+        if (error && limite(error)) return { ok: false, erro: "MuitasTentativas" };
+        console.error("[auth] falha ao cadastrar o autenticador:", error?.code ?? error?.status);
+        return { ok: false, erro: "FalhaInterna" };
+      }
+      return { ok: true, fatorId: data.id, qrCode: qrCodeComoImagem(data.totp.qr_code), segredo: data.totp.secret };
+    },
+
+    async verificarCodigo(fatorId, codigo): Promise<ResultadoDoCodigo> {
+      // Com sucesso, o Supabase devolve a sessão aal2 (gravada nos cookies pelo @supabase/ssr).
+      const { error } = await supabase.auth.mfa.challengeAndVerify({ factorId: fatorId, code: codigo });
+      if (!error) return { ok: true };
+      if (limite(error)) return { ok: false, erro: "MuitasTentativas" };
+      if (
+        error.code === "mfa_verification_failed" ||
+        error.code === "mfa_verification_rejected" ||
+        error.code === "mfa_challenge_expired" ||
+        error.code === "mfa_factor_not_found" ||
+        error.status === 400 ||
+        error.status === 422
+      ) {
+        return { ok: false, erro: "CodigoInvalido" };
+      }
+      console.error("[auth] falha ao verificar o código:", error.code ?? error.status);
+      return { ok: false, erro: "FalhaInterna" };
+    },
+
+    async removerFator(fatorId): Promise<ResultadoDaRemocaoDoFator> {
+      const { error } = await supabase.auth.mfa.unenroll({ factorId: fatorId });
+      if (!error) return { ok: true };
+      if (error.code === "insufficient_aal") return { ok: false, erro: "SegundoFatorNecessario" };
+      console.error("[auth] falha ao remover o autenticador:", error.code ?? error.status);
+      return { ok: false, erro: "FalhaInterna" };
+    },
   };
 }

@@ -13,7 +13,13 @@ export const metadata: Metadata = { title: "Novo item" };
 export default async function NovoItem({ searchParams }: PageProps<"/catalogo/novo">) {
   const membro = await exigirPermissao("catalogo", "criar");
   const c = catalogo(membro);
-  const [p, opcoes, subcategorias] = await Promise.all([searchParams, c.opcoesDeMaterial(), c.subcategorias()]);
+  const [p, opcoes, subcategorias, sugestoesNcm, exigeNcm] = await Promise.all([
+    searchParams,
+    c.opcoesDeMaterial(),
+    c.subcategorias(),
+    c.sugestoesDeNcm(),
+    c.emiteNotaDeProduto(),
+  ]);
   const categoria = CATEGORIAS.find((cat) => cat === p.categoria);
   const subcategoria = categoria ? subcategorias.find((s) => s.id === p.subcategoria && s.categoria === categoria) : undefined;
   // Volta para onde a pessoa estava (a lista filtrada ou a tela Subcategorias) — correção da homologação T12.
@@ -25,6 +31,8 @@ export default async function NovoItem({ searchParams }: PageProps<"/catalogo/no
         opcoes={opcoes}
         subcategorias={subcategorias}
         voltar={voltar === "/catalogo" ? null : voltar}
+        exigeNcm={exigeNcm}
+        sugestoesNcm={sugestoesNcm}
         valores={categoria ? { categoria, subcategoriaId: subcategoria?.id ?? null } : undefined}
       />
     </div>

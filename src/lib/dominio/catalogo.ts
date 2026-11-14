@@ -66,3 +66,29 @@ export function precoAbaixoDoCusto(preco: number, custo: number): boolean {
 export function formatarReais(valor: number): string {
   return valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
+
+/** Código interno (SPEC-024, 5.2): de 1 a 20 caracteres, maiúsculas sem acento, números, - . / _. */
+export const MAX_CODIGO = 20;
+const FORMATO_DO_CODIGO = /^[A-Z0-9._/-]{1,20}$/;
+
+/** Normalização antes de conferir e gravar (5.2): sem espaços nas pontas e em maiúsculas ("br-015 " → "BR-015"). */
+export const normalizarCodigo = (texto: string) => texto.trim().toUpperCase();
+
+/** O código já normalizado está no formato permitido (INV-002). */
+export const codigoValido = (codigo: string) => FORMATO_DO_CODIGO.test(codigo);
+
+/**
+ * O item cujo código é exatamente o texto digitado, normalizado (5.4, INV-005): o Enter da Nova venda
+ * só adiciona com o código exato, nunca por parte dele. Vazio ou sem item com o código: null.
+ */
+export function itemPeloCodigo<T extends { codigo: string | null }>(texto: string, itens: readonly T[]): T | null {
+  const codigo = normalizarCodigo(texto);
+  if (!codigo) return null;
+  return itens.find((i) => i.codigo === codigo) ?? null;
+}
+
+/** O item com o código exato primeiro (5.4); os outros mantêm a ordem em que vieram. */
+export function codigoExatoPrimeiro<T extends { codigo: string | null }>(itens: readonly T[], texto: string | undefined): T[] {
+  const exato = texto ? itemPeloCodigo(texto, itens) : null;
+  return exato ? [exato, ...itens.filter((i) => i !== exato)] : [...itens];
+}

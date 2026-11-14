@@ -1,5 +1,6 @@
 import "server-only";
 import { createClient } from "@supabase/supabase-js";
+import { apiDeAdministracaoDoSupabase } from "@/lib/suporte/redefinir-segundo-fator";
 
 /**
  * Remoção da credencial no Supabase Auth (SPEC-014, OPEN-001): API administrativa com a
@@ -22,4 +23,22 @@ export async function removerCredencial(usuarioId: string): Promise<ResultadoDaR
     console.error("[lgpd] falha ao remover a credencial:", e instanceof Error ? e.name : "erro");
     return "falha";
   }
+}
+
+/**
+ * SPEC-019 (5.11): na exclusão da conta de um Administrador, os autenticadores do 2º fator saem pela API de
+ * administração, logo depois da exclusão e antes da credencial. Sem a chave, nada é chamado: a remoção da
+ * credencial, pela rotina diária, apaga o usuário e os fatores dele.
+ */
+export type ResultadoDosAutenticadores = { status: "removidos"; quantos: number } | { status: "sem-chave" } | { status: "falha" };
+
+export async function removerAutenticadores(usuarioId: string): Promise<ResultadoDosAutenticadores> {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const chave = process.env.SUPABASE_SECRET_KEY;
+  if (!url || !chave) return { status: "sem-chave" };
+  const api = apiDeAdministracaoDoSupabase(url, chave);
+  const fatores = await api.listarFatores(usuarioId);
+  if (!fatores) return { status: "falha" };
+  for (const id of fatores) if (!(await api.apagarFator(usuarioId, id))) return { status: "falha" };
+  return { status: "removidos", quantos: fatores.length };
 }

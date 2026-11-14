@@ -230,7 +230,7 @@ describe("aceitar (5.3)", () => {
 
     expect(await servicos.aceitarConvite({ token }, await deps(joana, null))).toEqual({ status: "aceito", negocioId: negocio });
     expect(ativo).toBe(negocio);
-    expect(await acesso.filiacao(joana, negocio)).toEqual({ papel: "GERENTE", permissoesCustom: null });
+    expect(await acesso.filiacao(joana, negocio)).toEqual({ papel: "GERENTE", permissoesCustom: null, suspensao: null });
     expect(await base.convite.findFirstOrThrow()).toMatchObject({ status: "ACEITO", respondidoEm: expect.any(Date) });
   });
 
@@ -387,7 +387,7 @@ describe("gestão da equipe (5.4)", () => {
   it("T14 — trocar o papel limpa a matriz; remover tira o acesso na requisição seguinte (CA-12, INV-009)", async () => {
     const { usuario, membroId } = await entrarNaEquipe("colab@exemplo.com", "COLABORADOR", { personalizar: "on", [campoDaPermissao("financeiro", "criar")]: "on" });
     expect(await servicos.alterarPapel(membroId, "GERENTE", await deps(dono))).toEqual({ status: "ok", mensagem: M.papelAlterado });
-    expect(await acesso.filiacao(usuario, negocio)).toEqual({ papel: "GERENTE", permissoesCustom: null });
+    expect(await acesso.filiacao(usuario, negocio)).toEqual({ papel: "GERENTE", permissoesCustom: null, suspensao: null });
     expect((await membroDe(usuario, negocio))?.permissoes).toEqual(MATRIZ_COMPLETA);
 
     // Os registros da pessoa continuam depois da remoção (ligados ao Usuario).
@@ -412,7 +412,7 @@ describe("gestão da equipe (5.4)", () => {
 
     const { membroId } = await entrarNaEquipe("colab@exemplo.com");
     expect(await servicos.alterarPapel(membroId, "DONO", d)).toMatchObject({ status: "erro" });
-    expect(await acesso.filiacao(dono, negocio)).toEqual({ papel: "DONO", permissoesCustom: null });
+    expect(await acesso.filiacao(dono, negocio)).toEqual({ papel: "DONO", permissoesCustom: null, suspensao: null });
     expect(await base.membroNegocio.count({ where: { negocioId: negocio, papel: "DONO" } })).toBe(1);
   });
 

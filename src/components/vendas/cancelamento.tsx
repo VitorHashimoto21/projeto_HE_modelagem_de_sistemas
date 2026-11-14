@@ -4,6 +4,7 @@ import { useActionState, useState } from "react";
 import { Aviso, MensagemDeCampo } from "@/components/acesso/campos";
 import { classeDoCampo } from "@/components/ui/classes";
 import { DialogoDeConfirmacao, useConfirmacaoDoEnvio } from "@/components/ui/confirmacao";
+import { enviarSemReiniciar } from "@/components/ui/envio";
 import { classeDoBotao } from "@/components/ui/estilos";
 import { FORMAS_DE_REEMBOLSO, MOTIVOS_CANCELAMENTO, reaisDeCentavos } from "@/lib/dominio/venda";
 import { acaoCancelarVenda } from "@/lib/vendas/acoes";
@@ -18,8 +19,12 @@ export function FormularioCancelamento({ vendaId, numero, reembolsoCentavos }: {
 
   return (
     <form
-      action={executar}
-      onSubmit={confirmacao.aoEnviar}
+      onSubmit={(e) => {
+        // O primeiro envio só abre a confirmação; o confirmado vai pela transição, para o detalhe e a forma
+        // do reembolso não sumirem quando o servidor recusa.
+        confirmacao.aoEnviar(e);
+        if (!e.isDefaultPrevented()) enviarSemReiniciar(e, executar);
+      }}
       className="space-y-4"
     >
       <DialogoDeConfirmacao

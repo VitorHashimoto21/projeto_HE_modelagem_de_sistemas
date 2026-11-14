@@ -16,7 +16,7 @@ import {
   type ConsultasDeVendas,
 } from "@/lib/db/vendas";
 import { reaisDeCentavos } from "@/lib/dominio/venda";
-import { MENSAGENS_VENDA, validarCancelamento, validarCarrinho, validarCliente } from "./validacao";
+import { MENSAGENS_VENDA, validarCancelamento, validarCarrinho } from "./validacao";
 
 /**
  * Fluxos da venda (SPEC-008, seção 5), independentes do Next.js: as Server Actions (com a
@@ -31,9 +31,11 @@ export const MENSAGENS_FLUXO_VENDA = {
   naoVendavel: (nome: string, motivo: ItemNaoVendavel["motivo"]) =>
     motivo === "sem-preco"
       ? `${nome} não pode ser vendido: ainda não tem preço oficial.`
-      : motivo === "arquivado"
-        ? `${nome} não pode ser vendido: está arquivado.`
-        : "Um dos itens não foi encontrado. Recarregue a página.",
+      : motivo === "sem-ncm"
+        ? `${nome} está sem NCM. Cadastre o NCM para vender.`
+        : motivo === "arquivado"
+          ? `${nome} não pode ser vendido: está arquivado.`
+          : "Um dos itens não foi encontrado. Recarregue a página.",
   precoMudou: (itens: { nome: string; precoCentavos: number }[]) =>
     `O preço mudou: ${itens.map((i) => `${i.nome} agora custa ${reaisDeCentavos(i.precoCentavos)}`).join("; ")}. Revise os pagamentos.`,
   somaDivergente: (total: number) => `A soma dos pagamentos precisa ser igual ao total da venda (${reaisDeCentavos(total)}).`,
@@ -92,18 +94,6 @@ export async function registrarVenda(campos: Record<string, string>, deps: Depen
     console.error("[vendas] falha ao registrar:", e instanceof Error ? e.name : "erro");
     return { status: "erro", mensagem: MENSAGENS_FLUXO_VENDA.falhaInterna };
   }
-}
-
-export type EstadoDoCliente =
-  | { status: "ocioso" }
-  | { status: "erro"; erros: ErrosDeCampo }
-  | { status: "criado"; cliente: { id: string; nome: string; contato: string | null } };
-
-/** Cadastro rápido de cliente (OPEN-005). */
-export async function cadastrarCliente(campos: Record<string, string>, deps: DependenciasDaVenda): Promise<EstadoDoCliente> {
-  const v = validarCliente(campos);
-  if (!v.ok) return { status: "erro", erros: v.erros };
-  return { status: "criado", cliente: await deps.vendas.criarCliente(v.dados.nome, v.dados.contato) };
 }
 
 // ---------- Cancelamento e troca (SPEC-011) ----------
