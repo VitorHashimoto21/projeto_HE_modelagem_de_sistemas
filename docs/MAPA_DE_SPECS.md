@@ -144,6 +144,8 @@ Também foram corrigidos, sem decisão nova: a ordem do cronograma da Visão (Ca
 | SPEC-025 | Inventário do estoque numa data | 005, 006, 007, 013, 014, 016, 018, 021, 024 |
 | SPEC-026 | Fornecedores, vínculo nas contas e filtros | 001, 005, 008, 009, 013, 014, 016, 018, 022 |
 | SPEC-027 | Compras de fornecedores integradas ao estoque e ao financeiro *(proposta)* | 001, 005, 006, 007, 008, 009, 011, 013, 014, 016, 018, 019, 024, 025, 026 |
+| SPEC-028 | Desconto e acréscimo nos pagamentos das contas | 005, 008, 009, 010, 011, 012, 013, 014, 016, 018, 019, 026 |
+| SPEC-029 | Recebimento das vendas pelo contas a receber *(a escrever)* | 008, 009, 011, 012, 028 |
 
 ```mermaid
 flowchart LR
@@ -207,6 +209,10 @@ flowchart LR
     S19 --> S27
     S25 --> S27
     S26 --> S27
+    S9 --> S28[SPEC-028 Desconto e acréscimo nos pagamentos]
+    S26 --> S28
+    S8 --> S29[SPEC-029 Recebimento das vendas - a escrever]
+    S28 --> S29
 ```
 
 **Ordem de execução combinada em 19/10/2026:** **N8 da SPEC-016** (menu lateral recolhível — concluída e homologada em 19/10/2026) → SPEC-020 (concluída em 20/10/2026) → SPEC-021 (concluída em 22/10/2026) → SPEC-022 (concluída em 26/10/2026) → SPEC-019 (antes de abrir a produção). A barra lateral recolhível, planejada como SPEC-021, já estava prevista na SPEC-016 e não tinha sido entregue: virou a nota N8 dela (divergência corrigida), e as Specs seguintes foram renumeradas (NCM → 021, Cliente completo → 022). Esses itens vêm da revisão de uma profissional da área financeira e contábil que está montando uma loja de semijoias; a SPEC-019 continua obrigatória antes da produção (2º fator do Administrador).
@@ -226,6 +232,12 @@ flowchart LR
 - o desfazer fica recusado durante a suspensão.
 
 A revisão também trouxe ajustes derivados, sem mudar o comportamento decidido. A RN37 passou a citar os fornecedores.
+
+**Recomendações de uso real e nova ordem (14/11/2026, decisão da equipe):** a usuária com CNPJ que usa o HE no dia a dia recomendou desconto e acréscimo nas contas, desconto da taxa da maquininha no recebimento, data de recebimento editável nas vendas e toda venda gerando conta a receber, para alguém confirmar o recebimento. A equipe dividiu em duas Specs:
+- **SPEC-028** (desconto e acréscimo nos pagamentos das contas, com a taxa da maquininha e o estorno do pagamento): pequena e só no Financeiro; resolve os valores "pendentes" que a maquininha já descontou;
+- **SPEC-029** (recebimento das vendas pelo contas a receber): toda venda gera conta a receber, inclusive a paga na hora, com a data editável e a taxa do débito. Mexe no centro da venda e do caixa, e será feita por etapas.
+
+Nova ordem: **SPEC-028**, depois a entrevista da **SPEC-027** (compras) e, por último, a **SPEC-029**, que usa o desconto da SPEC-028.
 
 ### 2.2 Detalhamento
 
@@ -556,13 +568,28 @@ A revisão também trouxe ajustes derivados, sem mudar o comportamento decidido.
 - **RF (proposta):** RF91 (novo), RF08, RF15, RF30, RF89 e RF90 (alterados), RF20, RF29, RF31, RF32, RF46, RF47, RF62, RF88 · **RN:** RN43 (nova), RN03, RN04, RN11, RN14, RN15, RN22, RN25, RN27, RN37, RN39, RN41, RN42 · **RNF:** RNF05 (alterado), RNF01, RNF02, RNF04, RNF06
 - **Entidades:** `Compra` e `ItemCompra` (novas); `MovimentacaoEstoque`, `LancamentoFinanceiro`, `ContaPagarReceber`, `HistoricoCusto` e `Negocio` (ligação com a compra e contador); `Item` e `Fornecedor` (sem coluna nova)
 - **Dependências:** SPEC-001, SPEC-005, SPEC-006, SPEC-007, SPEC-008, SPEC-009, SPEC-011, SPEC-013, SPEC-014, SPEC-016, SPEC-018, SPEC-019, SPEC-024, SPEC-025, SPEC-026
-- **Justificativa da ordem:** a última das três Specs de melhorias de Estoque e Financeiro; usa o histórico de custo da SPEC-025 e os fornecedores da SPEC-026. Vem depois da SPEC-019 (decisão da equipe, 01/11/2026), então já nasce fora das correções do suporte e recusada em negócio suspenso.
+- **Justificativa da ordem:** a última das três Specs de melhorias de Estoque e Financeiro; usa o histórico de custo da SPEC-025 e os fornecedores da SPEC-026. Vem depois da SPEC-019 (decisão da equipe, 01/11/2026), então já nasce fora das correções do suporte e recusada em negócio suspenso. Em 14/11/2026, a equipe passou a SPEC-028 para antes da entrevista desta Spec; as contas a pagar das compras já nascem com o desconto e o acréscimo da SPEC-028.
+
+#### SPEC-028 — Desconto e acréscimo nos pagamentos das contas
+- **Spec:** [`specs/SPEC-028.md`](./specs/SPEC-028.md) (✅ aprovada em 14/11/2026, com as OPEN-001 a OPEN-008 decididas em entrevista, todas pela opção recomendada)
+- **Objetivo:** pagar ou receber uma conta com **desconto** (taxa da maquininha, desconto combinado) ou **acréscimo** (juros ou multa), quitando a conta sem deixar um resto que nunca vai ser pago:
+  - desconto e acréscimo no pagamento, com o motivo de uma lista curta; o caixa recebe só o valor real;
+  - nas contas de venda no cartão de crédito, a **taxa da maquininha** sugerida pela taxa média da Calculadora e descontada no recebimento automático;
+  - **estorno** do pagamento de conta;
+  - totais da lista, relatório de Contas e Painel com o desconto e o acréscimo.
+- **Valor entregue:** o contas a receber para de mostrar valores que a maquininha já descontou, o boleto pago com juros fecha a conta, e o caixa bate com o banco.
+- **Origem:** recomendações da usuária com CNPJ que usa o HE no dia a dia (14/11/2026).
+- **Decisões principais:** no pagamento, não na conta; só o valor real no caixa, sem categoria nova; taxa sugerida e automática nas contas de cartão; débito na SPEC-029; juros e multa digitados; estorno com *Financeiro: excluir*; desconto com a permissão do pagamento.
+- **RF:** RF31, RF71 e RF90 (alterados), RF29, RF32, RF51, RF67, RF68 · **RN:** RN44 (nova), RN11, RN20 e RN22 (alteradas), RN14, RN21, RN25, RN37, RN39 · **RNF:** RNF01, RNF02, RNF05, RNF06
+- **Entidades:** `LancamentoFinanceiro` e `ContaPagarReceber` (desconto, acréscimo e motivos); `Negocio` (sem mudança)
+- **Dependências:** SPEC-005, SPEC-008, SPEC-009, SPEC-010, SPEC-011, SPEC-012, SPEC-013, SPEC-014, SPEC-016, SPEC-018, SPEC-019, SPEC-026
+- **Justificativa da ordem:** pequena, só no Financeiro, e resolve o problema mais urgente das recomendações (decisão da equipe, 14/11/2026). Vem antes da SPEC-029, que usa o desconto para a taxa do débito.
 
 ---
 
 ## 3. Cobertura da baseline
 
-Todos os 144 requisitos (RF01–RF90, RN01–RN42, RNF01–RNF12) estão associados a pelo menos uma Spec. Requisitos compartilhados aparecem em mais de uma Spec com escopos complementares:
+Todos os 145 requisitos (RF01–RF90, RN01–RN42, RN44, RNF01–RNF12) estão associados a pelo menos uma Spec. O RF91 e a RN43 estão reservados para a SPEC-027, ainda em proposta. Requisitos compartilhados aparecem em mais de uma Spec com escopos complementares:
 
 | Requisito | Specs | Divisão |
 |---|---|---|
@@ -589,8 +616,10 @@ Todos os 144 requisitos (RF01–RF90, RN01–RN42, RNF01–RNF12) estão associa
 | RF58 | 004, 022 | Consulta do CNPJ no cadastro do negócio (004); CNPJ com letras (022) |
 | RF76 | 018, 022 | Máscara do modo suporte (018); todos os dados pessoais novos dos clientes (022) |
 | RN27 | 014, 022, 026 | Exclusão de conta com anonimização (014); campos novos dos clientes e exclusão de um cliente (022); fornecedores (026) |
-| RF30 / RF31 / RF67 / RN22 | 009, 026 | Contas, pagamentos e despesas fixas (009); fornecedor ou cliente, nº do documento e forma do pagamento (026) |
-| RF71 | 013, 026 | Exportação de relatórios (013); colunas novas no relatório de Contas (026) |
+| RF30 / RF31 / RF67 / RN22 | 009, 026, 028 | Contas, pagamentos e despesas fixas (009); fornecedor ou cliente, nº do documento e forma do pagamento (026); desconto, acréscimo e estorno do pagamento (028) |
+| RF71 | 013, 026, 028 | Exportação de relatórios (013); colunas novas no relatório de Contas (026); desconto e acréscimo dos pagamentos (028) |
+| RF90 | 026, 028 | Busca, filtros e totais das contas (026); totais de descontos e acréscimos (028) |
+| RN11 / RN20 | 008, 010, 028 | Parcelas iguais (008); taxa de cartão na formação do preço (010); taxa descontada no recebimento das contas de cartão (028) |
 | RN36 | 022, 026 | Dados e máscara do cliente (022); nome do cliente nas contas a receber (026) |
 
 ---
@@ -648,6 +677,7 @@ A conferência do seed fiscal foi concluída em 03/10/2026 (DAS do MEI atualizad
 - [SPEC-025](specs/SPEC-025.md) (inventário do estoque numa data): aprovada em 01/11/2026, com as OPEN-001 a OPEN-008 decididas em entrevista, todas pela opção recomendada. Tela "Inventário" no Estoque com prévia e arquivos CSV e PDF; quantidade ao fim do dia escolhido e custo pelo novo histórico de custo; nos dois planos, em qualquer data. Baseline ajustada (RF88 e RN41 novos; RF47 e RNF05 alterados). **Implementada em 01/11/2026** (PR #121) e verificada em build local (testes T01–T08 e o roteiro no navegador com 39 verificações), sem divergência conhecida. **Homologada em 01/11/2026** (T11), sem divergência: o inventário de 31/10/2026 bate com a contagem do estoque, e o CSV e o PDF saem no formato esperado. O campo de data segue o idioma do navegador, como os outros campos de data do HE; a equipe decidiu mantê-lo. Concluída. Em seguida vêm a SPEC-026 (fornecedores, contas e filtros) e a SPEC-027 (compras integradas), e depois a SPEC-019.
 - [SPEC-026](specs/SPEC-026.md) (fornecedores, vínculo nas contas e filtros): aprovada em 01/11/2026, com as OPEN-001 a OPEN-012 decididas em entrevista (a OPEN-002, campos iguais aos do cliente, por escolha da equipe; as demais pela opção recomendada). Cadastro de fornecedores em Financeiro › Fornecedores, com as permissões e a máscara do Financeiro; fornecedor ou cliente e nº do documento nas contas, corrigíveis a qualquer momento; forma do pagamento obrigatória; busca, filtros e totais na lista de contas; colunas novas no relatório de Contas; fornecedores fora das correções do suporte; nova versão da Política de Privacidade. Baseline ajustada (RF89, RF90 e RN42 novos; RF30, RF31, RF67, RF71, RN22, RN27 e RN36 alterados). **Implementada em 01/11/2026** e verificada em build local (testes T01–T10 e o roteiro no navegador com 71 verificações). Na implementação, o "Novo fornecedor" da conta passou a abrir no lugar do formulário, como o "Novo cliente" da Nova venda; o texto da Spec foi ajustado por decisão da equipe. **Homologada em 01/11/2026** (T13): o fornecedor pelo CNPJ, a conta com documento, o pagamento em duas formas, a correção na conta quitada, os filtros e os totais e o relatório de Contas, como previsto. A homologação encontrou campos cortados na gaveta da nova conta, um problema de tela que vem da SPEC-009, corrigido logo em seguida. A dúvida sobre a diferença entre o Novo lançamento e a Nova conta é o comportamento previsto. Concluída. Em seguida vem a SPEC-027.
 - [SPEC-027](specs/SPEC-027.md) (compras de fornecedores integradas ao estoque e ao financeiro): **proposta documentada em 14/11/2026**, a pedido da equipe, antes da entrevista. Traz as OPEN-001 a OPEN-010 com as opções e a recomendada; a baseline só é ajustada na aprovação (proposta: RF91 e RN43 novos). Próximo passo: a entrevista.
+- [SPEC-028](specs/SPEC-028.md) (desconto e acréscimo nos pagamentos das contas): **aprovada em 14/11/2026**, com as OPEN-001 a OPEN-008 decididas em entrevista, todas pela opção recomendada. Desconto e acréscimo no pagamento, com motivo; só o valor real no caixa; taxa da maquininha sugerida e descontada no recebimento automático das contas de cartão; estorno do pagamento de conta. Baseline ajustada (RN44 nova; RF31, RF71, RF90, RN11, RN20 e RN22 alterados). A implementar, em etapas.
 - `main`: atualizada até a SPEC-019 e a SPEC-026 (PR #140, 14/11/2026). A versão leva a SPEC-019, as SPEC-021 a SPEC-026 e a correção de segurança do PR #141, com o Next.js 16.4.6, até o PR #141 da `DEVELOP`; a anterior era a PR #105, de 22/10/2026, até a SPEC-020. Ainda não há ambiente de produção: no merge, as Migrações na `main` pularam as migrações e as cargas, porque o ambiente `producao` não tem segredos (conferido pela equipe em 14/11/2026). A próxima versão leva o que entrar na `DEVELOP` depois do PR #141.
 - **E-mails e domínio:** domínio próprio `.com.br` (Registro.br) verificado no Resend, que também passa a ser o SMTP do Supabase Auth ([ADR-009](definicoes_arquitetura/adrs-he.md), 18/10/2026); aguarda a compra.
 
@@ -664,5 +694,7 @@ Lista mantida até cada item ser resolvido; quem retomar o projeto (em qualquer 
 | 5 | **Dados do emitente para a futura nota fiscal** (pós-MVP): a nota de exemplo da loja de semijoias (NF-e nº 35685, 22/10/2026) pede do **próprio negócio** endereço, telefone, inscrição estadual e inscrição municipal, que os Dados do negócio ainda não guardam (hoje: nome, CNPJ, regime e enquadramento). Entra com a Spec da emissão de nota fiscal, junto com os dados de cada nota que não são do cadastro: código IBGE do município (do negócio, do cliente e do fornecedor, que tem os mesmos campos do cliente pela SPEC-026), endereço de entrega diferente do cadastro, natureza da operação, CFOP, CSOSN/CST, transportador e volumes. Os dados do cliente estão cobertos pela SPEC-022, e o NCM pela SPEC-021 | Registrada; aguarda a Spec da nota fiscal |
 | 6 | **Encerrar negócio e liberar o CNPJ** (encontrada em 26/10/2026, na homologação da SPEC-022): hoje não há como o Dono encerrar um negócio sem excluir a conta inteira (SPEC-014). Mesmo encerrado, o negócio continua com o CNPJ, que é único entre **todos** os negócios, e o cadastro recusa um CNPJ já usado. Também não há como transferir o negócio para outro Dono. Assim, um negócio cadastrado por engano ou fechado prende o CNPJ: ninguém mais consegue cadastrá-lo. Decidir se vira Spec, com as questões: (a) o Dono encerra um negócio sozinho, com confirmação; (b) o CNPJ fica livre ao encerrar, mantendo os registros fiscais por 5 anos (RN27); (c) transferir o negócio para outro membro como Dono. **Contorno na homologação (aplicado em 26/10/2026):** o negócio de teste foi encerrado e o CNPJ tirado dele direto no banco (SQL Editor do Supabase), e o negócio foi cadastrado na conta certa. Nunca usar na produção. **Acréscimo da SPEC-019 (OPEN-010, 28/10/2026):** a Spec desta pendência também cobre recuperar a conta do Dono sem acesso, e a **troca do e-mail do Dono é a funcionalidade prioritária**, com verificação de identidade própria (é o caminho clássico para roubar uma conta) | Aberta |
 | 7 | **Comissão gravada na venda** (evolução registrada pela SPEC-023, OPEN-005 e OPEN-006): gravar a comissão do momento em cada linha da venda, para descontá-la na **rentabilidade por item** (RF70) e considerar a comissão média no **ponto de equilíbrio** e na **meta** (RF55, RF56). Hoje a rentabilidade mostra margem = faturamento − custo, maior do que a real para quem paga comissão. Combina com uma futura Spec de comissões a pagar por vendedor (no MVP não há repasse, RN20) | Registrada; evolução futura |
-| 8 | **SPEC-027** (compras integradas ao estoque e ao financeiro): **documentada como proposta** em [`specs/SPEC-027.md`](specs/SPEC-027.md) (14/11/2026), com a tela "Registrar compra" (fornecedor, produtos com quantidade e custo unitário e a forma de pagar: à vista vira saída de caixa; a prazo vira contas a pagar), gravando tudo de uma vez. A decidir na entrevista, com as opções e a recomendada na seção 13 da Spec: o custo do produto (não mexer, última compra ou **custo médio**; a equipe ainda vai decidir), fornecedor e documento, produtos fora do cadastro, parcelas, frete e desconto, cancelamento, permissões, lugar no menu, Política de Privacidade e exportação (OPEN-001 a OPEN-010). O modo suporte e o negócio suspenso já vêm decididos pela SPEC-019. Depende da SPEC-026 (fornecedores) e grava no histórico de custo da SPEC-025 | Proposta documentada; aguardando a entrevista |
+| 8 | **SPEC-027** (compras integradas ao estoque e ao financeiro): **documentada como proposta** em [`specs/SPEC-027.md`](specs/SPEC-027.md) (14/11/2026), com a tela "Registrar compra" (fornecedor, produtos com quantidade e custo unitário e a forma de pagar: à vista vira saída de caixa; a prazo vira contas a pagar), gravando tudo de uma vez. A decidir na entrevista, com as opções e a recomendada na seção 13 da Spec: o custo do produto (não mexer, última compra ou **custo médio**; a equipe ainda vai decidir), fornecedor e documento, produtos fora do cadastro, parcelas, frete e desconto, cancelamento, permissões, lugar no menu, Política de Privacidade e exportação (OPEN-001 a OPEN-010). O modo suporte e o negócio suspenso já vêm decididos pela SPEC-019. Depende da SPEC-026 (fornecedores) e grava no histórico de custo da SPEC-025 | Proposta documentada; a entrevista vem depois da SPEC-028 (decisão de 14/11/2026) |
 | 9 | **Dívidas técnicas:** registro em [`qualidade/DIVIDAS_TECNICAS.md`](qualidade/DIVIDAS_TECNICAS.md) (criado em 14/11/2026), com o tipo, o quadrante de Fowler, a prioridade e como pagar. Abertas: actions em Node 20 (média), vulnerabilidades moderadas só no lint (baixa), imagem do modelo lógico (baixa), comissão não gravada na venda (média, ver a 7) e nenhuma verificação local antes do commit (baixa) | Aberta; ver o registro |
+| 10 | **SPEC-028** (desconto e acréscimo nos pagamentos das contas): aprovada em 14/11/2026; implementar em etapas (schema, domínio e pagamento; taxa, recebimento automático e estorno; lista, relatório, Painel e roteiro) e homologar com uma venda real no cartão e uma conta parcial antiga corrigida pelo estorno | Aprovada; a implementar |
+| 11 | **SPEC-029** (recebimento das vendas pelo contas a receber), das recomendações de 14/11/2026: toda venda gera conta a receber, inclusive a paga na hora, para alguém confirmar o recebimento; data de recebimento editável (por exemplo, a 2ª parcela de um Pix combinada para depois); forma Transferência na venda; taxa da maquininha no débito (SPEC-028, OPEN-004). Muda a RN09, a RN10, a RN12, o RF33 e o cancelamento da venda. A escrever, com entrevista, depois da SPEC-028 e da SPEC-027 | A escrever |
