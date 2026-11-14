@@ -18,7 +18,7 @@ Na Vercel, a homologação é o projeto **`he-homol`**: o ambiente que a Vercel 
 | Contas de Administrador | **Três** contas, conferidas pela equipe: todas corretas | Use duas delas como Conta A e Conta B. Cada conta deve ser exclusiva do suporte e de uma pessoa diferente. |
 | Logs antigos do workflow "Administradores" | Apagados pela equipe | As execuções novas mostram `***` no lugar do e-mail (etapa 4b). |
 | `EMISSOR_DO_AUTENTICADOR` na Vercel | Não definido, por decisão da equipe: o aplicativo autenticador mostra "Health Enterprise" também na homologação | — |
-| Branch do workflow "Administradores" | — | Até a próxima versão chegar à `main`, rodar `redefinir-2fator` **a partir da DEVELOP** (a versão da `main` ainda não tem essa ação). |
+| Branch do workflow "Administradores" | — | Durante a homologação, rodar `redefinir-2fator` **a partir da DEVELOP**, porque a versão da `main` ainda não tinha essa ação. Desde 14/11/2026 (PR #140), a `main` também tem o `redefinir-2fator` e as mensagens sem nenhuma parte do e-mail, e o workflow pode ser rodado a partir dela. |
 
 Pessoas e navegadores:
 - **Conta A** e **Conta B**: duas contas de Administrador, em dois navegadores (ou perfis), cada uma com o próprio autenticador no celular. Uma pessoa pode operar as duas na homologação.
