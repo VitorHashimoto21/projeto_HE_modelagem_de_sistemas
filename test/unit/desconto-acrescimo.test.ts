@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { abatidoDoPagamento, estaAtrasada, restanteDaConta } from "@/lib/dominio/financeiro";
+import { abatidoDoPagamento, descontoDaTaxa, estaAtrasada, restanteDaConta } from "@/lib/dominio/financeiro";
 import { MENSAGENS_FINANCEIRO as M, validarPagamento } from "@/lib/financeiro/validacao";
 
-// SPEC-028 — T01 (etapa 1): validação do pagamento com desconto e acréscimo, abatido e restante.
+// SPEC-028 — T01 (etapas 1 e 2): validação do pagamento com desconto e acréscimo, abatido e restante.
 
 const HOJE = "2026-11-15";
 const pagamento = (extra: Record<string, string> = {}) => validarPagamento({ valor: "194", data: HOJE, forma: "CREDITO", ...extra }, HOJE);
@@ -79,5 +79,21 @@ describe("T01 — abatido, restante e atraso (CA-05, INV-001)", () => {
     const c = { vencimento: "2026-11-01", status: "PARCIAL" as const, totalCentavos: 20000, pagoCentavos: 19400 };
     expect(estaAtrasada(c, HOJE)).toBe(true);
     expect(estaAtrasada({ ...c, descontoCentavos: 600 }, HOJE)).toBe(false);
+  });
+});
+
+describe("T01 — desconto da taxa da maquininha (CA-01, CA-03, INV-005)", () => {
+  it("restante × taxa, arredondado ao centavo", () => {
+    expect(descontoDaTaxa(20000, 3)).toBe(600);
+    expect(descontoDaTaxa(23500, 2.55)).toBe(599); // 5,9925 → 5,99
+    expect(descontoDaTaxa(10000, 3.19)).toBe(319);
+    expect(descontoDaTaxa(3333, 4.99)).toBe(166); // 1,663 → 1,66
+    expect(descontoDaTaxa(1, 3)).toBe(0); // 0,03 centavo → 0
+  });
+
+  it("sem taxa, sem restante ou sem valor a receber, o desconto é zero", () => {
+    expect(descontoDaTaxa(20000, 0)).toBe(0);
+    expect(descontoDaTaxa(0, 3)).toBe(0);
+    expect(descontoDaTaxa(100, 100)).toBe(0);
   });
 });

@@ -241,6 +241,14 @@ export default async function Caixa({ searchParams }: PageProps<"/financeiro">) 
                     {podeEstornar && !l.estornado && (l.origem === "AVULSO" || l.origem === "SALDO_INICIAL") && (
                       <BotaoEstornar lancamentoId={l.id} descricao={`${l.descricao ?? ROTULO_ORIGEM[l.origem]} (${reais(l.valorCentavos)})`} />
                     )}
+                    {/* SPEC-028 (5.5): o pagamento de conta também é estornado aqui; a conta volta a ficar em aberto ou parcial. */}
+                    {podeEstornar && !membro.modoSuporte && !l.estornado && l.origem === "CONTA" && (
+                      <BotaoEstornar
+                        lancamentoId={l.id}
+                        descricao={`${l.descricao ?? ROTULO_ORIGEM[l.origem]} (${reais(l.valorCentavos)})`}
+                        detalhe="Será gravado no caixa um lançamento contrário de mesmo valor, e a conta perde este pagamento, com o desconto e o acréscimo dele, e volta a ficar em aberto ou parcial."
+                      />
+                    )}
                   </div>
                 </li>
               );

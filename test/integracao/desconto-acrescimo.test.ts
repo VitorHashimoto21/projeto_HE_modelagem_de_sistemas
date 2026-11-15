@@ -6,13 +6,16 @@ import { criarPrismaClient } from "@/lib/db/criar-cliente";
 import { criarConsultasDoDashboard } from "@/lib/db/dashboard";
 import { criarConsultasFinanceiras } from "@/lib/db/financeiro";
 import { criarConsultasDeFornecedores } from "@/lib/db/fornecedores";
+import { criarConsultasDeVendas } from "@/lib/db/vendas";
 import { hoje as hojeLocal } from "@/lib/dominio/datas";
 import { competenciaDoDia } from "@/lib/dominio/financeiro";
 import * as servicos from "@/lib/financeiro/servicos";
 import { MENSAGENS_FLUXO_FINANCEIRO as F } from "@/lib/financeiro/servicos";
+import * as vendas from "@/lib/vendas/servicos";
 import { urlDoBancoDeTeste } from "../apoio/banco-de-teste";
 
-// SPEC-028 — etapa 1: pagamento com desconto e acréscimo no banco real (T02 e T09, parte).
+// SPEC-028 — etapa 1: pagamento com desconto e acréscimo no banco real (T02 e T09, parte); etapa 2: taxa
+// sugerida, recebimento automático com a taxa e estorno do pagamento (T03, T04, T07).
 
 const base: PrismaClient = criarPrismaClient(urlDoBancoDeTeste());
 const HOJE = hojeLocal();
@@ -34,6 +37,25 @@ const conta = (tipo: "PAGAR" | "RECEBER", valor: string, extra: Record<string, s
   servicos.criarConta({ tipo, descricao: `Conta ${valor}`, categoria: tipo === "PAGAR" ? "FORNECEDORES" : "VENDAS", valor, vencimento: HOJE, ...extra }, deps()).then(salvo);
 const pagar = (contaId: string, campos: Record<string, string>, negocioId = negocioA) =>
   servicos.registrarPagamento(contaId, { data: HOJE, forma: "PIX", ...campos }, deps(negocioId));
+
+const depsDaVenda = () => ({ vendas: criarConsultasDeVendas(cliente(), negocioA), usuarioId: usuario, hoje: HOJE, agora: new Date() });
+
+/** Venda de R$ {valor} no cartão de crédito à vista: uma conta a receber de venda (parcela). */
+async function vendaNoCartao(valor: number) {
+  const item = await base.item.create({
+    data: { negocioId: negocioA, tipo: "SERVICO", nome: `Serviço ${randomUUID()}`, nomeChave: randomUUID(), categoria: "BELEZA", unidadeMedida: "un", custoBase: 1, precoAtual: valor },
+  });
+  const r = await vendas.registrarVenda(
+    { carrinho: JSON.stringify({ id: randomUUID(), linhas: [{ itemId: item.id, quantidade: 1 }], pagamentos: [{ forma: "CREDITO", valor, parcelas: 1 }] }) },
+    depsDaVenda(),
+  );
+  if (r.status !== "registrada") throw new Error(JSON.stringify(r));
+  const conta = await base.contaPagarReceber.findFirstOrThrow({ where: { parcela: { pagamento: { vendaId: r.vendaId } } } });
+  return { vendaId: r.vendaId, contaId: conta.id };
+}
+const vencerOntem = (contaId: string) => base.contaPagarReceber.update({ where: { id: contaId }, data: { vencimento: new Date(Date.now() - 86_400_000) } });
+const taxaDe = (taxa: number) => base.negocio.update({ where: { id: negocioA }, data: { taxaCartaoMedia: taxa } });
+const lancamentosDa = (contaId: string) => base.lancamentoFinanceiro.findMany({ where: { contaId }, orderBy: { data: "asc" } });
 
 beforeEach(async () => {
   const tabelas = await base.$queryRaw<{ tablename: string }[]>`
@@ -149,5 +171,142 @@ describe("T09 — o banco recusa desconto e acréscimo fora das regras (INV-001,
     await expect(base.contaPagarReceber.update({ where: { id }, data: { valorPago: 95, valorDesconto: 6 } })).rejects.toThrow(/valores_validos/);
     await expect(base.contaPagarReceber.update({ where: { id }, data: { valorAcrescimo: 1 } })).rejects.toThrow(/valores_validos/);
     await expect(base.contaPagarReceber.update({ where: { id }, data: { valorPago: 102.5, valorAcrescimo: 2.5 } })).resolves.toBeTruthy();
+  });
+});
+
+describe("T03 — taxa sugerida e recebimento automático com a taxa (CA-01, CA-03, CA-08, INV-005)", () => {
+  it("a conta de venda no cartão sugere a taxa; as outras não", async () => {
+    await taxaDe(3);
+    const { contaId } = await vendaNoCartao(200);
+    expect((await fin().detalharConta(contaId, HOJE)).taxaSugerida).toEqual({ taxa: 3, descontoCentavos: 600 });
+    expect((await fin().detalharConta(await conta("RECEBER", "200"), HOJE)).taxaSugerida).toBeNull();
+    await taxaDe(0);
+    expect((await fin().detalharConta(contaId, HOJE)).taxaSugerida).toBeNull();
+  });
+
+  it("no vencimento, a parcela é recebida com o desconto da taxa (CA-03)", async () => {
+    await taxaDe(3);
+    const { contaId } = await vendaNoCartao(200);
+    await vencerOntem(contaId);
+    expect((await fin().conferir(HOJE)).parcelasRecebidas).toBe(1);
+    const c = await fin().detalharConta(contaId, HOJE);
+    expect(c).toMatchObject({ status: "QUITADA", pagoCentavos: 19400, descontoCentavos: 600, restanteCentavos: 0, taxaSugerida: null });
+    expect(c.lancamentos).toEqual([expect.objectContaining({ valorCentavos: 19400, forma: "CREDITO", registradoPor: null, descontoCentavos: 600, motivoDesconto: "TAXA_MAQUININHA" })]);
+  });
+
+  it("sem taxa informada, o recebimento automático é pelo valor cheio, como antes", async () => {
+    const { contaId } = await vendaNoCartao(200);
+    await vencerOntem(contaId);
+    await fin().conferir(HOJE);
+    expect(await fin().detalharConta(contaId, HOJE)).toMatchObject({ status: "QUITADA", pagoCentavos: 20000, descontoCentavos: 0 });
+  });
+
+  it("a conta com pagamento estornado sai do recebimento automático (CA-08)", async () => {
+    await taxaDe(3);
+    const { contaId } = await vendaNoCartao(200);
+    salvo(await pagar(contaId, { valor: "100", forma: "CREDITO" }));
+    const [l] = await lancamentosDa(contaId);
+    salvo(await servicos.estornar(l.id, deps()));
+    await vencerOntem(contaId);
+    expect((await fin().conferir(HOJE)).parcelasRecebidas).toBe(0);
+    expect(await fin().detalharConta(contaId, HOJE)).toMatchObject({ status: "ABERTA", restanteCentavos: 20000 });
+    salvo(await pagar(contaId, { valor: "193,80", forma: "CREDITO", desconto: "6,20", motivoDesconto: "TAXA_MAQUININHA" }));
+    expect(await fin().detalharConta(contaId, HOJE)).toMatchObject({ status: "QUITADA", restanteCentavos: 0 });
+  });
+});
+
+describe("T04 — estorno do pagamento de conta (CA-07, CA-09, CA-12, INV-001, INV-006)", () => {
+  it("estorna o pagamento com desconto: lançamento contrário, conta reaberta, nada apagado (CA-07)", async () => {
+    const id = await conta("PAGAR", "300");
+    salvo(await pagar(id, { valor: "150", desconto: "30", motivoDesconto: "DESCONTO_COMBINADO" }));
+    const [pagamento] = await lancamentosDa(id);
+    expect(await saldoAtual()).toBe(-15000);
+
+    expect(await servicos.estornar(pagamento.id, deps())).toEqual({ status: "salvo", mensagem: F.pagamentoEstornado(true), id });
+    expect(await fin().detalharConta(id, HOJE)).toMatchObject({ status: "ABERTA", pagoCentavos: 0, descontoCentavos: 0, restanteCentavos: 30000 });
+    expect(await saldoAtual()).toBe(0);
+    const [original, estorno] = await lancamentosDa(id);
+    expect(original.id).toBe(pagamento.id);
+    expect(estorno).toMatchObject({ origem: "ESTORNO", tipo: "ENTRADA", contaId: id, estornoDeId: pagamento.id, usuarioId: usuario, formaPagamento: null });
+    expect(Number(estorno.valor)).toBe(150);
+
+    // O detalhe mostra só o pagamento, marcado como estornado.
+    const c = await fin().detalharConta(id, HOJE);
+    expect(c.lancamentos).toEqual([expect.objectContaining({ id: pagamento.id, valorCentavos: 15000, estorno: expect.objectContaining({ registradoPor: "Gisele" }) })]);
+
+    // Um segundo estorno do mesmo pagamento é recusado.
+    expect(await servicos.estornar(pagamento.id, deps())).toEqual({ status: "erro", mensagem: F.jaEstornado });
+
+    // A conta manual sem pagamento válido volta a ser editável e cancelável (5.5, item 6).
+    salvo(await servicos.editarConta(id, { tipo: "PAGAR", descricao: "Conta corrigida", categoria: "FORNECEDORES", valor: "280", vencimento: HOJE }, deps()));
+    salvo(await servicos.cancelarConta(id, deps()));
+  });
+
+  it("com dois pagamentos, estornar um deixa a conta parcial", async () => {
+    const id = await conta("PAGAR", "100");
+    salvo(await pagar(id, { valor: "40" }));
+    salvo(await pagar(id, { valor: "62,50", acrescimo: "2,50", motivoAcrescimo: "JUROS_MULTA" }));
+    expect(await fin().detalharConta(id, HOJE)).toMatchObject({ status: "QUITADA" });
+    const [, segundo] = await lancamentosDa(id);
+    expect(await servicos.estornar(segundo.id, deps())).toEqual({ status: "salvo", mensagem: F.pagamentoEstornado(false), id });
+    expect(await fin().detalharConta(id, HOJE)).toMatchObject({ status: "PARCIAL", pagoCentavos: 4000, acrescimoCentavos: 0, restanteCentavos: 6000 });
+  });
+
+  it("estornos simultâneos do mesmo pagamento: só um vale (INV-006)", async () => {
+    const id = await conta("RECEBER", "200");
+    salvo(await pagar(id, { valor: "194", desconto: "6", motivoDesconto: "TAXA_MAQUININHA" }));
+    const [l] = await lancamentosDa(id);
+    const rs = await Promise.all([1, 2].map(() => servicos.estornar(l.id, deps())));
+    expect(rs.filter((r) => r.status === "salvo")).toHaveLength(1);
+    expect(rs.find((r) => r.status === "erro")).toEqual({ status: "erro", mensagem: F.jaEstornado });
+    expect(await fin().detalharConta(id, HOJE)).toMatchObject({ status: "ABERTA", pagoCentavos: 0, descontoCentavos: 0 });
+    expect(await saldoAtual()).toBe(0);
+  });
+
+  it("conta antiga parcial por causa da taxa: estornar e receber de novo com o desconto (CA-09)", async () => {
+    const id = await conta("RECEBER", "200");
+    salvo(await pagar(id, { valor: "194" }));
+    expect(await fin().detalharConta(id, HOJE)).toMatchObject({ status: "PARCIAL", restanteCentavos: 600 });
+    const [l] = await lancamentosDa(id);
+    salvo(await servicos.estornar(l.id, deps()));
+    salvo(await pagar(id, { valor: "194", desconto: "6", motivoDesconto: "TAXA_MAQUININHA" }));
+    expect(await fin().detalharConta(id, HOJE)).toMatchObject({ status: "QUITADA", pagoCentavos: 19400, restanteCentavos: 0 });
+    expect(await saldoAtual()).toBe(19400);
+  });
+
+  it("venda cancelada: o pagamento da conta não é estornado (CA-12)", async () => {
+    const { vendaId, contaId } = await vendaNoCartao(200);
+    salvo(await pagar(contaId, { valor: "194", forma: "CREDITO", desconto: "6", motivoDesconto: "TAXA_MAQUININHA" }));
+    const r = await vendas.cancelarVenda(vendaId, { motivo: "ERRO_REGISTRO", formaReembolso: "ESTORNO_CARTAO" }, depsDaVenda());
+    expect(r.status).toBe("cancelada");
+    // O reembolso é do valor recebido, sem o desconto.
+    const reembolso = await base.lancamentoFinanceiro.findFirstOrThrow({ where: { vendaId, estorno: true } });
+    expect(Number(reembolso.valor)).toBe(194);
+    const [l] = await lancamentosDa(contaId);
+    expect(await servicos.estornar(l.id, deps())).toEqual({ status: "erro", mensagem: F.estornoNaoPermitido });
+    expect((await fin().detalharConta(contaId, HOJE)).estornavel).toBe(false);
+  });
+
+  it("o pagamento estornado sai dos filtros de forma e de data do pagamento (5.5, item 7)", async () => {
+    const id = await conta("PAGAR", "100");
+    salvo(await pagar(id, { valor: "100", forma: "BOLETO" }));
+    const filtro = { busca: null, vencimentoDe: null, vencimentoAte: null, pagamentoDe: HOJE, pagamentoAte: HOJE, pessoaId: null, forma: "BOLETO" as const, categoria: null, origem: null };
+    let lista = await fin().listarContas({ tipo: "PAGAR", situacao: "todas", filtros: filtro }, HOJE);
+    expect([lista.contas.length, lista.totais.pagoCentavos]).toEqual([1, 10000]);
+    const [l] = await lancamentosDa(id);
+    salvo(await servicos.estornar(l.id, deps()));
+    lista = await fin().listarContas({ tipo: "PAGAR", situacao: "todas", filtros: filtro }, HOJE);
+    expect([lista.contas.length, lista.totais.pagoCentavos]).toEqual([0, 0]);
+    const semForma = { ...filtro, forma: null };
+    lista = await fin().listarContas({ tipo: "PAGAR", situacao: "todas", filtros: semForma }, HOJE);
+    expect([lista.contas.length, lista.totais.pagoCentavos]).toEqual([0, 0]);
+  });
+
+  it("o outro negócio não estorna o pagamento (INV-008)", async () => {
+    const id = await conta("PAGAR", "100");
+    salvo(await pagar(id, { valor: "100" }));
+    const [l] = await lancamentosDa(id);
+    expect(await servicos.estornar(l.id, deps(negocioB))).toEqual({ status: "erro", mensagem: F.lancamentoNaoEncontrado });
+    expect(await fin().detalharConta(id, HOJE)).toMatchObject({ status: "QUITADA" });
   });
 });

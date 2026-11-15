@@ -18,6 +18,7 @@ import {
   descricaoDoEstorno,
   DIA_VENCIMENTO_DAS,
   estaAtrasada,
+  descontoDaTaxa,
   primeiraCompetencia,
   reaisTexto,
   restanteDaConta,
@@ -78,6 +79,13 @@ export class ValorAcimaDoRestante extends Error {
   constructor(public readonly restanteCentavos: number) {
     super("Valor acima do restante da conta.");
     this.name = "ValorAcimaDoRestante";
+  }
+}
+/** SPEC-028 (5.5): conta cancelada, ou de venda cancelada, não tem pagamento estornado. */
+export class EstornoNaoPermitido extends Error {
+  constructor() {
+    super("Esta conta foi cancelada ou é de uma venda cancelada; o pagamento não pode ser estornado.");
+    this.name = "EstornoNaoPermitido";
   }
 }
 export class ContaNaoEditavel extends Error {
@@ -193,6 +201,66 @@ export async function pagarConta(tx: Tx, negocioId: string, p: Pagamento): Promi
   return { tipo: c.tipo, status: c.status, restanteCentavos: restanteLido(c), lancamentoId: lancamento.id };
 }
 
+/**
+ * Estorno do pagamento de conta (SPEC-028, 5.5; INV-001, INV-006): o lançamento contrário, ligado ao
+ * original e à mesma conta, e a conta sem o valor, o desconto e o acréscimo daquele pagamento, numa
+ * transação. A linha da conta fica travada; um segundo estorno do mesmo pagamento esbarra na
+ * unicidade do vínculo com o original. Nunca numa conta cancelada nem na de venda cancelada, cujo
+ * valor recebido o cancelamento já devolveu (RN25).
+ */
+export async function estornarPagamento(tx: Tx, negocioId: string, lancamentoId: string, usuarioId: string, agora: Date): Promise<{ id: string; contaId: string; status: StatusConta; restanteCentavos: number }> {
+  if (!UUID.test(lancamentoId)) throw new LancamentoNaoEncontrado();
+  const l = await tx.lancamentoFinanceiro.findFirst({
+    where: { id: lancamentoId, origem: "CONTA" },
+    select: { contaId: true, tipo: true, categoria: true, valor: true, desconto: true, acrescimo: true, descricao: true, estornadoPor: { select: { id: true } } },
+  });
+  if (!l || !l.contaId) throw new LancamentoNaoEncontrado();
+  if (l.estornadoPor) throw new JaEstornado();
+  const [conta] = await tx.$queryRaw<{ status: StatusConta; vendaCancelada: boolean }[]>`
+    SELECT c.status, COALESCE(v.status = 'CANCELADA', false) AS "vendaCancelada"
+    FROM "ContaPagarReceber" c
+    LEFT JOIN "Parcela" p ON p.id = c."parcelaId"
+    LEFT JOIN "Pagamento" pg ON pg.id = p."pagamentoId"
+    LEFT JOIN "Venda" v ON v.id = pg."vendaId"
+    WHERE c.id = ${l.contaId}::uuid AND c."negocioId" = ${negocioId}::uuid
+    FOR UPDATE OF c`;
+  if (!conta) throw new ContaNaoEncontrada();
+  if (conta.status === "CANCELADA" || conta.vendaCancelada) throw new EstornoNaoPermitido();
+
+  let estorno: { id: string };
+  try {
+    estorno = await tx.lancamentoFinanceiro.create({
+      data: {
+        negocioId,
+        contaId: l.contaId,
+        estornoDeId: lancamentoId,
+        origem: "ESTORNO",
+        tipo: l.tipo === "ENTRADA" ? "SAIDA" : "ENTRADA",
+        categoria: l.categoria,
+        valor: l.valor,
+        descricao: descricaoDoEstorno(l.descricao),
+        data: agora,
+        usuarioId,
+      },
+      select: { id: true },
+    });
+  } catch (e) {
+    if (ehUnicidade(e)) throw new JaEstornado();
+    throw e;
+  }
+  const v = String(l.valor), d = String(l.desconto), a = String(l.acrescimo);
+  const [c] = await tx.$queryRaw<({ status: StatusConta } & ValoresLidos)[]>`
+    UPDATE "ContaPagarReceber"
+    SET "valorPago" = "valorPago" - ${v}::numeric,
+        "valorDesconto" = "valorDesconto" - ${d}::numeric,
+        "valorAcrescimo" = "valorAcrescimo" - ${a}::numeric,
+        status = (CASE WHEN "valorPago" - ${v}::numeric + "valorDesconto" - ${d}::numeric - "valorAcrescimo" + ${a}::numeric <= 0
+                       THEN 'ABERTA' ELSE 'PARCIAL' END)::"StatusConta"
+    WHERE id = ${l.contaId}::uuid AND "negocioId" = ${negocioId}::uuid
+    RETURNING status, "valorTotal", "valorPago", "valorDesconto", "valorAcrescimo"`;
+  return { id: estorno.id, contaId: l.contaId, status: c.status, restanteCentavos: restanteLido(c) };
+}
+
 export type LancamentoExibido = {
   id: string;
   tipo: TipoLancamento;
@@ -268,7 +336,13 @@ export type DetalheDaConta = ContaExibida & {
     motivoDesconto: MotivoDesconto | null;
     motivoAcrescimo: MotivoAcrescimo | null;
     observacao: string | null;
+    /** SPEC-028 (5.4, 5.5): quando e por quem o pagamento foi estornado. */
+    estorno: { data: Date; registradoPor: string | null } | null;
   }[];
+  /** SPEC-028 (5.5): os pagamentos podem ser estornados (nem conta cancelada, nem de venda cancelada). */
+  estornavel: boolean;
+  /** SPEC-028 (5.2): desconto sugerido pela taxa média da maquininha, nas contas de venda no cartão em aberto. */
+  taxaSugerida: { taxa: number; descontoCentavos: number } | null;
 };
 
 export type DespesaExibida = {
@@ -520,10 +594,20 @@ export function criarConsultasFinanceiras(cliente: ClienteDoNegocio, negocioId: 
     return count;
   }
 
-  /** Parcelas do cartão vencidas até hoje: quitadas com entrada na data do vencimento (OPEN-008). */
+  /**
+   * Parcelas do cartão vencidas até hoje: quitadas com entrada na data do vencimento (OPEN-008). SPEC-028
+   * (5.2): com a taxa média da maquininha, o desconto da taxa; a conta com pagamento estornado fica de
+   * fora, para o recebimento certo ser registrado à mão.
+   */
   async function receberParcelasVencidas(hoje: string): Promise<number> {
+    const taxa = await taxaDaMaquininha();
     const contas = await cliente.contaPagarReceber.findMany({
-      where: { parcelaId: { not: null }, status: { in: ["ABERTA", "PARCIAL"] }, vencimento: { lt: intervaloDoDia(hoje).fim } },
+      where: {
+        parcelaId: { not: null },
+        status: { in: ["ABERTA", "PARCIAL"] },
+        vencimento: { lt: intervaloDoDia(hoje).fim },
+        lancamentos: { none: { origem: "ESTORNO" } },
+      },
       select: { id: true, valorTotal: true, valorPago: true, valorDesconto: true, valorAcrescimo: true, vencimento: true },
       orderBy: { vencimento: "asc" },
       take: 1000,
@@ -531,14 +615,18 @@ export function criarConsultasFinanceiras(cliente: ClienteDoNegocio, negocioId: 
     let recebidas = 0;
     for (const c of contas) {
       try {
+        const restante = restanteLido(c);
+        const desconto = descontoDaTaxa(restante, taxa);
         await cliente.$transaction((tx) =>
           pagarConta(tx as unknown as Tx, negocioId, {
             contaId: c.id,
-            valorCentavos: restanteLido(c),
+            valorCentavos: restante - desconto,
             data: c.vencimento,
             usuarioId: null,
             // SPEC-026 (5.5, item 4): a forma da venda.
             forma: "CREDITO",
+            descontoCentavos: desconto,
+            motivoDesconto: desconto ? "TAXA_MAQUININHA" : null,
           }),
         );
         recebidas++;
@@ -550,10 +638,21 @@ export function criarConsultasFinanceiras(cliente: ClienteDoNegocio, negocioId: 
     return recebidas;
   }
 
-  /** Condição sobre os pagamentos (lançamentos da conta) para os filtros de data e de forma (5.6). */
+  /** Taxa média da maquininha do negócio (RF51), em %; zero se não informada. */
+  async function taxaDaMaquininha(): Promise<number> {
+    const n = await cliente.negocio.findFirst({ select: { taxaCartaoMedia: true } });
+    return n ? Number(String(n.taxaCartaoMedia)) : 0;
+  }
+
+  /**
+   * Condição sobre os pagamentos (lançamentos da conta) para os filtros de data e de forma (5.6). SPEC-028
+   * (5.5, item 7): só os pagamentos válidos, sem os estornados nem os estornos.
+   */
   function condicaoDoPagamento(filtros: FiltrosDasContas) {
     if (!filtraPagamentos(filtros)) return null;
     return {
+      origem: "CONTA" as const,
+      estornadoPor: { is: null },
       ...(filtros.pagamentoDe || filtros.pagamentoAte
         ? {
             data: {
@@ -753,13 +852,16 @@ export function criarConsultasFinanceiras(cliente: ClienteDoNegocio, negocioId: 
     },
 
     /** Estorno (OPEN-003): lançamento contrário ligado ao original, no máximo uma vez (estornoDeId único). */
-    async estornar(id: string, usuarioId: string, agora: Date): Promise<{ id: string }> {
+    /** SPEC-028: no pagamento de conta, devolve também a conta, a situação e o restante depois do estorno. */
+    async estornar(id: string, usuarioId: string, agora: Date): Promise<{ id: string; contaId?: string; status?: StatusConta; restanteCentavos?: number }> {
       if (!UUID.test(id)) throw new LancamentoNaoEncontrado();
       const l = await cliente.lancamentoFinanceiro.findFirst({
         where: { id },
         select: { tipo: true, categoria: true, valor: true, origem: true, descricao: true, estornadoPor: { select: { id: true } } },
       });
       if (!l) throw new LancamentoNaoEncontrado();
+      // SPEC-028 (5.5): o pagamento de conta é estornado com a conta, numa transação.
+      if (l.origem === "CONTA") return cliente.$transaction((tx) => estornarPagamento(tx as unknown as Tx, negocioId, id, usuarioId, agora));
       if (l.origem !== "AVULSO" && l.origem !== "SALDO_INICIAL") throw new NaoEstornavel(l.origem);
       if (l.estornadoPor) throw new JaEstornado();
       try {
@@ -862,11 +964,13 @@ export function criarConsultasFinanceiras(cliente: ClienteDoNegocio, negocioId: 
             criadaPorId: true,
             parcela: {
               select: {
-                pagamento: { select: { venda: { select: { id: true, numero: true, cliente: { select: { id: true, tipo: true, nome: true, nomeFantasia: true } } } } } },
+                pagamento: { select: { venda: { select: { id: true, numero: true, status: true, cliente: { select: { id: true, tipo: true, nome: true, nomeFantasia: true } } } } } },
               },
             },
             despesaFixa: { select: { id: true, descricao: true } },
             lancamentos: {
+              // SPEC-028: só os pagamentos; o estorno aparece junto do pagamento estornado.
+              where: { origem: "CONTA" },
               orderBy: { data: "asc" },
               select: {
                 id: true,
@@ -879,6 +983,7 @@ export function criarConsultasFinanceiras(cliente: ClienteDoNegocio, negocioId: 
                 motivoAcrescimo: true,
                 observacaoPagamento: true,
                 usuario: { select: { nome: true, administradorEm: true } },
+                estornadoPor: { select: { data: true, usuario: { select: { nome: true, administradorEm: true } } } },
               },
             },
           },
@@ -888,10 +993,16 @@ export function criarConsultasFinanceiras(cliente: ClienteDoNegocio, negocioId: 
       // SPEC-019 (5.3, item 3): a conta criada pelo suporte mostra "{nome} (suporte do HE)" (o Administrador não é membro).
       const doSuporte =
         c.criadaPorId && !autor ? await cliente.usuario.findFirst({ where: { id: c.criadaPorId, administradorEm: { not: null } }, select: { nome: true, administradorEm: true } }) : null;
+      const conta = exibirConta(c, hoje);
+      const aberta = conta.status === "ABERTA" || conta.status === "PARCIAL";
+      const taxa = c.parcelaId && conta.tipo === "RECEBER" && aberta ? await taxaDaMaquininha() : 0;
+      const descontoSugerido = descontoDaTaxa(conta.restanteCentavos, taxa);
       return {
-        ...exibirConta(c, hoje),
+        ...conta,
+        taxaSugerida: descontoSugerido ? { taxa, descontoCentavos: descontoSugerido } : null,
+        estornavel: conta.status !== "CANCELADA" && c.parcela?.pagamento.venda.status !== "CANCELADA",
         criadaPor: autor?.usuario.nome ?? (doSuporte ? autorDoHistorico(doSuporte) : null),
-        venda: c.parcela?.pagamento.venda ?? null,
+        venda: c.parcela ? { id: c.parcela.pagamento.venda.id, numero: c.parcela.pagamento.venda.numero } : null,
         despesa: c.despesaFixa,
         lancamentos: c.lancamentos.map((l) => ({
           id: l.id,
@@ -904,6 +1015,7 @@ export function criarConsultasFinanceiras(cliente: ClienteDoNegocio, negocioId: 
           motivoDesconto: l.motivoDesconto,
           motivoAcrescimo: l.motivoAcrescimo,
           observacao: l.observacaoPagamento,
+          estorno: l.estornadoPor ? { data: l.estornadoPor.data, registradoPor: l.estornadoPor.usuario ? autorDoHistorico(l.estornadoPor.usuario) : null } : null,
         })),
       };
     },

@@ -216,7 +216,7 @@ export function FormularioSaldoInicial({ hoje }: { hoje: string }) {
 }
 
 /** Estorno (OPEN-003): pede confirmação; o original fica marcado como estornado. */
-export function BotaoEstornar({ lancamentoId, descricao }: { lancamentoId: string; descricao: string }) {
+export function BotaoEstornar({ lancamentoId, descricao, detalhe }: { lancamentoId: string; descricao: string; detalhe?: string }) {
   const f = useFormulario(acaoEstornar);
   const confirmacao = useConfirmacaoDoEnvio();
   if (f.estado.status === "salvo") return <span className="text-xs text-status-ok">Estornado</span>;
@@ -226,7 +226,7 @@ export function BotaoEstornar({ lancamentoId, descricao }: { lancamentoId: strin
         aberto={confirmacao.aberto}
         aoMudar={confirmacao.setAberto}
         titulo={`Estornar "${descricao}"?`}
-        descricao="Será gravado um lançamento contrário de mesmo valor."
+        descricao={detalhe ?? "Será gravado um lançamento contrário de mesmo valor."}
         confirmar="Estornar"
         aoConfirmar={confirmacao.confirmar}
       />
@@ -558,12 +558,28 @@ function CampoMotivo({ id, nome, rotulo, opcoes, valor, erro, aoMudar }: { id: s
  * vem com o restante e se ajusta ao desconto e ao acréscimo enquanto a pessoa não o muda à mão. A data e
  * a forma (`children`) ficam logo depois do valor.
  */
-function CamposDoValor({ receber, restanteCentavos, erros, limpar, children }: { receber: boolean; restanteCentavos: number; erros: ErrosDeCampo; limpar: (c: string) => void; children: React.ReactNode }) {
-  const [valor, setValor] = useState(valorBr(restanteCentavos));
+function CamposDoValor({
+  receber,
+  restanteCentavos,
+  taxaSugerida,
+  erros,
+  limpar,
+  children,
+}: {
+  receber: boolean;
+  restanteCentavos: number;
+  taxaSugerida: TaxaSugerida | null;
+  erros: ErrosDeCampo;
+  limpar: (c: string) => void;
+  children: React.ReactNode;
+}) {
+  // SPEC-028 (5.2): na conta de venda no cartão, o desconto já vem com a taxa média da maquininha.
+  const sugerido = taxaSugerida?.descontoCentavos ?? 0;
+  const [valor, setValor] = useState(valorBr(restanteCentavos - sugerido));
   const [valorMudado, setValorMudado] = useState(false);
-  const [desconto, setDesconto] = useState("");
+  const [desconto, setDesconto] = useState(sugerido ? valorBr(sugerido) : "");
   const [acrescimo, setAcrescimo] = useState("");
-  const [motivoD, setMotivoD] = useState("");
+  const [motivoD, setMotivoD] = useState(sugerido ? "TAXA_MAQUININHA" : "");
   const [motivoA, setMotivoA] = useState("");
   const d = centavosDoCampo(desconto) ?? 0;
   const a = centavosDoCampo(acrescimo) ?? 0;
@@ -598,6 +614,12 @@ function CamposDoValor({ receber, restanteCentavos, erros, limpar, children }: {
       {/* Uma coluna: o formulário fica numa coluna estreita ao lado da conta, e os motivos não cabem pela metade. */}
       <fieldset className="grid gap-4 sm:col-span-2">
         <legend className="mb-1 text-sm font-bold text-foreground">Desconto e acréscimo</legend>
+        {taxaSugerida && (
+          <p className="text-sm text-muted-foreground">
+            Desconto sugerido pela taxa média da maquininha ({taxaSugerida.taxa.toLocaleString("pt-BR")}%), informada na Calculadora. Troque pelo valor exato, se a maquininha
+            descontou outro.
+          </p>
+        )}
         <Campo id="pag-desconto" rotulo="Desconto (R$)" erro={erros.desconto} dica="Opcional. Ex.: a taxa da maquininha">
           <input
             id="pag-desconto"
@@ -679,8 +701,22 @@ function CamposDoValor({ receber, restanteCentavos, erros, limpar, children }: {
   );
 }
 
+export type TaxaSugerida = { taxa: number; descontoCentavos: number };
+
 /** Pagamento ou recebimento, total ou parcial (5.3). O valor sugerido é o restante; SPEC-028: desconto e acréscimo. */
-export function FormularioPagamento({ contaId, tipo, restanteCentavos, hoje }: { contaId: string; tipo: "PAGAR" | "RECEBER"; restanteCentavos: number; hoje: string }) {
+export function FormularioPagamento({
+  contaId,
+  tipo,
+  restanteCentavos,
+  hoje,
+  taxaSugerida = null,
+}: {
+  contaId: string;
+  tipo: "PAGAR" | "RECEBER";
+  restanteCentavos: number;
+  hoje: string;
+  taxaSugerida?: TaxaSugerida | null;
+}) {
   const f = useFormulario(acaoRegistrarPagamento, (c) => validarPagamento(c, hoje), true);
   const receber = tipo === "RECEBER";
   return (
@@ -688,7 +724,7 @@ export function FormularioPagamento({ contaId, tipo, restanteCentavos, hoje }: {
       <Avisos estado={f.estado} />
       <form key={f.chave} onSubmit={f.aoEnviar} noValidate className="grid gap-4 sm:grid-cols-2 sm:items-start">
         <input type="hidden" name="contaId" value={contaId} />
-        <CamposDoValor receber={receber} restanteCentavos={restanteCentavos} erros={f.erros} limpar={f.limpar}>
+        <CamposDoValor receber={receber} restanteCentavos={restanteCentavos} taxaSugerida={taxaSugerida} erros={f.erros} limpar={f.limpar}>
           <CampoData id="pag-data" hoje={hoje} erro={f.erros.data} limpar={f.limpar} />
           {/* SPEC-026 (OPEN-008): a forma é obrigatória, sem opção pré-escolhida. Na largura toda, para "Cartão de crédito" caber. */}
           <div className="sm:col-span-2">

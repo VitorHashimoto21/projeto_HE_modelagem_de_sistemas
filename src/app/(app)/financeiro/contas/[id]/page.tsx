@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { reais, ROTULO_CATEGORIA, SeloDaConta } from "@/components/financeiro/exibicao";
-import { BotaoCancelarConta, FormularioConta, FormularioPagamento, FormularioVinculo } from "@/components/financeiro/formularios";
+import { BotaoCancelarConta, BotaoEstornar, FormularioConta, FormularioPagamento, FormularioVinculo } from "@/components/financeiro/formularios";
 import { AvisoDaPagina } from "@/components/ui/aviso";
 import { CabecalhoDePagina } from "@/components/ui/cabecalho-de-pagina";
 import { classeDoLink } from "@/components/ui/estilos";
@@ -21,6 +21,16 @@ import { opcoesDoVinculo } from "@/lib/financeiro/opcoes";
 export const metadata: Metadata = { title: "Conta" };
 
 const dataBr = (dia: string) => dia.split("-").reverse().join("/");
+
+/** SPEC-028 (5.5, item 2): o que o estorno desfaz e o restante da conta depois dele. */
+function textoDoEstorno(l: { valorCentavos: number; descontoCentavos: number; acrescimoCentavos: number }, restanteCentavos: number): string {
+  const desfeitos = [`o valor de ${reais(l.valorCentavos)}`];
+  if (l.descontoCentavos > 0) desfeitos.push(`o desconto de ${reais(l.descontoCentavos)}`);
+  if (l.acrescimoCentavos > 0) desfeitos.push(`o acréscimo de ${reais(l.acrescimoCentavos)}`);
+  const restante = restanteCentavos + l.valorCentavos + l.descontoCentavos - l.acrescimoCentavos;
+  const lista = desfeitos.length > 1 ? `${desfeitos.slice(0, -1).join(", ")} e ${desfeitos.at(-1)}` : desfeitos[0];
+  return `Será gravado no caixa um lançamento contrário, e a conta perde ${lista} deste pagamento. O restante passa a ${reais(restante)}.`;
+}
 
 function Linha({ rotulo, children }: { rotulo: string; children: React.ReactNode }) {
   return (
@@ -50,6 +60,8 @@ export default async function Conta({ params, searchParams }: PageProps<"/financ
   const receber = c.tipo === "RECEBER";
 
   const podeRegistrar = aberta && pode(membro.permissoes, "financeiro", "criar");
+  // SPEC-028 (5.5): estornar um pagamento exige Financeiro — excluir; o suporte nunca estorna (fora da lista de correções).
+  const podeEstornar = c.estornavel && !membro.modoSuporte && pode(membro.permissoes, "financeiro", "excluir");
   const podeEditar = !membro.modoSuporte && pode(membro.permissoes, "financeiro", "editar");
   // SPEC-019 (5.4): o suporte com o Financeiro em "ver e corrigir" edita a conta manual, com o vínculo como está.
   const editaConta = pode(membro.permissoes, "financeiro", "editar") || corrige(membro, "financeiro.editarConta");
@@ -156,12 +168,19 @@ export default async function Conta({ params, searchParams }: PageProps<"/financ
               <ol className="divide-y">
                 {c.lancamentos.map((l) => (
                   <li key={l.id} className="py-3 text-sm">
-                    <div className="flex flex-wrap justify-between gap-2">
-                      <span className="text-foreground">
-                        {dataBrasileira(l.data)} · {rotuloDaForma(l.forma)} · {l.registradoPor ?? "automático no vencimento"}
+                    <div className={`flex flex-wrap justify-between gap-2 ${l.estorno ? "text-muted-foreground line-through" : ""}`}>
+                      <span className={l.estorno ? undefined : "text-foreground"}>
+                        {dataBrasileira(l.data)} · {rotuloDaForma(l.forma)} · {l.registradoPor ?? "Recebido automaticamente"}
                       </span>
-                      <span className="font-bold text-foreground tabular-nums">{reais(l.valorCentavos)}</span>
+                      <span className={`font-bold tabular-nums ${l.estorno ? "" : "text-foreground"}`}>{reais(l.valorCentavos)}</span>
                     </div>
+                    {/* SPEC-028 (5.4, 5.5): o pagamento estornado fica riscado, com quem estornou e quando. */}
+                    {l.estorno && (
+                      <p className="mt-1 text-muted-foreground">
+                        Estornado em {dataBrasileira(l.estorno.data)}
+                        {l.estorno.registradoPor && ` por ${l.estorno.registradoPor}`}
+                      </p>
+                    )}
                     {/* SPEC-028 (5.4): desconto e acréscimo do pagamento, com o motivo e a observação. */}
                     {(l.descontoCentavos > 0 || l.acrescimoCentavos > 0) && (
                       <p className="mt-1 text-muted-foreground">
@@ -179,6 +198,15 @@ export default async function Conta({ params, searchParams }: PageProps<"/financ
                         )}
                         {l.observacao && <span className="block break-words">{l.observacao}</span>}
                       </p>
+                    )}
+                    {podeEstornar && !l.estorno && (
+                      <div className="mt-1">
+                        <BotaoEstornar
+                          lancamentoId={l.id}
+                          descricao={`${receber ? "Recebimento" : "Pagamento"} de ${reais(l.valorCentavos)} em ${dataBrasileira(l.data)}`}
+                          detalhe={textoDoEstorno(l, c.restanteCentavos)}
+                        />
+                      </div>
                     )}
                   </li>
                 ))}
@@ -237,9 +265,9 @@ export default async function Conta({ params, searchParams }: PageProps<"/financ
               <TituloDaSuperficie
                 id="titulo-pagamento"
                 titulo={receber ? "Registrar recebimento" : "Registrar pagamento"}
-                descricao={`Pode ser parcial: o restante continua em aberto. Use o desconto para a taxa da maquininha ou um abatimento, e o acréscimo para juros ou multa.${c.origem === "venda" ? " Parcelas do cartão são recebidas sozinhas no vencimento; registre aqui só se a maquininha antecipou." : ""}`}
+                descricao={`Pode ser parcial: o restante continua em aberto. Use o desconto para a taxa da maquininha ou um abatimento, e o acréscimo para juros ou multa.${c.origem === "venda" ? " Parcelas do cartão são recebidas sozinhas no vencimento, já com a taxa da maquininha; registre aqui para informar o valor exato ou se a maquininha antecipou." : ""}`}
               />
-              <FormularioPagamento contaId={c.id} tipo={c.tipo} restanteCentavos={c.restanteCentavos} hoje={dia} />
+              <FormularioPagamento contaId={c.id} tipo={c.tipo} restanteCentavos={c.restanteCentavos} hoje={dia} taxaSugerida={c.taxaSugerida} />
             </Superficie>
           </aside>
         )}

@@ -5,6 +5,7 @@ import {
   ContaNaoEncontrada,
   DasNaoEditavel,
   DespesaNaoEncontrada,
+  EstornoNaoPermitido,
   JaEstornado,
   LancamentoNaoEncontrado,
   NaoEstornavel,
@@ -30,7 +31,10 @@ export const MENSAGENS_FLUXO_FINANCEIRO = {
   saldoInicialJaInformado: "O saldo inicial já foi informado. Para corrigi-lo, estorne o lançamento de saldo inicial.",
   estornado: "Lançamento estornado.",
   jaEstornado: "Este lançamento já foi estornado.",
-  naoEstornavel: "Só lançamentos avulsos e o saldo inicial podem ser estornados. Vendas e pagamentos de contas são corrigidos na origem.",
+  // SPEC-028: o pagamento de conta também é estornado; as vendas são corrigidas pelo cancelamento.
+  naoEstornavel: "Este lançamento não pode ser estornado. Lançamentos de venda são corrigidos pelo cancelamento da venda.",
+  pagamentoEstornado: (aberta: boolean) => `Pagamento estornado. A conta voltou a ficar ${aberta ? "em aberto" : "parcial"}.`,
+  estornoNaoPermitido: "Esta conta foi cancelada ou é de uma venda cancelada; o pagamento não pode ser estornado.",
   lancamentoNaoEncontrado: "Lançamento não encontrado.",
   contaCriada: "Conta cadastrada.",
   contaEditada: "Conta atualizada.",
@@ -89,6 +93,7 @@ function traduzir(e: unknown, campoDaPessoa = "pessoa"): { mensagem?: string; er
   if (e instanceof ContaNaoEditavel) return { mensagem: M.contaNaoEditavel[e.motivo] };
   if (e instanceof JaEstornado) return { mensagem: M.jaEstornado };
   if (e instanceof NaoEstornavel) return { mensagem: M.naoEstornavel };
+  if (e instanceof EstornoNaoPermitido) return { mensagem: M.estornoNaoPermitido };
   if (e instanceof LancamentoNaoEncontrado) return { mensagem: M.lancamentoNaoEncontrado };
   if (e instanceof SaldoInicialJaInformado) return { mensagem: M.saldoInicialJaInformado };
   if (e instanceof DespesaNaoEncontrada) return { mensagem: M.despesaNaoEncontrada };
@@ -141,8 +146,9 @@ export async function informarSaldoInicial(campos: Record<string, string>, deps:
 /** Estorno de avulso ou saldo inicial (OPEN-003). */
 export async function estornar(lancamentoId: string, deps: DependenciasDoFinanceiro): Promise<EstadoDoFinanceiro> {
   return executar(async () => {
-    const { id } = await deps.financeiro.estornar(lancamentoId, deps.usuarioId, deps.agora);
-    return { status: "salvo", mensagem: M.estornado, id };
+    const r = await deps.financeiro.estornar(lancamentoId, deps.usuarioId, deps.agora);
+    if (r.contaId) return { status: "salvo", mensagem: M.pagamentoEstornado(r.status === "ABERTA"), id: r.contaId };
+    return { status: "salvo", mensagem: M.estornado, id: r.id };
   });
 }
 
