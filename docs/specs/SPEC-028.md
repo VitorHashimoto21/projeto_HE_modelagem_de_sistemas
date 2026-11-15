@@ -1,6 +1,6 @@
 # SPEC-028 — Desconto e acréscimo nos pagamentos das contas
 
-> **Status:** ✅ **Aprovada em 14/11/2026** e **implementada em 15/11/2026**, em três etapas: (1) schema, regras e pagamento com desconto e acréscimo; (2) taxa sugerida, recebimento automático com a taxa e estorno do pagamento; (3) totais da lista, relatório de Contas e roteiro final. Verificada em build local, com os testes T01 a T11 ([evidências](evidencias/SPEC-028/README.md)). **Falta a homologação (T12).** As notas da implementação estão depois da seção 9. As questões em aberto foram decididas pela equipe em entrevista (seção 13), todas pela opção recomendada:
+> **Status:** ✅ **Aprovada em 14/11/2026**, implementada em três etapas — (1) schema, regras e pagamento com desconto e acréscimo; (2) taxa sugerida, recebimento automático com a taxa e estorno do pagamento; (3) totais da lista, relatório de Contas e roteiro final —, verificada em build local (testes T01 a T11) e homologada em 15/11/2026 (T12) ([evidências](evidencias/SPEC-028/README.md)). **Em ajuste:** a homologação mostrou que o estorno de um pagamento de conta, com a data de hoje, deixa o caixa do dia e do mês diferente do banco. A equipe decidiu em 15/11/2026 que o estorno passa a ter a **data do pagamento original** (OPEN-009). Os estornos já feitos ficam como estão (OPEN-010, decidida no mesmo dia). Falta implementar o ajuste (etapa 4). As notas da implementação e da homologação estão depois da seção 9. As questões em aberto foram decididas pela equipe em entrevista (seção 13), todas pela opção recomendada:
 > - o desconto e o acréscimo são informados **no pagamento** ou no recebimento de cada conta; o valor original da conta não muda (OPEN-001);
 > - o caixa recebe **só o valor real** que entrou ou saiu; o desconto e o acréscimo ficam registrados no pagamento (OPEN-002);
 > - nas contas de venda no cartão de crédito, a **taxa da maquininha** vem sugerida pela taxa média da Calculadora, e o recebimento automático no vencimento desconta a mesma taxa (OPEN-003);
@@ -191,7 +191,7 @@ Uma loja vende R$ 200,00 no cartão de crédito à vista, numa maquininha que co
 1. Quem tem *Financeiro: excluir* escolhe **Estornar** num pagamento, no detalhe da conta ou no fluxo de caixa.
 2. O diálogo de confirmação mostra o valor, o desconto e o acréscimo que serão desfeitos e o restante da conta depois.
 3. Ao confirmar, numa transação:
-   - o caixa ganha o lançamento contrário, do mesmo valor, na mesma categoria, sem forma (a forma fica no pagamento original; decisão da equipe, 15/11/2026), com a data de hoje e a descrição "Estorno de: {descrição}", ligado ao original;
+   - o caixa ganha o lançamento contrário, do mesmo valor, na mesma categoria, sem forma (a forma fica no pagamento original; decisão da equipe, 15/11/2026), com a **data do pagamento original** (OPEN-009) e a descrição "Estorno de: {descrição}", ligado ao original. O momento em que o estorno foi feito fica registrado à parte e aparece no "Estornado em … por …";
    - a conta perde o valor, o desconto e o acréscimo daquele pagamento e volta a ficar **aberta** (sem pagamentos válidos) ou **parcial**;
    - nada é apagado, e o pagamento original fica marcado como estornado.
 4. Recusas:
@@ -254,7 +254,7 @@ Uma loja vende R$ 200,00 no cartão de crédito à vista, numa maquininha que co
 | **INV-003** | Pagamentos simultâneos nunca passam do restante. | Teste de integração com pagamentos simultâneos. |
 | **INV-004** | Todo desconto ou acréscimo maior que zero tem motivo; o motivo Outro tem observação. O banco recusa o contrário. | Teste unitário da validação; teste de integração com gravação direta. |
 | **INV-005** | No recebimento automático, o desconto é o restante × a taxa média em vigor, arredondado ao centavo; com taxa zero, o desconto é zero; a conta com pagamento estornado não é recebida sozinha. | Teste de integração da conferência. |
-| **INV-006** | O estorno grava o lançamento contrário de mesmo valor e categoria, ligado ao original; um pagamento só é estornado uma vez, e nunca o de uma conta cancelada ou de venda cancelada; nada é alterado nem apagado. | Teste de integração, inclusive com estornos simultâneos. |
+| **INV-006** | O estorno grava o lançamento contrário de mesmo valor e categoria, com a data do pagamento original (OPEN-009), ligado ao original; um pagamento só é estornado uma vez, e nunca o de uma conta cancelada ou de venda cancelada; nada é alterado nem apagado. | Teste de integração, inclusive com estornos simultâneos. |
 | **INV-007** | O suporte nunca registra nem estorna pagamentos; o negócio suspenso também não. | Teste de integração no contexto de suporte e com o negócio suspenso. |
 | **INV-008** | Pagamentos, descontos, estornos e totais só trazem dados do próprio negócio. | Teste de integração com dois negócios. |
 
@@ -264,7 +264,7 @@ Uma loja vende R$ 200,00 no cartão de crédito à vista, numa maquininha que co
 
 | Entidade | Uso | Mudança |
 |---|---|---|
-| `LancamentoFinanceiro` | Lançamento de cada pagamento de conta e do estorno | **+ `desconto`** e **+ `acrescimo`** (valores, padrão zero), **+ motivo do desconto**, **+ motivo do acréscimo** e **+ observação** (até 120 caracteres), só nos lançamentos de pagamento de conta |
+| `LancamentoFinanceiro` | Lançamento de cada pagamento de conta e do estorno | **+ `desconto`** e **+ `acrescimo`** (valores, padrão zero), **+ motivo do desconto**, **+ motivo do acréscimo** e **+ observação**; **+ momento do registro** (etapa 4, OPEN-009), preenchido pelo banco em todo lançamento novo (até 120 caracteres), só nos lançamentos de pagamento de conta |
 | `ContaPagarReceber` | Contas a pagar e a receber | **+ `valorDesconto`** e **+ `valorAcrescimo`** (totais da conta, padrão zero), atualizados na mesma transação do pagamento e do estorno |
 | `Negocio` | Taxa média da maquininha (RF51) | Nenhuma: passa a ser lida também no recebimento |
 | `Venda`, `Parcela` | Parcelas do cartão | Nenhuma |
@@ -278,7 +278,8 @@ Uma loja vende R$ 200,00 no cartão de crédito à vista, numa maquininha que co
   - observação presente com o motivo Outro;
   - na conta, pago + descontos − acréscimos ≤ total;
 - o estorno do pagamento usa a origem de estorno e o vínculo com o original que já existem (SPEC-009) e fica ligado à mesma conta;
-- migração sem dados novos: tudo começa em zero.
+- migração sem dados novos: tudo começa em zero;
+- etapa 4 (OPEN-009): coluna com o momento do registro do lançamento, com o padrão "agora"; os lançamentos já existentes recebem a própria data.
 
 ---
 
@@ -334,6 +335,8 @@ Uma loja vende R$ 200,00 no cartão de crédito à vista, numa maquininha que co
 - **Relatório de Contas:** desde esta etapa, a coluna "Pagamentos" mostra só os pagamentos válidos, sem os estornados nem os estornos, para o relatório não mostrar um valor que voltou. A marcação dos estornados (5.6) continua na etapa 3.
 - **"Recebido automaticamente":** o detalhe da conta trocou "automático no vencimento" pelo texto da 5.2.
 
+**Homologação (15/11/2026)** — aprovada nos passos do roteiro ([evidências](evidencias/SPEC-028/README.md#homologação-t12--15112026)). Ao corrigir uma conta real, a equipe notou que o estorno com a data de hoje deixa o caixa do dia diferente do banco: no dia do estorno aparece uma saída que não existiu. Não é defeito, porque a Spec mandava usar a data de hoje, mas levou à OPEN-009 (data do pagamento original) e à OPEN-010 (os estornos já feitos ficam como estão), as duas decididas pela equipe em 15/11/2026. O ajuste vira a **etapa 4**.
+
 **Etapa 3 (15/11/2026)** — totais da lista, relatório de Contas e roteiro final:
 - **Totais com filtro de pagamento:** com o filtro de forma ou de data do pagamento, os descontos e os acréscimos somam só os pagamentos do filtro, como o pago já fazia (SPEC-026). Sem esses filtros, somam os das contas filtradas. O em aberto continua sendo a soma dos restantes das contas.
 - **Relatório de Contas no PDF:** com as duas colunas novas, a tabela tem 13 colunas e usa a fonte de 7 pt (as outras tabelas continuam com 8 pt). Os pagamentos com desconto, acréscimo ou estorno não cabiam numa linha, e o PDF cortava justamente o motivo e a marcação do estorno que a 5.6 pede. Por isso, a coluna "Pagamentos" passou a continuar nas linhas de baixo, até 10 linhas por conta. A nota da SPEC-026 dizia que mais de um pagamento podia ser cortado no PDF; agora eles aparecem inteiros. As descrições longas continuam cortadas no PDF e inteiras no CSV, como na SPEC-026.
@@ -366,7 +369,7 @@ Uma loja vende R$ 200,00 no cartão de crédito à vista, numa maquininha que co
 
 **CA-06 — Motivo.** Quando alguém informa um desconto sem motivo, ou o motivo Outro sem observação, então aparece a mensagem da seção 5.10, e nada é gravado.
 
-**CA-07 — Estorno.** Dada a conta do CA-01 quitada, quando alguém com *Financeiro: excluir* estorna o recebimento, então o caixa ganha a saída de R$ 194,00, "Estorno de: …", a conta volta a ficar aberta com restante de R$ 200,00, e o pagamento aparece riscado como estornado. Um segundo estorno do mesmo pagamento é recusado.
+**CA-07 — Estorno.** Dada a conta do CA-01 quitada, quando alguém com *Financeiro: excluir* estorna o recebimento em outro dia, então o caixa ganha a saída de R$ 194,00, "Estorno de: …", **na data do recebimento original** (o caixa daquele dia e daquele mês fica com zero dessa conta, e o de hoje não muda), o detalhe mostra "Estornado em {hoje} por …", a conta volta a ficar aberta com restante de R$ 200,00, e o pagamento aparece riscado como estornado. Um segundo estorno do mesmo pagamento é recusado.
 
 **CA-08 — Depois do estorno.** Dada a conta do CA-07, já vencida, quando a conferência roda, então ela não é recebida sozinha. Quando a pessoa registra o recebimento certo, então a conta fica quitada.
 
@@ -393,7 +396,7 @@ Uma loja vende R$ 200,00 no cartão de crédito à vista, numa maquininha que co
 | T01 | Validação do pagamento (valor, desconto, acréscimo, abatido, motivo, observação), sugestão da taxa e arredondamento | Unitário | CA-01, CA-02, CA-04, CA-05, CA-06, INV-004 |
 | T02 | Pagamento no banco com desconto e acréscimo: totais da conta, status, lançamento do valor real, pagamentos simultâneos | Integração | CA-01, CA-02, CA-04, CA-05, INV-001, INV-002, INV-003 |
 | T03 | Recebimento automático com taxa, sem taxa e com pagamento estornado | Integração | CA-03, CA-08, INV-005 |
-| T04 | Estorno do pagamento: lançamento contrário, conta reaberta, estorno repetido e simultâneo, conta cancelada, conta manual editável de novo | Integração | CA-07, CA-09, CA-12, INV-001, INV-006 |
+| T04 | Estorno do pagamento: lançamento contrário na data do pagamento original e o momento do registro (OPEN-009), conta reaberta, estorno repetido e simultâneo, conta cancelada, conta manual editável de novo | Integração | CA-07, CA-09, CA-12, INV-001, INV-006 |
 | T05 | Totais da lista, filtros de pagamento sem os estornados, Painel e projeção pelo restante | Integração | CA-10, CA-11, INV-008 |
 | T06 | Relatório de Contas com as colunas novas (CSV e PDF) | Unitário + integração | CA-10 |
 | T07 | Permissões: pagamento com *criar*, estorno com *excluir* | Integração | CA-13 |
@@ -420,11 +423,18 @@ Todas decididas pela equipe em 14/11/2026, em entrevista, pela opção recomenda
 | **OPEN-007** — Corrigir um pagamento errado | **Estornar o pagamento** (recomendada): quem tem *Financeiro: excluir* estorna um pagamento de conta; o caixa ganha o lançamento contrário, e a conta volta a ficar aberta ou parcial, sem o desconto e o acréscimo daquele pagamento. Nada é apagado. Descartado: manter o pagamento de conta sem estorno, como hoje. |
 | **OPEN-008** — Permissão | **A do pagamento** (recomendada): quem registra pagamento (*Financeiro: criar*) informa o desconto e o acréscimo. Descartado: exigir *Financeiro: editar* para o desconto. |
 
+Questões surgidas na homologação (15/11/2026):
+
+| ID | Decisão |
+|---|---|
+| **OPEN-009** — Data do estorno do pagamento de conta | **Decidida pela equipe em 15/11/2026: a data do pagamento original.** O estorno de um pagamento de conta corrige um registro, e não é dinheiro saindo de novo. Com a data de hoje, o original e o estorno caíam em dias (e às vezes meses) diferentes: o dia do pagamento mostrava a entrada, e o dia do estorno, uma saída que não existiu no banco. Com a data do original, os dois se anulam no mesmo dia, e o caixa por dia e por mês bate com o extrato. O momento em que o estorno foi feito, e por quem, continua registrado (RNF05) e aparece no detalhe. Contrapartida aceita: corrigir um pagamento de um mês passado muda o caixa daquele mês. Descartadas: manter a data de hoje; perguntar a data no diálogo. **Fora desta decisão:** o estorno do lançamento avulso (SPEC-009) e o reembolso da venda cancelada (RN25), que é dinheiro devolvido de verdade, continuam com a data de hoje. |
+| **OPEN-010** — Estornos de pagamento de conta feitos antes do ajuste | **Decidida pela equipe em 15/11/2026: manter como estão.** Os estornos já gravados continuam com a data em que foram feitos (por exemplo, o recebimento de 09/11 estornado em 15/11). O caixa do dia do estorno continua com a saída, e o saldo total fica certo. Nenhum lançamento é alterado (INV-006 sem exceção). A data do pagamento original vale só para os estornos feitos depois da etapa 4. Na migração da etapa 4, o momento do registro dos lançamentos existentes recebe a própria data. Descartada: ajustar uma única vez a data desses estornos para a do pagamento original. |
+
 **Decisões derivadas do pedido e da baseline (sem questão nova):**
 - o desconto sugerido é o **restante × a taxa**, arredondado ao centavo, só nas contas de venda no cartão de crédito;
 - vale a **taxa em vigor no dia do recebimento**; mudar a taxa não mexe nos recebimentos já feitos;
 - a conta de cartão com **pagamento estornado** sai do recebimento automático, para que o recebimento certo seja registrado à mão;
-- o **estorno** tem a data de hoje e repete a categoria do pagamento, como o estorno do lançamento avulso (SPEC-009); a forma fica só no pagamento original (decisão da equipe, 15/11/2026);
+- o **estorno** repete a categoria do pagamento; a forma fica só no pagamento original (decisão da equipe, 15/11/2026). A data, que antes era a de hoje, como no estorno do lançamento avulso (SPEC-009), passou a ser a do pagamento original (OPEN-009);
 - o pagamento estornado **não conta** nos filtros de data do pagamento e de forma, nem no total pago (SPEC-026);
 - a conta manual com todos os pagamentos estornados volta a ser **editável e cancelável**;
 - o **faturamento e o RBT12** continuam pelo valor da venda (RN21);
@@ -440,14 +450,14 @@ A SPEC-028 estará concluída quando:
 
 - [x] todos os critérios de aceitação (CA-01 a CA-15) estiverem implementados (15/11/2026);
 - [x] todos os invariantes (INV-001 a INV-008) estiverem preservados (testes T02 a T09);
-- [ ] os testes derivados (T01 a T12) estiverem aprovados, com o CI verde em cada PR: T01 a T11 aprovados; **falta a homologação (T12)**;
+- [x] os testes derivados (T01 a T12) estiverem aprovados, com o CI verde em cada PR: T01 a T11 em build local e T12 na homologação (15/11/2026);
 - [x] os RNFs aplicáveis (RNF01, RNF02, RNF05, RNF06) tiverem sido verificados como descrito na seção 10: telas em 390, 768 e 1440 px com o axe; INV-008; INV-004 e INV-006; a lista com 5.000 contas e 10.000 pagamentos de 19 a 80 ms;
 - [x] as questões OPEN-001 a OPEN-008 tiverem sido decididas e registradas (14/11/2026):
   - na baseline, RN44 incluída;
   - RF31, RF71, RF90, RN11, RN20 e RN22 alterados;
-- [x] não existir divergência conhecida entre a implementação e esta Spec: as duas encontradas (a mensagem do valor e a forma do estorno) foram decididas pela equipe em 15/11/2026, e a Spec foi ajustada;
+- [ ] não existir divergência conhecida entre a implementação e esta Spec: a mensagem do valor e a forma do estorno foram decididas pela equipe em 15/11/2026, e a Spec foi ajustada; **falta a etapa 4**, para a data do estorno seguir a OPEN-009 (a OPEN-010 foi decidida: os estornos já feitos ficam como estão);
 - [x] toda divergência em relação à baseline tiver sido explicitamente analisada e registrada nos documentos.
 
-**Implementação por etapas** (referência: até cerca de 400 linhas por revisão): (1) schema, domínio e pagamento com desconto e acréscimo; (2) taxa sugerida, recebimento automático e estorno; (3) lista, relatório, Painel, roteiro e evidências.
+**Implementação por etapas** (referência: até cerca de 400 linhas por revisão): (1) schema, domínio e pagamento com desconto e acréscimo; (2) taxa sugerida, recebimento automático e estorno; (3) lista, relatório, Painel, roteiro e evidências; (4) depois da homologação: data do estorno pela do pagamento original (OPEN-009), sem mexer nos estornos já feitos (OPEN-010).
 
 **Regra fundamental:** a implementação obedece a esta Spec aprovada. Se surgir conflito entre código, Spec e documentos de modelagem, o comportamento não é alterado em silêncio. A divergência é registrada com duas propostas, (1) corrigir a implementação ou (2) alterar a baseline, e a decisão é da equipe.

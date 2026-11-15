@@ -98,6 +98,30 @@ Mesmo ambiente das etapas anteriores. O negócio de teste passou ao plano pago, 
 | [`s28c_07_dialogo_do_estorno_390_claro.png`](s28c_07_dialogo_do_estorno_390_claro.png) | Diálogo do estorno no celular |
 | [`s28c_07_dialogo_do_estorno_768_escuro.png`](s28c_07_dialogo_do_estorno_768_escuro.png) | O mesmo diálogo em 768 px, tema escuro |
 
-### Falta
+## Homologação (T12) — 15/11/2026
 
-- **T12 (homologação):** uma venda real no cartão recebida com a taxa da maquininha e uma conta parcial antiga corrigida pelo estorno.
+Feita pela equipe no ambiente de homologação, com o negócio de teste **HE Testing** e o código da DEVELOP depois das três etapas. As capturas e os relatórios estão em [`homologacao/`](homologacao). Os nomes de pessoas (o Dono e o cliente) e o nome do fornecedor foram cobertos. Os PDFs viraram imagens, e no CSV os nomes foram trocados por "[nome coberto]" e "[fornecedor coberto]".
+
+| Passo | O que foi conferido | Captura | Resultado |
+|---|---|---|---|
+| 1. Taxa da maquininha | Calculadora com a taxa média de 3%, e a dica diz que ela é o desconto sugerido ao receber as vendas no cartão | [`t12_01`](homologacao/t12_01_taxa_da_maquininha.png) | ✅ |
+| 2. Venda no cartão | Venda nº 25, de R$ 200,00, no crédito à vista; a parcela 1/1 vence em 15/12/2026 e fica a receber | [`t12_02`](homologacao/t12_02_venda_no_cartao.png) | ✅ |
+| 3. Recebimento com a taxa | A conta da venda fica Recebida: R$ 194,00 recebidos, Descontos R$ 6,00, "Desconto de R$ 6,00 · Taxa da maquininha" e 100% abatido | [`t12_03`](homologacao/t12_03_venda_recebida_com_a_taxa.png) | ✅ |
+| 3. Caixa com o valor real | Entrada de R$ 194,00 da venda nº 25, e não de R$ 200,00. As vendas nº 3 e nº 10, vencidas no dia, foram recebidas automaticamente com a taxa ("automático") | [`t12_04`](homologacao/t12_04_caixa_com_o_valor_real.png) | ✅ |
+| 4. Conta parcial "antiga" | Conta manual de R$ 200,00 com R$ 194,00 recebidos sem desconto: "Recebida em parte", restam R$ 6,00, como ficavam as contas antes da SPEC-028 | [`t12_05`](homologacao/t12_05_conta_recebida_em_parte.png) | ✅ |
+| 4. Diálogo do estorno | "Será gravado no caixa um lançamento contrário… O restante passa a R$ 200,00." | [`t12_06`](homologacao/t12_06_dialogo_do_estorno.png) | ✅ |
+| 4. Conta estornada | A conta volta a "A receber", com R$ 200,00 de restante, e o recebimento aparece riscado com "Estornado em 15/11/2026 por …" | [`t12_07`](homologacao/t12_07_conta_estornada.png) | ✅ |
+| 4. Caixa com o estorno | Saída de R$ 194,00 com a origem estorno, e o recebimento original riscado e marcado "estornado" | [`t12_08`](homologacao/t12_08_caixa_com_o_estorno.png) | ✅ |
+| 4. Conta corrigida | Novo recebimento de R$ 194,00 com R$ 6,00 de desconto, "Taxa da maquininha": a conta fica Recebida, restante R$ 0,00, com os dois recebimentos no histórico | [`t12_09`](homologacao/t12_09_conta_corrigida.png) | ✅ |
+| 5. Totais da lista | A receber, todas: Recebido R$ 388,00, Descontos R$ 12,00 (6 + 6), Acréscimos R$ 0,00 e Em aberto R$ 2.902,89 (3.302,89 − 388 − 12) | [`t12_10`](homologacao/t12_10_totais_a_receber.png) | ✅ |
+| 5. Relatório de Contas (PDF) | Colunas Descontos e Acréscimos; os pagamentos em várias linhas, com o desconto, o motivo e "[estornado em …]" | [`t12_11`](homologacao/t12_11_relatorio_contas_pdf.png) | ✅ |
+| Opcional: juros | Conta recebida com R$ 208,00 e acréscimo de R$ 8,00, "Juros ou multa", no relatório de 01/09 a 15/11 | [`t12_12`](homologacao/t12_12_relatorio_contas_com_juros_pdf.png) | ✅ |
+| 5. Relatório de Contas (CSV) | As mesmas colunas e os mesmos textos dos pagamentos | [`t12_13`](homologacao/t12_13_relatorio_contas.csv) | ✅ |
+
+**Além do roteiro:**
+- as vendas nº 3 e nº 10 foram recebidas automaticamente no vencimento com o desconto da taxa (R$ 41,78 + R$ 1,52 e R$ 43,42 + R$ 1,58, que correspondem a 3,5%, a taxa da Calculadora naquele momento). Depois, a equipe estornou esses recebimentos, e as contas continuaram a receber, sem um novo recebimento automático (CA-08). O relatório mostra os dois recebimentos marcados como estornados;
+- o pagamento antigo da conta de internet de outubro aparece como "Não informada" (SPEC-026), sem desconto nem acréscimo.
+
+**Resultado:** a homologação foi aprovada nos passos do roteiro.
+
+**Observação da equipe (depois das capturas):** ao corrigir uma conta real do mesmo jeito do passo 4, recebida em 09/11 e estornada em 15/11, o caixa do dia 15/11 mostrou uma saída do valor do recebimento sem entrada nenhuma. O saldo total estava certo, mas o caixa do dia não batia com o banco. O estorno seguia a regra da Spec, que mandava usar a data de hoje. A equipe decidiu que o estorno de pagamento de conta passa a ter a data do pagamento original (OPEN-009, etapa 4); os estornos já feitos ficam como estão (OPEN-010).
