@@ -1,0 +1,8 @@
+﻿Tipo;Descrição;Fornecedor/Cliente;Nº do documento;Categoria;Vencimento;Situação;Total;Pago;Descontos;Acréscimos;Restante;Pagamentos
+A pagar;Aluguel — 11/2026;;;Outros;10/11/2026;A pagar;1200,00;0,00;0,00;0,00;1200,00;
+A pagar;[fornecedor coberto] — 11/2026;;;Fornecedores;10/11/2026;A pagar;540,00;0,00;0,00;0,00;540,00;
+A receber;Venda nº 10 — parcela 1/1;;;Vendas;15/11/2026;A receber;45,00;0,00;0,00;0,00;45,00;15/11/2026 Cartão de crédito 43,42, desconto 1,58 (Taxa da maquininha) [estornado em 15/11/2026]
+A pagar;Internet — 11/2026;;;Outros;15/11/2026;A pagar;120,00;0,00;0,00;0,00;120,00;
+A receber;Venda nº 3 — parcela 1/3;;;Vendas;15/11/2026;A receber;43,30;0,00;0,00;0,00;43,30;15/11/2026 Cartão de crédito 41,78, desconto 1,52 (Taxa da maquininha) [estornado em 15/11/2026]
+A receber;Venda Manual (exemplo);[nome coberto];;Vendas;15/11/2026;Recebida;200,00;194,00;6,00;0,00;0,00;15/11/2026 Cartão de crédito 194,00 [estornado em 15/11/2026] + 15/11/2026 Cartão de crédito 194,00, desconto 6,00 (Taxa da maquininha)
+Total;A receber 88,30;A pagar 1860,00;;;;;;;;;;

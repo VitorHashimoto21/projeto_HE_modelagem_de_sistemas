@@ -1,6 +1,6 @@
 # SPEC-028 — Desconto e acréscimo nos pagamentos das contas
 
-> **Status:** ✅ **Aprovada em 14/11/2026** e **implementada em 15/11/2026**, em três etapas: (1) schema, regras e pagamento com desconto e acréscimo; (2) taxa sugerida, recebimento automático com a taxa e estorno do pagamento; (3) totais da lista, relatório de Contas e roteiro final. Verificada em build local, com os testes T01 a T11 ([evidências](evidencias/SPEC-028/README.md)). **Falta a homologação (T12).** As notas da implementação estão depois da seção 9. As questões em aberto foram decididas pela equipe em entrevista (seção 13), todas pela opção recomendada:
+> **Status:** ✅ **Concluída em 15/11/2026**: aprovada em 14/11/2026, implementada em três etapas — (1) schema, regras e pagamento com desconto e acréscimo; (2) taxa sugerida, recebimento automático com a taxa e estorno do pagamento; (3) totais da lista, relatório de Contas e roteiro final —, verificada em build local (testes T01 a T11) e homologada (T12) ([evidências](evidencias/SPEC-028/README.md)). As notas da implementação estão depois da seção 9. As questões em aberto foram decididas pela equipe em entrevista (seção 13), todas pela opção recomendada:
 > - o desconto e o acréscimo são informados **no pagamento** ou no recebimento de cada conta; o valor original da conta não muda (OPEN-001);
 > - o caixa recebe **só o valor real** que entrou ou saiu; o desconto e o acréscimo ficam registrados no pagamento (OPEN-002);
 > - nas contas de venda no cartão de crédito, a **taxa da maquininha** vem sugerida pela taxa média da Calculadora, e o recebimento automático no vencimento desconta a mesma taxa (OPEN-003);
@@ -440,7 +440,7 @@ A SPEC-028 estará concluída quando:
 
 - [x] todos os critérios de aceitação (CA-01 a CA-15) estiverem implementados (15/11/2026);
 - [x] todos os invariantes (INV-001 a INV-008) estiverem preservados (testes T02 a T09);
-- [ ] os testes derivados (T01 a T12) estiverem aprovados, com o CI verde em cada PR: T01 a T11 aprovados; **falta a homologação (T12)**;
+- [x] os testes derivados (T01 a T12) estiverem aprovados, com o CI verde em cada PR: T01 a T11 em build local e T12 na homologação (15/11/2026);
 - [x] os RNFs aplicáveis (RNF01, RNF02, RNF05, RNF06) tiverem sido verificados como descrito na seção 10: telas em 390, 768 e 1440 px com o axe; INV-008; INV-004 e INV-006; a lista com 5.000 contas e 10.000 pagamentos de 19 a 80 ms;
 - [x] as questões OPEN-001 a OPEN-008 tiverem sido decididas e registradas (14/11/2026):
   - na baseline, RN44 incluída;
