@@ -231,8 +231,9 @@ Uma loja vende R$ 200,00 no cartão de crédito à vista, numa maquininha que co
 
 | Situação | Mensagem |
 |---|---|
-| Valor zero ou negativo | "Informe um valor maior que zero." |
+| Valor zero, negativo ou inválido | "Use um valor maior que zero, até R$ 9.999.999,99, com até 2 casas" (a mensagem de todos os valores do HE; decisão da equipe, 15/11/2026) |
 | Desconto ou acréscimo negativo | "O desconto e o acréscimo não podem ser negativos." |
+| Desconto ou acréscimo que não é número, ou com mais de 2 casas | "Use um valor com até 2 casas, como 6 ou 6,50" |
 | Abatido passa do restante, sem acréscimo | "O valor passa do restante da conta ({restante}). Se houve juros ou multa, informe o acréscimo." |
 | Abatido passa do restante, com acréscimo | "Valor, desconto e acréscimo passam do restante da conta ({restante})." |
 | Abatido zero ou negativo | "O acréscimo não pode ser maior que o valor pago mais o desconto." |
@@ -324,7 +325,7 @@ Uma loja vende R$ 200,00 no cartão de crédito à vista, numa maquininha que co
 - **Mensagens:**
   - para o valor zero ou inválido, continua a mensagem que o HE já usa em todos os valores ("Use um valor maior que zero, até R$ 9.999.999,99, com até 2 casas"), no lugar de "Informe um valor maior que zero." (5.10);
   - para o desconto ou o acréscimo que não é número, ou que tem mais de 2 casas, foi acrescentada "Use um valor com até 2 casas, como 6 ou 6,50".
-  - **A decidir pela equipe:** (1) manter a mensagem atual do valor e ajustar a 5.10 (proposta) ou (2) trocar pela da 5.10 só no pagamento.
+  - **Decidido pela equipe em 15/11/2026:** manter a mensagem atual do valor (opção recomendada). A tabela da seção 5.10 foi ajustada, e a mensagem do desconto ou acréscimo inválido entrou nela.
 - **Forma do pagamento na largura toda:** o campo da forma ficava pela metade na coluna do pagamento e cortava "Cartão de crédito" (desde a SPEC-026). Como o formulário mudou nesta etapa, o campo passou a ocupar a largura toda.
 
 ---
