@@ -1,6 +1,6 @@
 # SPEC-028 — Desconto e acréscimo nos pagamentos das contas
 
-> **Status:** ✅ **Aprovada em 14/11/2026**, a implementar. As questões em aberto foram decididas pela equipe em entrevista (seção 13), todas pela opção recomendada:
+> **Status:** ✅ **Aprovada em 14/11/2026**, **em implementação por etapas**: a etapa 1 (schema, regras e pagamento com desconto e acréscimo) foi implementada em 15/11/2026 e verificada em build local ([evidências](evidencias/SPEC-028/README.md)); as notas da implementação estão depois da seção 9. As questões em aberto foram decididas pela equipe em entrevista (seção 13), todas pela opção recomendada:
 > - o desconto e o acréscimo são informados **no pagamento** ou no recebimento de cada conta; o valor original da conta não muda (OPEN-001);
 > - o caixa recebe **só o valor real** que entrou ou saiu; o desconto e o acréscimo ficam registrados no pagamento (OPEN-002);
 > - nas contas de venda no cartão de crédito, a **taxa da maquininha** vem sugerida pela taxa média da Calculadora, e o recebimento automático no vencimento desconta a mesma taxa (OPEN-003);
@@ -231,8 +231,9 @@ Uma loja vende R$ 200,00 no cartão de crédito à vista, numa maquininha que co
 
 | Situação | Mensagem |
 |---|---|
-| Valor zero ou negativo | "Informe um valor maior que zero." |
+| Valor zero, negativo ou inválido | "Use um valor maior que zero, até R$ 9.999.999,99, com até 2 casas" (a mensagem de todos os valores do HE; decisão da equipe, 15/11/2026) |
 | Desconto ou acréscimo negativo | "O desconto e o acréscimo não podem ser negativos." |
+| Desconto ou acréscimo que não é número, ou com mais de 2 casas | "Use um valor com até 2 casas, como 6 ou 6,50" |
 | Abatido passa do restante, sem acréscimo | "O valor passa do restante da conta ({restante}). Se houve juros ou multa, informe o acréscimo." |
 | Abatido passa do restante, com acréscimo | "Valor, desconto e acréscimo passam do restante da conta ({restante})." |
 | Abatido zero ou negativo | "O acréscimo não pode ser maior que o valor pago mais o desconto." |
@@ -315,6 +316,17 @@ Uma loja vende R$ 200,00 no cartão de crédito à vista, numa maquininha que co
 | **Listar contas** (SPEC-026) | os filtros de hoje | + totais de descontos e acréscimos; "em aberto" pelo restante | Sem mudança |
 | **Conferir** (rotina, SPEC-009) | hoje | {contasCriadas, parcelasRecebidas} | Sem mudança |
 | **Relatório de Contas** (SPEC-013, SPEC-026) | período | + colunas Descontos e Acréscimos; pagamentos com desconto, acréscimo, motivo e estorno | Sem mudança |
+
+### Notas da implementação
+
+**Etapa 1 (15/11/2026)** — schema, regras e pagamento com desconto e acréscimo:
+- **O restante já está certo em todas as telas desde a etapa 1.** Assim que um pagamento pode ter desconto, o restante passa a ser total − pago − descontos + acréscimos em todo lugar: o detalhe e a lista de contas, os totais da lista ("em aberto"), o Painel e a projeção, o detalhe do fornecedor, o cancelamento de venda e o relatório de Contas. A divisão da seção 14 deixava a lista, o relatório e o Painel para a etapa 3. A etapa 1 adianta só o cálculo do restante, para a DEVELOP (e a homologação) nunca mostrar um valor errado. As colunas novas do relatório e os totais de descontos e acréscimos na lista continuam na etapa 3.
+- **Observação:** o campo aparece quando há desconto ou acréscimo, com "(opcional)" no rótulo, e passa a obrigatório com o motivo "Outro". Sem desconto nem acréscimo, o formulário fica como antes.
+- **Mensagens:**
+  - para o valor zero ou inválido, continua a mensagem que o HE já usa em todos os valores ("Use um valor maior que zero, até R$ 9.999.999,99, com até 2 casas"), no lugar de "Informe um valor maior que zero." (5.10);
+  - para o desconto ou o acréscimo que não é número, ou que tem mais de 2 casas, foi acrescentada "Use um valor com até 2 casas, como 6 ou 6,50".
+  - **Decidido pela equipe em 15/11/2026:** manter a mensagem atual do valor (opção recomendada). A tabela da seção 5.10 foi ajustada, e a mensagem do desconto ou acréscimo inválido entrou nela.
+- **Forma do pagamento na largura toda:** o campo da forma ficava pela metade na coluna do pagamento e cortava "Cartão de crédito" (desde a SPEC-026). Como o formulário mudou nesta etapa, o campo passou a ocupar a largura toda.
 
 ---
 

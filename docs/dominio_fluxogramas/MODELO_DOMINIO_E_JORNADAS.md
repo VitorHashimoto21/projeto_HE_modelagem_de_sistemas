@@ -178,9 +178,11 @@ classDiagram
     class LancamentoFinanceiro {
         +tipo  Entrada | Saida
         +categoria  Vendas | Fornecedores | Impostos | Salario | Outros
-        +valor
+        +valor  o que entrou ou saiu do caixa
         +data
         +origem  Venda | Conta | Manual
+        +desconto  com motivo, no pagamento de conta (SPEC-028)
+        +acrescimo  com motivo, no pagamento de conta (SPEC-028)
     }
 
     class ContaPagarReceber {
@@ -188,6 +190,8 @@ classDiagram
         +categoria
         +valorTotal
         +valorPago
+        +valorDesconto  soma dos descontos (SPEC-028)
+        +valorAcrescimo  soma dos acréscimos (SPEC-028)
         +vencimento
         +status  Aberta | Parcial | Quitada | Cancelada
         +competencia  se gerada por despesa fixa

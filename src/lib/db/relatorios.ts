@@ -41,6 +41,9 @@ export type ContaExportada = {
   status: StatusConta;
   totalCentavos: number;
   pagoCentavos: number;
+  /** SPEC-028: totais dos descontos e dos acréscimos (o restante já os considera). */
+  descontoCentavos: number;
+  acrescimoCentavos: number;
   /** SPEC-026 (5.7): fornecedor ou cliente (o da venda, nas contas do cartão), nº do documento e pagamentos. */
   pessoa: string | null;
   numeroDocumento: string | null;
@@ -152,6 +155,8 @@ export function criarConsultasDeRelatorios(cliente: ClienteDoNegocio, negocioId:
           status: true,
           valorTotal: true,
           valorPago: true,
+          valorDesconto: true,
+          valorAcrescimo: true,
           numeroDocumento: true,
           fornecedor: PESSOA,
           cliente: PESSOA,
@@ -169,6 +174,8 @@ export function criarConsultasDeRelatorios(cliente: ClienteDoNegocio, negocioId:
           status: c.status,
           totalCentavos: centavosDe(c.valorTotal),
           pagoCentavos: centavosDe(c.valorPago),
+          descontoCentavos: centavosDe(c.valorDesconto),
+          acrescimoCentavos: centavosDe(c.valorAcrescimo),
           pessoa: pessoa && nomeDeExibicao(pessoa),
           numeroDocumento: c.numeroDocumento,
           pagamentos: c.lancamentos.map((l) => ({ data: l.data, forma: l.formaPagamento, valorCentavos: centavosDe(l.valor) })),

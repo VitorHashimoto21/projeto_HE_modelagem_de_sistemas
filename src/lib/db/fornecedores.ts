@@ -2,7 +2,7 @@ import type { StatusConta } from "@/generated/prisma/enums";
 import type { DadosDoCliente } from "@/lib/clientes/validacao";
 import { dataBrasileira, diaLocal } from "@/lib/dominio/datas";
 import { faltandoParaNota, nomeDeExibicao, type TipoCliente } from "@/lib/dominio/cliente";
-import { centavosDe, estaAtrasada } from "@/lib/dominio/financeiro";
+import { centavosDe, estaAtrasada, restanteDaConta } from "@/lib/dominio/financeiro";
 import { FORNECEDOR_ANONIMO } from "@/lib/dominio/lgpd";
 import { pode, type Matriz } from "@/lib/dominio/permissoes";
 import { CAMPOS, CAMPOS_DO_FORMULARIO, condicaoDaBusca, ehUnicidade, exibicaoDoCadastro, type ClienteDaLista, type DetalheDoCliente, type ValoresDoCliente, type Visao } from "./clientes";
@@ -130,13 +130,16 @@ export function criarConsultasDeFornecedores(cliente: ClienteDoNegocio, negocioI
       const [contas, quantidade, totais, emAberto, despesas] = await Promise.all([
         cliente.contaPagarReceber.findMany({
           where: { fornecedorId: id },
-          select: { id: true, descricao: true, numeroDocumento: true, vencimento: true, valorTotal: true, valorPago: true, status: true },
+          select: { id: true, descricao: true, numeroDocumento: true, vencimento: true, valorTotal: true, valorPago: true, valorDesconto: true, valorAcrescimo: true, status: true },
           orderBy: [{ vencimento: "desc" }, { id: "asc" }],
           take: LIMITE_DE_CONTAS_DO_FORNECEDOR,
         }),
         cliente.contaPagarReceber.count({ where: { fornecedorId: id } }),
         cliente.contaPagarReceber.aggregate({ where: { fornecedorId: id }, _sum: { valorPago: true } }),
-        cliente.contaPagarReceber.aggregate({ where: { fornecedorId: id, status: { in: ["ABERTA", "PARCIAL"] } }, _sum: { valorTotal: true, valorPago: true } }),
+        cliente.contaPagarReceber.aggregate({
+          where: { fornecedorId: id, status: { in: ["ABERTA", "PARCIAL"] } },
+          _sum: { valorTotal: true, valorPago: true, valorDesconto: true, valorAcrescimo: true },
+        }),
         cliente.despesaFixa.findMany({ where: { fornecedorId: id }, select: { id: true, descricao: true, ativo: true }, orderBy: [{ ativo: "desc" }, { descricao: "asc" }] }),
       ]);
       const lista: ContaDoFornecedor[] = contas.map((c) => ({
@@ -146,14 +149,30 @@ export function criarConsultasDeFornecedores(cliente: ClienteDoNegocio, negocioI
         vencimento: dataBrasileira(c.vencimento),
         valorCentavos: centavosDe(c.valorTotal),
         status: c.status,
-        atrasada: estaAtrasada({ vencimento: diaLocal(c.vencimento), status: c.status, totalCentavos: centavosDe(c.valorTotal), pagoCentavos: centavosDe(c.valorPago) }, hoje),
+        atrasada: estaAtrasada(
+          {
+            vencimento: diaLocal(c.vencimento),
+            status: c.status,
+            totalCentavos: centavosDe(c.valorTotal),
+            pagoCentavos: centavosDe(c.valorPago),
+            descontoCentavos: centavosDe(c.valorDesconto),
+            acrescimoCentavos: centavosDe(c.valorAcrescimo),
+          },
+          hoje,
+        ),
       }));
       return {
         fornecedor: paraDetalhe(f),
         contas: lista,
         quantidadeDeContas: quantidade,
         pagoCentavos: centavosDe(totais._sum.valorPago ?? 0),
-        emAbertoCentavos: centavosDe(emAberto._sum.valorTotal ?? 0) - centavosDe(emAberto._sum.valorPago ?? 0),
+        // SPEC-028: o em aberto já considera os descontos e os acréscimos.
+        emAbertoCentavos: restanteDaConta({
+          totalCentavos: centavosDe(emAberto._sum.valorTotal ?? 0),
+          pagoCentavos: centavosDe(emAberto._sum.valorPago ?? 0),
+          descontoCentavos: centavosDe(emAberto._sum.valorDesconto ?? 0),
+          acrescimoCentavos: centavosDe(emAberto._sum.valorAcrescimo ?? 0),
+        }),
         despesas,
       };
     },

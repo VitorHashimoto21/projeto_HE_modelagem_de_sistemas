@@ -1,4 +1,14 @@
-import type { AtividadeMei, CategoriaLancamento, OrigemDespesaFixa, OrigemLancamento, StatusConta, TipoConta, TipoLancamento } from "@/generated/prisma/enums";
+import type {
+  AtividadeMei,
+  CategoriaLancamento,
+  MotivoAcrescimo,
+  MotivoDesconto,
+  OrigemDespesaFixa,
+  OrigemLancamento,
+  StatusConta,
+  TipoConta,
+  TipoLancamento,
+} from "@/generated/prisma/enums";
 import { intervaloDaCompetencia, intervaloDoDia } from "@/lib/dominio/datas";
 import {
   centavosDe,
@@ -10,6 +20,7 @@ import {
   estaAtrasada,
   primeiraCompetencia,
   reaisTexto,
+  restanteDaConta,
   tipoDoPagamento,
   vencimentoNaCompetencia,
 } from "@/lib/dominio/financeiro";
@@ -108,30 +119,54 @@ export type Pagamento = {
   usuarioId: string | null;
   /** SPEC-026 (OPEN-008): obrigatória nos pagamentos pela tela; cartão de crédito no recebimento automático. */
   forma: FormaDoPagamento;
+  /** SPEC-028 (OPEN-001, OPEN-005): desconto e acréscimo, cada um com o motivo; zero quando ausentes. */
+  descontoCentavos?: number;
+  acrescimoCentavos?: number;
+  motivoDesconto?: MotivoDesconto | null;
+  motivoAcrescimo?: MotivoAcrescimo | null;
+  observacao?: string | null;
 };
 
+type ValoresLidos = { valorTotal: unknown; valorPago: unknown; valorDesconto: unknown; valorAcrescimo: unknown };
+const restanteLido = (c: ValoresLidos) =>
+  restanteDaConta({
+    totalCentavos: centavosDe(c.valorTotal),
+    pagoCentavos: centavosDe(c.valorPago),
+    descontoCentavos: centavosDe(c.valorDesconto),
+    acrescimoCentavos: centavosDe(c.valorAcrescimo),
+  });
+
 /**
- * Pagamento ou recebimento de conta (5.3, INV-002 a INV-004): atualização condicional do
- * valor pago e do status com RETURNING, mais o lançamento vinculado, na transação de quem
- * chama. A linha da conta fica travada até o fim da transação, então pagamentos simultâneos
- * nunca ultrapassam o total.
+ * Pagamento ou recebimento de conta (5.3, INV-002 a INV-004; SPEC-028, INV-001 a INV-003):
+ * atualização condicional do pago, dos totais de desconto e acréscimo e do status com RETURNING,
+ * mais o lançamento vinculado, na transação de quem chama. O lançamento é do valor real; a conta
+ * abate valor + desconto − acréscimo. A linha da conta fica travada até o fim da transação, então
+ * pagamentos simultâneos nunca ultrapassam o restante.
  */
 export async function pagarConta(tx: Tx, negocioId: string, p: Pagamento): Promise<{ tipo: TipoConta; status: StatusConta; restanteCentavos: number; lancamentoId: string }> {
   if (!UUID.test(p.contaId)) throw new ContaNaoEncontrada();
   const v = reaisTexto(p.valorCentavos);
-  const linhas = await tx.$queryRaw<{ tipo: TipoConta; categoria: CategoriaLancamento; descricao: string | null; valorTotal: unknown; valorPago: unknown; status: StatusConta }[]>`
+  const d = reaisTexto(p.descontoCentavos ?? 0);
+  const a = reaisTexto(p.acrescimoCentavos ?? 0);
+  const linhas = await tx.$queryRaw<({ tipo: TipoConta; categoria: CategoriaLancamento; descricao: string | null; status: StatusConta } & ValoresLidos)[]>`
     UPDATE "ContaPagarReceber"
     SET "valorPago" = "valorPago" + ${v}::numeric,
-        status = (CASE WHEN "valorPago" + ${v}::numeric >= "valorTotal" THEN 'QUITADA' ELSE 'PARCIAL' END)::"StatusConta"
-    WHERE id = ${p.contaId}::uuid AND "negocioId" = ${negocioId}::uuid
-      AND status IN ('ABERTA', 'PARCIAL') AND "valorPago" + ${v}::numeric <= "valorTotal"
-    RETURNING tipo, categoria, descricao, "valorTotal", "valorPago", status`;
+        "valorDesconto" = "valorDesconto" + ${d}::numeric,
+        "valorAcrescimo" = "valorAcrescimo" + ${a}::numeric,
+        status = (CASE WHEN "valorPago" + "valorDesconto" - "valorAcrescimo" + ${v}::numeric + ${d}::numeric - ${a}::numeric >= "valorTotal"
+                       THEN 'QUITADA' ELSE 'PARCIAL' END)::"StatusConta"
+    WHERE id = ${p.contaId}::uuid AND "negocioId" = ${negocioId}::uuid AND status IN ('ABERTA', 'PARCIAL')
+      AND "valorPago" + "valorDesconto" - "valorAcrescimo" + ${v}::numeric + ${d}::numeric - ${a}::numeric <= "valorTotal"
+    RETURNING tipo, categoria, descricao, "valorTotal", "valorPago", "valorDesconto", "valorAcrescimo", status`;
 
   if (linhas.length === 0) {
-    const conta = await tx.contaPagarReceber.findFirst({ where: { id: p.contaId }, select: { status: true, valorTotal: true, valorPago: true } });
+    const conta = await tx.contaPagarReceber.findFirst({
+      where: { id: p.contaId },
+      select: { status: true, valorTotal: true, valorPago: true, valorDesconto: true, valorAcrescimo: true },
+    });
     if (!conta) throw new ContaNaoEncontrada();
     if (conta.status === "QUITADA" || conta.status === "CANCELADA") throw new ContaEncerrada(conta.status);
-    throw new ValorAcimaDoRestante(centavosDe(conta.valorTotal) - centavosDe(conta.valorPago));
+    throw new ValorAcimaDoRestante(restanteLido(conta));
   }
 
   const c = linhas[0];
@@ -147,10 +182,15 @@ export async function pagarConta(tx: Tx, negocioId: string, p: Pagamento): Promi
       data: p.data,
       usuarioId: p.usuarioId,
       formaPagamento: p.forma,
+      desconto: d,
+      acrescimo: a,
+      motivoDesconto: p.descontoCentavos ? (p.motivoDesconto ?? null) : null,
+      motivoAcrescimo: p.acrescimoCentavos ? (p.motivoAcrescimo ?? null) : null,
+      observacaoPagamento: p.observacao ?? null,
     },
     select: { id: true },
   });
-  return { tipo: c.tipo, status: c.status, restanteCentavos: centavosDe(c.valorTotal) - centavosDe(c.valorPago), lancamentoId: lancamento.id };
+  return { tipo: c.tipo, status: c.status, restanteCentavos: restanteLido(c), lancamentoId: lancamento.id };
 }
 
 export type LancamentoExibido = {
@@ -200,6 +240,9 @@ export type ContaExibida = {
   descricao: string | null;
   totalCentavos: number;
   pagoCentavos: number;
+  /** SPEC-028: totais dos descontos e dos acréscimos dos pagamentos. */
+  descontoCentavos: number;
+  acrescimoCentavos: number;
   restanteCentavos: number;
   vencimento: string;
   status: StatusConta;
@@ -213,7 +256,19 @@ export type DetalheDaConta = ContaExibida & {
   criadaPor: string | null;
   venda: { id: string; numero: number } | null;
   despesa: { id: string; descricao: string } | null;
-  lancamentos: { id: string; valorCentavos: number; data: Date; registradoPor: string | null; forma: FormaDoPagamento | null }[];
+  lancamentos: {
+    id: string;
+    valorCentavos: number;
+    data: Date;
+    registradoPor: string | null;
+    forma: FormaDoPagamento | null;
+    /** SPEC-028: desconto e acréscimo do pagamento, com o motivo e a observação. */
+    descontoCentavos: number;
+    acrescimoCentavos: number;
+    motivoDesconto: MotivoDesconto | null;
+    motivoAcrescimo: MotivoAcrescimo | null;
+    observacao: string | null;
+  }[];
 };
 
 export type DespesaExibida = {
@@ -256,6 +311,8 @@ export function criarConsultasFinanceiras(cliente: ClienteDoNegocio, negocioId: 
     descricao: string | null;
     valorTotal: unknown;
     valorPago: unknown;
+    valorDesconto: unknown;
+    valorAcrescimo: unknown;
     vencimento: Date;
     status: StatusConta;
     parcelaId: string | null;
@@ -275,20 +332,23 @@ export function criarConsultasFinanceiras(cliente: ClienteDoNegocio, negocioId: 
   }
 
   function exibirConta(c: ContaLida, hoje: string): ContaExibida {
-    const totalCentavos = centavosDe(c.valorTotal);
-    const pagoCentavos = centavosDe(c.valorPago);
+    const valores = {
+      totalCentavos: centavosDe(c.valorTotal),
+      pagoCentavos: centavosDe(c.valorPago),
+      descontoCentavos: centavosDe(c.valorDesconto),
+      acrescimoCentavos: centavosDe(c.valorAcrescimo),
+    };
     const vencimento = diaLocalDe(c.vencimento);
     return {
       id: c.id,
       tipo: c.tipo,
       categoria: c.categoria,
       descricao: c.descricao,
-      totalCentavos,
-      pagoCentavos,
-      restanteCentavos: c.status === "CANCELADA" ? 0 : totalCentavos - pagoCentavos,
+      ...valores,
+      restanteCentavos: c.status === "CANCELADA" ? 0 : restanteDaConta(valores),
       vencimento,
       status: c.status,
-      atrasada: estaAtrasada({ vencimento, status: c.status, totalCentavos, pagoCentavos }, hoje),
+      atrasada: estaAtrasada({ ...valores, vencimento, status: c.status }, hoje),
       origem: origemDaConta(c),
       pessoa: pessoaDaConta(c),
       numeroDocumento: c.numeroDocumento,
@@ -302,6 +362,8 @@ export function criarConsultasFinanceiras(cliente: ClienteDoNegocio, negocioId: 
     descricao: true,
     valorTotal: true,
     valorPago: true,
+    valorDesconto: true,
+    valorAcrescimo: true,
     vencimento: true,
     status: true,
     parcelaId: true,
@@ -462,7 +524,7 @@ export function criarConsultasFinanceiras(cliente: ClienteDoNegocio, negocioId: 
   async function receberParcelasVencidas(hoje: string): Promise<number> {
     const contas = await cliente.contaPagarReceber.findMany({
       where: { parcelaId: { not: null }, status: { in: ["ABERTA", "PARCIAL"] }, vencimento: { lt: intervaloDoDia(hoje).fim } },
-      select: { id: true, valorTotal: true, valorPago: true, vencimento: true },
+      select: { id: true, valorTotal: true, valorPago: true, valorDesconto: true, valorAcrescimo: true, vencimento: true },
       orderBy: { vencimento: "asc" },
       take: 1000,
     });
@@ -472,7 +534,7 @@ export function criarConsultasFinanceiras(cliente: ClienteDoNegocio, negocioId: 
         await cliente.$transaction((tx) =>
           pagarConta(tx as unknown as Tx, negocioId, {
             contaId: c.id,
-            valorCentavos: centavosDe(c.valorTotal) - centavosDe(c.valorPago),
+            valorCentavos: restanteLido(c),
             data: c.vencimento,
             usuarioId: null,
             // SPEC-026 (5.5, item 4): a forma da venda.
@@ -756,7 +818,7 @@ export function criarConsultasFinanceiras(cliente: ClienteDoNegocio, negocioId: 
             })
           : Promise.resolve(0),
         cliente.contaPagarReceber.aggregate({ where: semCanceladas, _sum: { valorTotal: true, valorPago: true } }),
-        cliente.contaPagarReceber.aggregate({ where: emAberto, _sum: { valorTotal: true, valorPago: true } }),
+        cliente.contaPagarReceber.aggregate({ where: emAberto, _sum: { valorTotal: true, valorPago: true, valorDesconto: true, valorAcrescimo: true } }),
         // Com filtro de data do pagamento ou de forma, "Pago" soma só os pagamentos que atendem (5.6, item 4).
         filtraPagamentos(filtros) ? cliente.lancamentoFinanceiro.aggregate({ where: { ...pagamento, conta: { is: semCanceladas } }, _sum: { valor: true } }) : Promise.resolve(null),
       ]);
@@ -774,7 +836,12 @@ export function criarConsultasFinanceiras(cliente: ClienteDoNegocio, negocioId: 
         quantidade: total,
         totalCentavos: centavosDe(somaGeral._sum.valorTotal ?? 0),
         pagoCentavos: pagoFiltrado ? centavosDe(pagoFiltrado._sum.valor ?? 0) : centavosDe(somaGeral._sum.valorPago ?? 0),
-        emAbertoCentavos: centavosDe(somaEmAberto._sum.valorTotal ?? 0) - centavosDe(somaEmAberto._sum.valorPago ?? 0),
+        emAbertoCentavos: restanteLido({
+          valorTotal: somaEmAberto._sum.valorTotal ?? 0,
+          valorPago: somaEmAberto._sum.valorPago ?? 0,
+          valorDesconto: somaEmAberto._sum.valorDesconto ?? 0,
+          valorAcrescimo: somaEmAberto._sum.valorAcrescimo ?? 0,
+        }),
       };
       return {
         contas: contas.map((c) => exibirConta(c, hoje)),
@@ -799,7 +866,21 @@ export function criarConsultasFinanceiras(cliente: ClienteDoNegocio, negocioId: 
               },
             },
             despesaFixa: { select: { id: true, descricao: true } },
-            lancamentos: { orderBy: { data: "asc" }, select: { id: true, valor: true, data: true, formaPagamento: true, usuario: { select: { nome: true, administradorEm: true } } } },
+            lancamentos: {
+              orderBy: { data: "asc" },
+              select: {
+                id: true,
+                valor: true,
+                data: true,
+                formaPagamento: true,
+                desconto: true,
+                acrescimo: true,
+                motivoDesconto: true,
+                motivoAcrescimo: true,
+                observacaoPagamento: true,
+                usuario: { select: { nome: true, administradorEm: true } },
+              },
+            },
           },
         });
       if (!c) throw new ContaNaoEncontrada();
@@ -812,7 +893,18 @@ export function criarConsultasFinanceiras(cliente: ClienteDoNegocio, negocioId: 
         criadaPor: autor?.usuario.nome ?? (doSuporte ? autorDoHistorico(doSuporte) : null),
         venda: c.parcela?.pagamento.venda ?? null,
         despesa: c.despesaFixa,
-        lancamentos: c.lancamentos.map((l) => ({ id: l.id, valorCentavos: centavosDe(l.valor), data: l.data, registradoPor: l.usuario ? autorDoHistorico(l.usuario) : null, forma: l.formaPagamento })),
+        lancamentos: c.lancamentos.map((l) => ({
+          id: l.id,
+          valorCentavos: centavosDe(l.valor),
+          data: l.data,
+          registradoPor: l.usuario ? autorDoHistorico(l.usuario) : null,
+          forma: l.formaPagamento,
+          descontoCentavos: centavosDe(l.desconto),
+          acrescimoCentavos: centavosDe(l.acrescimo),
+          motivoDesconto: l.motivoDesconto,
+          motivoAcrescimo: l.motivoAcrescimo,
+          observacao: l.observacaoPagamento,
+        })),
       };
     },
 

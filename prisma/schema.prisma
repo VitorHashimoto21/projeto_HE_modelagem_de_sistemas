@@ -101,6 +101,18 @@ enum FormaPagamentoConta {
   OUTRA
 }
 
+// SPEC-028 (OPEN-005): motivo do desconto e do acréscimo de um pagamento de conta.
+enum MotivoDesconto {
+  TAXA_MAQUININHA
+  DESCONTO_COMBINADO
+  OUTRO
+}
+
+enum MotivoAcrescimo {
+  JUROS_MULTA
+  OUTRO
+}
+
 // RF65: status da venda (nunca é apagada)
 enum StatusVenda {
   CONCLUIDA
@@ -864,22 +876,29 @@ model Parcela {
 }
 
 model LancamentoFinanceiro {
-  id             String               @id @default(uuid()) @db.Uuid
-  negocioId      String               @db.Uuid
-  vendaId        String?              @db.Uuid // RN09: lançamento imediato de venda
-  contaId        String?              @db.Uuid // RN22: pagamento/recebimento de conta
-  tipo           TipoLancamento
-  categoria      CategoriaLancamento // RF32
-  valor          Decimal              @db.Decimal(10, 2)
-  estorno        Boolean              @default(false) // RN25: saída que estorna valor recebido de venda cancelada
+  id                  String               @id @default(uuid()) @db.Uuid
+  negocioId           String               @db.Uuid
+  vendaId             String?              @db.Uuid // RN09: lançamento imediato de venda
+  contaId             String?              @db.Uuid // RN22: pagamento/recebimento de conta
+  tipo                TipoLancamento
+  categoria           CategoriaLancamento // RF32
+  valor               Decimal              @db.Decimal(10, 2)
+  estorno             Boolean              @default(false) // RN25: saída que estorna valor recebido de venda cancelada
   // SPEC-009: origem, descrição e quem registrou (RNF05); estorno ligado ao original (OPEN-003)
-  origem         OrigemLancamento
-  descricao      String?              @db.VarChar(120)
-  usuarioId      String?              @db.Uuid // nulo só nos automáticos da rotina diária
-  estornoDeId    String?              @unique @db.Uuid
-  data           DateTime             @default(now())
+  origem              OrigemLancamento
+  descricao           String?              @db.VarChar(120)
+  usuarioId           String?              @db.Uuid // nulo só nos automáticos da rotina diária
+  estornoDeId         String?              @unique @db.Uuid
+  data                DateTime             @default(now())
   // SPEC-026 (OPEN-008): forma do pagamento de conta; nula nos anteriores e nos que não são de conta.
-  formaPagamento FormaPagamentoConta?
+  formaPagamento      FormaPagamentoConta?
+  // SPEC-028 (OPEN-001, OPEN-002): desconto e acréscimo do pagamento de conta; o valor é o que entrou
+  // ou saiu do caixa, e a conta abate valor + desconto − acréscimo. Zero e sem motivo nos demais.
+  desconto            Decimal              @default(0) @db.Decimal(10, 2)
+  acrescimo           Decimal              @default(0) @db.Decimal(10, 2)
+  motivoDesconto      MotivoDesconto?
+  motivoAcrescimo     MotivoAcrescimo?
+  observacaoPagamento String?              @db.VarChar(120) // obrigatória com o motivo "Outro"
 
   negocio Negocio            @relation(fields: [negocioId], references: [id])
   venda   Venda?             @relation(fields: [vendaId], references: [id])
@@ -907,7 +926,10 @@ model ContaPagarReceber {
   categoria       CategoriaLancamento // RF30/RN13: contas de venda usam VENDAS
   descricao       String?
   valorTotal      Decimal             @db.Decimal(10, 2)
-  valorPago       Decimal             @default(0) @db.Decimal(10, 2) // RF31
+  valorPago       Decimal             @default(0) @db.Decimal(10, 2) // RF31: o que entrou ou saiu do caixa
+  // SPEC-028: totais dos descontos e acréscimos dos pagamentos; restante = total − pago − desconto + acréscimo.
+  valorDesconto   Decimal             @default(0) @db.Decimal(10, 2)
+  valorAcrescimo  Decimal             @default(0) @db.Decimal(10, 2)
   vencimento      DateTime
   status          StatusConta         @default(ABERTA)
   criadaPorId     String?             @db.Uuid // SPEC-009: quem criou a conta manual

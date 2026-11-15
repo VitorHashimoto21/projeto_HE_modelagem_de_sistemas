@@ -11,7 +11,7 @@ import { Superficie, TituloDaSuperficie } from "@/components/ui/superficie";
 import { exigirPermissao } from "@/lib/auth/servidor";
 import { financeiro } from "@/lib/db";
 import { ContaNaoEncontrada } from "@/lib/db/financeiro";
-import { rotuloDaForma, SEM_OPCOES } from "@/lib/dominio/contas";
+import { ROTULO_MOTIVO_DO_ACRESCIMO, ROTULO_MOTIVO_DO_DESCONTO, rotuloDaForma, SEM_OPCOES } from "@/lib/dominio/contas";
 import { dataBrasileira, hoje } from "@/lib/dominio/datas";
 import { corrige } from "@/lib/dominio/correcoes";
 import { pode } from "@/lib/dominio/permissoes";
@@ -58,7 +58,10 @@ export default async function Conta({ params, searchParams }: PageProps<"/financ
   // O link para o cadastro: fornecedor com Financeiro — ver (já exigido aqui); cliente só com Vendas — ver (5.2, item 3).
   const linkDaPessoa =
     pessoa && !membro.modoSuporte && (pessoa.papel === "fornecedor" ? `/financeiro/fornecedores/${pessoa.id}` : pode(membro.permissoes, "vendas", "ver") ? `/vendas/clientes/${pessoa.id}` : null);
-  const quitado = c.totalCentavos > 0 ? Math.min(100, Math.round((c.pagoCentavos / c.totalCentavos) * 100)) : 0;
+  // SPEC-028: a barra mostra o que já foi abatido (pago + descontos − acréscimos).
+  const abatido = c.status === "CANCELADA" ? 0 : c.totalCentavos - c.restanteCentavos;
+  const comAjuste = c.descontoCentavos > 0 || c.acrescimoCentavos > 0;
+  const quitado = c.totalCentavos > 0 ? Math.min(100, Math.max(0, Math.round((abatido / c.totalCentavos) * 100))) : 0;
 
   return (
     <div className="space-y-6">
@@ -84,6 +87,18 @@ export default async function Conta({ params, searchParams }: PageProps<"/financ
                   <dt className="text-sm text-estrutura-suave">{receber ? "Recebido" : "Pago"}</dt>
                   <dd className="mt-0.5 text-lg font-extrabold tabular-nums">{reais(c.pagoCentavos)}</dd>
                 </div>
+                {c.descontoCentavos > 0 && (
+                  <div>
+                    <dt className="text-sm text-estrutura-suave">Descontos</dt>
+                    <dd className="mt-0.5 text-lg font-extrabold tabular-nums">{reais(c.descontoCentavos)}</dd>
+                  </div>
+                )}
+                {c.acrescimoCentavos > 0 && (
+                  <div>
+                    <dt className="text-sm text-estrutura-suave">Acréscimos</dt>
+                    <dd className="mt-0.5 text-lg font-extrabold tabular-nums">{reais(c.acrescimoCentavos)}</dd>
+                  </div>
+                )}
               </dl>
             </div>
             <div className="mt-5" aria-hidden="true">
@@ -92,7 +107,7 @@ export default async function Conta({ params, searchParams }: PageProps<"/financ
               </div>
             </div>
             <p className="mt-2 text-xs text-estrutura-suave">
-              {quitado}% {receber ? "recebido" : "pago"}, vence em {dataBr(c.vencimento)}
+              {quitado}% {comAjuste ? "abatido" : receber ? "recebido" : "pago"}, vence em {dataBr(c.vencimento)}
             </p>
           </Superficie>
 
@@ -140,11 +155,31 @@ export default async function Conta({ params, searchParams }: PageProps<"/financ
             ) : (
               <ol className="divide-y">
                 {c.lancamentos.map((l) => (
-                  <li key={l.id} className="flex flex-wrap justify-between gap-2 py-3 text-sm">
-                    <span className="text-foreground">
-                      {dataBrasileira(l.data)} · {rotuloDaForma(l.forma)} · {l.registradoPor ?? "automático no vencimento"}
-                    </span>
-                    <span className="font-bold text-foreground tabular-nums">{reais(l.valorCentavos)}</span>
+                  <li key={l.id} className="py-3 text-sm">
+                    <div className="flex flex-wrap justify-between gap-2">
+                      <span className="text-foreground">
+                        {dataBrasileira(l.data)} · {rotuloDaForma(l.forma)} · {l.registradoPor ?? "automático no vencimento"}
+                      </span>
+                      <span className="font-bold text-foreground tabular-nums">{reais(l.valorCentavos)}</span>
+                    </div>
+                    {/* SPEC-028 (5.4): desconto e acréscimo do pagamento, com o motivo e a observação. */}
+                    {(l.descontoCentavos > 0 || l.acrescimoCentavos > 0) && (
+                      <p className="mt-1 text-muted-foreground">
+                        {l.descontoCentavos > 0 && (
+                          <span className="block">
+                            Desconto de <span className="tabular-nums">{reais(l.descontoCentavos)}</span>
+                            {l.motivoDesconto && ` · ${ROTULO_MOTIVO_DO_DESCONTO[l.motivoDesconto]}`}
+                          </span>
+                        )}
+                        {l.acrescimoCentavos > 0 && (
+                          <span className="block">
+                            Acréscimo de <span className="tabular-nums">{reais(l.acrescimoCentavos)}</span>
+                            {l.motivoAcrescimo && ` · ${ROTULO_MOTIVO_DO_ACRESCIMO[l.motivoAcrescimo]}`}
+                          </span>
+                        )}
+                        {l.observacao && <span className="block break-words">{l.observacao}</span>}
+                      </p>
+                    )}
                   </li>
                 ))}
               </ol>
@@ -202,7 +237,7 @@ export default async function Conta({ params, searchParams }: PageProps<"/financ
               <TituloDaSuperficie
                 id="titulo-pagamento"
                 titulo={receber ? "Registrar recebimento" : "Registrar pagamento"}
-                descricao={`Pode ser parcial: o restante continua em aberto.${c.origem === "venda" ? " Parcelas do cartão são recebidas sozinhas no vencimento; registre aqui só se a maquininha antecipou." : ""}`}
+                descricao={`Pode ser parcial: o restante continua em aberto. Use o desconto para a taxa da maquininha ou um abatimento, e o acréscimo para juros ou multa.${c.origem === "venda" ? " Parcelas do cartão são recebidas sozinhas no vencimento; registre aqui só se a maquininha antecipou." : ""}`}
               />
               <FormularioPagamento contaId={c.id} tipo={c.tipo} restanteCentavos={c.restanteCentavos} hoje={dia} />
             </Superficie>
