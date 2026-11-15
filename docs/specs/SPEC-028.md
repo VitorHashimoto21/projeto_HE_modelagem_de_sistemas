@@ -191,7 +191,7 @@ Uma loja vende R$ 200,00 no cartão de crédito à vista, numa maquininha que co
 1. Quem tem *Financeiro: excluir* escolhe **Estornar** num pagamento, no detalhe da conta ou no fluxo de caixa.
 2. O diálogo de confirmação mostra o valor, o desconto e o acréscimo que serão desfeitos e o restante da conta depois.
 3. Ao confirmar, numa transação:
-   - o caixa ganha o lançamento contrário, do mesmo valor, na mesma categoria, com a forma do original, a data de hoje e a descrição "Estorno de: {descrição}", ligado ao original;
+   - o caixa ganha o lançamento contrário, do mesmo valor, na mesma categoria, sem forma (a forma fica no pagamento original; decisão da equipe, 15/11/2026), com a data de hoje e a descrição "Estorno de: {descrição}", ligado ao original;
    - a conta perde o valor, o desconto e o acréscimo daquele pagamento e volta a ficar **aberta** (sem pagamentos válidos) ou **parcial**;
    - nada é apagado, e o pagamento original fica marcado como estornado.
 4. Recusas:
@@ -329,7 +329,7 @@ Uma loja vende R$ 200,00 no cartão de crédito à vista, numa maquininha que co
 - **Forma do pagamento na largura toda:** o campo da forma ficava pela metade na coluna do pagamento e cortava "Cartão de crédito" (desde a SPEC-026). Como o formulário mudou nesta etapa, o campo passou a ocupar a largura toda.
 
 **Etapa 2 (15/11/2026)** — taxa sugerida, recebimento automático com a taxa e estorno do pagamento:
-- **O estorno não repete a forma do pagamento** (5.5, item 3, e as decisões derivadas diziam "com a forma do original"). Pela regra do banco da SPEC-026, a forma só existe no lançamento de pagamento de conta, e o estorno é um lançamento de estorno. O efeito pedido continua garantido: os filtros de forma e de data do pagamento consideram só os pagamentos válidos, sem os estornados nem os estornos (5.5, item 7). **A decidir pela equipe:** (1) manter assim e tirar "com a forma do original" da Spec (proposta) ou (2) mudar a regra do banco para o estorno guardar a forma.
+- **O estorno não repete a forma do pagamento** (5.5, item 3, e as decisões derivadas diziam "com a forma do original"). Pela regra do banco da SPEC-026, a forma só existe no lançamento de pagamento de conta, e o estorno é um lançamento de estorno. O efeito pedido continua garantido: os filtros de forma e de data do pagamento consideram só os pagamentos válidos, sem os estornados nem os estornos (5.5, item 7). **Decidido pela equipe em 15/11/2026:** manter assim (opção recomendada). O item 3 da 5.5 e as decisões derivadas foram ajustados.
 - **Mensagem do estorno:** o serviço devolve "Pagamento estornado. A conta voltou a ficar em aberto." (ou "parcial"), mas a tela da conta se atualiza na hora, e o resultado aparece no próprio detalhe: o pagamento riscado com "Estornado em … por …" e o restante de volta. A Spec não pede mensagem.
 - **Relatório de Contas:** desde esta etapa, a coluna "Pagamentos" mostra só os pagamentos válidos, sem os estornados nem os estornos, para o relatório não mostrar um valor que voltou. A marcação dos estornados (5.6) continua na etapa 3.
 - **"Recebido automaticamente":** o detalhe da conta trocou "automático no vencimento" pelo texto da 5.2.
@@ -419,7 +419,7 @@ Todas decididas pela equipe em 14/11/2026, em entrevista, pela opção recomenda
 - o desconto sugerido é o **restante × a taxa**, arredondado ao centavo, só nas contas de venda no cartão de crédito;
 - vale a **taxa em vigor no dia do recebimento**; mudar a taxa não mexe nos recebimentos já feitos;
 - a conta de cartão com **pagamento estornado** sai do recebimento automático, para que o recebimento certo seja registrado à mão;
-- o **estorno** tem a data de hoje e repete a categoria e a forma do pagamento, como o estorno do lançamento avulso (SPEC-009);
+- o **estorno** tem a data de hoje e repete a categoria do pagamento, como o estorno do lançamento avulso (SPEC-009); a forma fica só no pagamento original (decisão da equipe, 15/11/2026);
 - o pagamento estornado **não conta** nos filtros de data do pagamento e de forma, nem no total pago (SPEC-026);
 - a conta manual com todos os pagamentos estornados volta a ser **editável e cancelável**;
 - o **faturamento e o RBT12** continuam pelo valor da venda (RN21);
