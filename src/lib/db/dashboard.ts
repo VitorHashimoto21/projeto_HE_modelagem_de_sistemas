@@ -139,7 +139,7 @@ export function criarConsultasDoDashboard(cliente: ClienteDoNegocio, negocioId: 
       const [contas, despesas, negocio] = await Promise.all([
         cliente.$queryRaw<{ tipo: "PAGAR" | "RECEBER"; dia: string; restante: unknown }[]>`
           SELECT tipo, to_char((vencimento AT TIME ZONE 'UTC') AT TIME ZONE 'America/Sao_Paulo', 'YYYY-MM-DD') AS dia,
-                 SUM("valorTotal" - "valorPago") AS restante
+                 SUM("valorTotal" - "valorPago" - "valorDesconto" + "valorAcrescimo") AS restante
           FROM "ContaPagarReceber"
           WHERE "negocioId" = ${negocioId}::uuid AND status IN ('ABERTA', 'PARCIAL') AND vencimento < ${ate}
           GROUP BY 1, 2`,

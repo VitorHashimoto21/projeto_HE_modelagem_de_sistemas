@@ -40,9 +40,19 @@ export function situacaoPeloValor(totalCentavos: number, pagoCentavos: number): 
   return pagoCentavos >= totalCentavos ? "QUITADA" : "PARCIAL";
 }
 
+/** Valores de uma conta: o pago é o que entrou ou saiu do caixa; desconto e acréscimo são da SPEC-028. */
+export type ValoresDaConta = { totalCentavos: number; pagoCentavos: number; descontoCentavos?: number; acrescimoCentavos?: number };
+
+/** Restante (SPEC-028, INV-001): total − pago − descontos + acréscimos. */
+export const restanteDaConta = (c: ValoresDaConta) => c.totalCentavos - c.pagoCentavos - (c.descontoCentavos ?? 0) + (c.acrescimoCentavos ?? 0);
+
+/** O que um pagamento abate da conta (SPEC-028, 5.1): valor + desconto − acréscimo. */
+export const abatidoDoPagamento = (p: { valorCentavos: number; descontoCentavos: number; acrescimoCentavos: number }) =>
+  p.valorCentavos + p.descontoCentavos - p.acrescimoCentavos;
+
 /** Atrasada: vencimento antes de hoje e ainda falta pagar, em aberto ou parcial (5.3). */
-export function estaAtrasada(c: { vencimento: string; status: SituacaoDaConta; totalCentavos: number; pagoCentavos: number }, hoje: string): boolean {
-  return (c.status === "ABERTA" || c.status === "PARCIAL") && c.pagoCentavos < c.totalCentavos && c.vencimento < hoje;
+export function estaAtrasada(c: ValoresDaConta & { vencimento: string; status: SituacaoDaConta }, hoje: string): boolean {
+  return (c.status === "ABERTA" || c.status === "PARCIAL") && restanteDaConta(c) > 0 && c.vencimento < hoje;
 }
 
 /** Lançamento entra no caixa como entrada para a receber e como saída para a pagar (RN22). */

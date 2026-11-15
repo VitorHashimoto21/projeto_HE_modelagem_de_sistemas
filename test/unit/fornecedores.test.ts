@@ -120,7 +120,11 @@ describe("T02 — filtros das contas, forma e vínculo (CA-06, CA-10, CA-13)", (
   it("forma do pagamento obrigatória (OPEN-008)", () => {
     expect(validarPagamento({ valor: "100", data: HOJE }, HOJE)).toMatchObject({ ok: false, erros: { forma: M.formaObrigatoria } });
     expect(validarPagamento({ valor: "100", data: HOJE, forma: "CHEQUE" }, HOJE)).toMatchObject({ ok: false, erros: { forma: M.formaObrigatoria } });
-    expect(validarPagamento({ valor: "100", data: HOJE, forma: "BOLETO" }, HOJE)).toEqual({ ok: true, dados: { valorCentavos: 10000, dia: HOJE, forma: "BOLETO" } });
+    // SPEC-028: o pagamento validado traz também o desconto e o acréscimo, zerados quando ausentes.
+    expect(validarPagamento({ valor: "100", data: HOJE, forma: "BOLETO" }, HOJE)).toEqual({
+      ok: true,
+      dados: { valorCentavos: 10000, dia: HOJE, forma: "BOLETO", descontoCentavos: 0, acrescimoCentavos: 0, motivoDesconto: null, motivoAcrescimo: null, observacao: null },
+    });
     expect(rotuloDaForma(null)).toBe("Não informada");
     expect(rotuloDaForma("DEBITO")).toBe("Cartão de débito");
   });
@@ -145,6 +149,8 @@ describe("T09 (unitário) — relatório de Contas com as colunas novas (CA-15)"
     status: "QUITADA",
     totalCentavos: 15000,
     pagoCentavos: 15000,
+    descontoCentavos: 0,
+    acrescimoCentavos: 0,
     pessoa: "Embalagens Exemplo",
     numeroDocumento: "1234",
     pagamentos: [

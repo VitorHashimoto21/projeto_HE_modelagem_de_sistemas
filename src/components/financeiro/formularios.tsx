@@ -8,10 +8,23 @@ import { classeDoCampo } from "@/components/ui/classes";
 import { DialogoDeConfirmacao, useConfirmacaoDoEnvio } from "@/components/ui/confirmacao";
 import { enviarSemReiniciar } from "@/components/ui/envio";
 import { camposDoFormulario, type ErrosDeCampo } from "@/lib/auth/validacao";
-import { FORMAS_DO_PAGAMENTO, MAX_NUMERO_DOCUMENTO, ROTULO_FORMA, SEM_OPCOES, type OpcaoDePessoa, type OpcoesDoVinculo } from "@/lib/dominio/contas";
+import {
+  FORMAS_DO_PAGAMENTO,
+  MAX_NUMERO_DOCUMENTO,
+  MAX_OBSERVACAO_DO_PAGAMENTO,
+  MOTIVOS_DO_ACRESCIMO,
+  MOTIVOS_DO_DESCONTO,
+  ROTULO_FORMA,
+  ROTULO_MOTIVO_DO_ACRESCIMO,
+  ROTULO_MOTIVO_DO_DESCONTO,
+  SEM_OPCOES,
+  type OpcaoDePessoa,
+  type OpcoesDoVinculo,
+} from "@/lib/dominio/contas";
+import { lerNumero } from "@/lib/dominio/catalogo";
 import { MENSAGENS_DAS_CORRECOES } from "@/lib/dominio/correcoes";
 import { somarDias } from "@/lib/dominio/estoque";
-import { CATEGORIAS, DIAS_RETROATIVOS_FINANCEIRO } from "@/lib/dominio/financeiro";
+import { abatidoDoPagamento, CATEGORIAS, DIAS_RETROATIVOS_FINANCEIRO } from "@/lib/dominio/financeiro";
 import {
   acaoCancelarConta,
   acaoCorrigirVinculo,
@@ -516,7 +529,157 @@ export function BotaoCancelarConta({ contaId }: { contaId: string }) {
   );
 }
 
-/** Pagamento ou recebimento, total ou parcial (5.3). O valor sugerido é o restante. */
+/** Centavos de um campo de valor, ou null se vazio ou inválido (só para o resumo; quem decide é a validação). */
+function centavosDoCampo(texto: string): number | null {
+  const n = lerNumero(texto);
+  return n === null || n < 0 ? null : Math.round(n * 100);
+}
+
+const reaisBr = (centavos: number) => `R$ ${valorBr(centavos)}`;
+
+/** Motivo do desconto ou do acréscimo (SPEC-028, OPEN-005): só aparece quando há valor. */
+function CampoMotivo({ id, nome, rotulo, opcoes, valor, erro, aoMudar }: { id: string; nome: string; rotulo: string; opcoes: [string, string][]; valor: string; erro?: string; aoMudar: (v: string) => void }) {
+  return (
+    <Campo id={id} rotulo={rotulo} erro={erro}>
+      <select id={id} name={nome} value={valor} {...aria(id, erro)} onChange={(e) => aoMudar(e.target.value)} className={classeDoCampo(erro)}>
+        <option value="">Selecione…</option>
+        {opcoes.map(([v, r]) => (
+          <option key={v} value={v}>
+            {r}
+          </option>
+        ))}
+      </select>
+    </Campo>
+  );
+}
+
+/**
+ * SPEC-028 (5.1): valor, desconto e acréscimo, cada um com o motivo, e o resumo "Abate da conta". O valor
+ * vem com o restante e se ajusta ao desconto e ao acréscimo enquanto a pessoa não o muda à mão. A data e
+ * a forma (`children`) ficam logo depois do valor.
+ */
+function CamposDoValor({ receber, restanteCentavos, erros, limpar, children }: { receber: boolean; restanteCentavos: number; erros: ErrosDeCampo; limpar: (c: string) => void; children: React.ReactNode }) {
+  const [valor, setValor] = useState(valorBr(restanteCentavos));
+  const [valorMudado, setValorMudado] = useState(false);
+  const [desconto, setDesconto] = useState("");
+  const [acrescimo, setAcrescimo] = useState("");
+  const [motivoD, setMotivoD] = useState("");
+  const [motivoA, setMotivoA] = useState("");
+  const d = centavosDoCampo(desconto) ?? 0;
+  const a = centavosDoCampo(acrescimo) ?? 0;
+  const v = centavosDoCampo(valor);
+  const abatido = v === null ? null : abatidoDoPagamento({ valorCentavos: v, descontoCentavos: d, acrescimoCentavos: a });
+  const comAjuste = d > 0 || a > 0;
+
+  function ajustar(novoD: number, novoA: number) {
+    const sugerido = restanteCentavos - novoD + novoA;
+    if (!valorMudado && sugerido > 0) setValor(valorBr(sugerido));
+  }
+
+  return (
+    <>
+      <Campo id="pag-valor" rotulo={`Valor ${receber ? "recebido" : "pago"} (R$)`} erro={erros.valor}>
+        <input
+          id="pag-valor"
+          name="valor"
+          inputMode="decimal"
+          placeholder="Ex.: 80 ou 1.234,56"
+          value={valor}
+          {...aria("pag-valor", erros.valor)}
+          onChange={(e) => {
+            setValor(e.target.value);
+            setValorMudado(true);
+            limpar("valor");
+          }}
+          className={classeDoCampo(erros.valor)}
+        />
+      </Campo>
+      {children}
+      {/* Uma coluna: o formulário fica numa coluna estreita ao lado da conta, e os motivos não cabem pela metade. */}
+      <fieldset className="grid gap-4 sm:col-span-2">
+        <legend className="mb-1 text-sm font-bold text-foreground">Desconto e acréscimo</legend>
+        <Campo id="pag-desconto" rotulo="Desconto (R$)" erro={erros.desconto} dica="Opcional. Ex.: a taxa da maquininha">
+          <input
+            id="pag-desconto"
+            name="desconto"
+            inputMode="decimal"
+            placeholder="0,00"
+            value={desconto}
+            {...aria("pag-desconto", erros.desconto)}
+            onChange={(e) => {
+              setDesconto(e.target.value);
+              ajustar(centavosDoCampo(e.target.value) ?? 0, a);
+              limpar("desconto");
+              limpar("acrescimo");
+            }}
+            className={classeDoCampo(erros.desconto)}
+          />
+        </Campo>
+        {d > 0 && (
+          <CampoMotivo
+            id="pag-motivo-desconto"
+            nome="motivoDesconto"
+            rotulo="Motivo do desconto"
+            opcoes={MOTIVOS_DO_DESCONTO.map((m) => [m, ROTULO_MOTIVO_DO_DESCONTO[m]])}
+            valor={motivoD}
+            erro={erros.motivoDesconto}
+            aoMudar={(m) => {
+              setMotivoD(m);
+              limpar("motivoDesconto");
+              limpar("observacao");
+            }}
+          />
+        )}
+        <Campo id="pag-acrescimo" rotulo="Acréscimo (R$)" erro={erros.acrescimo} dica="Opcional. Ex.: juros ou multa do boleto">
+          <input
+            id="pag-acrescimo"
+            name="acrescimo"
+            inputMode="decimal"
+            placeholder="0,00"
+            value={acrescimo}
+            {...aria("pag-acrescimo", erros.acrescimo)}
+            onChange={(e) => {
+              setAcrescimo(e.target.value);
+              ajustar(d, centavosDoCampo(e.target.value) ?? 0);
+              limpar("acrescimo");
+            }}
+            className={classeDoCampo(erros.acrescimo)}
+          />
+        </Campo>
+        {a > 0 && (
+          <CampoMotivo
+            id="pag-motivo-acrescimo"
+            nome="motivoAcrescimo"
+            rotulo="Motivo do acréscimo"
+            opcoes={MOTIVOS_DO_ACRESCIMO.map((m) => [m, ROTULO_MOTIVO_DO_ACRESCIMO[m]])}
+            valor={motivoA}
+            erro={erros.motivoAcrescimo}
+            aoMudar={(m) => {
+              setMotivoA(m);
+              limpar("motivoAcrescimo");
+              limpar("observacao");
+            }}
+          />
+        )}
+        {comAjuste && (
+          <div>
+            <Campo id="pag-observacao" rotulo={motivoD === "OUTRO" || motivoA === "OUTRO" ? "Observação" : "Observação (opcional)"} erro={erros.observacao}>
+              <input id="pag-observacao" name="observacao" maxLength={MAX_OBSERVACAO_DO_PAGAMENTO} {...aria("pag-observacao", erros.observacao)} onChange={() => limpar("observacao")} className={classeDoCampo(erros.observacao)} />
+            </Campo>
+          </div>
+        )}
+        {comAjuste && abatido !== null && (
+          <p className="rounded-xl bg-muted px-3 py-2 text-sm text-foreground" aria-live="polite">
+            Abate da conta: <strong className="tabular-nums">{reaisBr(abatido)}</strong>
+            <span className="block text-muted-foreground">Restante depois: {reaisBr(restanteCentavos - abatido)}</span>
+          </p>
+        )}
+      </fieldset>
+    </>
+  );
+}
+
+/** Pagamento ou recebimento, total ou parcial (5.3). O valor sugerido é o restante; SPEC-028: desconto e acréscimo. */
 export function FormularioPagamento({ contaId, tipo, restanteCentavos, hoje }: { contaId: string; tipo: "PAGAR" | "RECEBER"; restanteCentavos: number; hoje: string }) {
   const f = useFormulario(acaoRegistrarPagamento, (c) => validarPagamento(c, hoje), true);
   const receber = tipo === "RECEBER";
@@ -525,19 +688,22 @@ export function FormularioPagamento({ contaId, tipo, restanteCentavos, hoje }: {
       <Avisos estado={f.estado} />
       <form key={f.chave} onSubmit={f.aoEnviar} noValidate className="grid gap-4 sm:grid-cols-2 sm:items-start">
         <input type="hidden" name="contaId" value={contaId} />
-        <CampoValor id="pag-valor" rotulo={`Valor ${receber ? "recebido" : "pago"} (R$)`} erro={f.erros.valor} limpar={f.limpar} padrao={valorBr(restanteCentavos)} />
-        <CampoData id="pag-data" hoje={hoje} erro={f.erros.data} limpar={f.limpar} />
-        {/* SPEC-026 (OPEN-008): a forma é obrigatória, sem opção pré-escolhida. */}
-        <Campo id="pag-forma" rotulo={`Forma do ${receber ? "recebimento" : "pagamento"}`} erro={f.erros.forma}>
-          <select id="pag-forma" name="forma" defaultValue="" {...aria("pag-forma", f.erros.forma)} onChange={() => f.limpar("forma")} className={classeDoCampo(f.erros.forma)}>
-            <option value="">Selecione…</option>
-            {FORMAS_DO_PAGAMENTO.map((forma) => (
-              <option key={forma} value={forma}>
-                {ROTULO_FORMA[forma]}
-              </option>
-            ))}
-          </select>
-        </Campo>
+        <CamposDoValor receber={receber} restanteCentavos={restanteCentavos} erros={f.erros} limpar={f.limpar}>
+          <CampoData id="pag-data" hoje={hoje} erro={f.erros.data} limpar={f.limpar} />
+          {/* SPEC-026 (OPEN-008): a forma é obrigatória, sem opção pré-escolhida. Na largura toda, para "Cartão de crédito" caber. */}
+          <div className="sm:col-span-2">
+            <Campo id="pag-forma" rotulo={`Forma do ${receber ? "recebimento" : "pagamento"}`} erro={f.erros.forma}>
+              <select id="pag-forma" name="forma" defaultValue="" {...aria("pag-forma", f.erros.forma)} onChange={() => f.limpar("forma")} className={classeDoCampo(f.erros.forma)}>
+                <option value="">Selecione…</option>
+                {FORMAS_DO_PAGAMENTO.map((forma) => (
+                  <option key={forma} value={forma}>
+                    {ROTULO_FORMA[forma]}
+                  </option>
+                ))}
+              </select>
+            </Campo>
+          </div>
+        </CamposDoValor>
         <button type="submit" disabled={f.enviando} className={`${botaoPrimario} sm:col-span-2 sm:justify-self-start`}>
           {f.enviando ? "Registrando…" : receber ? "Registrar recebimento" : "Registrar pagamento"}
         </button>

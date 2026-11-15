@@ -26,6 +26,25 @@ export const FILTRO_SEM_FORMA = "NAO_INFORMADA";
 export const rotuloDaForma = (forma: FormaDoPagamento | null) => (forma ? ROTULO_FORMA[forma] : FORMA_NAO_INFORMADA);
 export const ehForma = (valor: string): valor is FormaDoPagamento => (FORMAS_DO_PAGAMENTO as readonly string[]).includes(valor);
 
+/** SPEC-028 (OPEN-005): motivos do desconto e do acréscimo de um pagamento; "Outro" pede observação. */
+export const MOTIVOS_DO_DESCONTO = ["TAXA_MAQUININHA", "DESCONTO_COMBINADO", "OUTRO"] as const;
+export type MotivoDoDesconto = (typeof MOTIVOS_DO_DESCONTO)[number];
+export const MOTIVOS_DO_ACRESCIMO = ["JUROS_MULTA", "OUTRO"] as const;
+export type MotivoDoAcrescimo = (typeof MOTIVOS_DO_ACRESCIMO)[number];
+
+export const ROTULO_MOTIVO_DO_DESCONTO: Record<MotivoDoDesconto, string> = {
+  TAXA_MAQUININHA: "Taxa da maquininha",
+  DESCONTO_COMBINADO: "Desconto combinado",
+  OUTRO: "Outro",
+};
+export const ROTULO_MOTIVO_DO_ACRESCIMO: Record<MotivoDoAcrescimo, string> = { JUROS_MULTA: "Juros ou multa", OUTRO: "Outro" };
+
+export const ehMotivoDoDesconto = (v: string): v is MotivoDoDesconto => (MOTIVOS_DO_DESCONTO as readonly string[]).includes(v);
+export const ehMotivoDoAcrescimo = (v: string): v is MotivoDoAcrescimo => (MOTIVOS_DO_ACRESCIMO as readonly string[]).includes(v);
+
+/** Observação do pagamento (5.1): até 120 caracteres. */
+export const MAX_OBSERVACAO_DO_PAGAMENTO = 120;
+
 /** Nº do documento (5.4, item 1): opcional, até 40 caracteres, sem precisar ser único. */
 export const MAX_NUMERO_DOCUMENTO = 40;
 

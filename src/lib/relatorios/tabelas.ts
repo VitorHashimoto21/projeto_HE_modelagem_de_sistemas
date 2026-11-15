@@ -1,6 +1,6 @@
 import type { ContaExportada, LancamentoExportado, VendaExportada } from "@/lib/db/relatorios";
 import { diaLocal } from "@/lib/dominio/datas";
-import { CATEGORIAS } from "@/lib/dominio/financeiro";
+import { CATEGORIAS, restanteDaConta } from "@/lib/dominio/financeiro";
 import { rotuloDaForma } from "@/lib/dominio/contas";
 import { observacaoDaLinha, siglaDaUnidade, type Inventario } from "@/lib/dominio/inventario";
 import { diaBrasileiro, quantidadeParaPlanilha as qtd, valorParaPlanilha as valor, type Rentabilidade } from "@/lib/dominio/relatorios";
@@ -77,7 +77,8 @@ export function tabelaDoFluxo(lancamentos: LancamentoExportado[]): Tabela {
 }
 
 export function tabelaDeContas(contas: ContaExportada[]): Tabela {
-  const restante = (c: ContaExportada) => (c.status === "CANCELADA" ? 0 : c.totalCentavos - c.pagoCentavos);
+  // SPEC-028: o restante já considera os descontos e os acréscimos dos pagamentos.
+  const restante = (c: ContaExportada) => (c.status === "CANCELADA" ? 0 : restanteDaConta(c));
   const somar = (tipo: "PAGAR" | "RECEBER") => contas.filter((c) => c.tipo === tipo).reduce((s, c) => s + restante(c), 0);
   return {
     titulo: "Contas a pagar e a receber",

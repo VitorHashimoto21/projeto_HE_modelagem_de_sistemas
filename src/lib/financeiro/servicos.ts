@@ -43,7 +43,11 @@ export const MENSAGENS_FLUXO_FINANCEIRO = {
     encerrada: "Esta conta já está quitada ou cancelada.",
   },
   contaEncerrada: "Esta conta já está quitada ou cancelada.",
-  acimaDoRestante: (centavos: number) => `O restante desta conta é ${reaisDeCentavos(centavos)}.`,
+  // SPEC-028 (5.10): sem acréscimo, a mensagem lembra dos juros ou da multa.
+  acimaDoRestante: (centavos: number, comAcrescimo = false) =>
+    comAcrescimo
+      ? `Valor, desconto e acréscimo passam do restante da conta (${reaisDeCentavos(centavos)}).`
+      : `O valor passa do restante da conta (${reaisDeCentavos(centavos)}). Se houve juros ou multa, informe o acréscimo.`,
   pago: (receber: boolean, quitada: boolean, restante: number) =>
     `${receber ? "Recebimento" : "Pagamento"} registrado.${quitada ? ` Conta ${receber ? "recebida" : "paga"} por completo.` : ` Restam ${reaisDeCentavos(restante)}.`}`,
   despesaCriada: "Despesa fixa cadastrada.",
@@ -192,20 +196,29 @@ export async function cancelarConta(contaId: string, deps: DependenciasDoFinance
   });
 }
 
-/** Registrar pagamento ou recebimento, total ou parcial (5.3). */
+/** Registrar pagamento ou recebimento, total ou parcial (5.3), com desconto e acréscimo (SPEC-028, 5.1). */
 export async function registrarPagamento(contaId: string, campos: Record<string, string>, deps: DependenciasDoFinanceiro): Promise<EstadoDoFinanceiro> {
   const v = validarPagamento(campos, deps.hoje);
   if (!v.ok) return { status: "erro", erros: v.erros };
-  return executar(async () => {
+  const d = v.dados;
+  try {
     const r = await deps.financeiro.pagar({
       contaId,
-      valorCentavos: v.dados.valorCentavos,
-      data: instanteDaOcorrencia(v.dados.dia, deps.agora),
+      valorCentavos: d.valorCentavos,
+      data: instanteDaOcorrencia(d.dia, deps.agora),
       usuarioId: deps.usuarioId,
-      forma: v.dados.forma,
+      forma: d.forma,
+      descontoCentavos: d.descontoCentavos,
+      acrescimoCentavos: d.acrescimoCentavos,
+      motivoDesconto: d.motivoDesconto,
+      motivoAcrescimo: d.motivoAcrescimo,
+      observacao: d.observacao,
     });
     return { status: "salvo", mensagem: M.pago(r.tipo === "RECEBER", r.status === "QUITADA", r.restanteCentavos), id: contaId };
-  });
+  } catch (e) {
+    if (e instanceof ValorAcimaDoRestante) return { status: "erro", erros: { valor: M.acimaDoRestante(e.restanteCentavos, d.acrescimoCentavos > 0) } };
+    return { status: "erro", ...traduzir(e) };
+  }
 }
 
 /** Nova despesa fixa (5.5): a conta do mês (OPEN-004) é gerada na hora. */

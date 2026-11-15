@@ -1,6 +1,7 @@
 import type { ErrosDeCampo } from "@/lib/auth/validacao";
 import { casasDecimais, lerNumero } from "@/lib/dominio/catalogo";
 import {
+  abatidoDoPagamento,
   CATEGORIAS,
   dataPermitidaNoFinanceiro,
   DIAS_RETROATIVOS_FINANCEIRO,
@@ -9,7 +10,16 @@ import {
   type Categoria,
   type TipoDeLancamento,
 } from "@/lib/dominio/financeiro";
-import { ehForma, MAX_NUMERO_DOCUMENTO, type FormaDoPagamento } from "@/lib/dominio/contas";
+import {
+  ehForma,
+  ehMotivoDoAcrescimo,
+  ehMotivoDoDesconto,
+  MAX_NUMERO_DOCUMENTO,
+  MAX_OBSERVACAO_DO_PAGAMENTO,
+  type FormaDoPagamento,
+  type MotivoDoAcrescimo,
+  type MotivoDoDesconto,
+} from "@/lib/dominio/contas";
 
 /**
  * Validação do Financeiro (SPEC-009, 5.7). Roda no navegador e no servidor; "hoje" é o dia
@@ -33,6 +43,14 @@ export const MENSAGENS_FINANCEIRO = {
   formaObrigatoria: "Escolha a forma do pagamento.",
   numeroDocumentoLongo: `Use no máximo ${MAX_NUMERO_DOCUMENTO} caracteres`,
   pessoaInvalida: "Escolha uma opção da lista",
+  // SPEC-028 (5.10)
+  ajusteInvalido: "Use um valor com até 2 casas, como 6 ou 6,50",
+  ajusteNegativo: "O desconto e o acréscimo não podem ser negativos.",
+  motivoDoDesconto: "Escolha o motivo do desconto.",
+  motivoDoAcrescimo: "Escolha o motivo do acréscimo.",
+  observacaoObrigatoria: "Descreva o motivo.",
+  observacaoLonga: `Use no máximo ${MAX_OBSERVACAO_DO_PAGAMENTO} caracteres`,
+  acrescimoAcimaDoAbatido: "O acréscimo não pode ser maior que o valor pago mais o desconto.",
 } as const;
 
 export type Validacao<T> = { ok: true; dados: T } | { ok: false; erros: ErrosDeCampo };
@@ -42,7 +60,17 @@ export type DadosDoSaldoInicial = { valorCentavos: number; dia: string };
 /** SPEC-026 (5.4): o fornecedor (a pagar) ou o cliente (a receber) e o nº do documento, opcionais. */
 export type DadosDoVinculo = { pessoaId: string | null; numeroDocumento: string | null };
 export type DadosDaConta = { tipo: "PAGAR" | "RECEBER"; descricao: string; categoria: Categoria; valorCentavos: number; vencimento: string } & DadosDoVinculo;
-export type DadosDoPagamento = { valorCentavos: number; dia: string; forma: FormaDoPagamento };
+/** SPEC-028: o valor é o que entrou ou saiu do caixa; desconto e acréscimo, com o motivo, ficam no pagamento. */
+export type DadosDoPagamento = {
+  valorCentavos: number;
+  dia: string;
+  forma: FormaDoPagamento;
+  descontoCentavos: number;
+  acrescimoCentavos: number;
+  motivoDesconto: MotivoDoDesconto | null;
+  motivoAcrescimo: MotivoDoAcrescimo | null;
+  observacao: string | null;
+};
 export type DadosDaDespesa = { descricao: string; valorCentavos: number; diaVencimento: number; categoria: Categoria; fornecedorId: string | null };
 
 const DIA = /^\d{4}-\d{2}-\d{2}$/;
@@ -154,7 +182,26 @@ export function validarVinculo(campos: Record<string, string>): Validacao<DadosD
   return resultado(erros, () => vinculo);
 }
 
-/** Pagamento ou recebimento (5.3): o limite do restante é conferido no banco. */
+/** Desconto ou acréscimo (SPEC-028, 5.1): opcional (vazio = zero), não negativo, com até 2 casas. */
+function lerAjuste(texto: string | undefined, erros: ErrosDeCampo, campo: string): number | null {
+  if (!texto || !texto.trim()) return 0;
+  const n = lerNumero(texto);
+  if (n !== null && n < 0) {
+    erros[campo] = MENSAGENS_FINANCEIRO.ajusteNegativo;
+    return null;
+  }
+  const centavos = n === null ? NaN : Math.round(n * 100);
+  if (n === null || casasDecimais(n) > 2 || centavos > VALOR_MAXIMO_CENTAVOS) {
+    erros[campo] = MENSAGENS_FINANCEIRO.ajusteInvalido;
+    return null;
+  }
+  return centavos;
+}
+
+/**
+ * Pagamento ou recebimento (5.3; SPEC-028, 5.1): valor, data, forma e, opcionais, o desconto e o
+ * acréscimo, cada um com o motivo. O limite do restante é conferido no banco.
+ */
 export function validarPagamento(campos: Record<string, string>, hoje: string): Validacao<DadosDoPagamento> {
   const erros: ErrosDeCampo = {};
   const valorCentavos = lerValor(campos.valor, erros);
@@ -162,7 +209,36 @@ export function validarPagamento(campos: Record<string, string>, hoje: string): 
   // SPEC-026 (OPEN-008): a forma é obrigatória.
   const forma = (campos.forma ?? "").trim();
   if (!ehForma(forma)) erros.forma = MENSAGENS_FINANCEIRO.formaObrigatoria;
-  return resultado(erros, () => ({ valorCentavos: valorCentavos!, dia, forma: forma as FormaDoPagamento }));
+
+  // SPEC-028 (OPEN-005): com valor, o motivo é obrigatório; sem valor, o motivo é ignorado.
+  const descontoCentavos = lerAjuste(campos.desconto, erros, "desconto");
+  const acrescimoCentavos = lerAjuste(campos.acrescimo, erros, "acrescimo");
+  const motivoD = (campos.motivoDesconto ?? "").trim();
+  const motivoA = (campos.motivoAcrescimo ?? "").trim();
+  const motivoDesconto = descontoCentavos ? (ehMotivoDoDesconto(motivoD) ? motivoD : null) : null;
+  const motivoAcrescimo = acrescimoCentavos ? (ehMotivoDoAcrescimo(motivoA) ? motivoA : null) : null;
+  if (descontoCentavos && !motivoDesconto) erros.motivoDesconto = MENSAGENS_FINANCEIRO.motivoDoDesconto;
+  if (acrescimoCentavos && !motivoAcrescimo) erros.motivoAcrescimo = MENSAGENS_FINANCEIRO.motivoDoAcrescimo;
+
+  // "Outro" pede a observação; sem ele, a observação é opcional.
+  const observacao = (campos.observacao ?? "").trim().replace(/\s+/g, " ") || null;
+  if (observacao && observacao.length > MAX_OBSERVACAO_DO_PAGAMENTO) erros.observacao = MENSAGENS_FINANCEIRO.observacaoLonga;
+  else if (!observacao && (motivoDesconto === "OUTRO" || motivoAcrescimo === "OUTRO")) erros.observacao = MENSAGENS_FINANCEIRO.observacaoObrigatoria;
+
+  // Cada pagamento abate mais que zero da conta (INV-004).
+  if (valorCentavos !== null && descontoCentavos !== null && acrescimoCentavos !== null && abatidoDoPagamento({ valorCentavos, descontoCentavos, acrescimoCentavos }) <= 0)
+    erros.acrescimo = MENSAGENS_FINANCEIRO.acrescimoAcimaDoAbatido;
+
+  return resultado(erros, () => ({
+    valorCentavos: valorCentavos!,
+    dia,
+    forma: forma as FormaDoPagamento,
+    descontoCentavos: descontoCentavos!,
+    acrescimoCentavos: acrescimoCentavos!,
+    motivoDesconto,
+    motivoAcrescimo,
+    observacao,
+  }));
 }
 
 /** Dia de vencimento da despesa fixa: inteiro de 1 a 31. */

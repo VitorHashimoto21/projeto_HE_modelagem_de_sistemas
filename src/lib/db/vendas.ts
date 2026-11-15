@@ -557,7 +557,7 @@ export function criarConsultasDeVendas(cliente: ClienteDoNegocio, negocioId: str
       const [r, [contas]] = await Promise.all([
         recebido(cliente, v.id),
         cliente.$queryRaw<{ quantidade: number; restante: unknown }[]>`
-          SELECT COUNT(*)::int AS quantidade, COALESCE(SUM(c."valorTotal" - c."valorPago"), 0) AS restante
+          SELECT COUNT(*)::int AS quantidade, COALESCE(SUM(c."valorTotal" - c."valorPago" - c."valorDesconto" + c."valorAcrescimo"), 0) AS restante
           FROM "ContaPagarReceber" c JOIN "Parcela" p ON p.id = c."parcelaId" JOIN "Pagamento" pg ON pg.id = p."pagamentoId"
           WHERE pg."vendaId" = ${v.id}::uuid AND c."negocioId" = ${negocioId}::uuid AND c.status IN ('ABERTA', 'PARCIAL')`,
       ]);
