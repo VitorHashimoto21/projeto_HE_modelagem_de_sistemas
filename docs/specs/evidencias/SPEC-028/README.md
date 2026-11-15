@@ -122,4 +122,6 @@ Feita pela equipe no ambiente de homologação, com o negócio de teste **HE Tes
 - as vendas nº 3 e nº 10 foram recebidas automaticamente no vencimento com o desconto da taxa (R$ 41,78 + R$ 1,52 e R$ 43,42 + R$ 1,58, que correspondem a 3,5%, a taxa da Calculadora naquele momento). Depois, a equipe estornou esses recebimentos, e as contas continuaram a receber, sem um novo recebimento automático (CA-08). O relatório mostra os dois recebimentos marcados como estornados;
 - o pagamento antigo da conta de internet de outubro aparece como "Não informada" (SPEC-026), sem desconto nem acréscimo.
 
-**Resultado:** a homologação foi aprovada, sem problemas encontrados.
+**Resultado:** a homologação foi aprovada nos passos do roteiro.
+
+**Observação da equipe (depois das capturas):** ao corrigir uma conta real do mesmo jeito do passo 4, recebida em 09/11 e estornada em 15/11, o caixa do dia 15/11 mostrou uma saída do valor do recebimento sem entrada nenhuma. O saldo total estava certo, mas o caixa do dia não batia com o banco. O estorno seguia a regra da Spec, que mandava usar a data de hoje. A equipe decidiu que o estorno de pagamento de conta passa a ter a data do pagamento original (OPEN-009, etapa 4); o que fazer com os estornos já feitos fica para a OPEN-010.
