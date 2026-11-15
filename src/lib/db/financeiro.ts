@@ -298,8 +298,8 @@ export type FiltroDasContas = { tipo: TipoConta; situacao: SituacaoFiltrada; pag
 /** SPEC-026 (5.4): fornecedor (conta a pagar) ou cliente (conta a receber; na de venda, o da venda). */
 export type PessoaDaConta = { id: string; nome: string; papel: "fornecedor" | "cliente"; daVenda: boolean };
 
-/** SPEC-026 (5.6, item 4): totais de todas as contas filtradas, sem as canceladas nos valores. */
-export type TotaisDasContas = { quantidade: number; totalCentavos: number; pagoCentavos: number; emAbertoCentavos: number };
+/** SPEC-026 (5.6, item 4): totais de todas as contas filtradas, sem as canceladas nos valores. SPEC-028 (5.6): descontos e acréscimos. */
+export type TotaisDasContas = { quantidade: number; totalCentavos: number; pagoCentavos: number; descontoCentavos: number; acrescimoCentavos: number; emAbertoCentavos: number };
 
 export type ContaExibida = {
   id: string;
@@ -919,10 +919,13 @@ export function criarConsultasFinanceiras(cliente: ClienteDoNegocio, negocioId: 
               where: { tipo: f.tipo, status: { in: (f.situacao === "quitadas" ? ["QUITADA"] : f.situacao === "canceladas" ? ["CANCELADA"] : ["QUITADA", "CANCELADA"]) as StatusConta[] }, vencimento: { lt: desde } },
             })
           : Promise.resolve(0),
-        cliente.contaPagarReceber.aggregate({ where: semCanceladas, _sum: { valorTotal: true, valorPago: true } }),
+        cliente.contaPagarReceber.aggregate({ where: semCanceladas, _sum: { valorTotal: true, valorPago: true, valorDesconto: true, valorAcrescimo: true } }),
         cliente.contaPagarReceber.aggregate({ where: emAberto, _sum: { valorTotal: true, valorPago: true, valorDesconto: true, valorAcrescimo: true } }),
         // Com filtro de data do pagamento ou de forma, "Pago" soma só os pagamentos que atendem (5.6, item 4).
-        filtraPagamentos(filtros) ? cliente.lancamentoFinanceiro.aggregate({ where: { ...pagamento, conta: { is: semCanceladas } }, _sum: { valor: true } }) : Promise.resolve(null),
+        // SPEC-028: os descontos e os acréscimos seguem a mesma regra, pelos pagamentos que atendem ao filtro.
+        filtraPagamentos(filtros)
+          ? cliente.lancamentoFinanceiro.aggregate({ where: { ...pagamento, conta: { is: semCanceladas } }, _sum: { valor: true, desconto: true, acrescimo: true } })
+          : Promise.resolve(null),
       ]);
       const paginas = Math.max(1, Math.ceil(total / CONTAS_POR_PAGINA));
       const pagina = Math.min(Math.max(1, Math.floor(f.pagina ?? 1) || 1), paginas);
@@ -938,6 +941,8 @@ export function criarConsultasFinanceiras(cliente: ClienteDoNegocio, negocioId: 
         quantidade: total,
         totalCentavos: centavosDe(somaGeral._sum.valorTotal ?? 0),
         pagoCentavos: pagoFiltrado ? centavosDe(pagoFiltrado._sum.valor ?? 0) : centavosDe(somaGeral._sum.valorPago ?? 0),
+        descontoCentavos: pagoFiltrado ? centavosDe(pagoFiltrado._sum.desconto ?? 0) : centavosDe(somaGeral._sum.valorDesconto ?? 0),
+        acrescimoCentavos: pagoFiltrado ? centavosDe(pagoFiltrado._sum.acrescimo ?? 0) : centavosDe(somaGeral._sum.valorAcrescimo ?? 0),
         emAbertoCentavos: restanteLido({
           valorTotal: somaEmAberto._sum.valorTotal ?? 0,
           valorPago: somaEmAberto._sum.valorPago ?? 0,

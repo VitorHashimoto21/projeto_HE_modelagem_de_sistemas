@@ -1,4 +1,4 @@
-import type { CategoriaLancamento, FormaPagamento, OrigemLancamento, StatusConta, StatusVenda, TipoConta, TipoLancamento } from "@/generated/prisma/enums";
+import type { CategoriaLancamento, FormaPagamento, MotivoAcrescimo, MotivoDesconto, OrigemLancamento, StatusConta, StatusVenda, TipoConta, TipoLancamento } from "@/generated/prisma/enums";
 import { intervaloDoDia } from "@/lib/dominio/datas";
 import { centavosDe } from "@/lib/dominio/financeiro";
 import type { LinhaVendida } from "@/lib/dominio/relatorios";
@@ -47,7 +47,17 @@ export type ContaExportada = {
   /** SPEC-026 (5.7): fornecedor ou cliente (o da venda, nas contas do cartão), nº do documento e pagamentos. */
   pessoa: string | null;
   numeroDocumento: string | null;
-  pagamentos: { data: Date; forma: FormaDoPagamento | null; valorCentavos: number }[];
+  /** SPEC-028 (5.6): cada pagamento com o desconto e o acréscimo, com o motivo, e o estorno, se houve. */
+  pagamentos: {
+    data: Date;
+    forma: FormaDoPagamento | null;
+    valorCentavos: number;
+    descontoCentavos?: number;
+    acrescimoCentavos?: number;
+    motivoDesconto?: MotivoDesconto | null;
+    motivoAcrescimo?: MotivoAcrescimo | null;
+    estornadoEm?: Date | null;
+  }[];
 };
 
 const PESSOA = { select: { tipo: true, nome: true, nomeFantasia: true } } as const;
@@ -161,8 +171,21 @@ export function criarConsultasDeRelatorios(cliente: ClienteDoNegocio, negocioId:
           fornecedor: PESSOA,
           cliente: PESSOA,
           parcela: { select: { pagamento: { select: { venda: { select: { cliente: PESSOA } } } } } },
-          // SPEC-028 (5.5): só os pagamentos válidos, sem os estornados nem os estornos (a marcação dos estornados vem na etapa 3).
-          lancamentos: { where: { origem: "CONTA", estornadoPor: { is: null } }, orderBy: { data: "asc" }, select: { data: true, formaPagamento: true, valor: true } },
+          // SPEC-028 (5.6): os pagamentos, com os estornados marcados; os próprios estornos ficam de fora.
+          lancamentos: {
+            where: { origem: "CONTA" },
+            orderBy: { data: "asc" },
+            select: {
+              data: true,
+              formaPagamento: true,
+              valor: true,
+              desconto: true,
+              acrescimo: true,
+              motivoDesconto: true,
+              motivoAcrescimo: true,
+              estornadoPor: { select: { data: true } },
+            },
+          },
         },
       });
       return lista.map((c) => {
@@ -179,7 +202,16 @@ export function criarConsultasDeRelatorios(cliente: ClienteDoNegocio, negocioId:
           acrescimoCentavos: centavosDe(c.valorAcrescimo),
           pessoa: pessoa && nomeDeExibicao(pessoa),
           numeroDocumento: c.numeroDocumento,
-          pagamentos: c.lancamentos.map((l) => ({ data: l.data, forma: l.formaPagamento, valorCentavos: centavosDe(l.valor) })),
+          pagamentos: c.lancamentos.map((l) => ({
+            data: l.data,
+            forma: l.formaPagamento,
+            valorCentavos: centavosDe(l.valor),
+            descontoCentavos: centavosDe(l.desconto),
+            acrescimoCentavos: centavosDe(l.acrescimo),
+            motivoDesconto: l.motivoDesconto,
+            motivoAcrescimo: l.motivoAcrescimo,
+            estornadoEm: l.estornadoPor?.data ?? null,
+          })),
         };
       });
     },

@@ -411,7 +411,7 @@ Uma loja compra embalagens todo mês da fornecedora "Embalagens Exemplo Ltda" e 
 - **Totais:** aparecem sempre, mesmo sem filtro. Com filtro, uma nota diz o que somam.
 - **Forma:** o seletor começa em "Selecione…", sem forma pré-escolhida.
 - **Detalhe do fornecedor:** com mais de 50 contas, um link leva às contas dele já filtradas.
-- **Relatório de Contas no PDF:** as larguras foram medidas na fonte do PDF, e a linha de total tem "A receber" e "A pagar" em células separadas. Descrições longas e mais de um pagamento podem ser cortados no PDF; no CSV, ficam inteiros. Encontrado no roteiro.
+- **Relatório de Contas no PDF:** as larguras foram medidas na fonte do PDF, e a linha de total tem "A receber" e "A pagar" em células separadas. Descrições longas e mais de um pagamento podem ser cortados no PDF; no CSV, ficam inteiros. Encontrado no roteiro. Desde a SPEC-028 (etapa 3), os pagamentos continuam nas linhas de baixo e aparecem inteiros no PDF.
 - **Telas:** os filtros usam seis colunas no computador, para as datas caberem inteiras, e o fornecedor e o documento ficam empilhados na conta. Encontrado no roteiro.
 
 **Homologação (T13, 01/11/2026):** a equipe conferiu a Spec na homologação, depois do merge do PR #124 e da migração `20261101200000_fornecedores`, aplicada pelo workflow Migrações. O teste foi feito com o Dono do negócio **HE Testing**. Fluxo aprovado:

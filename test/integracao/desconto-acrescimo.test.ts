@@ -7,6 +7,7 @@ import { criarConsultasDoDashboard } from "@/lib/db/dashboard";
 import { criarConsultasFinanceiras } from "@/lib/db/financeiro";
 import { criarConsultasDeFornecedores } from "@/lib/db/fornecedores";
 import { criarConsultasDeVendas } from "@/lib/db/vendas";
+import { criarConsultasDeRelatorios } from "@/lib/db/relatorios";
 import { hoje as hojeLocal } from "@/lib/dominio/datas";
 import { competenciaDoDia } from "@/lib/dominio/financeiro";
 import * as servicos from "@/lib/financeiro/servicos";
@@ -15,7 +16,8 @@ import * as vendas from "@/lib/vendas/servicos";
 import { urlDoBancoDeTeste } from "../apoio/banco-de-teste";
 
 // SPEC-028 — etapa 1: pagamento com desconto e acréscimo no banco real (T02 e T09, parte); etapa 2: taxa
-// sugerida, recebimento automático com a taxa e estorno do pagamento (T03, T04, T07).
+// sugerida, recebimento automático com a taxa e estorno do pagamento (T03, T04, T07); etapa 3: totais da
+// lista e relatório de Contas (T05, T06).
 
 const base: PrismaClient = criarPrismaClient(urlDoBancoDeTeste());
 const HOJE = hojeLocal();
@@ -308,5 +310,50 @@ describe("T04 — estorno do pagamento de conta (CA-07, CA-09, CA-12, INV-001, I
     const [l] = await lancamentosDa(id);
     expect(await servicos.estornar(l.id, deps(negocioB))).toEqual({ status: "erro", mensagem: F.lancamentoNaoEncontrado });
     expect(await fin().detalharConta(id, HOJE)).toMatchObject({ status: "QUITADA" });
+  });
+});
+
+describe("T05 e T06 — totais da lista e relatório de Contas (CA-10, INV-007 da SPEC-026)", () => {
+  async function cenario() {
+    const receber = await conta("RECEBER", "200");
+    salvo(await pagar(receber, { valor: "194", forma: "CREDITO", desconto: "6", motivoDesconto: "TAXA_MAQUININHA" }));
+    const boleto = await conta("PAGAR", "100");
+    salvo(await pagar(boleto, { valor: "40", forma: "PIX" }));
+    const [errado] = await lancamentosDa(boleto);
+    salvo(await servicos.estornar(errado.id, deps()));
+    salvo(await pagar(boleto, { valor: "102,50", forma: "BOLETO", acrescimo: "2,50", motivoAcrescimo: "JUROS_MULTA" }));
+    const parcial = await conta("PAGAR", "300");
+    salvo(await pagar(parcial, { valor: "150", forma: "PIX", desconto: "30", motivoDesconto: "DESCONTO_COMBINADO" }));
+    return { receber, boleto, parcial };
+  }
+
+  it("os totais somam descontos e acréscimos; com filtro de pagamento, só os pagamentos do filtro (CA-10)", async () => {
+    await cenario();
+    const aReceber = await fin().listarContas({ tipo: "RECEBER", situacao: "todas" }, HOJE);
+    expect(aReceber.totais).toEqual({ quantidade: 1, totalCentavos: 20000, pagoCentavos: 19400, descontoCentavos: 600, acrescimoCentavos: 0, emAbertoCentavos: 0 });
+    const aPagar = await fin().listarContas({ tipo: "PAGAR", situacao: "todas" }, HOJE);
+    expect(aPagar.totais).toEqual({ quantidade: 2, totalCentavos: 40000, pagoCentavos: 25250, descontoCentavos: 3000, acrescimoCentavos: 250, emAbertoCentavos: 12000 });
+
+    // Filtro de forma: só o pagamento por boleto (o Pix estornado e o Pix da conta parcial ficam de fora do Boleto).
+    const filtro = { busca: null, vencimentoDe: null, vencimentoAte: null, pagamentoDe: null, pagamentoAte: null, pessoaId: null, forma: "BOLETO" as const, categoria: null, origem: null };
+    const soBoleto = await fin().listarContas({ tipo: "PAGAR", situacao: "todas", filtros: filtro }, HOJE);
+    expect(soBoleto.totais).toMatchObject({ quantidade: 1, pagoCentavos: 10250, descontoCentavos: 0, acrescimoCentavos: 250 });
+    const soPix = await fin().listarContas({ tipo: "PAGAR", situacao: "todas", filtros: { ...filtro, forma: "PIX" } }, HOJE);
+    expect(soPix.totais).toMatchObject({ quantidade: 1, pagoCentavos: 15000, descontoCentavos: 3000, acrescimoCentavos: 0 });
+  });
+
+  it("o relatório traz o desconto, o acréscimo e o motivo de cada pagamento, com o estorno marcado (CA-10)", async () => {
+    const { receber, boleto } = await cenario();
+    const ontem = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10);
+    const amanha = new Date(Date.now() + 86_400_000).toISOString().slice(0, 10);
+    const lista = await criarConsultasDeRelatorios(cliente(), negocioA).contas(ontem, amanha);
+    const r = lista.find((c) => c.descricao === "Conta 200")!;
+    expect(r).toMatchObject({ descontoCentavos: 600, acrescimoCentavos: 0, pagamentos: [expect.objectContaining({ valorCentavos: 19400, descontoCentavos: 600, motivoDesconto: "TAXA_MAQUININHA", estornadoEm: null })] });
+    const b = lista.find((c) => c.descricao === "Conta 100")!;
+    expect(b.pagamentos).toEqual([
+      expect.objectContaining({ forma: "PIX", valorCentavos: 4000, estornadoEm: expect.any(Date) }),
+      expect.objectContaining({ forma: "BOLETO", valorCentavos: 10250, acrescimoCentavos: 250, motivoAcrescimo: "JUROS_MULTA", estornadoEm: null }),
+    ]);
+    expect([receber, boleto]).toHaveLength(2);
   });
 });

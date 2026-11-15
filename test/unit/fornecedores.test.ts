@@ -162,15 +162,16 @@ describe("T09 (unitário) — relatório de Contas com as colunas novas (CA-15)"
 
   it("fornecedor ou cliente, nº do documento e os pagamentos numa coluna só", () => {
     const t = tabelaDeContas([conta({}), conta({ tipo: "RECEBER", pessoa: null, numeroDocumento: null, status: "ABERTA", pagoCentavos: 0, pagamentos: [{ data: new Date("2026-09-30T15:00:00Z"), forma: null, valorCentavos: 0 }] })]);
-    expect(t.colunas.map((c) => c.titulo)).toEqual(["Tipo", "Descrição", "Fornecedor/Cliente", "Nº do documento", "Categoria", "Vencimento", "Situação", "Total", "Pago", "Restante", "Pagamentos"]);
+    // SPEC-028 (5.6): as colunas Descontos e Acréscimos entram antes do Restante.
+    expect(t.colunas.map((c) => c.titulo)).toEqual(["Tipo", "Descrição", "Fornecedor/Cliente", "Nº do documento", "Categoria", "Vencimento", "Situação", "Total", "Pago", "Descontos", "Acréscimos", "Restante", "Pagamentos"]);
     expect(t.colunas.reduce((s, c) => s + c.largura, 0)).toBeCloseTo(1, 5);
     expect(t.linhas[0].slice(2, 4)).toEqual(["Embalagens Exemplo", "1234"]);
-    expect(t.linhas[0][10]).toBe("05/10/2026 Pix 100,00 + 20/10/2026 Boleto 50,00");
+    expect(t.linhas[0][12]).toBe("05/10/2026 Pix 100,00 + 20/10/2026 Boleto 50,00");
     expect(t.linhas[1].slice(2, 4)).toEqual(["", ""]);
-    expect(t.linhas[1][10]).toBe("30/09/2026 Não informada 0,00");
-    expect(t.totais).toEqual(["Total", "A receber 150,00", "A pagar 0,00", "", "", "", "", "", "", "", ""]);
+    expect(t.linhas[1][12]).toBe("30/09/2026 Não informada 0,00");
+    expect(t.totais).toEqual(["Total", "A receber 150,00", "A pagar 0,00", "", "", "", "", "", "", "", "", "", ""]);
     const csv = csvDaTabela(t).replace(/^﻿/, "").split("\r\n");
-    expect(csv[0]).toBe("Tipo;Descrição;Fornecedor/Cliente;Nº do documento;Categoria;Vencimento;Situação;Total;Pago;Restante;Pagamentos");
+    expect(csv[0]).toBe("Tipo;Descrição;Fornecedor/Cliente;Nº do documento;Categoria;Vencimento;Situação;Total;Pago;Descontos;Acréscimos;Restante;Pagamentos");
   });
 });
 

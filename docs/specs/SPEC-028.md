@@ -1,6 +1,6 @@
 # SPEC-028 — Desconto e acréscimo nos pagamentos das contas
 
-> **Status:** ✅ **Aprovada em 14/11/2026**, **em implementação por etapas**: as etapas 1 (schema, regras e pagamento com desconto e acréscimo) e 2 (taxa sugerida, recebimento automático com a taxa e estorno do pagamento) foram implementadas em 15/11/2026 e verificadas em build local ([evidências](evidencias/SPEC-028/README.md)); as notas da implementação estão depois da seção 9. As questões em aberto foram decididas pela equipe em entrevista (seção 13), todas pela opção recomendada:
+> **Status:** ✅ **Aprovada em 14/11/2026** e **implementada em 15/11/2026**, em três etapas: (1) schema, regras e pagamento com desconto e acréscimo; (2) taxa sugerida, recebimento automático com a taxa e estorno do pagamento; (3) totais da lista, relatório de Contas e roteiro final. Verificada em build local, com os testes T01 a T11 ([evidências](evidencias/SPEC-028/README.md)). **Falta a homologação (T12).** As notas da implementação estão depois da seção 9. As questões em aberto foram decididas pela equipe em entrevista (seção 13), todas pela opção recomendada:
 > - o desconto e o acréscimo são informados **no pagamento** ou no recebimento de cada conta; o valor original da conta não muda (OPEN-001);
 > - o caixa recebe **só o valor real** que entrou ou saiu; o desconto e o acréscimo ficam registrados no pagamento (OPEN-002);
 > - nas contas de venda no cartão de crédito, a **taxa da maquininha** vem sugerida pela taxa média da Calculadora, e o recebimento automático no vencimento desconta a mesma taxa (OPEN-003);
@@ -334,6 +334,11 @@ Uma loja vende R$ 200,00 no cartão de crédito à vista, numa maquininha que co
 - **Relatório de Contas:** desde esta etapa, a coluna "Pagamentos" mostra só os pagamentos válidos, sem os estornados nem os estornos, para o relatório não mostrar um valor que voltou. A marcação dos estornados (5.6) continua na etapa 3.
 - **"Recebido automaticamente":** o detalhe da conta trocou "automático no vencimento" pelo texto da 5.2.
 
+**Etapa 3 (15/11/2026)** — totais da lista, relatório de Contas e roteiro final:
+- **Totais com filtro de pagamento:** com o filtro de forma ou de data do pagamento, os descontos e os acréscimos somam só os pagamentos do filtro, como o pago já fazia (SPEC-026). Sem esses filtros, somam os das contas filtradas. O em aberto continua sendo a soma dos restantes das contas.
+- **Relatório de Contas no PDF:** com as duas colunas novas, a tabela tem 13 colunas e usa a fonte de 7 pt (as outras tabelas continuam com 8 pt). Os pagamentos com desconto, acréscimo ou estorno não cabiam numa linha, e o PDF cortava justamente o motivo e a marcação do estorno que a 5.6 pede. Por isso, a coluna "Pagamentos" passou a continuar nas linhas de baixo, até 10 linhas por conta. A nota da SPEC-026 dizia que mais de um pagamento podia ser cortado no PDF; agora eles aparecem inteiros. As descrições longas continuam cortadas no PDF e inteiras no CSV, como na SPEC-026.
+- **Testes da SPEC-026:** os que conferem o relatório de Contas e os totais da lista mudaram só no formato esperado: 13 colunas no relatório e os campos de descontos e acréscimos nos totais.
+
 ---
 
 ## 10. Requisitos não funcionais aplicáveis
@@ -433,15 +438,15 @@ Todas decididas pela equipe em 14/11/2026, em entrevista, pela opção recomenda
 
 A SPEC-028 estará concluída quando:
 
-- [ ] todos os critérios de aceitação (CA-01 a CA-15) estiverem implementados;
-- [ ] todos os invariantes (INV-001 a INV-008) estiverem preservados;
-- [ ] os testes derivados (T01 a T12) estiverem aprovados, com o CI verde em cada PR;
-- [ ] os RNFs aplicáveis (RNF01, RNF02, RNF05, RNF06) tiverem sido verificados como descrito na seção 10;
+- [x] todos os critérios de aceitação (CA-01 a CA-15) estiverem implementados (15/11/2026);
+- [x] todos os invariantes (INV-001 a INV-008) estiverem preservados (testes T02 a T09);
+- [ ] os testes derivados (T01 a T12) estiverem aprovados, com o CI verde em cada PR: T01 a T11 aprovados; **falta a homologação (T12)**;
+- [x] os RNFs aplicáveis (RNF01, RNF02, RNF05, RNF06) tiverem sido verificados como descrito na seção 10: telas em 390, 768 e 1440 px com o axe; INV-008; INV-004 e INV-006; a lista com 5.000 contas e 10.000 pagamentos de 19 a 80 ms;
 - [x] as questões OPEN-001 a OPEN-008 tiverem sido decididas e registradas (14/11/2026):
   - na baseline, RN44 incluída;
   - RF31, RF71, RF90, RN11, RN20 e RN22 alterados;
-- [ ] não existir divergência conhecida entre a implementação e esta Spec;
-- [ ] toda divergência em relação à baseline tiver sido explicitamente analisada e registrada nos documentos.
+- [x] não existir divergência conhecida entre a implementação e esta Spec: as duas encontradas (a mensagem do valor e a forma do estorno) foram decididas pela equipe em 15/11/2026, e a Spec foi ajustada;
+- [x] toda divergência em relação à baseline tiver sido explicitamente analisada e registrada nos documentos.
 
 **Implementação por etapas** (referência: até cerca de 400 linhas por revisão): (1) schema, domínio e pagamento com desconto e acréscimo; (2) taxa sugerida, recebimento automático e estorno; (3) lista, relatório, Painel, roteiro e evidências.
 

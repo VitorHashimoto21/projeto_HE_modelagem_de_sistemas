@@ -1,7 +1,7 @@
 import type { ContaExportada, LancamentoExportado, VendaExportada } from "@/lib/db/relatorios";
 import { diaLocal } from "@/lib/dominio/datas";
 import { CATEGORIAS, restanteDaConta } from "@/lib/dominio/financeiro";
-import { rotuloDaForma } from "@/lib/dominio/contas";
+import { ROTULO_MOTIVO_DO_ACRESCIMO, ROTULO_MOTIVO_DO_DESCONTO, rotuloDaForma } from "@/lib/dominio/contas";
 import { observacaoDaLinha, siglaDaUnidade, type Inventario } from "@/lib/dominio/inventario";
 import { diaBrasileiro, quantidadeParaPlanilha as qtd, valorParaPlanilha as valor, type Rentabilidade } from "@/lib/dominio/relatorios";
 import { FORMAS_DE_PAGAMENTO } from "@/lib/dominio/venda";
@@ -11,8 +11,10 @@ import { FORMAS_DE_PAGAMENTO } from "@/lib/dominio/venda";
  * formatos têm sempre as mesmas linhas e totais. Valores sem "R$", vírgula decimal (OPEN-006).
  */
 
-export type Coluna = { titulo: string; largura: number; numero?: boolean };
-export type Tabela = { titulo: string; colunas: Coluna[]; linhas: string[][]; totais: string[] };
+/** `quebrar`: no PDF, o texto que não cabe continua nas linhas de baixo, em vez de ser cortado (SPEC-028). */
+export type Coluna = { titulo: string; largura: number; numero?: boolean; quebrar?: boolean };
+/** `tamanho`: corpo da fonte no PDF, quando a tabela precisa de menos que o padrão para caber (SPEC-028). */
+export type Tabela = { titulo: string; colunas: Coluna[]; linhas: string[][]; totais: string[]; tamanho?: number };
 
 const dia = (d: Date) => diaBrasileiro(diaLocal(d));
 const FORMA: Record<string, string> = { ...FORMAS_DE_PAGAMENTO, CREDITO_TROCA: "Crédito de troca" };
@@ -76,6 +78,18 @@ export function tabelaDoFluxo(lancamentos: LancamentoExportado[]): Tabela {
   };
 }
 
+/**
+ * Um pagamento da conta (SPEC-026, 5.7; SPEC-028, 5.6): data, forma e valor; o desconto e o acréscimo, com
+ * o motivo; e a marca do estorno.
+ */
+function textoDoPagamento(p: ContaExportada["pagamentos"][number]): string {
+  let t = `${dia(p.data)} ${rotuloDaForma(p.forma)} ${valor(p.valorCentavos)}`;
+  if (p.descontoCentavos) t += `, desconto ${valor(p.descontoCentavos)}${p.motivoDesconto ? ` (${ROTULO_MOTIVO_DO_DESCONTO[p.motivoDesconto]})` : ""}`;
+  if (p.acrescimoCentavos) t += `, acréscimo ${valor(p.acrescimoCentavos)}${p.motivoAcrescimo ? ` (${ROTULO_MOTIVO_DO_ACRESCIMO[p.motivoAcrescimo]})` : ""}`;
+  if (p.estornadoEm) t += ` [estornado em ${dia(p.estornadoEm)}]`;
+  return t;
+}
+
 export function tabelaDeContas(contas: ContaExportada[]): Tabela {
   // SPEC-028: o restante já considera os descontos e os acréscimos dos pagamentos.
   const restante = (c: ContaExportada) => (c.status === "CANCELADA" ? 0 : restanteDaConta(c));
@@ -83,20 +97,25 @@ export function tabelaDeContas(contas: ContaExportada[]): Tabela {
   return {
     titulo: "Contas a pagar e a receber",
     // SPEC-026 (5.7): fornecedor ou cliente, nº do documento e os pagamentos (data, forma e valor).
-    // Larguras medidas na fonte do PDF: os títulos, "Recebida em parte" e um pagamento cabem inteiros;
-    // descrições longas e mais de um pagamento são cortados no PDF e ficam completos no CSV.
+    // SPEC-028 (5.6): Descontos e Acréscimos por conta, e o desconto, o acréscimo e o estorno de cada pagamento.
+    // Com 13 colunas, o PDF usa a fonte de 7 pt. Larguras medidas nessa fonte: os títulos, "Recebida em parte" e
+    // valores até 99.999,99 cabem inteiros. No PDF, os pagamentos continuam nas linhas de baixo, para o desconto,
+    // o acréscimo, o motivo e o estorno aparecerem; descrições longas ainda são cortadas e ficam completas no CSV.
+    tamanho: 7,
     colunas: [
-      { titulo: "Tipo", largura: 0.06 },
-      { titulo: "Descrição", largura: 0.11 },
-      { titulo: "Fornecedor/Cliente", largura: 0.11 },
-      { titulo: "Nº do documento", largura: 0.1 },
-      { titulo: "Categoria", largura: 0.08 },
-      { titulo: "Vencimento", largura: 0.07 },
-      { titulo: "Situação", largura: 0.1 },
-      { titulo: "Total", largura: 0.065, numero: true },
-      { titulo: "Pago", largura: 0.065, numero: true },
-      { titulo: "Restante", largura: 0.07, numero: true },
-      { titulo: "Pagamentos", largura: 0.17 },
+      { titulo: "Tipo", largura: 0.055 },
+      { titulo: "Descrição", largura: 0.1 },
+      { titulo: "Fornecedor/Cliente", largura: 0.1 },
+      { titulo: "Nº do documento", largura: 0.085 },
+      { titulo: "Categoria", largura: 0.07 },
+      { titulo: "Vencimento", largura: 0.065 },
+      { titulo: "Situação", largura: 0.09 },
+      { titulo: "Total", largura: 0.06, numero: true },
+      { titulo: "Pago", largura: 0.06, numero: true },
+      { titulo: "Descontos", largura: 0.065, numero: true },
+      { titulo: "Acréscimos", largura: 0.07, numero: true },
+      { titulo: "Restante", largura: 0.065, numero: true },
+      { titulo: "Pagamentos", largura: 0.115, quebrar: true },
     ],
     linhas: contas.map((c) => [
       c.tipo === "PAGAR" ? "A pagar" : "A receber",
@@ -108,11 +127,13 @@ export function tabelaDeContas(contas: ContaExportada[]): Tabela {
       SITUACAO_CONTA[c.tipo][c.status],
       valor(c.totalCentavos),
       valor(c.pagoCentavos),
+      valor(c.descontoCentavos),
+      valor(c.acrescimoCentavos),
       valor(restante(c)),
-      c.pagamentos.map((p) => `${dia(p.data)} ${rotuloDaForma(p.forma)} ${valor(p.valorCentavos)}`).join(" + "),
+      c.pagamentos.map(textoDoPagamento).join(" + "),
     ]),
     // O que falta receber e pagar em células separadas, para caberem no PDF (SPEC-026).
-    totais: ["Total", `A receber ${valor(somar("RECEBER"))}`, `A pagar ${valor(somar("PAGAR"))}`, "", "", "", "", "", "", "", ""],
+    totais: ["Total", `A receber ${valor(somar("RECEBER"))}`, `A pagar ${valor(somar("PAGAR"))}`, "", "", "", "", "", "", "", "", "", ""],
   };
 }
 

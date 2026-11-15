@@ -228,10 +228,13 @@ export default async function Contas({ searchParams }: PageProps<"/financeiro/co
         <h2 id="titulo-totais" className="sr-only">
           Totais da lista
         </h2>
-        <dl className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+        {/* SPEC-028 (5.6): descontos e acréscimos dos pagamentos; o em aberto já considera os dois. */}
+        <dl className="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-6">
           <Total rotulo={r.totais.quantidade === 1 ? "Conta" : "Contas"} valor={String(r.totais.quantidade)} />
           <Total rotulo="Total" valor={reais(r.totais.totalCentavos)} />
           <Total rotulo={receber ? "Recebido" : "Pago"} valor={reais(r.totais.pagoCentavos)} />
+          <Total rotulo="Descontos" valor={reais(r.totais.descontoCentavos)} />
+          <Total rotulo="Acréscimos" valor={reais(r.totais.acrescimoCentavos)} />
           <Total rotulo="Em aberto" valor={reais(r.totais.emAbertoCentavos)} destaque />
         </dl>
         {ativos > 0 && (
