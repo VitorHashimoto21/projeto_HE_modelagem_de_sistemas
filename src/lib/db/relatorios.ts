@@ -161,7 +161,8 @@ export function criarConsultasDeRelatorios(cliente: ClienteDoNegocio, negocioId:
           fornecedor: PESSOA,
           cliente: PESSOA,
           parcela: { select: { pagamento: { select: { venda: { select: { cliente: PESSOA } } } } } },
-          lancamentos: { orderBy: { data: "asc" }, select: { data: true, formaPagamento: true, valor: true } },
+          // SPEC-028 (5.5): só os pagamentos válidos, sem os estornados nem os estornos (a marcação dos estornados vem na etapa 3).
+          lancamentos: { where: { origem: "CONTA", estornadoPor: { is: null } }, orderBy: { data: "asc" }, select: { data: true, formaPagamento: true, valor: true } },
         },
       });
       return lista.map((c) => {

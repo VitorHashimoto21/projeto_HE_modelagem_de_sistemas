@@ -131,7 +131,7 @@ export function FormularioParametros({ atuais }: { atuais: ParametrosExibidos })
       {estado.status === "salvo" && <Aviso tipo="sucesso">{estado.mensagem}</Aviso>}
       <Superficie aria-labelledby="titulo-cartao">
         <TituloDaSuperficie id="titulo-cartao" titulo="Vendas no cartão" />
-        <div className="sm:max-w-xs">{campo("taxaCartao", "Taxa média da maquininha (%)", { placeholder: "Ex.: 3,5", dica: "Entra como despesa variável em todo preço." })}</div>
+        <div className="sm:max-w-xs">{campo("taxaCartao", "Taxa média da maquininha (%)", { placeholder: "Ex.: 3,5", dica: "Entra como despesa variável em todo preço e é o desconto sugerido ao receber as vendas no cartão." })}</div>
       </Superficie>
       <Superficie aria-labelledby="titulo-estimativas">
         <TituloDaSuperficie

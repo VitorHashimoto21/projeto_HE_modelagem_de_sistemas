@@ -1,6 +1,6 @@
 # SPEC-028 — Desconto e acréscimo nos pagamentos das contas
 
-> **Status:** ✅ **Aprovada em 14/11/2026**, **em implementação por etapas**: a etapa 1 (schema, regras e pagamento com desconto e acréscimo) foi implementada em 15/11/2026 e verificada em build local ([evidências](evidencias/SPEC-028/README.md)); as notas da implementação estão depois da seção 9. As questões em aberto foram decididas pela equipe em entrevista (seção 13), todas pela opção recomendada:
+> **Status:** ✅ **Aprovada em 14/11/2026**, **em implementação por etapas**: as etapas 1 (schema, regras e pagamento com desconto e acréscimo) e 2 (taxa sugerida, recebimento automático com a taxa e estorno do pagamento) foram implementadas em 15/11/2026 e verificadas em build local ([evidências](evidencias/SPEC-028/README.md)); as notas da implementação estão depois da seção 9. As questões em aberto foram decididas pela equipe em entrevista (seção 13), todas pela opção recomendada:
 > - o desconto e o acréscimo são informados **no pagamento** ou no recebimento de cada conta; o valor original da conta não muda (OPEN-001);
 > - o caixa recebe **só o valor real** que entrou ou saiu; o desconto e o acréscimo ficam registrados no pagamento (OPEN-002);
 > - nas contas de venda no cartão de crédito, a **taxa da maquininha** vem sugerida pela taxa média da Calculadora, e o recebimento automático no vencimento desconta a mesma taxa (OPEN-003);
@@ -327,6 +327,12 @@ Uma loja vende R$ 200,00 no cartão de crédito à vista, numa maquininha que co
   - para o desconto ou o acréscimo que não é número, ou que tem mais de 2 casas, foi acrescentada "Use um valor com até 2 casas, como 6 ou 6,50".
   - **Decidido pela equipe em 15/11/2026:** manter a mensagem atual do valor (opção recomendada). A tabela da seção 5.10 foi ajustada, e a mensagem do desconto ou acréscimo inválido entrou nela.
 - **Forma do pagamento na largura toda:** o campo da forma ficava pela metade na coluna do pagamento e cortava "Cartão de crédito" (desde a SPEC-026). Como o formulário mudou nesta etapa, o campo passou a ocupar a largura toda.
+
+**Etapa 2 (15/11/2026)** — taxa sugerida, recebimento automático com a taxa e estorno do pagamento:
+- **O estorno não repete a forma do pagamento** (5.5, item 3, e as decisões derivadas diziam "com a forma do original"). Pela regra do banco da SPEC-026, a forma só existe no lançamento de pagamento de conta, e o estorno é um lançamento de estorno. O efeito pedido continua garantido: os filtros de forma e de data do pagamento consideram só os pagamentos válidos, sem os estornados nem os estornos (5.5, item 7). **A decidir pela equipe:** (1) manter assim e tirar "com a forma do original" da Spec (proposta) ou (2) mudar a regra do banco para o estorno guardar a forma.
+- **Mensagem do estorno:** o serviço devolve "Pagamento estornado. A conta voltou a ficar em aberto." (ou "parcial"), mas a tela da conta se atualiza na hora, e o resultado aparece no próprio detalhe: o pagamento riscado com "Estornado em … por …" e o restante de volta. A Spec não pede mensagem.
+- **Relatório de Contas:** desde esta etapa, a coluna "Pagamentos" mostra só os pagamentos válidos, sem os estornados nem os estornos, para o relatório não mostrar um valor que voltou. A marcação dos estornados (5.6) continua na etapa 3.
+- **"Recebido automaticamente":** o detalhe da conta trocou "automático no vencimento" pelo texto da 5.2.
 
 ---
 

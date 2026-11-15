@@ -31,3 +31,35 @@ Verificação em build de produção local (`next build` + `next start`), com Po
 | [`s28a_02_conta_quitada_com_desconto_1440_claro.png`](s28a_02_conta_quitada_com_desconto_1440_claro.png) | Conta recebida com R$ 194,00 e R$ 6,00 de desconto |
 | [`s28a_02_conta_quitada_com_desconto_390_escuro.png`](s28a_02_conta_quitada_com_desconto_390_escuro.png) | O mesmo detalhe no celular, tema escuro |
 | [`s28a_03_boleto_com_juros_1440_claro.png`](s28a_03_boleto_com_juros_1440_claro.png) | Boleto pago com R$ 2,50 de juros |
+
+## Etapa 2 — taxa sugerida, recebimento automático com a taxa e estorno do pagamento (15/11/2026)
+
+Mesmo ambiente da etapa 1. O negócio de teste ganhou a taxa média da maquininha de 3% e duas vendas fictícias no cartão de crédito, de R$ 200,00 cada: uma a vencer e outra vencida ontem.
+
+### Testes automatizados
+
+| # | Teste | Onde | Resultado |
+|---|---|---|---|
+| T01 (parte) | Desconto da taxa: restante × taxa, arredondado ao centavo; zero sem taxa, sem restante ou sem valor a receber | `test/unit/desconto-acrescimo.test.ts` | ✅ |
+| T03 | Taxa sugerida só na conta de venda no cartão; recebimento automático com a taxa e, sem taxa, pelo valor cheio; a conta com pagamento estornado fica fora do automático | `test/integracao/desconto-acrescimo.test.ts` | ✅ |
+| T04 | Estorno: lançamento contrário ligado ao original e à conta, conta reaberta sem o desconto, segundo estorno recusado, conta manual editável e cancelável de novo, estorno de um de dois pagamentos (parcial), estornos simultâneos, a conta antiga parcial corrigida, venda cancelada (reembolso sem o desconto e estorno recusado), pagamento estornado fora dos filtros de forma e de data, outro negócio fora | idem | ✅ |
+| T07 e T08 | O estorno continua com *Financeiro: excluir* (guarda já existente da ação) e recusado no modo suporte (teste existente "fora da lista: estorno…", em `test/integracao/correcoes-financeiro.test.ts`) | os testes existentes | ✅ |
+
+**Suíte completa:** 720 testes unitários e 439 de integração, além de lint, tipos e build.
+
+### Roteiro no navegador (T10, parte)
+
+29 verificações, todas aprovadas:
+- **Calculadora:** a dica da taxa média diz que ela também é o desconto sugerido ao receber as vendas no cartão;
+- **taxa sugerida:** na conta da venda a vencer, o recebimento já vem com R$ 194,00, o desconto de R$ 6,00 e o motivo "Taxa da maquininha", com o texto que explica a sugestão; recebida, a conta fica com R$ 194,00 no caixa e R$ 6,00 de desconto;
+- **estorno pelo detalhe:** o diálogo diz que o valor e o desconto serão desfeitos e que o restante passa a R$ 200,00. Depois do estorno, a conta volta a ficar a receber, o recebimento aparece riscado com "Estornado em … por …", o banco tem o estorno de R$ 194,00 ligado à conta, e o formulário sugere a taxa de novo;
+- **recebimento automático:** ao abrir o Financeiro, a venda vencida é recebida com R$ 194,00, "Recebido automaticamente" e "Desconto de R$ 6,00 · Taxa da maquininha";
+- **estorno pelo fluxo de caixa:** o diálogo explica o efeito na conta. Depois do estorno, abrir o Financeiro de novo não recebe a conta sozinha;
+- telas em 1440 e 390 px, claro e escuro, sem rolagem horizontal; axe sem violações no detalhe com o pagamento estornado.
+
+| Captura | O que mostra |
+|---|---|
+| [`s28b_01_taxa_sugerida_1440_claro.png`](s28b_01_taxa_sugerida_1440_claro.png) | Recebimento da venda no cartão com a taxa sugerida |
+| [`s28b_02_pagamento_estornado_1440_claro.png`](s28b_02_pagamento_estornado_1440_claro.png) | Conta depois do estorno: recebimento riscado e o restante de volta |
+| [`s28b_02_pagamento_estornado_390_escuro.png`](s28b_02_pagamento_estornado_390_escuro.png) | O mesmo detalhe no celular, tema escuro |
+| [`s28b_03_recebido_automaticamente_1440_claro.png`](s28b_03_recebido_automaticamente_1440_claro.png) | Parcela recebida no vencimento, com o desconto da taxa |

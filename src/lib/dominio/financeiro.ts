@@ -50,6 +50,16 @@ export const restanteDaConta = (c: ValoresDaConta) => c.totalCentavos - c.pagoCe
 export const abatidoDoPagamento = (p: { valorCentavos: number; descontoCentavos: number; acrescimoCentavos: number }) =>
   p.valorCentavos + p.descontoCentavos - p.acrescimoCentavos;
 
+/**
+ * Desconto da taxa da maquininha (SPEC-028, 5.2): o restante × a taxa média (RF51), arredondado ao
+ * centavo. Zero sem taxa ou quando o desconto não deixaria valor a receber.
+ */
+export function descontoDaTaxa(restanteCentavos: number, taxaPercentual: number): number {
+  if (!(taxaPercentual > 0) || restanteCentavos <= 0) return 0;
+  const desconto = Math.round((restanteCentavos * Math.round(taxaPercentual * 100)) / 10_000);
+  return desconto < restanteCentavos ? desconto : 0;
+}
+
 /** Atrasada: vencimento antes de hoje e ainda falta pagar, em aberto ou parcial (5.3). */
 export function estaAtrasada(c: ValoresDaConta & { vencimento: string; status: SituacaoDaConta }, hoje: string): boolean {
   return (c.status === "ABERTA" || c.status === "PARCIAL") && restanteDaConta(c) > 0 && c.vencimento < hoje;
