@@ -261,11 +261,12 @@ describe("T06 — filtros e totais (CA-11 a CA-14, INV-007, INV-008)", () => {
 
     const r = await listar("PAGAR", { pessoaId: a, pagamentoDe: dia(-10), pagamentoAte: HOJE, forma: "PIX" });
     expect(r.contas.map((c) => c.id)).toEqual([c1]);
-    expect(r.totais).toEqual({ quantidade: 1, totalCentavos: 10000, pagoCentavos: 4000, emAbertoCentavos: 0 });
+    // SPEC-028 (5.6): os totais trazem também os descontos e os acréscimos, zerados aqui.
+    expect(r.totais).toEqual({ quantidade: 1, totalCentavos: 10000, pagoCentavos: 4000, descontoCentavos: 0, acrescimoCentavos: 0, emAbertoCentavos: 0 });
 
     const deA = await listar("PAGAR", { pessoaId: a });
     expect(deA.contas.map((c) => c.id).sort()).toEqual([c1, c2].sort());
-    expect(deA.totais).toEqual({ quantidade: 2, totalCentavos: 30000, pagoCentavos: 15000, emAbertoCentavos: 15000 });
+    expect(deA.totais).toEqual({ quantidade: 2, totalCentavos: 30000, pagoCentavos: 15000, descontoCentavos: 0, acrescimoCentavos: 0, emAbertoCentavos: 15000 });
     expect((await listar("PAGAR", { busca: "234" })).contas.map((c) => c.id)).toEqual([c1]);
     expect((await listar("PAGAR", { busca: "botõ" })).contas.map((c) => c.id)).toEqual([c3]);
     expect((await listar("PAGAR", { forma: "BOLETO" })).contas.map((c) => c.id)).toEqual([c2]);
@@ -350,7 +351,8 @@ describe("T09 — relatório de Contas (CA-15)", () => {
     expect(aPagar).toMatchObject({ pessoa: "Embalagens Exemplo", numeroDocumento: "1234", pagamentos: [{ forma: "PIX", valorCentavos: 10000 }] });
     expect(lista.filter((x) => x.tipo === "RECEBER").every((x) => x.pessoa === "Ana")).toBe(true);
     const t = tabelaDeContas(lista);
-    expect(t.linhas.find((l) => l[2] === "Embalagens Exemplo")![10]).toMatch(/Pix 100,00$/);
+    // SPEC-028: os pagamentos passaram para a última coluna, depois de Descontos e Acréscimos.
+    expect(t.linhas.find((l) => l[2] === "Embalagens Exemplo")![12]).toMatch(/Pix 100,00$/);
   });
 });
 

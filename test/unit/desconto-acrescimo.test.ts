@@ -1,8 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { abatidoDoPagamento, descontoDaTaxa, estaAtrasada, restanteDaConta } from "@/lib/dominio/financeiro";
 import { MENSAGENS_FINANCEIRO as M, validarPagamento } from "@/lib/financeiro/validacao";
+import type { ContaExportada } from "@/lib/db/relatorios";
+import { PDFDocument, StandardFonts } from "pdf-lib";
+import { csvDaTabela, pdfDaTabela, quebrarTexto } from "@/lib/relatorios/arquivos";
+import { tabelaDeContas } from "@/lib/relatorios/tabelas";
 
-// SPEC-028 — T01 (etapas 1 e 2): validação do pagamento com desconto e acréscimo, abatido e restante.
+// SPEC-028 — T01 (etapas 1 e 2) e T06 (etapa 3): validação do pagamento com desconto e acréscimo, abatido e restante.
 
 const HOJE = "2026-11-15";
 const pagamento = (extra: Record<string, string> = {}) => validarPagamento({ valor: "194", data: HOJE, forma: "CREDITO", ...extra }, HOJE);
@@ -95,5 +99,80 @@ describe("T01 — desconto da taxa da maquininha (CA-01, CA-03, INV-005)", () =>
     expect(descontoDaTaxa(20000, 0)).toBe(0);
     expect(descontoDaTaxa(0, 3)).toBe(0);
     expect(descontoDaTaxa(100, 100)).toBe(0);
+  });
+});
+
+describe("T06 (unitário) — relatório de Contas com descontos, acréscimos e estornos (CA-10)", () => {
+  const conta = (extra: Partial<ContaExportada>): ContaExportada => ({
+    tipo: "RECEBER",
+    descricao: "Venda nº 901",
+    categoria: "VENDAS",
+    vencimento: new Date("2026-11-13T15:00:00Z"),
+    status: "QUITADA",
+    totalCentavos: 20000,
+    pagoCentavos: 19400,
+    descontoCentavos: 600,
+    acrescimoCentavos: 0,
+    pessoa: null,
+    numeroDocumento: null,
+    pagamentos: [{ data: new Date("2026-11-13T15:00:00Z"), forma: "CREDITO", valorCentavos: 19400, descontoCentavos: 600, motivoDesconto: "TAXA_MAQUININHA" }],
+    ...extra,
+  });
+
+  it("colunas Descontos e Acréscimos; cada pagamento com o motivo e o estorno marcado", () => {
+    const boleto = conta({
+      tipo: "PAGAR",
+      descricao: "Boleto",
+      categoria: "FORNECEDORES",
+      totalCentavos: 10000,
+      pagoCentavos: 10250,
+      descontoCentavos: 0,
+      acrescimoCentavos: 250,
+      pagamentos: [
+        { data: new Date("2026-11-10T15:00:00Z"), forma: "PIX", valorCentavos: 4000, estornadoEm: new Date("2026-11-11T15:00:00Z") },
+        { data: new Date("2026-11-12T15:00:00Z"), forma: "BOLETO", valorCentavos: 10250, acrescimoCentavos: 250, motivoAcrescimo: "JUROS_MULTA" },
+      ],
+    });
+    const t = tabelaDeContas([conta({}), boleto]);
+    expect(t.tamanho).toBe(7);
+    expect(t.colunas.reduce((s, c) => s + c.largura, 0)).toBeCloseTo(1, 5);
+    expect(t.linhas[0].slice(7, 13)).toEqual(["200,00", "194,00", "6,00", "0,00", "0,00", "13/11/2026 Cartão de crédito 194,00, desconto 6,00 (Taxa da maquininha)"]);
+    expect(t.linhas[1].slice(7, 13)).toEqual([
+      "100,00",
+      "102,50",
+      "0,00",
+      "2,50",
+      "0,00",
+      "10/11/2026 Pix 40,00 [estornado em 11/11/2026] + 12/11/2026 Boleto 102,50, acréscimo 2,50 (Juros ou multa)",
+    ]);
+    const csv = csvDaTabela(t).replace(/^\uFEFF/, "").split("\r\n");
+    expect(csv[0]).toBe("Tipo;Descrição;Fornecedor/Cliente;Nº do documento;Categoria;Vencimento;Situação;Total;Pago;Descontos;Acréscimos;Restante;Pagamentos");
+  });
+
+  it("no PDF, os pagamentos quebram em linhas, sem perder o desconto, o motivo nem o estorno", async () => {
+    const fonte = await (await PDFDocument.create()).embedFont(StandardFonts.Helvetica);
+    const largura = 0.115 * 770 - 6; // a coluna Pagamentos na fonte de 7 pt
+    const texto = "10/11/2026 Pix 40,00 [estornado em 11/11/2026] + 12/11/2026 Boleto 102,50, acréscimo 2,50 (Juros ou multa)";
+    const linhas = quebrarTexto(texto, fonte, 7, largura);
+    expect(linhas.length).toBeGreaterThan(1);
+    expect(linhas.every((l) => fonte.widthOfTextAtSize(l, 7) <= largura)).toBe(true);
+    expect(linhas.join(" ")).toBe(texto);
+    // Depois do máximo de linhas, a última termina com reticências; uma palavra maior que a coluna é cortada.
+    const curtas = quebrarTexto(texto, fonte, 7, largura, 2);
+    expect(curtas).toHaveLength(2);
+    expect(curtas[1].endsWith("…")).toBe(true);
+    expect(quebrarTexto("Pagamento-sem-espaços-maior-que-a-coluna-inteira", fonte, 7, 40)[0].endsWith("…")).toBe(true);
+    expect(quebrarTexto("", fonte, 7, largura)).toEqual([""]);
+    expect(tabelaDeContas([]).colunas.filter((c) => c.quebrar).map((c) => c.titulo)).toEqual(["Pagamentos"]);
+  });
+
+  it("no PDF, as linhas altas passam para a página seguinte", async () => {
+    const pagamentos = Array.from({ length: 3 }, (_, i) => ({ data: new Date(`2026-11-1${i}T15:00:00Z`), forma: "PIX" as const, valorCentavos: 4000, descontoCentavos: 100, motivoDesconto: "DESCONTO_COMBINADO" as const }));
+    const contas = Array.from({ length: 30 }, () => conta({ pagamentos }));
+    const cabecalho = { negocio: "Negócio de teste", periodo: "01/11/2026 a 15/11/2026", geradoEm: "15/11/2026 10:00" };
+    const altas = await PDFDocument.load(await pdfDaTabela(tabelaDeContas(contas), cabecalho));
+    const simples = await PDFDocument.load(await pdfDaTabela(tabelaDeContas(contas.map((c) => ({ ...c, pagamentos: [] }))), cabecalho));
+    expect(simples.getPageCount()).toBe(2);
+    expect(altas.getPageCount()).toBeGreaterThan(simples.getPageCount());
   });
 });

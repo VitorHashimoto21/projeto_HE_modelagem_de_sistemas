@@ -40,6 +40,30 @@ function caber(t: string, fonte: PDFFont, tamanho: number, largura: number): str
   return `${s}…`;
 }
 
+/** Máximo de linhas de uma célula que quebra; o que passar disso termina com reticências (fica inteiro no CSV). */
+export const MAX_LINHAS_DA_CELULA = 10;
+
+/**
+ * Quebra o texto em linhas que cabem na largura, palavra por palavra (SPEC-028: os pagamentos do relatório de
+ * Contas). Uma palavra maior que a largura é cortada; depois do máximo de linhas, a última termina com reticências.
+ */
+export function quebrarTexto(t: string, fonte: PDFFont, tamanho: number, largura: number, maximo = MAX_LINHAS_DA_CELULA): string[] {
+  const linhas: string[] = [];
+  let atual = "";
+  for (const palavra of t.split(" ").filter(Boolean)) {
+    const junto = atual ? `${atual} ${palavra}` : palavra;
+    if (!atual || fonte.widthOfTextAtSize(junto, tamanho) <= largura) atual = junto;
+    else {
+      linhas.push(atual);
+      atual = palavra;
+    }
+  }
+  if (atual) linhas.push(atual);
+  if (linhas.length === 0) return [""];
+  if (linhas.length > maximo) linhas.splice(maximo - 1, linhas.length, linhas.slice(maximo - 1).join(" "));
+  return linhas.map((l) => caber(l, fonte, tamanho, largura));
+}
+
 const LARGURA = 842; // A4 deitado
 const ALTURA = 595;
 const MARGEM = 36;
@@ -63,16 +87,29 @@ export async function pdfDaTabela(t: Tabela, c: CabecalhoDoPdf): Promise<Uint8Ar
 
   const escrever = (texto: string, x: number, yy: number, f: PDFFont, tam: number, cor = COR_TEXTO) => pagina.drawText(textoParaPdf(texto), { x, y: yy, size: tam, font: f, color: cor });
 
-  const linhaDaTabela = (celulas: string[], f: PDFFont) => {
-    t.colunas.forEach((col, i) => {
-      // Números alinhados à direita, com folga maior antes da coluna seguinte.
-      const largura = col.largura * util - (col.numero ? 14 : 6);
-      const texto = caber(textoParaPdf(celulas[i] ?? ""), f, TAMANHO, largura);
-      const x = col.numero ? xs[i] + largura - f.widthOfTextAtSize(texto, TAMANHO) : xs[i];
-      pagina.drawText(texto, { x, y, size: TAMANHO, font: f, color: COR_TEXTO });
+  // SPEC-028: a tabela pode pedir uma fonte menor para caber (o relatório de Contas, com 13 colunas).
+  const tamanho = t.tamanho ?? TAMANHO;
+  const entrelinha = tamanho + 2;
+  // Números alinhados à direita, com folga maior antes da coluna seguinte.
+  const larguraDa = (i: number) => t.colunas[i].largura * util - (t.colunas[i].numero ? 14 : 6);
+  /** As linhas de texto de cada célula: uma só, cortada, ou várias nas colunas que quebram (SPEC-028). */
+  const celulasDaLinha = (celulas: string[], f: PDFFont) =>
+    t.colunas.map((col, i) => {
+      const texto = textoParaPdf(celulas[i] ?? "");
+      return col.quebrar ? quebrarTexto(texto, f, tamanho, larguraDa(i)) : [caber(texto, f, tamanho, larguraDa(i))];
     });
-    pagina.drawLine({ start: { x: MARGEM, y: y - 4 }, end: { x: LARGURA - MARGEM, y: y - 4 }, thickness: 0.5, color: COR_LINHA });
-    y -= LINHA;
+  /** Altura que a linha ocupa além da linha simples. */
+  const extraDa = (celulas: string[][]) => (Math.max(1, ...celulas.map((c) => c.length)) - 1) * entrelinha;
+  const linhaDaTabela = (celulas: string[][], f: PDFFont) => {
+    celulas.forEach((textos, i) =>
+      textos.forEach((texto, k) => {
+        const x = t.colunas[i].numero ? xs[i] + larguraDa(i) - f.widthOfTextAtSize(texto, tamanho) : xs[i];
+        pagina.drawText(texto, { x, y: y - k * entrelinha, size: tamanho, font: f, color: COR_TEXTO });
+      }),
+    );
+    const extra = extraDa(celulas);
+    pagina.drawLine({ start: { x: MARGEM, y: y - extra - 4 }, end: { x: LARGURA - MARGEM, y: y - extra - 4 }, thickness: 0.5, color: COR_LINHA });
+    y -= LINHA + extra;
   };
 
   const novaPagina = () => {
@@ -84,7 +121,7 @@ export async function pdfDaTabela(t: Tabela, c: CabecalhoDoPdf): Promise<Uint8Ar
     const periodo = `${c.rotuloDoPeriodo ?? "Período"}: ${c.periodo} · Gerado em ${c.geradoEm}`;
     escrever(periodo, LARGURA - MARGEM - fonte.widthOfTextAtSize(textoParaPdf(periodo), 9), y, fonte, 9, COR_SUAVE);
     y -= 24;
-    linhaDaTabela(t.colunas.map((col) => col.titulo), negrito);
+    linhaDaTabela(celulasDaLinha(t.colunas.map((col) => col.titulo), negrito), negrito);
   };
 
   novaPagina();
@@ -93,11 +130,13 @@ export async function pdfDaTabela(t: Tabela, c: CabecalhoDoPdf): Promise<Uint8Ar
     y -= LINHA;
   }
   for (const l of t.linhas) {
-    if (y < MARGEM + 2 * LINHA) novaPagina();
-    linhaDaTabela(l, fonte);
+    const celulas = celulasDaLinha(l, fonte);
+    if (y - extraDa(celulas) < MARGEM + 2 * LINHA) novaPagina();
+    linhaDaTabela(celulas, fonte);
   }
-  if (y < MARGEM + 2 * LINHA) novaPagina();
-  linhaDaTabela(t.totais, negrito);
+  const totais = celulasDaLinha(t.totais, negrito);
+  if (y - extraDa(totais) < MARGEM + 2 * LINHA) novaPagina();
+  linhaDaTabela(totais, negrito);
   if (c.notas?.length) {
     y -= LINHA / 2;
     for (const nota of c.notas) {

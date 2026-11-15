@@ -63,3 +63,41 @@ Mesmo ambiente da etapa 1. O negócio de teste ganhou a taxa média da maquininh
 | [`s28b_02_pagamento_estornado_1440_claro.png`](s28b_02_pagamento_estornado_1440_claro.png) | Conta depois do estorno: recebimento riscado e o restante de volta |
 | [`s28b_02_pagamento_estornado_390_escuro.png`](s28b_02_pagamento_estornado_390_escuro.png) | O mesmo detalhe no celular, tema escuro |
 | [`s28b_03_recebido_automaticamente_1440_claro.png`](s28b_03_recebido_automaticamente_1440_claro.png) | Parcela recebida no vencimento, com o desconto da taxa |
+
+## Etapa 3 — totais da lista, relatório de Contas e roteiro final (15/11/2026)
+
+Mesmo ambiente das etapas anteriores. O negócio de teste passou ao plano pago, porque o relatório de Contas é do plano pago, e a conta de R$ 300,00 venceu há 2 dias, para entrar no período do relatório. Além das contas fictícias da SPEC-028, o negócio tem as da semente da SPEC-019: uma a receber de R$ 300,00 em aberto, uma a pagar de R$ 900,00 paga e outra a pagar de R$ 150,00 em aberto.
+
+### Testes automatizados
+
+| # | Teste | Onde | Resultado |
+|---|---|---|---|
+| T05 | Totais da lista com descontos e acréscimos; com filtro de forma, só os pagamentos do filtro, sem o estornado | `test/integracao/desconto-acrescimo.test.ts` | ✅ |
+| T06 | Relatório de Contas: colunas Descontos e Acréscimos; cada pagamento com o desconto, o acréscimo e o motivo, e o estornado marcado; os estornos fora da lista; CSV; no PDF, os pagamentos quebram em linhas e as linhas altas passam para a página seguinte | `test/unit/desconto-acrescimo.test.ts` e `test/integracao/desconto-acrescimo.test.ts` | ✅ |
+
+**Suíte completa:** 723 testes unitários e 441 de integração, além de lint, tipos, a checagem do schema e o build. Os testes da SPEC-026 que conferem o relatório de Contas e os totais da lista mudaram só no formato esperado: 13 colunas no relatório e os campos de descontos e acréscimos nos totais (`test/unit/fornecedores.test.ts` e `test/integracao/fornecedores.test.ts`).
+
+**Desempenho (RNF06):** num banco à parte, com 5.000 contas, 10.000 pagamentos (um terço com desconto e um quinto com acréscimo) e 50 fornecedores, a lista com os totais levou de 19 a 80 ms, sem filtro e com os filtros de forma, de data do pagamento, de busca e de categoria. A meta é até 1 s.
+
+### Roteiro no navegador (T10 e T11)
+
+63 verificações, todas aprovadas:
+- **pagamentos pelas telas:** a venda no cartão recebida com a taxa sugerida (R$ 194,00 e R$ 6,00 de desconto); no boleto, um Pix de R$ 40,00 estornado e o pagamento de R$ 102,50 com R$ 2,50 de juros; a conta de R$ 300,00 com R$ 150,00 pagos e R$ 30,00 de desconto combinado; a venda vencida recebida automaticamente com a taxa;
+- **totais da lista:** a receber, Descontos R$ 12,00, Acréscimos R$ 0,00 e Em aberto R$ 500,00 (900 − 388 − 12); a pagar, Descontos R$ 30,00, Acréscimos R$ 2,50 e Em aberto R$ 270,00 (1.450 − 1.152,50 − 30 + 2,50). Com o filtro Pix, só a conta parcial entra (o Pix estornado do boleto fica de fora), com Pago R$ 150,00 e Descontos R$ 30,00, e a nota explica que o pago soma só os pagamentos do filtro;
+- **relatório de Contas:** o link da página de Relatórios leva à exportação. O CSV tem as colunas Descontos e Acréscimos, e cada pagamento traz o desconto ou o acréscimo com o motivo, como "15/11/2026 Pix 40,00 [estornado em 15/11/2026] + 15/11/2026 Boleto 102,50, acréscimo 2,50 (Juros ou multa)". O PDF traz os mesmos valores, e os pagamentos aparecem inteiros, em várias linhas;
+- **Painel:** "1 conta atrasada entra no mês atual, R$ 120,00 a pagar", o restante da conta parcial já com o desconto;
+- **telas:** a lista em 1440, 768 e 390 px; o detalhe e o formulário com desconto em 768 px; o diálogo do estorno em 390, 768 e 1440 px; claro e escuro, sem rolagem horizontal e com o axe sem violações. Com as etapas 1 e 2, o formulário, o detalhe e o diálogo ficam verificados nas três larguras (CA-15). "Voltar" no diálogo não estorna.
+
+| Captura | O que mostra |
+|---|---|
+| [`s28c_01_totais_a_receber_1440_claro.png`](s28c_01_totais_a_receber_1440_claro.png) | Contas a receber com os totais de descontos e acréscimos |
+| [`s28c_01_totais_a_receber_390_escuro.png`](s28c_01_totais_a_receber_390_escuro.png) | Os mesmos totais no celular, tema escuro |
+| [`s28c_02_totais_a_pagar_1440_claro.png`](s28c_02_totais_a_pagar_1440_claro.png) | Contas a pagar: descontos, juros e o em aberto pelo restante |
+| [`s28c_03_relatorio_contas_pdf.png`](s28c_03_relatorio_contas_pdf.png) | PDF do relatório de Contas, com os pagamentos em várias linhas |
+| [`s28c_05_boleto_estornado_e_juros_768_claro.png`](s28c_05_boleto_estornado_e_juros_768_claro.png) | Boleto com o Pix estornado e o pagamento com juros, em 768 px |
+| [`s28c_07_dialogo_do_estorno_390_claro.png`](s28c_07_dialogo_do_estorno_390_claro.png) | Diálogo do estorno no celular |
+| [`s28c_07_dialogo_do_estorno_768_escuro.png`](s28c_07_dialogo_do_estorno_768_escuro.png) | O mesmo diálogo em 768 px, tema escuro |
+
+### Falta
+
+- **T12 (homologação):** uma venda real no cartão recebida com a taxa da maquininha e uma conta parcial antiga corrigida pelo estorno.
