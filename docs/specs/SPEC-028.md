@@ -1,6 +1,6 @@
 # SPEC-028 — Desconto e acréscimo nos pagamentos das contas
 
-> **Status:** ✅ **Aprovada em 14/11/2026**, implementada em três etapas — (1) schema, regras e pagamento com desconto e acréscimo; (2) taxa sugerida, recebimento automático com a taxa e estorno do pagamento; (3) totais da lista, relatório de Contas e roteiro final —, verificada em build local (testes T01 a T11) e homologada em 15/11/2026 (T12) ([evidências](evidencias/SPEC-028/README.md)). **Em ajuste:** a homologação mostrou que o estorno de um pagamento de conta, com a data de hoje, deixa o caixa do dia e do mês diferente do banco. A equipe decidiu em 15/11/2026 que o estorno passa a ter a **data do pagamento original** (OPEN-009). Os estornos já feitos ficam como estão (OPEN-010, decidida no mesmo dia). Falta implementar o ajuste (etapa 4). As notas da implementação e da homologação estão depois da seção 9. As questões em aberto foram decididas pela equipe em entrevista (seção 13), todas pela opção recomendada:
+> **Status:** ✅ **Aprovada em 14/11/2026**, implementada em três etapas — (1) schema, regras e pagamento com desconto e acréscimo; (2) taxa sugerida, recebimento automático com a taxa e estorno do pagamento; (3) totais da lista, relatório de Contas e roteiro final —, verificada em build local (testes T01 a T11) e homologada em 15/11/2026 (T12) ([evidências](evidencias/SPEC-028/README.md)). A homologação mostrou que o estorno de um pagamento de conta, com a data de hoje, deixava o caixa do dia e do mês diferente do banco. A equipe decidiu em 15/11/2026 que o estorno passa a ter a **data do pagamento original** (OPEN-009); os estornos já feitos ficam como estão (OPEN-010). O ajuste foi implementado na **etapa 4** (16/11/2026) e verificado em build local. **Falta conferi-lo na homologação.** As notas da implementação e da homologação estão depois da seção 9. As questões em aberto foram decididas pela equipe em entrevista (seção 13), todas pela opção recomendada:
 > - o desconto e o acréscimo são informados **no pagamento** ou no recebimento de cada conta; o valor original da conta não muda (OPEN-001);
 > - o caixa recebe **só o valor real** que entrou ou saiu; o desconto e o acréscimo ficam registrados no pagamento (OPEN-002);
 > - nas contas de venda no cartão de crédito, a **taxa da maquininha** vem sugerida pela taxa média da Calculadora, e o recebimento automático no vencimento desconta a mesma taxa (OPEN-003);
@@ -279,7 +279,7 @@ Uma loja vende R$ 200,00 no cartão de crédito à vista, numa maquininha que co
   - na conta, pago + descontos − acréscimos ≤ total;
 - o estorno do pagamento usa a origem de estorno e o vínculo com o original que já existem (SPEC-009) e fica ligado à mesma conta;
 - migração sem dados novos: tudo começa em zero;
-- etapa 4 (OPEN-009): coluna com o momento do registro do lançamento, com o padrão "agora"; os lançamentos já existentes recebem a própria data.
+- etapa 4 (OPEN-009): coluna com o momento do registro do lançamento, com o padrão "agora"; nos lançamentos já existentes, a coluna fica vazia e vale a própria data (nota da etapa 4).
 
 ---
 
@@ -334,6 +334,12 @@ Uma loja vende R$ 200,00 no cartão de crédito à vista, numa maquininha que co
 - **Mensagem do estorno:** o serviço devolve "Pagamento estornado. A conta voltou a ficar em aberto." (ou "parcial"), mas a tela da conta se atualiza na hora, e o resultado aparece no próprio detalhe: o pagamento riscado com "Estornado em … por …" e o restante de volta. A Spec não pede mensagem.
 - **Relatório de Contas:** desde esta etapa, a coluna "Pagamentos" mostra só os pagamentos válidos, sem os estornados nem os estornos, para o relatório não mostrar um valor que voltou. A marcação dos estornados (5.6) continua na etapa 3.
 - **"Recebido automaticamente":** o detalhe da conta trocou "automático no vencimento" pelo texto da 5.2.
+
+**Etapa 4 (16/11/2026)** — data do estorno pelo pagamento original (OPEN-009 e OPEN-010):
+- O estorno de pagamento de conta grava a data do pagamento original, e o momento em que foi feito vai para a coluna nova `registradoEm`. O "Estornado em … por …" do detalhe e o "[estornado em …]" do relatório de Contas usam esse momento.
+- **Lançamentos existentes:** a seção 7 dizia que eles "recebem a própria data" na coluna nova. Para isso, a migração precisaria alterar todas as linhas, e o banco recusa alterar lançamentos (INV-006). A OPEN-010 decidiu justamente que nenhum lançamento muda. Por isso, a coluna fica vazia nos lançamentos anteriores, e o sistema usa a própria data quando ela está vazia. O efeito na tela é o mesmo. A seção 7 foi ajustada.
+- O estorno de lançamento avulso e o reembolso da venda cancelada continuam com a data de hoje. O registro deles também ganha o momento, preenchido pelo banco.
+- No fluxo de caixa, os totais do mês continuam somando o pagamento estornado e o estorno, como no estorno avulso desde a SPEC-009. O resultado do mês fica certo, e agora os dois caem no mesmo mês.
 
 **Homologação (15/11/2026)** — aprovada nos passos do roteiro ([evidências](evidencias/SPEC-028/README.md#homologação-t12--15112026)). Ao corrigir uma conta real, a equipe notou que o estorno com a data de hoje deixa o caixa do dia diferente do banco: no dia do estorno aparece uma saída que não existiu. Não é defeito, porque a Spec mandava usar a data de hoje, mas levou à OPEN-009 (data do pagamento original) e à OPEN-010 (os estornos já feitos ficam como estão), as duas decididas pela equipe em 15/11/2026. O ajuste vira a **etapa 4**.
 
@@ -455,7 +461,7 @@ A SPEC-028 estará concluída quando:
 - [x] as questões OPEN-001 a OPEN-008 tiverem sido decididas e registradas (14/11/2026):
   - na baseline, RN44 incluída;
   - RF31, RF71, RF90, RN11, RN20 e RN22 alterados;
-- [ ] não existir divergência conhecida entre a implementação e esta Spec: a mensagem do valor e a forma do estorno foram decididas pela equipe em 15/11/2026, e a Spec foi ajustada; **falta a etapa 4**, para a data do estorno seguir a OPEN-009 (a OPEN-010 foi decidida: os estornos já feitos ficam como estão);
+- [x] não existir divergência conhecida entre a implementação e esta Spec: a mensagem do valor e a forma do estorno foram decididas pela equipe em 15/11/2026, e a Spec foi ajustada; a data do estorno segue a OPEN-009 desde a etapa 4 (16/11/2026), e os estornos já feitos ficaram como estavam (OPEN-010). **Falta conferir a etapa 4 na homologação;**
 - [x] toda divergência em relação à baseline tiver sido explicitamente analisada e registrada nos documentos.
 
 **Implementação por etapas** (referência: até cerca de 400 linhas por revisão): (1) schema, domínio e pagamento com desconto e acréscimo; (2) taxa sugerida, recebimento automático e estorno; (3) lista, relatório, Painel, roteiro e evidências; (4) depois da homologação: data do estorno pela do pagamento original (OPEN-009), sem mexer nos estornos já feitos (OPEN-010).

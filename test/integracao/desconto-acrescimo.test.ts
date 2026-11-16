@@ -244,6 +244,27 @@ describe("T04 — estorno do pagamento de conta (CA-07, CA-09, CA-12, INV-001, I
     salvo(await servicos.cancelarConta(id, deps()));
   });
 
+  it("o estorno tem a data do pagamento original e guarda quando foi feito (etapa 4, OPEN-009)", async () => {
+    // O caso da homologação: recebido dias antes e estornado hoje.
+    const antes = new Date(Date.parse(`${HOJE}T12:00:00Z`) - 6 * 86_400_000).toISOString().slice(0, 10);
+    const id = await conta("RECEBER", "200");
+    salvo(await pagar(id, { valor: "194", data: antes, forma: "CREDITO" }));
+    const [original] = await lancamentosDa(id);
+    const agora = new Date();
+    salvo(await servicos.estornar(original.id, { ...deps(), agora }));
+
+    const [, estorno] = await lancamentosDa(id);
+    expect(estorno.origem).toBe("ESTORNO");
+    expect(estorno.data.getTime()).toBe(original.data.getTime());
+    expect(estorno.registradoEm?.getTime()).toBe(agora.getTime());
+    // O pagamento foi registrado agora pelo banco; o detalhe e o relatório dizem quando o estorno foi feito.
+    expect(original.registradoEm).toBeInstanceOf(Date);
+    const c = await fin().detalharConta(id, HOJE);
+    expect(c.lancamentos[0].estorno?.data.getTime()).toBe(agora.getTime());
+    const [exportada] = await criarConsultasDeRelatorios(cliente(), negocioA).contas(antes, HOJE);
+    expect(exportada.pagamentos[0].estornadoEm?.getTime()).toBe(agora.getTime());
+  });
+
   it("com dois pagamentos, estornar um deixa a conta parcial", async () => {
     const id = await conta("PAGAR", "100");
     salvo(await pagar(id, { valor: "40" }));

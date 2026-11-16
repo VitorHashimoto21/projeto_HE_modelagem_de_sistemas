@@ -899,6 +899,9 @@ model LancamentoFinanceiro {
   motivoDesconto      MotivoDesconto?
   motivoAcrescimo     MotivoAcrescimo?
   observacaoPagamento String?              @db.VarChar(120) // obrigatória com o motivo "Outro"
+  /// SPEC-028 (etapa 4, OPEN-009): quando o lançamento foi gravado. O estorno de pagamento de conta tem a data do
+  /// pagamento original, e este campo guarda quando foi feito. Vazio nos lançamentos anteriores (OPEN-010): vale a data.
+  registradoEm        DateTime?            @default(now())
 
   negocio Negocio            @relation(fields: [negocioId], references: [id])
   venda   Venda?             @relation(fields: [vendaId], references: [id])
