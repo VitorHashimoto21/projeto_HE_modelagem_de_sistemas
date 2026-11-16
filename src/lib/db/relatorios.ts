@@ -183,7 +183,7 @@ export function criarConsultasDeRelatorios(cliente: ClienteDoNegocio, negocioId:
               acrescimo: true,
               motivoDesconto: true,
               motivoAcrescimo: true,
-              estornadoPor: { select: { data: true } },
+              estornadoPor: { select: { data: true, registradoEm: true } },
             },
           },
         },
@@ -210,7 +210,8 @@ export function criarConsultasDeRelatorios(cliente: ClienteDoNegocio, negocioId:
             acrescimoCentavos: centavosDe(l.acrescimo),
             motivoDesconto: l.motivoDesconto,
             motivoAcrescimo: l.motivoAcrescimo,
-            estornadoEm: l.estornadoPor?.data ?? null,
+            // Quando o estorno foi feito (SPEC-028, etapa 4); nos anteriores, a própria data do estorno.
+            estornadoEm: l.estornadoPor ? (l.estornadoPor.registradoEm ?? l.estornadoPor.data) : null,
           })),
         };
       });

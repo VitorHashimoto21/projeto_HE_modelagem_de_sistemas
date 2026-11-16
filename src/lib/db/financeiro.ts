@@ -212,7 +212,7 @@ export async function estornarPagamento(tx: Tx, negocioId: string, lancamentoId:
   if (!UUID.test(lancamentoId)) throw new LancamentoNaoEncontrado();
   const l = await tx.lancamentoFinanceiro.findFirst({
     where: { id: lancamentoId, origem: "CONTA" },
-    select: { contaId: true, tipo: true, categoria: true, valor: true, desconto: true, acrescimo: true, descricao: true, estornadoPor: { select: { id: true } } },
+    select: { contaId: true, tipo: true, categoria: true, valor: true, desconto: true, acrescimo: true, descricao: true, data: true, estornadoPor: { select: { id: true } } },
   });
   if (!l || !l.contaId) throw new LancamentoNaoEncontrado();
   if (l.estornadoPor) throw new JaEstornado();
@@ -239,7 +239,10 @@ export async function estornarPagamento(tx: Tx, negocioId: string, lancamentoId:
         categoria: l.categoria,
         valor: l.valor,
         descricao: descricaoDoEstorno(l.descricao),
-        data: agora,
+        // Etapa 4 (OPEN-009): o estorno corrige um registro, e não é dinheiro saindo de novo. Fica na data do
+        // pagamento original, para os dois se anularem no mesmo dia; o momento do estorno fica em registradoEm.
+        data: l.data,
+        registradoEm: agora,
         usuarioId,
       },
       select: { id: true },
@@ -988,7 +991,7 @@ export function criarConsultasFinanceiras(cliente: ClienteDoNegocio, negocioId: 
                 motivoAcrescimo: true,
                 observacaoPagamento: true,
                 usuario: { select: { nome: true, administradorEm: true } },
-                estornadoPor: { select: { data: true, usuario: { select: { nome: true, administradorEm: true } } } },
+                estornadoPor: { select: { data: true, registradoEm: true, usuario: { select: { nome: true, administradorEm: true } } } },
               },
             },
           },
@@ -1020,7 +1023,8 @@ export function criarConsultasFinanceiras(cliente: ClienteDoNegocio, negocioId: 
           motivoDesconto: l.motivoDesconto,
           motivoAcrescimo: l.motivoAcrescimo,
           observacao: l.observacaoPagamento,
-          estorno: l.estornadoPor ? { data: l.estornadoPor.data, registradoPor: l.estornadoPor.usuario ? autorDoHistorico(l.estornadoPor.usuario) : null } : null,
+          // Quando o estorno foi feito (etapa 4); nos anteriores, a própria data do estorno.
+          estorno: l.estornadoPor ? { data: l.estornadoPor.registradoEm ?? l.estornadoPor.data, registradoPor: l.estornadoPor.usuario ? autorDoHistorico(l.estornadoPor.usuario) : null } : null,
         })),
       };
     },

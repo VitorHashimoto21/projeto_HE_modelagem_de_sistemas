@@ -125,3 +125,34 @@ Feita pela equipe no ambiente de homologação, com o negócio de teste **HE Tes
 **Resultado:** a homologação foi aprovada nos passos do roteiro.
 
 **Observação da equipe (depois das capturas):** ao corrigir uma conta real do mesmo jeito do passo 4, recebida em 09/11 e estornada em 15/11, o caixa do dia 15/11 mostrou uma saída do valor do recebimento sem entrada nenhuma. O saldo total estava certo, mas o caixa do dia não batia com o banco. O estorno seguia a regra da Spec, que mandava usar a data de hoje. A equipe decidiu que o estorno de pagamento de conta passa a ter a data do pagamento original (OPEN-009, etapa 4); os estornos já feitos ficam como estão (OPEN-010).
+
+## Etapa 4 — data do estorno pelo pagamento original (16/11/2026)
+
+Ajuste decidido depois da homologação (OPEN-009 e OPEN-010). Mesmo ambiente das etapas anteriores.
+
+### Testes automatizados
+
+| # | Teste | Onde | Resultado |
+|---|---|---|---|
+| T04 (parte) | Um recebimento de 6 dias atrás é estornado hoje. O estorno fica com a data do recebimento, e o momento em que foi feito fica registrado. O detalhe e o relatório mostram esse momento. O teste foi escrito antes da mudança e falhava (o estorno saía com a data de hoje) | `test/integracao/desconto-acrescimo.test.ts` | ✅ |
+
+**Suíte completa:** 723 testes unitários e 442 de integração, além de lint, tipos, a checagem do schema (`migrate diff` sem diferença) e o build.
+
+### Roteiro no navegador
+
+13 verificações, todas aprovadas:
+- um recebimento de R$ 194,00 registrado com a data de 6 dias atrás não muda o "Hoje" da faixa do caixa;
+- o estorno feito hoje fica, no banco, com a data do recebimento e o momento do registro de hoje;
+- o detalhe mostra "Estornado em {hoje} por …", e a conta volta a ficar a receber;
+- o "Hoje" da faixa continua sem saída;
+- no fluxo de caixa, o recebimento (riscado) e o estorno aparecem no mesmo dia, e nenhum estorno aparece hoje;
+- telas em 1440 e 390 px, sem rolagem horizontal; axe sem violações no fluxo de caixa, claro e escuro.
+
+| Captura | O que mostra |
+|---|---|
+| [`s28d_01_estornado_hoje_1440_claro.png`](s28d_01_estornado_hoje_1440_claro.png) | Detalhe da conta: recebimento de dias atrás estornado hoje |
+| [`s28d_02_fluxo_mesmo_dia_1440_claro.png`](s28d_02_fluxo_mesmo_dia_1440_claro.png) | Fluxo de caixa: o recebimento e o estorno no mesmo dia, com a faixa de hoje zerada |
+
+### Falta
+
+- Conferir na homologação: estornar um pagamento de outro dia e ver o estorno na data do pagamento.
