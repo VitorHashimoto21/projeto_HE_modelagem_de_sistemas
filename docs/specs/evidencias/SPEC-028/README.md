@@ -153,6 +153,23 @@ Ajuste decidido depois da homologação (OPEN-009 e OPEN-010). Mesmo ambiente da
 | [`s28d_01_estornado_hoje_1440_claro.png`](s28d_01_estornado_hoje_1440_claro.png) | Detalhe da conta: recebimento de dias atrás estornado hoje |
 | [`s28d_02_fluxo_mesmo_dia_1440_claro.png`](s28d_02_fluxo_mesmo_dia_1440_claro.png) | Fluxo de caixa: o recebimento e o estorno no mesmo dia, com a faixa de hoje zerada |
 
-### Falta
+### Homologação da etapa 4 (15/11/2026)
 
-- Conferir na homologação: estornar um pagamento de outro dia e ver o estorno na data do pagamento.
+Feita pela equipe no ambiente de homologação, no mesmo negócio de teste. A venda nº 28, no cartão, foi recebida em 10/11 com R$ 775,99 e R$ 24,00 de desconto da taxa, e o recebimento foi estornado em 15/11. Nas capturas, o nome do Dono está coberto.
+
+| Passo | O que foi conferido | Captura | Resultado |
+|---|---|---|---|
+| Antes | Saldo R$ 5.402,19; no mês, entrou R$ 2.769,19 e saiu R$ 823,19; resultado R$ 1.946,00; hoje, + R$ 875,20 e − R$ 279,20 | [`t12e4_01`](homologacao/t12e4_01_antes_do_recebimento.png) | ✅ |
+| Recebimento em 10/11 | A entrada de R$ 775,99 aparece em 10/11. O saldo vai a R$ 6.178,18, e o "Hoje" não muda | [`t12e4_02`](homologacao/t12e4_02_recebido_em_10_11.png) | ✅ |
+| Estorno hoje | O estorno de − R$ 775,99 aparece **em 10/11**, logo abaixo do recebimento riscado. O saldo e o resultado do mês voltam a R$ 5.402,19 e R$ 1.946,00, e o "Hoje" continua + R$ 875,20 e − R$ 279,20 | [`t12e4_03`](homologacao/t12e4_03_estornado_hoje_caixa.png) | ✅ |
+| Detalhe da conta | O recebimento aparece riscado com "Estornado em 15/11/2026 por …", e a conta volta a "A receber" (R$ 799,99). O formulário sugere de novo o desconto de R$ 24,00 (3%) | [`t12e4_04`](homologacao/t12e4_04_estornado_hoje_detalhe.png) | ✅ |
+
+**Também conferido:**
+- a venda nº 27 também teve o recebimento de 09/11 estornado, e os dois lançamentos ficaram em 09/11;
+- o estorno feito antes da etapa 4 (a "Venda Manual (exemplo)") continua em 15/11, como a OPEN-010 decidiu.
+
+**Resultado:** a homologação foi aprovada.
+
+**Observações sem defeito:**
+- os totais "Entrou" e "Saiu" do mês somam o pagamento estornado e o estorno, como no estorno avulso desde a SPEC-009, e o resultado do mês fica certo;
+- nas capturas 2 e 4, o menu lateral aparece no meio da página por causa da ferramenta de captura de página inteira, e não da tela do HE.
