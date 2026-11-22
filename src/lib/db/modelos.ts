@@ -49,6 +49,8 @@ export const MODELOS = {
       contas: { modelo: "ContaPagarReceber" },
       clientes: { modelo: "Cliente" },
       fornecedores: { modelo: "Fornecedor" },
+      compras: { modelo: "Compra" },
+      itensCompra: { modelo: "ItemCompra" },
       despesasFixas: { modelo: "DespesaFixa" },
     },
   },
@@ -92,6 +94,7 @@ export const MODELOS = {
       negocio: { modelo: "Negocio", fk: "negocioId" },
       contas: { modelo: "ContaPagarReceber" },
       despesasFixas: { modelo: "DespesaFixa" },
+      compras: { modelo: "Compra" },
     },
   },
   Item: {
@@ -105,6 +108,7 @@ export const MODELOS = {
       materiais: { modelo: "MaterialServico" },
       usadoEm: { modelo: "MaterialServico" },
       itensVenda: { modelo: "ItemVenda" },
+      itensCompra: { modelo: "ItemCompra" },
     },
   },
   // SPEC-020 (RF79): subcategoria livre do negócio dentro de uma categoria fixa.
@@ -129,6 +133,7 @@ export const MODELOS = {
       negocio: { modelo: "Negocio", fk: "negocioId" },
       item: { modelo: "Item", fk: "itemId" },
       venda: { modelo: "Venda", fk: "vendaId" },
+      compra: { modelo: "Compra", fk: "compraId" },
       usuario: { modelo: "Usuario", fk: "usuarioId" },
     },
   },
@@ -147,6 +152,7 @@ export const MODELOS = {
       negocio: { modelo: "Negocio", fk: "negocioId" },
       item: { modelo: "Item", fk: "itemId" },
       usuario: { modelo: "Usuario", fk: "usuarioId" },
+      compra: { modelo: "Compra", fk: "compraId" },
     },
   },
   DespesaFixa: {
@@ -215,7 +221,30 @@ export const MODELOS = {
       despesaFixa: { modelo: "DespesaFixa", fk: "despesaFixaId" },
       fornecedor: { modelo: "Fornecedor", fk: "fornecedorId" },
       cliente: { modelo: "Cliente", fk: "clienteId" },
+      compra: { modelo: "Compra", fk: "compraId" },
       lancamentos: { modelo: "LancamentoFinanceiro" },
+    },
+  },
+  // SPEC-027: compras de fornecedores e os produtos de cada compra.
+  Compra: {
+    classe: "operacional",
+    relacoes: {
+      negocio: { modelo: "Negocio", fk: "negocioId" },
+      fornecedor: { modelo: "Fornecedor", fk: "fornecedorId" },
+      registradaPor: { modelo: "Usuario", fk: "registradaPorId" },
+      canceladaPor: { modelo: "Usuario", fk: "canceladaPorId" },
+      itens: { modelo: "ItemCompra" },
+      movimentacoes: { modelo: "MovimentacaoEstoque" },
+      contas: { modelo: "ContaPagarReceber" },
+      custos: { modelo: "HistoricoCusto" },
+    },
+  },
+  ItemCompra: {
+    classe: "operacional",
+    relacoes: {
+      negocio: { modelo: "Negocio", fk: "negocioId" },
+      compra: { modelo: "Compra", fk: "compraId" },
+      item: { modelo: "Item", fk: "itemId" },
     },
   },
 
@@ -278,6 +307,8 @@ export const MODELOS = {
       registrosSuporte: { modelo: "RegistroSuporte" },
       pedidosFeitos: { modelo: "PedidoPlataforma" },
       pedidosDecididos: { modelo: "PedidoPlataforma" },
+      comprasRegistradas: { modelo: "Compra" },
+      comprasCanceladas: { modelo: "Compra" },
     },
   },
   FaixaTributaria: { classe: "global", relacoes: {} },

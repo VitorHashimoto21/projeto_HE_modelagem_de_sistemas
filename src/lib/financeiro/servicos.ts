@@ -43,6 +43,7 @@ export const MENSAGENS_FLUXO_FINANCEIRO = {
   contaNaoEditavel: {
     venda: "Contas geradas por uma venda não podem ser alteradas aqui.",
     despesa: "Contas geradas por uma despesa fixa não podem ser alteradas. Altere a despesa fixa para os próximos meses.",
+    compra: "Contas geradas por uma compra não podem ser alteradas aqui. A correção e o cancelamento são feitos na compra.",
     "com-pagamento": "Esta conta já tem pagamento registrado e não pode mais ser alterada nem cancelada.",
     encerrada: "Esta conta já está quitada ou cancelada.",
   },

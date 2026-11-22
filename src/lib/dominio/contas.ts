@@ -56,10 +56,10 @@ export type OpcoesDoVinculo = { fornecedores: OpcaoDePessoa[]; clientes: OpcaoDe
 
 export const SEM_OPCOES: OpcoesDoVinculo = { fornecedores: [], clientes: [], podeCriarFornecedor: false, podeCriarCliente: false };
 
-/** Origem da conta (5.6): manual, gerada por uma despesa fixa ou por uma venda no cartão. */
-export const ORIGENS_DA_CONTA = ["manual", "despesa", "venda"] as const;
+/** Origem da conta (5.6): manual, gerada por uma despesa fixa, por uma venda no cartão ou por uma compra (SPEC-027). */
+export const ORIGENS_DA_CONTA = ["manual", "despesa", "venda", "compra"] as const;
 export type OrigemDaConta = (typeof ORIGENS_DA_CONTA)[number];
-export const ROTULO_ORIGEM: Record<OrigemDaConta, string> = { manual: "Manual", despesa: "Despesa fixa", venda: "Venda no cartão" };
+export const ROTULO_ORIGEM: Record<OrigemDaConta, string> = { manual: "Manual", despesa: "Despesa fixa", venda: "Venda no cartão", compra: "Compra" };
 
 export const MENSAGENS_DOS_FILTROS = {
   dataInvalida: "Data inválida.",

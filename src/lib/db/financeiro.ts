@@ -25,7 +25,7 @@ import {
   tipoDoPagamento,
   vencimentoNaCompetencia,
 } from "@/lib/dominio/financeiro";
-import { filtraPagamentos, SEM_FILTROS, type FiltrosDasContas, type FormaDoPagamento } from "@/lib/dominio/contas";
+import { filtraPagamentos, SEM_FILTROS, type FiltrosDasContas, type FormaDoPagamento, type OrigemDaConta } from "@/lib/dominio/contas";
 import { nomeDeExibicao, type TipoCliente } from "@/lib/dominio/cliente";
 import { mascararNome } from "@/lib/dominio/suporte";
 import { ClienteNaoEncontrado } from "./clientes";
@@ -89,7 +89,7 @@ export class EstornoNaoPermitido extends Error {
   }
 }
 export class ContaNaoEditavel extends Error {
-  constructor(public readonly motivo: "venda" | "despesa" | "com-pagamento" | "encerrada") {
+  constructor(public readonly motivo: "venda" | "despesa" | "compra" | "com-pagamento" | "encerrada") {
     super("Esta conta não pode ser alterada.");
     this.name = "ContaNaoEditavel";
   }
@@ -318,7 +318,7 @@ export type ContaExibida = {
   vencimento: string;
   status: StatusConta;
   atrasada: boolean;
-  origem: "venda" | "despesa" | "manual";
+  origem: OrigemDaConta;
   pessoa: PessoaDaConta | null;
   numeroDocumento: string | null;
 };
@@ -377,8 +377,8 @@ export function criarConsultasFinanceiras(cliente: ClienteDoNegocio, negocioId: 
     return opcoes.mascararNomes ? mascararNome(nome) : nome;
   };
 
-  const origemDaConta = (c: { parcelaId: string | null; despesaFixaId: string | null }) =>
-    c.parcelaId ? ("venda" as const) : c.despesaFixaId ? ("despesa" as const) : ("manual" as const);
+  const origemDaConta = (c: { parcelaId: string | null; despesaFixaId: string | null; compraId: string | null }): OrigemDaConta =>
+    c.parcelaId ? "venda" : c.despesaFixaId ? "despesa" : c.compraId ? "compra" : "manual";
 
   type PessoaLida = { id: string; tipo: TipoCliente; nome: string; nomeFantasia: string | null } | null;
   type ContaLida = {
@@ -394,6 +394,7 @@ export function criarConsultasFinanceiras(cliente: ClienteDoNegocio, negocioId: 
     status: StatusConta;
     parcelaId: string | null;
     despesaFixaId: string | null;
+    compraId: string | null;
     numeroDocumento: string | null;
     fornecedor: PessoaLida;
     cliente: PessoaLida;
@@ -445,6 +446,7 @@ export function criarConsultasFinanceiras(cliente: ClienteDoNegocio, negocioId: 
     status: true,
     parcelaId: true,
     despesaFixaId: true,
+    compraId: true,
     numeroDocumento: true,
     fornecedor: { select: { id: true, tipo: true, nome: true, nomeFantasia: true } },
     cliente: { select: { id: true, tipo: true, nome: true, nomeFantasia: true } },
@@ -691,9 +693,10 @@ export function criarConsultasFinanceiras(cliente: ClienteDoNegocio, negocioId: 
       );
     }
     if (filtros.categoria) e.push({ categoria: filtros.categoria });
-    if (filtros.origem === "manual") e.push({ parcelaId: null, despesaFixaId: null });
+    if (filtros.origem === "manual") e.push({ parcelaId: null, despesaFixaId: null, compraId: null });
     else if (filtros.origem === "despesa") e.push({ despesaFixaId: { not: null } });
     else if (filtros.origem === "venda") e.push({ parcelaId: { not: null } });
+    else if (filtros.origem === "compra") e.push({ compraId: { not: null } });
     return e;
   }
 
@@ -1054,7 +1057,7 @@ export function criarConsultasFinanceiras(cliente: ClienteDoNegocio, negocioId: 
       if (!atual) throw new ContaNaoEncontrada();
       const vinculo = await conferirPessoa(d.tipo, d.pessoaId ?? null, d.tipo === "PAGAR" ? atual.fornecedorId : atual.clienteId);
       const { count } = await cliente.contaPagarReceber.updateMany({
-        where: { id, parcelaId: null, despesaFixaId: null, status: "ABERTA", valorPago: 0 },
+        where: { id, parcelaId: null, despesaFixaId: null, compraId: null, status: "ABERTA", valorPago: 0 },
         data: {
           tipo: d.tipo,
           descricao: d.descricao,
@@ -1091,8 +1094,10 @@ export function criarConsultasFinanceiras(cliente: ClienteDoNegocio, negocioId: 
      */
     async corrigirVinculo(id: string, d: DadosDoVinculo): Promise<void> {
       if (!UUID.test(id)) throw new ContaNaoEncontrada();
-      const c = await cliente.contaPagarReceber.findFirst({ where: { id }, select: { tipo: true, parcelaId: true, fornecedorId: true, clienteId: true } });
+      const c = await cliente.contaPagarReceber.findFirst({ where: { id }, select: { tipo: true, parcelaId: true, compraId: true, fornecedorId: true, clienteId: true } });
       if (!c) throw new ContaNaoEncontrada();
+      // SPEC-027 (5.7): a conta da compra é corrigida pela compra, que corrige todas as contas juntas.
+      if (c.compraId) throw new ContaNaoEditavel("compra");
       const vinculo = c.parcelaId ? { fornecedorId: null, clienteId: null } : await conferirPessoa(c.tipo, d.pessoaId, c.tipo === "PAGAR" ? c.fornecedorId : c.clienteId);
       const { count } = await cliente.contaPagarReceber.updateMany({ where: { id }, data: { ...vinculo, numeroDocumento: d.numeroDocumento } });
       if (count === 0) throw new ContaNaoEncontrada();
@@ -1113,7 +1118,7 @@ export function criarConsultasFinanceiras(cliente: ClienteDoNegocio, negocioId: 
     async cancelarConta(id: string): Promise<void> {
       if (!UUID.test(id)) throw new ContaNaoEncontrada();
       const { count } = await cliente.contaPagarReceber.updateMany({
-        where: { id, parcelaId: null, despesaFixaId: null, status: "ABERTA", valorPago: 0 },
+        where: { id, parcelaId: null, despesaFixaId: null, compraId: null, status: "ABERTA", valorPago: 0 },
         data: { status: "CANCELADA" },
       });
       if (count === 0) await explicarRecusa(id);
@@ -1203,10 +1208,11 @@ export function criarConsultasFinanceiras(cliente: ClienteDoNegocio, negocioId: 
 
   /** Por que a conta não pôde ser editada/cancelada (CA-11). */
   async function explicarRecusa(id: string): Promise<never> {
-    const c = await cliente.contaPagarReceber.findFirst({ where: { id }, select: { parcelaId: true, despesaFixaId: true, status: true, valorPago: true } });
+    const c = await cliente.contaPagarReceber.findFirst({ where: { id }, select: { parcelaId: true, despesaFixaId: true, compraId: true, status: true, valorPago: true } });
     if (!c) throw new ContaNaoEncontrada();
     if (c.parcelaId) throw new ContaNaoEditavel("venda");
     if (c.despesaFixaId) throw new ContaNaoEditavel("despesa");
+    if (c.compraId) throw new ContaNaoEditavel("compra");
     if (c.status === "QUITADA" || c.status === "CANCELADA") throw new ContaNaoEditavel("encerrada");
     throw new ContaNaoEditavel("com-pagamento");
   }

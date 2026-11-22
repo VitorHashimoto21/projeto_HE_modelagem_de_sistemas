@@ -12,7 +12,7 @@
 > - **nova versão da Política com novo aceite** (OPEN-009);
 > - **sem relatório novo** (OPEN-010).
 >
-> A baseline foi ajustada: RF91 e RN43 novos; RF08, RF15, RF30, RF89, RF90 e RNF05 alterados. Nada desta Spec foi implementado ainda; a implementação é por etapas (seção 14). Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar), a pedido da equipe. Origem: pendência 8 do Mapa, das melhorias de Estoque e Financeiro pedidas em 01/11/2026 a partir do uso real por uma usuária com CNPJ. É a terceira dessas Specs: usa o histórico de custo da SPEC-025 e os fornecedores da SPEC-026. A SPEC-019, concluída antes desta por decisão da equipe (01/11/2026), já garante que a compra nasce fora das correções do suporte e recusada em negócio suspenso.
+> A baseline foi ajustada: RF91 e RN43 novos; RF08, RF15, RF30, RF89, RF90 e RNF05 alterados. **Em implementação por etapas** (seção 14): a etapa 1a (o banco das compras) foi feita em 22/11/2026; as notas estão no fim da seção 9. Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar), a pedido da equipe. Origem: pendência 8 do Mapa, das melhorias de Estoque e Financeiro pedidas em 01/11/2026 a partir do uso real por uma usuária com CNPJ. É a terceira dessas Specs: usa o histórico de custo da SPEC-025 e os fornecedores da SPEC-026. A SPEC-019, concluída antes desta por decisão da equipe (01/11/2026), já garante que a compra nasce fora das correções do suporte e recusada em negócio suspenso.
 >
 > **Mapa:** [`MAPA_DE_SPECS.md`](../MAPA_DE_SPECS.md)
 > - **Altera:**
@@ -408,6 +408,16 @@ No custo médio, o saldo antes é o saldo do produto no momento do registro; a e
 | **Detalhar fornecedor** (SPEC-026) | id | + compras [{id, numero, data, total, situação}] (até 50) e total comprado | Sem mudança |
 | **Listar contas** (SPEC-026) | + origem "Compra" | + compra {id, numero} em cada conta da compra | Sem mudança |
 
+### Notas da implementação
+
+**Etapa 1a (22/11/2026)** — o banco das compras: schema, migração e proteções, e as contas da compra no Financeiro:
+- **A etapa 1 foi dividida em três.** Ela passava muito do tamanho de referência de um PR (cerca de 400 linhas de código). A 1a traz o banco: as tabelas, as regras do banco (seção 7) e o tratamento das contas da compra no Financeiro, com os testes T04. A 1b traz as regras e a gravação (validação, rateio, contas, custo e registrar), com os testes T01, T02, T03 e T09. A 1c traz a tela "Registrar compra", com o resumo, e o atalho no Estoque. Até a 1c, quem usa o HE não vê nada novo, salvo o filtro de origem "Compra" no Financeiro (abaixo), que fica sem contas.
+- **Unicidade do nº do documento (INV-011).** A seção 7 previa um índice único parcial. O CI compara o banco com o schema do Prisma, que não representa índice parcial. Por isso, a regra usa uma coluna-chave com um índice único comum, como o nome e o código do item (SPEC-006 e SPEC-024). A chave só existe na compra registrada com nº e fica vazia na cancelada e na sem nota. O efeito é o mesmo, e o banco recusa a repetição mesmo com compras simultâneas.
+- **Origem do lançamento.** A seção 7 previa um valor novo na origem do lançamento. Com a decisão de 21/11/2026 (toda compra gera contas a pagar), nenhum lançamento nasce da compra. O pagamento de cada conta tem a origem de pagamento de conta, como hoje, e os estornos do cancelamento terão a origem de estorno. Por isso, a origem do lançamento não ganhou valor novo. A ligação do lançamento com a compra e o tipo novo de movimentação (a saída do cancelamento) entram na etapa 3, que os usa. **Proposta:** (2) ajustar o texto da seção 7 e as menções que sobraram do "lançamento" da compra à vista (5.6, 8 e 9), escritas antes da decisão de 21/11/2026.
+- **Contas da compra no Financeiro já na etapa 1a.** A origem "Compra" na lista e no detalhe da conta e o filtro de origem "Compra" estavam na etapa 2. Entraram agora, junto com a regra de que a conta da compra não é editada, cancelada nem corrigida pelo Financeiro (5.7). Assim, a DEVELOP nunca trata uma conta de compra como manual. O pagamento e o estorno do pagamento continuam pelo Financeiro. Até a etapa 3, o fornecedor e o nº do documento dessas contas não têm correção, porque a correção pela compra é da etapa 3. O link "Compra nº N" na conta continua na etapa 2.
+- **Proteções no banco**, além dos CHECKs da seção 7: o produto da compra é físico e ativo (gatilho); os produtos da compra nunca mudam; a compra nunca é apagada nem muda de negócio; e as tabelas novas entram no gatilho do negócio suspenso.
+- **Modelo lógico.** O `MODELO_LOGICO_BANCO.md` será atualizado na etapa 4, com as tabelas desta Spec. Os campos da SPEC-028 também ainda não estão nele.
+
 ---
 
 ## 10. Requisitos não funcionais aplicáveis
@@ -619,6 +629,6 @@ A SPEC-027 estará concluída quando:
 - [ ] não existir divergência conhecida entre a implementação e esta Spec;
 - [ ] toda divergência em relação à baseline tiver sido explicitamente analisada e registrada nos documentos.
 
-**Implementação por etapas:** a Spec é grande para um PR só (referência: até cerca de 400 linhas por revisão). Divisão prevista: (1) schema, domínio e registrar compra; (2) lista, detalhe e ligações; (3) correção, cancelamento, suporte e LGPD; (4) roteiro, evidências e homologação.
+**Implementação por etapas:** a Spec é grande para um PR só (referência: até cerca de 400 linhas por revisão). Divisão prevista: (1) schema, domínio e registrar compra, em três partes: 1a (o banco: schema, migração e proteções), 1b (regras e gravação) e 1c (tela "Registrar compra" com o resumo e o atalho no Estoque); (2) lista, detalhe e ligações; (3) correção, cancelamento, suporte e LGPD; (4) roteiro, evidências e homologação.
 
 **Regra fundamental:** a implementação obedece a esta Spec aprovada. Se surgir conflito entre código, Spec e documentos de modelagem, o comportamento não é alterado em silêncio. A divergência é registrada com duas propostas, (1) corrigir a implementação ou (2) alterar a baseline, e a decisão é da equipe.

@@ -72,6 +72,25 @@ enum TipoMovimentacao {
   ENTRADA_ESTORNO // RN25: devolução de estoque por cancelamento de venda
 }
 
+// SPEC-027 (OPEN-004): à vista ou a prazo (com entrada opcional). Toda compra gera contas a pagar;
+// a forma (Pix, dinheiro…) é escolhida no pagamento de cada conta no Financeiro.
+enum CondicaoCompra {
+  A_VISTA
+  A_PRAZO
+}
+
+enum SituacaoCompra {
+  REGISTRADA
+  CANCELADA // SPEC-027 (OPEN-006): nunca apagada
+}
+
+// SPEC-027 (OPEN-001): o custo do produto depois da compra, escolhido produto por produto.
+enum EscolhaCustoCompra {
+  MEDIO // (saldo antes × custo atual + valor da linha com o rateio) ÷ (saldo antes + quantidade)
+  COMPRA // custo unitário desta compra, com o rateio (OPEN-005)
+  ATUAL // mantém o custo; nada no histórico
+}
+
 // RF17: motivo obrigatório apenas quando tipo = SAIDA_MANUAL (validar na aplicação)
 enum MotivoSaidaManual {
   PERDA
@@ -291,23 +310,25 @@ model Usuario {
   administradorEm          DateTime? // SPEC-018 (RF74, OPEN-001): Administrador da plataforma desde; concedido só pelo script (5.1)
   segundoFatorRedefinidoEm DateTime? // SPEC-019 (OPEN-002): 2º fator redefinido pelo workflow; sessões abertas antes disso deixam de valer
 
-  membroEm          MembroNegocio[]
-  movimentacoes     MovimentacaoEstoque[] // RNF05: auditoria (quem fez a alteração)
-  historicoPrecos   HistoricoPreco[] // RNF05: auditoria (quem confirmou o preço)
-  historicoCustos   HistoricoCusto[] // SPEC-025 (RNF05): quem alterou o custo
-  vendasCanceladas  Venda[]                @relation("VendaCanceladaPor") // RF65: auditoria do cancelamento
-  vendasRegistradas Venda[]                @relation("VendaRegistradaPor") // SPEC-008 (OPEN-006)
-  lancamentos       LancamentoFinanceiro[] @relation("LancamentoRegistradoPor") // SPEC-009 (RNF05)
-  convitesEnviados  Convite[]              @relation("ConviteEnviadoPor") // RF72
-  planosAlterados   Negocio[]              @relation("PlanoAlteradoPor") // RF73
-  negociosSuspensos Negocio[]              @relation("NegocioSuspensoPor") // SPEC-019 (5.7)
-  trocasDePlano     HistoricoPlano[] // SPEC-013 (OPEN-007): quem trocou o plano
-  acessosLiberados  AcessoSuporte[]        @relation("AcessoLiberadoPor") // SPEC-018 (RF75)
-  acessosRevogados  AcessoSuporte[]        @relation("AcessoRevogadoPor") // SPEC-018 (RF75)
-  registrosSuporte  RegistroSuporte[] // SPEC-018 (RF77): autor do evento
-  pedidosFeitos     PedidoPlataforma[]     @relation("PedidoSolicitadoPor") // SPEC-019 (5.8)
-  pedidosDecididos  PedidoPlataforma[]     @relation("PedidoDecididoPor") // SPEC-019 (5.8)
-  createdAt         DateTime               @default(now())
+  membroEm           MembroNegocio[]
+  movimentacoes      MovimentacaoEstoque[] // RNF05: auditoria (quem fez a alteração)
+  historicoPrecos    HistoricoPreco[] // RNF05: auditoria (quem confirmou o preço)
+  historicoCustos    HistoricoCusto[] // SPEC-025 (RNF05): quem alterou o custo
+  vendasCanceladas   Venda[]                @relation("VendaCanceladaPor") // RF65: auditoria do cancelamento
+  vendasRegistradas  Venda[]                @relation("VendaRegistradaPor") // SPEC-008 (OPEN-006)
+  lancamentos        LancamentoFinanceiro[] @relation("LancamentoRegistradoPor") // SPEC-009 (RNF05)
+  convitesEnviados   Convite[]              @relation("ConviteEnviadoPor") // RF72
+  planosAlterados    Negocio[]              @relation("PlanoAlteradoPor") // RF73
+  negociosSuspensos  Negocio[]              @relation("NegocioSuspensoPor") // SPEC-019 (5.7)
+  trocasDePlano      HistoricoPlano[] // SPEC-013 (OPEN-007): quem trocou o plano
+  acessosLiberados   AcessoSuporte[]        @relation("AcessoLiberadoPor") // SPEC-018 (RF75)
+  acessosRevogados   AcessoSuporte[]        @relation("AcessoRevogadoPor") // SPEC-018 (RF75)
+  registrosSuporte   RegistroSuporte[] // SPEC-018 (RF77): autor do evento
+  pedidosFeitos      PedidoPlataforma[]     @relation("PedidoSolicitadoPor") // SPEC-019 (5.8)
+  pedidosDecididos   PedidoPlataforma[]     @relation("PedidoDecididoPor") // SPEC-019 (5.8)
+  comprasRegistradas Compra[]               @relation("CompraRegistradaPor") // SPEC-027 (RNF05)
+  comprasCanceladas  Compra[]               @relation("CompraCanceladaPor") // SPEC-027 (OPEN-006)
+  createdAt          DateTime               @default(now())
 }
 
 model Negocio {
@@ -340,6 +361,7 @@ model Negocio {
   faturamentoMensalEstimado Decimal? @db.Decimal(12, 2) // RF50: recomendado = capacidade × ticket, editável
   cmvEstimado               Decimal? @db.Decimal(5, 2) // RF62: CMV% usado enquanto não há histórico
   proximoNumeroVenda        Int      @default(1) // SPEC-008 (OPEN-007): próximo número de venda, incrementado na transação da venda
+  proximoNumeroCompra       Int      @default(1) // SPEC-027: próximo número de compra, como o da venda
   diasCoberturaEstoque      Int      @default(7) // RF20: estoque mínimo = ⌈consumo médio diário × dias⌉
 
   // SPEC-021 (OPEN-005, RN35): "Emito nota fiscal de produtos" — NCM obrigatório e produto sem NCM fora da venda
@@ -377,6 +399,8 @@ model Negocio {
   contas            ContaPagarReceber[]
   clientes          Cliente[]
   fornecedores      Fornecedor[] // SPEC-026
+  compras           Compra[] // SPEC-027
+  itensCompra       ItemCompra[] // SPEC-027
   despesasFixas     DespesaFixa[]
 
   @@index([id])
@@ -493,6 +517,7 @@ model Fornecedor {
   negocio       Negocio             @relation(fields: [negocioId], references: [id])
   contas        ContaPagarReceber[]
   despesasFixas DespesaFixa[]
+  compras       Compra[] // SPEC-027
 
   // Como no cliente: o documento fica vazio ao anonimizar, e a unicidade vale entre os ativos.
   @@unique([negocioId, documento])
@@ -540,6 +565,7 @@ model Item {
   materiais       MaterialServico[]     @relation("ServicoParaMaterial")
   usadoEm         MaterialServico[]     @relation("MaterialParaServico")
   itensVenda      ItemVenda[]
+  itensCompra     ItemCompra[] // SPEC-027
 
   @@unique([negocioId, nomeChave])
   @@unique([negocioId, codigoChave])
@@ -587,6 +613,7 @@ model MovimentacaoEstoque {
   negocioId      String             @db.Uuid // ADR-002
   itemId         String             @db.Uuid
   vendaId        String?            @db.Uuid // RN25: SAIDA_VENDA e ENTRADA_ESTORNO apontam para a venda (estorno exato)
+  compraId       String?            @db.Uuid // SPEC-027: a entrada da compra aponta para ela
   tipo           TipoMovimentacao
   quantidade     Decimal            @db.Decimal(10, 3)
   saldoAnterior  Decimal            @db.Decimal(10, 3) // RNF05: valor anterior
@@ -602,6 +629,7 @@ model MovimentacaoEstoque {
   negocio Negocio @relation(fields: [negocioId], references: [id])
   item    Item    @relation(fields: [itemId], references: [id])
   venda   Venda?  @relation(fields: [vendaId], references: [id])
+  compra  Compra? @relation(fields: [compraId], references: [id])
   usuario Usuario @relation(fields: [usuarioId], references: [id])
 
   @@index([negocioId])
@@ -609,6 +637,7 @@ model MovimentacaoEstoque {
   @@index([itemId, data]) // SPEC-007: consumo dos últimos 90 dias
   @@index([itemId, registradoEm]) // SPEC-007: movimentações na ordem de registro
   @@index([vendaId])
+  @@index([compraId])
 }
 
 // Referenciado em Item.historicoPrecos na v1, mas nunca definido — adicionado agora.
@@ -652,13 +681,16 @@ model HistoricoCusto {
   custo        Decimal  @db.Decimal(10, 2)
   vigenteDesde DateTime @default(now())
   usuarioId    String?  @db.Uuid // RNF05: quem definiu; nulo no início do histórico
+  compraId     String?  @db.Uuid // SPEC-027 (OPEN-001): o custo mudou pela compra ("Compra nº N")
 
   negocio Negocio  @relation(fields: [negocioId], references: [id])
   item    Item     @relation(fields: [itemId], references: [id])
   usuario Usuario? @relation(fields: [usuarioId], references: [id])
+  compra  Compra?  @relation(fields: [compraId], references: [id])
 
   @@index([negocioId])
   @@index([itemId, vigenteDesde]) // SPEC-025: custo vigente numa data
+  @@index([compraId])
 }
 
 // ==========================================================
@@ -875,6 +907,76 @@ model Parcela {
   @@index([pagamentoId])
 }
 
+// ==========================================================
+// Compras de fornecedores (SPEC-027)
+// ==========================================================
+
+// SPEC-027: compra de fornecedor. Numa transação, entra no estoque, gera as contas a pagar (toda compra,
+// OPEN-004) e pode mudar o custo dos produtos (OPEN-001). Nunca é apagada: o cancelamento a marca (OPEN-006).
+model Compra {
+  id                 String         @id @default(uuid()) @db.Uuid
+  negocioId          String         @db.Uuid // ADR-002
+  numero             Int // sequencial por negócio (Negocio.proximoNumeroCompra)
+  fornecedorId       String         @db.Uuid // OPEN-002: obrigatório
+  numeroDocumento    String?        @db.VarChar(40) // OPEN-002: obrigatório, vazio só na compra sem nota fiscal
+  // INV-011: nº do documento normalizado enquanto a compra não é cancelada; nulo na cancelada e na sem nota.
+  // A unicidade com o fornecedor vale só entre as não canceladas, como o nome do item entre os ativos.
+  documentoChave     String?
+  semNotaFiscal      Boolean        @default(false)
+  data               DateTime       @db.Date // data da compra: hoje ou até 90 dias atrás
+  observacao         String?        @db.VarChar(200)
+  valorProdutos      Decimal        @db.Decimal(10, 2) // soma dos totais das linhas
+  frete              Decimal        @default(0) @db.Decimal(10, 2) // OPEN-005: rateado no custo
+  outrasDespesas     Decimal        @default(0) @db.Decimal(10, 2)
+  desconto           Decimal        @default(0) @db.Decimal(10, 2)
+  total              Decimal        @db.Decimal(10, 2) // produtos + frete + outras despesas − desconto
+  condicao           CondicaoCompra
+  valorEntrada       Decimal?       @db.Decimal(10, 2) // só a prazo, opcional
+  situacao           SituacaoCompra @default(REGISTRADA)
+  registradaPorId    String         @db.Uuid
+  registradaEm       DateTime       @default(now())
+  canceladaPorId     String?        @db.Uuid
+  canceladaEm        DateTime?
+  motivoCancelamento String?        @db.VarChar(200)
+
+  negocio       Negocio               @relation(fields: [negocioId], references: [id])
+  fornecedor    Fornecedor            @relation(fields: [fornecedorId], references: [id], onDelete: Restrict)
+  registradaPor Usuario               @relation("CompraRegistradaPor", fields: [registradaPorId], references: [id])
+  canceladaPor  Usuario?              @relation("CompraCanceladaPor", fields: [canceladaPorId], references: [id])
+  itens         ItemCompra[]
+  movimentacoes MovimentacaoEstoque[]
+  contas        ContaPagarReceber[]
+  custos        HistoricoCusto[]
+
+  @@unique([negocioId, numero])
+  @@unique([negocioId, fornecedorId, documentoChave]) // INV-011
+  @@index([negocioId, data])
+  @@index([fornecedorId])
+}
+
+// SPEC-027: cada produto da compra, com o custo antes e depois. Somente INSERT.
+model ItemCompra {
+  id             String             @id @default(uuid()) @db.Uuid
+  negocioId      String             @db.Uuid // ADR-002
+  compraId       String             @db.Uuid
+  itemId         String             @db.Uuid // produto físico ativo (gatilho)
+  quantidade     Decimal            @db.Decimal(10, 3)
+  custoUnitario  Decimal            @db.Decimal(10, 2) // informado
+  totalLinha     Decimal            @db.Decimal(10, 2) // quantidade × custo unitário, ao centavo
+  custoComRateio Decimal            @db.Decimal(10, 2) // OPEN-005: com o frete, as outras despesas e o desconto
+  escolhaCusto   EscolhaCustoCompra // OPEN-001
+  custoAnterior  Decimal            @db.Decimal(10, 2) // custo do produto no registro
+  custoNovo      Decimal            @db.Decimal(10, 2) // igual ao anterior em ATUAL
+
+  negocio Negocio @relation(fields: [negocioId], references: [id])
+  compra  Compra  @relation(fields: [compraId], references: [id])
+  item    Item    @relation(fields: [itemId], references: [id])
+
+  @@unique([compraId, itemId]) // OPEN-003: o mesmo produto não aparece em duas linhas
+  @@index([negocioId])
+  @@index([itemId])
+}
+
 model LancamentoFinanceiro {
   id                  String               @id @default(uuid()) @db.Uuid
   negocioId           String               @db.Uuid
@@ -940,12 +1042,16 @@ model ContaPagarReceber {
   fornecedorId    String?             @db.Uuid // só na conta a pagar
   clienteId       String?             @db.Uuid // só na conta a receber manual (a de venda usa o cliente da venda)
   numeroDocumento String?             @db.VarChar(40) // nota, boleto…
+  // SPEC-027 (OPEN-004): conta a pagar gerada pela compra (à vista, entrada ou parcela). Só a pagar;
+  // não é editada nem cancelada sozinha pelo Financeiro (o caminho é cancelar a compra).
+  compraId        String?             @db.Uuid
 
   negocio     Negocio                @relation(fields: [negocioId], references: [id])
   parcela     Parcela?               @relation(fields: [parcelaId], references: [id])
   despesaFixa DespesaFixa?           @relation(fields: [despesaFixaId], references: [id])
   fornecedor  Fornecedor?            @relation(fields: [fornecedorId], references: [id], onDelete: Restrict)
   cliente     Cliente?               @relation(fields: [clienteId], references: [id], onDelete: Restrict)
+  compra      Compra?                @relation(fields: [compraId], references: [id])
   lancamentos LancamentoFinanceiro[] // RN22: cada pagamento parcial/total gera um lançamento
 
   @@unique([despesaFixaId, competencia]) // RF67: não duplicar a conta do mesmo mês
@@ -953,6 +1059,7 @@ model ContaPagarReceber {
   @@index([negocioId, vencimento, status]) // SPEC-009: contas a vencer e atrasadas
   @@index([fornecedorId]) // SPEC-026: filtro e detalhe do fornecedor
   @@index([clienteId])
+  @@index([compraId])
 }
 
 // SPEC-013 (RF73, OPEN-007): toda troca de plano, somente inserção (gatilho he_somente_insercao).
