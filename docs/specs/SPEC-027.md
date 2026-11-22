@@ -4,7 +4,7 @@
 > - **custo do produto escolhido em cada compra**, produto por produto, com o **custo médio** já marcado; as outras escolhas são o custo desta compra e manter o atual (OPEN-001);
 > - **fornecedor e nº do documento obrigatórios**, com o nº único por fornecedor; a compra **sem nota fiscal** é marcada como tal e fica sem o nº (OPEN-002, a pedido da usuária);
 > - só **produtos físicos do Catálogo**, com "Novo produto" sem sair da compra (OPEN-003);
-> - **à vista, a prazo em 1 a 12 parcelas, ou entrada + parcelas**, com a entrada opcional (OPEN-004);
+> - **à vista, a prazo em 1 a 12 parcelas, ou entrada + parcelas**, com a entrada opcional; **toda compra gera contas a pagar**, inclusive a à vista e a entrada, e o caixa só muda quando o pagamento é confirmado no Financeiro (OPEN-004, a pedido da usuária);
 > - **frete, outras despesas e desconto** rateados no custo (OPEN-005);
 > - **cancelar a compra inteira**, com motivo, numa transação (OPEN-006);
 > - **permissões sem mudar a matriz** (OPEN-007);
@@ -17,7 +17,7 @@
 > **Mapa:** [`MAPA_DE_SPECS.md`](../MAPA_DE_SPECS.md)
 > - **Altera:**
 >   - [SPEC-007](SPEC-007.md): entrada no estoque pela compra; a saída do cancelamento da compra não conta como consumo;
->   - [SPEC-009](SPEC-009.md): saída no caixa e contas a pagar geradas pela compra, com a origem "Compra";
+>   - [SPEC-009](SPEC-009.md): contas a pagar geradas pela compra, com a origem "Compra"; a saída no caixa vem do pagamento de cada conta;
 >   - [SPEC-025](SPEC-025.md): o histórico de custo recebe os custos das compras (conforme a OPEN-001);
 >   - [SPEC-026](SPEC-026.md): o detalhe do fornecedor mostra as compras; a exclusão considera as compras; o filtro de origem das contas ganha "Compra";
 >   - [SPEC-014](SPEC-014.md): a exportação dos dados inclui as compras.
@@ -35,7 +35,7 @@
 |---|---|
 | **ID** | SPEC-027 |
 | **Nome** | Compras de fornecedores integradas ao estoque e ao financeiro |
-| **Objetivo** | Registrar uma **compra de fornecedor** numa tela só: o fornecedor, o nº da nota, os produtos com quantidade e custo unitário e a forma de pagar. Ao confirmar, o HE grava tudo de uma vez: a **entrada no estoque** de cada produto, a **saída no caixa** (à vista) ou as **contas a pagar** (a prazo) e o **custo** dos produtos (conforme a OPEN-001). |
+| **Objetivo** | Registrar uma **compra de fornecedor** numa tela só: o fornecedor, o nº da nota, os produtos com quantidade e custo unitário e a forma de pagar. Ao confirmar, o HE grava tudo de uma vez: a **entrada no estoque** de cada produto, as **contas a pagar** (à vista, entrada e parcelas) e o **custo** dos produtos (conforme a OPEN-001). A saída no caixa só acontece quando cada conta é paga no Financeiro. |
 | **Valor entregue** | O negócio para de registrar a mesma compra em três lugares. O estoque, o caixa, as contas e o custo ficam coerentes entre si, e cada entrada e cada conta mostram de qual compra vieram. A lista de compras responde quanto se comprou de cada fornecedor no período, e o inventário de fim de mês (SPEC-025) sai com o custo do que foi pago. |
 
 ### O que muda nas compras
@@ -69,23 +69,23 @@ A loja do exemplo da SPEC-026 compra da fornecedora "Embalagens Exemplo Ltda" 10
 
 | Tipo | Itens | Como esta Spec atende / altera |
 |---|---|---|
-| **RF** | **RF91** (novo) | Registrar compra de fornecedor numa só operação, com a entrada no estoque, a saída no caixa ou as contas a pagar e o custo dos produtos; lista com busca, filtros e total; detalhe ligado às movimentações e às contas; correção do fornecedor e do nº do documento; cancelamento (OPEN-006). |
+| **RF** | **RF91** (novo) | Registrar compra de fornecedor numa só operação, com a entrada no estoque, as contas a pagar (à vista, entrada e parcelas) e o custo dos produtos; lista com busca, filtros e total; detalhe ligado às movimentações e às contas; correção do fornecedor e do nº do documento; cancelamento (OPEN-006). |
 | | RF15 | **Alterado:** a entrada de estoque também acontece pela compra. A entrada manual continua igual. |
 | | RF08 | **Alterado:** o custo do produto físico também muda pela compra, conforme a escolha na compra (OPEN-001), com registro no histórico de custo. |
 | | RF30 | **Alterado:** a conta a pagar pode nascer de uma compra, com o fornecedor e o nº do documento da compra e a origem "Compra". |
 | | RF89 | **Alterado:** o detalhe do fornecedor mostra as compras dele. |
 | | RF90 | **Alterado:** o filtro de origem da lista de contas ganha "Compra". |
-| | RF29, RF31, RF32 | Usados: a compra à vista é uma saída no caixa, na categoria Fornecedores, com a forma; a conta a pagar da compra é paga como as outras, com a forma obrigatória. |
+| | RF29, RF31, RF32 | Usados: toda compra vira contas a pagar na categoria Fornecedores; cada conta é paga como as outras, com a forma obrigatória, e só então sai do caixa. |
 | | RF20 | Usado: a entrada da compra conta para o ciclo do mínimo sugerido; a saída do cancelamento é um estorno e não conta como consumo. |
 | | RF46, RF47 | Usados: compras nos dois planos, sem limite de quantidade; a lista do plano gratuito mostra os últimos 12 meses. |
 | | RF62, RF70 | Usados: as vendas guardam o custo do momento; uma compra nunca muda o custo de vendas passadas. |
 | | RF88 | Usado: o inventário numa data passa a trazer o custo das compras pelo histórico de custo (conforme a OPEN-001). |
-| **RN** | **RN43** (nova) | Regras da compra: gravada inteira ou nada; fornecedor e nº do documento obrigatórios, com o nº único por fornecedor, salvo na compra sem nota fiscal (OPEN-002); só produtos físicos ativos; total = produtos + frete + outras despesas − desconto (OPEN-005); à vista e a entrada saem do caixa na data, as parcelas viram contas a pagar (OPEN-004); custo escolhido na compra, com o médio marcado (OPEN-001); cancelamento em transação única (OPEN-006); a compra nunca é apagada. |
+| **RN** | **RN43** (nova) | Regras da compra: gravada inteira ou nada; fornecedor e nº do documento obrigatórios, com o nº único por fornecedor, salvo na compra sem nota fiscal (OPEN-002); só produtos físicos ativos; total = produtos + frete + outras despesas − desconto (OPEN-005); toda compra gera contas a pagar, inclusive a à vista e a entrada, e o caixa só muda no pagamento (OPEN-004); custo escolhido na compra, com o médio marcado (OPEN-001); cancelamento em transação única (OPEN-006); a compra nunca é apagada. |
 | | RN03, RN04 | Usadas: só produtos físicos têm estoque; serviços não entram na compra. |
 | | RN11 | Usada como modelo: as parcelas são iguais, com a diferença de centavos na 1ª (OPEN-004). |
-| | RN14 | Usada: a compra a prazo não mexe no saldo do caixa até o pagamento. |
+| | RN14 | Usada: nenhuma compra mexe no saldo do caixa até o pagamento de cada conta, nem a à vista. |
 | | RN15 | Usada: o preço oficial não muda sozinho quando o custo muda; a tela leva à Calculadora. |
-| | RN22 | Usada: o pagamento da conta da compra gera o lançamento com a forma. |
+| | RN22 | Usada: o pagamento de cada conta da compra (inclusive a à vista e a entrada) gera o lançamento com a forma. |
 | | RN25 | Usada como modelo do cancelamento da compra (OPEN-006). |
 | | RN37, RN39 | Mantidas: a compra fica fora da lista fechada de correções do suporte e é recusada em negócio suspenso. |
 | | RN41 | Usada: o custo no inventário vem do histórico de custo, que passa a receber as compras. |
@@ -109,8 +109,8 @@ A loja do exemplo da SPEC-026 compra da fornecedora "Embalagens Exemplo Ltda" 10
 
 ### Texto da baseline (aprovado em 22/11/2026)
 
-- **RF91 (novo):** O sistema deve permitir **registrar uma compra de fornecedor** numa só operação: fornecedor, nº do documento (ou a marcação de compra sem nota fiscal), data, produtos físicos com quantidade e custo unitário, frete, outras despesas e desconto, e a forma de pagar (à vista, a prazo em 1 a 12 parcelas, ou entrada + parcelas). Ao confirmar, o sistema dá a entrada de cada produto no estoque, registra a saída no caixa (à vista e entrada) e as contas a pagar (parcelas), e atualiza o custo de cada produto pela escolha feita na compra (RN43). As compras ficam numa lista com busca, filtros e total, e o detalhe liga cada compra às movimentações e às contas; uma compra pode ser cancelada com motivo (SPEC-027).
-- **RN43 (nova):** Compra: gravada inteira ou nada; fornecedor obrigatório e nº do documento obrigatório e único por fornecedor entre as compras não canceladas, salvo na compra marcada sem nota fiscal; só produtos físicos ativos; total = produtos + frete + outras despesas − desconto, rateados no custo das linhas; à vista e a entrada saem do caixa na data da compra, as parcelas viram contas a pagar; o custo de cada produto é o escolhido na compra (custo médio ponderado, já marcado; custo desta compra; ou o atual), a partir do registro; cancelamento em transação única, como o da venda; nunca apagada; fora das correções do suporte.
+- **RF91 (novo):** O sistema deve permitir **registrar uma compra de fornecedor** numa só operação: fornecedor, nº do documento (ou a marcação de compra sem nota fiscal), data, produtos físicos com quantidade e custo unitário, frete, outras despesas e desconto, e a forma de pagar (à vista, a prazo em 1 a 12 parcelas, ou entrada + parcelas). Ao confirmar, o sistema dá a entrada de cada produto no estoque, gera as contas a pagar (à vista e entrada, com vencimento na data da compra, e parcelas), que saem do caixa só quando o pagamento é registrado, e atualiza o custo de cada produto pela escolha feita na compra (RN43). As compras ficam numa lista com busca, filtros e total, e o detalhe liga cada compra às movimentações e às contas; uma compra pode ser cancelada com motivo (SPEC-027).
+- **RN43 (nova):** Compra: gravada inteira ou nada; fornecedor obrigatório e nº do documento obrigatório e único por fornecedor entre as compras não canceladas, salvo na compra marcada sem nota fiscal; só produtos físicos ativos; total = produtos + frete + outras despesas − desconto, rateados no custo das linhas; toda compra gera contas a pagar (à vista e entrada com vencimento na data da compra, e as parcelas), e o caixa só muda no pagamento de cada conta; o custo de cada produto é o escolhido na compra (custo médio ponderado, já marcado; custo desta compra; ou o atual), a partir do registro; cancelamento em transação única, como o da venda; nunca apagada; fora das correções do suporte.
 - **RF08, RF15, RF30, RF89, RF90 e RNF05:** os acréscimos descritos na tabela acima. O `requisitos_ears.md` recebe o RF91 e a RN43 no mesmo formato.
 
 ---
@@ -124,7 +124,7 @@ A loja do exemplo da SPEC-026 compra da fornecedora "Embalagens Exemplo Ltda" 10
    - nº do documento, data da compra e observação;
    - produtos buscados pelo nome ou pelo código interno, com quantidade, custo unitário e o total da linha (OPEN-003);
    - frete, outras despesas e desconto (OPEN-005);
-   - forma de pagar: à vista ou a prazo (OPEN-004);
+   - forma de pagar: à vista, a prazo ou entrada + parcelas, sempre como contas a pagar (OPEN-004);
    - resumo antes de confirmar: as entradas, o lançamento ou as contas, e o custo atual e o novo de cada produto (OPEN-001).
 2. **Gravação numa transação:** número da compra, entradas no estoque, lançamento ou contas a pagar e custo dos produtos.
 3. **Lista de compras:** busca (fornecedor, nº do documento ou nº da compra), filtros (período, fornecedor e situação) e o total da lista filtrada.
@@ -194,7 +194,7 @@ A loja do exemplo da SPEC-026 compra da fornecedora "Embalagens Exemplo Ltda" 10
 3. Adiciona os **produtos** (5.2), o **frete e o desconto** (OPEN-005) e a **forma de pagar** (5.3).
 4. Clica em **Revisar**. O resumo mostra:
    - cada produto com a quantidade que entra, o saldo atual e o novo;
-   - o lançamento à vista ou as contas a pagar, com valor e vencimento;
+   - as contas a pagar (à vista, entrada e parcelas), com valor e vencimento;
    - para cada produto, o custo atual, o desta compra (com o rateio) e o médio, com o **médio já marcado**; a pessoa pode trocar a escolha de cada produto (5.5, OPEN-001).
 5. Clica em **Confirmar compra**. O servidor valida tudo de novo e grava numa transação (5.4). A tela mostra "Compra nº N registrada." e leva ao detalhe.
 6. Para cada produto cujo custo mudou, o detalhe mostra "O custo mudou. Revise o preço na Calculadora." com o link para a Calculadora do item. O preço oficial só muda quando alguém confirma (RN15).
@@ -210,8 +210,10 @@ A loja do exemplo da SPEC-026 compra da fornecedora "Embalagens Exemplo Ltda" 10
 ### 5.3 Forma de pagar (OPEN-004)
 
 Decidido na entrevista (OPEN-004, opção com entrada):
-- **À vista:** sai do caixa na data da compra, com a forma: Dinheiro, Pix, Cartão de débito, Boleto, Transferência ou Outra.
-- **A prazo:** de 1 a 12 parcelas, **com entrada opcional**. Sem entrada, todo o total vira parcelas. Com entrada, a pessoa informa o valor (maior que zero e menor que o total) e a forma; a entrada sai do caixa na data da compra, como um pagamento à vista, e o resto vira as parcelas.
+**Toda compra gera contas a pagar**, inclusive a à vista e a entrada (pedido da usuária, 22/11/2026, como a SPEC-029 fará com as vendas). Nenhuma compra sai do caixa no registro: o caixa só muda quando alguém **confirma o pagamento** de cada conta no Financeiro, com a forma (Dinheiro, Pix, Cartão de débito, Boleto, Transferência ou Outra), como em qualquer conta (SPEC-026). Assim, o pagamento fica conferido antes de entrar no caixa.
+- **À vista:** uma conta a pagar com o total da compra e vencimento na data da compra.
+- **A prazo:** de 1 a 12 parcelas, **com entrada opcional**. Sem entrada, todo o total vira parcelas. Com entrada, a pessoa informa o valor (maior que zero e menor que o total); a entrada vira uma conta a pagar com vencimento na data da compra, e o resto vira as parcelas.
+- Enquanto a conta à vista ou a da entrada não é paga, ela aparece nas contas a pagar como "vence hoje" ou, numa compra com data passada, como atrasada, para lembrar de confirmar o pagamento.
 - **Parcelas:** de 1 a 12. Os vencimentos são sugeridos a cada 30 dias depois da data da compra e podem ser trocados, sem ficar antes da data da compra. Os valores são iguais, com a diferença de centavos na 1ª (como a RN11). Cada parcela vira uma conta a pagar; a forma é escolhida ao pagar cada uma.
 - **Cartão de crédito do negócio:** entra como "A prazo", com o vencimento na fatura, para o caixa sair no dia em que a fatura é paga (RN14). A tela explica isso ao lado da opção.
 
@@ -219,10 +221,10 @@ Decidido na entrevista (OPEN-004, opção com entrada):
 
 | Onde | O que acontece |
 |---|---|
-| **Compra** | Número sequencial do negócio, fornecedor, nº do documento, data, observação, produtos, frete, outras despesas, desconto, total, forma de pagar, quem registrou e quando. Situação "Registrada". |
+| **Compra** | Número sequencial do negócio, fornecedor, nº do documento, data, observação, produtos, frete, outras despesas, desconto, total, condição (à vista ou a prazo) e o valor da entrada, quem registrou e quando. Situação "Registrada". |
 | **Estoque** | Uma movimentação de entrada por produto, com a quantidade, a data da compra e a ligação com a compra, pela mesma primitiva da entrada manual (SPEC-007). |
-| **Financeiro (à vista)** | Um lançamento de saída: valor = total da compra, categoria Fornecedores, forma escolhida, data da compra, descrição "Compra nº N — {fornecedor}", origem "Compra". |
-| **Financeiro (entrada)** | Na compra a prazo com entrada, um lançamento de saída com o valor e a forma da entrada, na data da compra, descrição "Compra nº N — entrada", origem "Compra". |
+| **Financeiro (à vista)** | Uma conta a pagar: valor = total da compra, categoria Fornecedores, fornecedor e nº do documento da compra, vencimento na data da compra, descrição "Compra nº N — à vista", origem "Compra". Nenhum lançamento no caixa. |
+| **Financeiro (entrada)** | Na compra a prazo com entrada, uma conta a pagar com o valor da entrada, vencimento na data da compra, descrição "Compra nº N — entrada", origem "Compra". |
 | **Financeiro (a prazo)** | Uma conta a pagar por parcela: categoria Fornecedores, fornecedor e nº do documento da compra, descrição "Compra nº N — parcela i/n", vencimento e valor da parcela, origem "Compra". |
 | **Custo** | Para cada produto cuja escolha muda o custo (5.5): o custo novo e um registro no histórico de custo, com o usuário e a ligação com a compra. Quem escolhe "manter o atual" não gera registro. |
 
@@ -252,7 +254,7 @@ No custo médio, o saldo antes é o saldo do produto no momento do registro; a e
 ### 5.6 Lista, detalhe e ligações
 
 - **Lista de compras:**
-  - colunas: nº, data, fornecedor, nº do documento, total, forma de pagar (à vista ou a prazo, com a situação das contas) e situação (Registrada ou Cancelada);
+  - colunas: nº, data, fornecedor, nº do documento, total, condição (à vista ou a prazo) com a situação das contas (por exemplo, "A pagar", "Paga em parte" ou "Paga") e situação da compra (Registrada ou Cancelada);
   - busca pelo nome do fornecedor, pelo nº do documento ou pelo nº da compra;
   - filtros: período da data da compra, fornecedor e situação;
   - total da lista filtrada, somando todas as páginas, sem as canceladas;
@@ -268,11 +270,11 @@ No custo médio, o saldo antes é o saldo do produto no momento do registro; a e
 - **Cancelamento** (OPEN-006, decidido na entrevista):
   - cancela a compra inteira, com motivo obrigatório (até 200 caracteres), numa transação;
   - o estoque de cada produto sai pela quantidade da compra, numa movimentação de estorno ligada à compra. Se o saldo atual de algum produto não cobre, o cancelamento é recusado: "Não dá para cancelar: o saldo de {produto} é menor que a quantidade da compra.";
-  - as contas sem pagamento são canceladas; os valores já pagos (o lançamento à vista, a entrada e os pagamentos das contas) são estornados no caixa;
+  - as contas sem pagamento são canceladas; os pagamentos já feitos das contas (inclusive a à vista e a entrada) são estornados no caixa;
   - o custo de cada produto cuja escolha mudou o custo volta ao anterior, com novo registro no histórico, **só** se o custo atual ainda é o que a compra gravou; senão, fica como está, e o detalhe avisa para revisar no Catálogo;
   - a compra cancelada libera o nº do documento: a nota pode ser registrada de novo, corrigida;
   - a compra fica "Cancelada", nunca é apagada, e sai do total da lista.
-- O lançamento e as contas da compra não são estornados nem cancelados sozinhos pelo Financeiro; o caminho é cancelar a compra. O pagamento das contas continua pelo Financeiro.
+- As contas da compra não são editadas nem canceladas sozinhas pelo Financeiro; o caminho é cancelar a compra. O pagamento das contas, e o estorno de um pagamento feito errado (SPEC-028), continuam pelo Financeiro.
 
 ### 5.8 Permissões, menu e plano
 
@@ -318,8 +320,6 @@ No custo médio, o saldo antes é o saldo do produto no momento do registro; a e
 | Desconto maior que os produtos | "O desconto não pode passar do valor dos produtos." |
 | Documento repetido (OPEN-002) | "Este fornecedor já tem a compra nº {N} com o documento {nº}. Confira o número ou cancele a compra anterior." |
 | Entrada fora do total (OPEN-004) | "A entrada precisa ser maior que zero e menor que o total da compra." |
-| Entrada sem forma (OPEN-004) | "Escolha a forma da entrada." |
-| Sem forma na compra à vista | "Escolha a forma do pagamento." |
 | Cancelamento sem saldo | "Não dá para cancelar: o saldo de {produto} é menor que a quantidade da compra." |
 | Compra já cancelada | "Esta compra já foi cancelada." |
 | Suporte ou negócio suspenso | As mensagens da SPEC-019. |
@@ -331,12 +331,12 @@ No custo médio, o saldo antes é o saldo do produto no momento do registro; a e
 | ID | Invariante | Como verificar |
 |---|---|---|
 | **INV-001** | A compra é gravada inteira ou nada: número, produtos, entradas, lançamento ou contas e custo. | Teste de integração com falha forçada no meio (produto arquivado entre a revisão e a confirmação). |
-| **INV-002** | Total = soma das linhas + frete + outras despesas − desconto, maior que zero. À vista, o lançamento é igual ao total; a prazo, a entrada (se houver) + a soma das parcelas é igual ao total, com os centavos na 1ª parcela. | Teste unitário das contas; teste de integração conferindo o banco. |
+| **INV-002** | Total = soma das linhas + frete + outras despesas − desconto, maior que zero. À vista, a conta é igual ao total; a prazo, a entrada (se houver) + a soma das parcelas é igual ao total, com os centavos na 1ª parcela. | Teste unitário das contas; teste de integração conferindo o banco. |
 | **INV-003** | Cada linha gera uma entrada no produto da linha, com a quantidade da linha e a ligação com a compra, pela primitiva de movimentação; compras e vendas simultâneas nunca deixam o saldo errado. | Teste de integração com compras e vendas simultâneas. |
 | **INV-004** | A compra só tem produtos físicos ativos e fornecedor do mesmo negócio; o banco recusa o contrário. | Teste de integração com gravação direta. |
 | **INV-005** | O número da compra é sequencial por negócio e nunca se repete, mesmo com compras simultâneas. | Teste de integração com compras simultâneas. |
 | **INV-006** | Toda mudança de custo pela compra gera um registro no histórico de custo, com o usuário e a compra; nenhum registro é alterado ou apagado (RNF05). | Teste de integração. |
-| **INV-007** | A compra a prazo não muda o saldo do caixa até o pagamento (RN14). | Teste de integração do saldo antes e depois. |
+| **INV-007** | Nenhuma compra muda o saldo do caixa no registro, nem a à vista nem a entrada; o caixa só muda no pagamento de cada conta (RN14, OPEN-004). | Teste de integração do saldo antes e depois. |
 | **INV-008** | O cancelamento é inteiro ou nada; é recusado se algum saldo ficaria negativo; a compra cancelada nunca é apagada. | Teste de integração. |
 | **INV-009** | O suporte nunca registra, corrige nem cancela compras; o negócio suspenso também não. | Teste de integração no contexto de suporte e com o negócio suspenso. |
 | **INV-010** | Compras, filtros e totais só trazem dados do próprio negócio. | Teste de integração com dois negócios. |
@@ -348,10 +348,10 @@ No custo médio, o saldo antes é o saldo do produto no momento do registro; a e
 
 | Entidade | Uso | Mudança |
 |---|---|---|
-| `Compra` | A compra registrada | **Nova:** número (sequencial por negócio), fornecedor (obrigatório), nº do documento (vazio só na compra sem nota fiscal), sem nota fiscal (sim ou não), data da compra, observação, valor dos produtos, frete, outras despesas, desconto, total, condição (à vista ou a prazo), forma (à vista), valor e forma da entrada (a prazo, opcional), situação (registrada ou cancelada), quem registrou e quando, e quem cancelou, quando e o motivo |
+| `Compra` | A compra registrada | **Nova:** número (sequencial por negócio), fornecedor (obrigatório), nº do documento (vazio só na compra sem nota fiscal), sem nota fiscal (sim ou não), data da compra, observação, valor dos produtos, frete, outras despesas, desconto, total, condição (à vista ou a prazo), valor da entrada (a prazo, opcional), situação (registrada ou cancelada), quem registrou e quando, e quem cancelou, quando e o motivo |
 | `ItemCompra` | Cada linha da compra | **Nova:** compra, produto, quantidade, custo unitário informado, total da linha, o custo com o rateio (OPEN-005), a escolha do custo (médio, desta compra ou manter, OPEN-001) e o custo anterior e o novo do produto |
 | `MovimentacaoEstoque` | Entradas e saídas | **+ ligação com a compra** (opcional, como a ligação com a venda); **novo tipo** para a saída do cancelamento da compra, fora do consumo (RF20) |
-| `LancamentoFinanceiro` | Saída à vista e estornos | **+ ligação com a compra** (opcional); **nova origem** "Compra" |
+| `LancamentoFinanceiro` | Estornos do cancelamento | **+ ligação com a compra** (opcional), para os estornos dos pagamentos no cancelamento; os pagamentos das contas da compra seguem a origem de pagamento de conta, como hoje |
 | `ContaPagarReceber` | Contas a pagar da compra | **+ ligação com a compra** (opcional, só a pagar) |
 | `HistoricoCusto` | Histórico de custo (SPEC-025) | **+ ligação com a compra** (opcional), para mostrar a origem |
 | `Negocio` | Contador | **+ próximo número de compra**, como o da venda |
@@ -360,11 +360,11 @@ No custo médio, o saldo antes é o saldo do produto no momento do registro; a e
 
 **Mudanças previstas no schema:**
 - tabelas `Compra` e `ItemCompra`, com RLS, índices por negócio, por fornecedor e por data, e os modelos em `modelos.ts`;
-- enums da condição e da situação da compra; o da forma reaproveita o da SPEC-026;
+- enums da condição e da situação da compra (a forma fica nos pagamentos das contas, SPEC-026);
 - colunas de ligação com a compra em `MovimentacaoEstoque`, `LancamentoFinanceiro`, `ContaPagarReceber` e `HistoricoCusto`, com índices;
 - valor novo nos enums do tipo da movimentação e da origem do lançamento;
 - gatilho de mesmo negócio para o fornecedor, os produtos e as ligações;
-- CHECKs: quantidade maior que zero, valores não negativos, total maior que zero, forma só na compra à vista, entrada só a prazo (maior que zero, menor que o total e com forma), nº do documento vazio se e só se a compra é sem nota fiscal, conta da compra só a pagar;
+- CHECKs: quantidade maior que zero, valores não negativos, total maior que zero, entrada só a prazo (maior que zero e menor que o total), nº do documento vazio se e só se a compra é sem nota fiscal, conta da compra só a pagar;
 - índice único parcial de fornecedor + nº do documento entre as compras não canceladas (INV-011);
 - migração sem dados novos: nada do que existe vira compra.
 
@@ -400,7 +400,7 @@ No custo médio, o saldo antes é o saldo do produto no momento do registro; a e
 | Contrato | Entrada | Saída | Erros |
 |---|---|---|---|
 | **Revisar compra** | os campos da compra | o resumo: entradas (saldo atual e novo), lançamento, entrada e parcelas, e por produto o custo atual, o desta compra e o médio, com o médio marcado | `CampoInvalido`, `FornecedorNaoEncontrado`, `DocumentoRepetido`, `ItemNaoEncontrado`, `ItemSemEstoque`, `ItemArquivado`, `SemPermissao` |
-| **Registrar compra** | fornecedorId, numeroDocumento ou semNotaFiscal, data, observacao?, linhas [{itemId, quantidade, custoUnitario, escolhaDoCusto}], frete?, outrasDespesas?, desconto?, condição (à vista: forma; a prazo: entrada? {valor, forma}, parcelas [{vencimento}]) | {compraId, numero} | os da revisão + `ForaDaListaDeCorrecoes`, `NegocioSuspenso` |
+| **Registrar compra** | fornecedorId, numeroDocumento ou semNotaFiscal, data, observacao?, linhas [{itemId, quantidade, custoUnitario, escolhaDoCusto}], frete?, outrasDespesas?, desconto?, condição (à vista; ou a prazo: entrada?, parcelas [{vencimento}]) | {compraId, numero} | os da revisão + `ForaDaListaDeCorrecoes`, `NegocioSuspenso` |
 | **Listar compras** | busca?, período?, fornecedorId?, situação?, página | [{id, numero, data, fornecedor, numeroDocumento, total, condição, situação}], total da lista | `SemPermissao`, `CampoInvalido` (período invertido) |
 | **Detalhar compra** | id | a compra, os produtos, o lançamento ou as contas com os pagamentos, as entradas, os custos e o cancelamento | `CompraNaoEncontrada`, `SemPermissao` |
 | **Corrigir fornecedor e documento** | id, fornecedorId, numeroDocumento ou semNotaFiscal | a compra | `CompraNaoEncontrada`, `FornecedorNaoEncontrado`, `DocumentoRepetido`, `CampoInvalido`, `SemPermissao`, `ForaDaListaDeCorrecoes`, `NegocioSuspenso` |
@@ -426,9 +426,9 @@ No custo médio, o saldo antes é o saldo do produto no momento do registro; a e
 
 **CA-01 — Compra a prazo.** Dado o exemplo da seção 1, quando a compra é confirmada, então o saldo da Embalagem P passa de 20 para 120 e o da G sobe 50, nasce uma conta a pagar de R$ 220,00 com a fornecedora, o nº 1234, a categoria Fornecedores e a origem "Compra nº 1", e o saldo do caixa não muda.
 
-**CA-02 — Compra à vista.** Dada uma compra à vista de R$ 150,00 por Pix, quando é confirmada, então o caixa ganha uma saída de R$ 150,00 na data da compra, categoria Fornecedores, forma Pix e descrição "Compra nº N — {fornecedor}", e nenhuma conta é criada.
+**CA-02 — Compra à vista.** Dada uma compra à vista de R$ 150,00, quando é confirmada, então nasce uma conta a pagar de R$ 150,00 com vencimento na data da compra, categoria Fornecedores e descrição "Compra nº N — à vista", e o saldo do caixa não muda. Quando alguém registra o pagamento dessa conta no Financeiro, com Pix, então o caixa ganha a saída de R$ 150,00 com a forma Pix, e a conta fica paga.
 
-**CA-03 — Parcelas e entrada.** Dada uma compra de R$ 100,00 a prazo em 3 parcelas, sem entrada, então as contas são de R$ 33,34, R$ 33,33 e R$ 33,33, com vencimentos sugeridos a 30, 60 e 90 dias e editáveis; um vencimento antes da data da compra é recusado. Dada uma compra de R$ 300,00 com entrada de R$ 100,00 em Pix e 2 parcelas, então o caixa ganha a saída de R$ 100,00 na data da compra e nascem duas contas de R$ 100,00; uma entrada de R$ 300,00 ou zero é recusada.
+**CA-03 — Parcelas e entrada.** Dada uma compra de R$ 100,00 a prazo em 3 parcelas, sem entrada, então as contas são de R$ 33,34, R$ 33,33 e R$ 33,33, com vencimentos sugeridos a 30, 60 e 90 dias e editáveis; um vencimento antes da data da compra é recusado. Dada uma compra de R$ 300,00 com entrada de R$ 100,00 e 2 parcelas, então nascem três contas a pagar: a entrada de R$ 100,00, com vencimento na data da compra, e duas parcelas de R$ 100,00; o caixa não muda até os pagamentos. Uma entrada de R$ 300,00 ou zero é recusada.
 
 **CA-04 — Custo.** Dado o exemplo da seção 1, quando a pessoa revisa a compra, então a Embalagem P mostra R$ 1,00 (atual), R$ 1,20 (desta compra) e R$ 1,17 (médio), com o médio marcado. Confirmando com o médio, o custo passa a R$ 1,17, o histórico de custo mostra "Compra nº 1", o inventário de hoje usa o custo novo, e as vendas anteriores continuam com o custo da época; o detalhe leva à Calculadora para revisar o preço, que não muda sozinho. Escolhendo "Custo desta compra", o custo passa a R$ 1,20; escolhendo "Manter o atual", fica R$ 1,00, sem registro no histórico.
 
@@ -465,7 +465,7 @@ No custo médio, o saldo antes é o saldo do produto no momento do registro; a e
 | # | Teste | Tipo | Cobre |
 |---|---|---|---|
 | T01 | Validação da compra e das linhas, documento ou sem nota, total, rateio, entrada e parcelas, e os três custos (médio, desta compra, manter) | Unitário | CA-03, CA-04, CA-05, CA-06, INV-002 |
-| T02 | Registrar compra no banco: à vista e a prazo, entradas, lançamento ou contas, custo e histórico, número | Integração | CA-01, CA-02, CA-04, CA-09, INV-002, INV-003, INV-006, INV-007 |
+| T02 | Registrar compra no banco: à vista, a prazo e com entrada, entradas no estoque, contas a pagar sem lançamento no caixa, o pagamento depois, custo e histórico, número | Integração | CA-01, CA-02, CA-04, CA-09, INV-002, INV-003, INV-006, INV-007 |
 | T03 | Tudo ou nada com falha forçada; compras e vendas simultâneas; números sem repetição | Integração | CA-07, CA-08, INV-001, INV-003, INV-005 |
 | T04 | Gravação direta com produto ou fornecedor de outro negócio, serviço ou produto arquivado (o banco recusa) | Integração | INV-004 |
 | T05 | Lista, filtros, busca e total no banco, com várias páginas e o plano gratuito; outro negócio fora | Integração | CA-10, INV-010 |
@@ -525,7 +525,9 @@ A compra informa o custo pago. O que acontece com o custo do produto, usado na C
 
 **Recomendada: (a).** Segue o desenho da venda (RN09, RN10, RN11), e o caixa só muda quando o dinheiro sai (RN14). A entrada pode ser registrada com a 1ª parcela vencendo no dia da compra e paga em seguida, sem tela nova. Parcelas com valores diferentes ficam fora: os boletos de uma mesma nota costumam ser iguais.
 
-**Decisão (22/11/2026): (c), com a entrada opcional.** A compra pode ser à vista, a prazo sem entrada ou a prazo com entrada. A entrada é um campo opcional da compra a prazo: sem ela, o total todo vira parcelas, como na (a). Detalhes na seção 5.3.
+**Decisão (22/11/2026): (c), com a entrada opcional.** A compra pode ser à vista, a prazo sem entrada ou a prazo com entrada. A entrada é um campo opcional da compra a prazo: sem ela, o total todo vira parcelas, como na (a).
+
+**Complemento (22/11/2026, a pedido da usuária): toda compra gera contas a pagar**, inclusive a à vista e a entrada, que vencem na data da compra. A saída do caixa só acontece quando alguém confirma o pagamento de cada conta no Financeiro, com a forma. Assim, o pagamento é conferido antes de entrar no caixa, e as compras seguem o mesmo princípio que a SPEC-029 trará para as vendas. Isso troca o "à vista sai do caixa na data" das opções acima. Detalhes na seção 5.3.
 
 ### OPEN-005 — Frete, outras despesas e desconto
 
@@ -580,7 +582,7 @@ A Política diz que o fornecedor é apagado "se não tiver contas nem despesas f
 
 ### OPEN-010 — Exportar as compras
 
-- **(a) Sem relatório novo nesta Spec:** a lista mostra o total do período; o lançamento e as contas da compra já saem nos relatórios de Fluxo de caixa e de Contas. Um relatório de compras fica como evolução.
+- **(a) Sem relatório novo nesta Spec:** a lista mostra o total do período; as contas da compra e os pagamentos já saem nos relatórios de Fluxo de caixa e de Contas. Um relatório de compras fica como evolução.
 - **(b) Relatório "Compras" nos Relatórios do plano pago,** em CSV e PDF, com os produtos de cada compra, alterando o RF71.
 - **(c) Botão de CSV na própria lista,** nos dois planos.
 
@@ -590,14 +592,14 @@ A Política diz que o fornecedor é apagado "se não tiver contas nem despesas f
 
 **Decisões derivadas do pedido e da baseline (sem questão nova):**
 - compras nos **dois planos**, sem limite de quantidade (RF46, RF47, RN18); a lista do plano gratuito mostra os últimos 12 meses (SPEC-013, OPEN-005);
-- **data da compra:** hoje ou até 90 dias atrás, como as movimentações e os lançamentos (SPEC-007, OPEN-005); a entrada e o lançamento à vista usam essa data;
+- **data da compra:** hoje ou até 90 dias atrás, como as movimentações e os lançamentos (SPEC-007, OPEN-005); a entrada no estoque usa essa data, e as contas à vista e da entrada vencem nela;
 - **número sequencial** por negócio, como a venda (SPEC-008, OPEN-007);
 - **só produtos físicos ativos** (RN04), como a entrada manual; o mesmo produto não se repete na compra;
 - **quantidade** com até 3 casas, como o estoque; **custo unitário** com 2 casas, como o custo do produto;
 - **até 100 produtos** por compra, para caber no tempo da seção 10; o **custo unitário** vem preenchido com o custo atual do produto e pode ser trocado;
 - **categoria** Fornecedores (RF32) no lançamento e nas contas;
 - o **fornecedor e o nº do documento** das contas vêm da compra e são corrigidos pela compra (SPEC-026, OPEN-007);
-- o **lançamento e as contas da compra** não são estornados nem cancelados sozinhos pelo Financeiro, como os da venda (SPEC-009, OPEN-003); o pagamento das contas continua pelo Financeiro;
+- as **contas da compra** não são editadas nem canceladas sozinhas pelo Financeiro, como as da venda (SPEC-009, OPEN-003); o pagamento das contas e o estorno de um pagamento (SPEC-028) continuam pelo Financeiro;
 - a **saída do cancelamento** é um estorno e não conta como consumo para o mínimo sugerido (RF20);
 - **suporte:** vê as compras com o fornecedor mascarado e nunca registra, corrige nem cancela (RN37 e a decisão de 01/11/2026 no Mapa); **negócio suspenso** não registra, corrige nem cancela (RN39);
 - **vendas passadas** não mudam (RF62);
