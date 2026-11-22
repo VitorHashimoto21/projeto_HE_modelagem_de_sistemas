@@ -1,6 +1,6 @@
 # SPEC-027 — Compras de fornecedores integradas ao estoque e ao financeiro
 
-> **Status:** ✅ **Aprovada em 22/11/2026.** Proposta documentada em 14/11/2026; as questões em aberto foram decididas pela equipe em entrevista (seção 13):
+> **Status:** ✅ **Aprovada em 21/11/2026.** Proposta documentada em 14/11/2026; as questões em aberto foram decididas pela equipe em entrevista (seção 13):
 > - **custo do produto escolhido em cada compra**, produto por produto, com o **custo médio** já marcado; as outras escolhas são o custo desta compra e manter o atual (OPEN-001);
 > - **fornecedor e nº do documento obrigatórios**, com o nº único por fornecedor; a compra **sem nota fiscal** é marcada como tal e fica sem o nº (OPEN-002, a pedido da usuária);
 > - só **produtos físicos do Catálogo**, com "Novo produto" sem sair da compra (OPEN-003);
@@ -107,7 +107,7 @@ A loja do exemplo da SPEC-026 compra da fornecedora "Embalagens Exemplo Ltda" 10
 | **Entidades** | `Compra` e `ItemCompra` (novas); `MovimentacaoEstoque`, `LancamentoFinanceiro`, `ContaPagarReceber`, `HistoricoCusto`, `Item`, `Fornecedor`, `Negocio` | Ver seção 7. |
 | **ADRs** | ADR-002 (multi-tenant), ADR-003 (autorização no servidor), ADR-005 (regras puras em TypeScript, como o motor de precificação) | Ver seção 8. |
 
-### Texto da baseline (aprovado em 22/11/2026)
+### Texto da baseline (aprovado em 21/11/2026)
 
 - **RF91 (novo):** O sistema deve permitir **registrar uma compra de fornecedor** numa só operação: fornecedor, nº do documento (ou a marcação de compra sem nota fiscal), data, produtos físicos com quantidade e custo unitário, frete, outras despesas e desconto, e a forma de pagar (à vista, a prazo em 1 a 12 parcelas, ou entrada + parcelas). Ao confirmar, o sistema dá a entrada de cada produto no estoque, gera as contas a pagar (à vista e entrada, com vencimento na data da compra, e parcelas), que saem do caixa só quando o pagamento é registrado, e atualiza o custo de cada produto pela escolha feita na compra (RN43). As compras ficam numa lista com busca, filtros e total, e o detalhe liga cada compra às movimentações e às contas; uma compra pode ser cancelada com motivo (SPEC-027).
 - **RN43 (nova):** Compra: gravada inteira ou nada; fornecedor obrigatório e nº do documento obrigatório e único por fornecedor entre as compras não canceladas, salvo na compra marcada sem nota fiscal; só produtos físicos ativos; total = produtos + frete + outras despesas − desconto, rateados no custo das linhas; toda compra gera contas a pagar (à vista e entrada com vencimento na data da compra, e as parcelas), e o caixa só muda no pagamento de cada conta; o custo de cada produto é o escolhido na compra (custo médio ponderado, já marcado; custo desta compra; ou o atual), a partir do registro; cancelamento em transação única, como o da venda; nunca apagada; fora das correções do suporte.
@@ -210,7 +210,7 @@ A loja do exemplo da SPEC-026 compra da fornecedora "Embalagens Exemplo Ltda" 10
 ### 5.3 Forma de pagar (OPEN-004)
 
 Decidido na entrevista (OPEN-004, opção com entrada):
-**Toda compra gera contas a pagar**, inclusive a à vista e a entrada (pedido da usuária, 22/11/2026, como a SPEC-029 fará com as vendas). Nenhuma compra sai do caixa no registro: o caixa só muda quando alguém **confirma o pagamento** de cada conta no Financeiro, com a forma (Dinheiro, Pix, Cartão de débito, Boleto, Transferência ou Outra), como em qualquer conta (SPEC-026). Assim, o pagamento fica conferido antes de entrar no caixa.
+**Toda compra gera contas a pagar**, inclusive a à vista e a entrada (pedido da usuária, 21/11/2026, como a SPEC-029 fará com as vendas). Nenhuma compra sai do caixa no registro: o caixa só muda quando alguém **confirma o pagamento** de cada conta no Financeiro, com a forma (Dinheiro, Pix, Cartão de débito, Boleto, Transferência ou Outra), como em qualquer conta (SPEC-026). Assim, o pagamento fica conferido antes de entrar no caixa.
 - **À vista:** uma conta a pagar com o total da compra e vencimento na data da compra.
 - **A prazo:** de 1 a 12 parcelas, **com entrada opcional**. Sem entrada, todo o total vira parcelas. Com entrada, a pessoa informa o valor (maior que zero e menor que o total); a entrada vira uma conta a pagar com vencimento na data da compra, e o resto vira as parcelas.
 - Enquanto a conta à vista ou a da entrada não é paga, ela aparece nas contas a pagar como "vence hoje" ou, numa compra com data passada, como atrasada, para lembrar de confirmar o pagamento.
@@ -483,7 +483,7 @@ No custo médio, o saldo antes é o saldo do produto no momento do registro; a e
 
 ## 13. Questões em aberto
 
-Decididas pela equipe em entrevista em 22/11/2026. Cada questão mantém as opções e a recomendada da proposta e termina com a **decisão**.
+Decididas pela equipe em entrevista em 21/11/2026. Cada questão mantém as opções e a recomendada da proposta e termina com a **decisão**.
 
 ### OPEN-001 — Custo do produto depois da compra
 
@@ -495,7 +495,7 @@ A compra informa o custo pago. O que acontece com o custo do produto, usado na C
 
 **Recomendada: (c) custo médio ponderado.** É o método aceito na contabilidade para avaliar o estoque (NBC TG 16, custo médio ponderado). Deixa o inventário da SPEC-025 coerente com o que foi pago e não deixa o custo saltar por uma compra pequena e cara. O resumo mostra o custo atual e o novo antes de confirmar, e o detalhe leva à Calculadora. A (b) acompanha melhor o preço de reposição, mas o inventário passa a valer o estoque antigo pelo custo novo. A (a) mantém o retrabalho de hoje. A (d) dá controle, mas pede uma decisão a cada produto e deixa o custo do inventário sem regra única.
 
-**Decisão (22/11/2026): (d) escolher na compra, com o custo médio já marcado.** A equipe preferiu poder decidir produto por produto. Em vez de um padrão configurável do negócio, o resumo vem sempre com o custo médio marcado (a regra contábil), e a pessoa troca só quando quer: para o custo desta compra ou para manter o atual. Detalhes na seção 5.5.
+**Decisão (21/11/2026): (d) escolher na compra, com o custo médio já marcado.** A equipe preferiu poder decidir produto por produto. Em vez de um padrão configurável do negócio, o resumo vem sempre com o custo médio marcado (a regra contábil), e a pessoa troca só quando quer: para o custo desta compra ou para manter o atual. Detalhes na seção 5.5.
 
 ### OPEN-002 — Fornecedor e nº do documento
 
@@ -505,7 +505,7 @@ A compra informa o custo pago. O que acontece com o custo do produto, usado na C
 
 **Recomendada: (a).** A compra é o registro de quem forneceu, e o cadastro de fornecedor aceita só o nome, sem sair da compra (SPEC-026). O aviso evita lançar a mesma nota duas vezes, o que dobraria o estoque e a dívida, sem impedir compras sem nota.
 
-**Decisão (22/11/2026): (a) e (c) juntas, com a marcação "Compra sem nota fiscal".** A usuária com CNPJ, que usa o HE no dia a dia, orientou que o fornecedor e o nº do documento sejam obrigatórios: a nota fiscal é o que comprova a compra para a contabilidade, e o nº evita lançar a mesma nota duas vezes. Por isso, o nº é obrigatório e único por fornecedor entre as compras não canceladas, e a repetição é **bloqueada**, não só avisada. Para não impedir as compras que de fato não têm nota (feira, pessoa física), a caixa "Compra sem nota fiscal" dispensa o nº, e a compra aparece como "Sem nota". O fornecedor continua obrigatório em todos os casos.
+**Decisão (21/11/2026): (a) e (c) juntas, com a marcação "Compra sem nota fiscal".** A usuária com CNPJ, que usa o HE no dia a dia, orientou que o fornecedor e o nº do documento sejam obrigatórios: a nota fiscal é o que comprova a compra para a contabilidade, e o nº evita lançar a mesma nota duas vezes. Por isso, o nº é obrigatório e único por fornecedor entre as compras não canceladas, e a repetição é **bloqueada**, não só avisada. Para não impedir as compras que de fato não têm nota (feira, pessoa física), a caixa "Compra sem nota fiscal" dispensa o nº, e a compra aparece como "Sem nota". O fornecedor continua obrigatório em todos os casos.
 
 ### OPEN-003 — Produtos da compra
 
@@ -515,7 +515,7 @@ A compra informa o custo pago. O que acontece com o custo do produto, usado na C
 
 **Recomendada: (a).** A compra existe para dar entrada no estoque; o material de consumo continua como conta ou lançamento do Financeiro. Linhas livres misturariam despesa e estoque no mesmo total e complicariam o custo e o cancelamento. O "Novo produto" evita abandonar a compra no meio, como o "Novo fornecedor".
 
-**Decisão (22/11/2026): (a).**
+**Decisão (21/11/2026): (a).**
 
 ### OPEN-004 — Forma de pagar
 
@@ -525,9 +525,9 @@ A compra informa o custo pago. O que acontece com o custo do produto, usado na C
 
 **Recomendada: (a).** Segue o desenho da venda (RN09, RN10, RN11), e o caixa só muda quando o dinheiro sai (RN14). A entrada pode ser registrada com a 1ª parcela vencendo no dia da compra e paga em seguida, sem tela nova. Parcelas com valores diferentes ficam fora: os boletos de uma mesma nota costumam ser iguais.
 
-**Decisão (22/11/2026): (c), com a entrada opcional.** A compra pode ser à vista, a prazo sem entrada ou a prazo com entrada. A entrada é um campo opcional da compra a prazo: sem ela, o total todo vira parcelas, como na (a).
+**Decisão (21/11/2026): (c), com a entrada opcional.** A compra pode ser à vista, a prazo sem entrada ou a prazo com entrada. A entrada é um campo opcional da compra a prazo: sem ela, o total todo vira parcelas, como na (a).
 
-**Complemento (22/11/2026, a pedido da usuária): toda compra gera contas a pagar**, inclusive a à vista e a entrada, que vencem na data da compra. A saída do caixa só acontece quando alguém confirma o pagamento de cada conta no Financeiro, com a forma. Assim, o pagamento é conferido antes de entrar no caixa, e as compras seguem o mesmo princípio que a SPEC-029 trará para as vendas. Isso troca o "à vista sai do caixa na data" das opções acima. Detalhes na seção 5.3.
+**Complemento (21/11/2026, a pedido da usuária): toda compra gera contas a pagar**, inclusive a à vista e a entrada, que vencem na data da compra. A saída do caixa só acontece quando alguém confirma o pagamento de cada conta no Financeiro, com a forma. Assim, o pagamento é conferido antes de entrar no caixa, e as compras seguem o mesmo princípio que a SPEC-029 trará para as vendas. Isso troca o "à vista sai do caixa na data" das opções acima. Detalhes na seção 5.3.
 
 ### OPEN-005 — Frete, outras despesas e desconto
 
@@ -537,7 +537,7 @@ A compra informa o custo pago. O que acontece com o custo do produto, usado na C
 
 **Recomendada: (a).** O custo de aquisição inclui o frete e as despesas da compra e desconta os abatimentos (NBC TG 16), e o total da compra bate com o valor da nota. Com a OPEN-001 (a), o rateio só aparece no detalhe da compra.
 
-**Decisão (22/11/2026): (a).** O custo desta compra e o custo médio (OPEN-001) já usam o custo com o rateio.
+**Decisão (21/11/2026): (a).** O custo desta compra e o custo médio (OPEN-001) já usam o custo com o rateio.
 
 ### OPEN-006 — Cancelar uma compra registrada errada
 
@@ -547,7 +547,7 @@ A compra informa o custo pago. O que acontece com o custo do produto, usado na C
 
 **Recomendada: (a).** Uma compra lançada errada (quantidade digitada errada, nota repetida) precisa ser desfeita de uma vez, sem deixar o estoque, o caixa e o custo desencontrados. É o mesmo modelo que a equipe já conhece da venda. A (b) deixa o erro na mão de quem registra e quebra as ligações. A (c) impede cancelar a compra mais comum: a à vista, que já nasce paga.
 
-**Decisão (22/11/2026): (a).**
+**Decisão (21/11/2026): (a).**
 
 ### OPEN-007 — Permissões
 
@@ -557,7 +557,7 @@ A compra informa o custo pago. O que acontece com o custo do produto, usado na C
 
 **Recomendada: (a).** Não muda a matriz nem as permissões já salvas. Quem registra uma compra mexe no estoque e no caixa, então precisa das duas permissões. O custo segue a regra da compra, como a venda dá baixa no estoque sem exigir permissão no Estoque.
 
-**Decisão (22/11/2026): (a).**
+**Decisão (21/11/2026): (a).**
 
 ### OPEN-008 — Onde fica a compra
 
@@ -567,7 +567,7 @@ A compra informa o custo pago. O que acontece com o custo do produto, usado na C
 
 **Recomendada: (a).** A compra é o espelho da venda e mexe em dois módulos; no menu, fica fácil de achar sem escolher entre o Estoque e o Financeiro. Os atalhos levam à compra de onde a pessoa já está.
 
-**Decisão (22/11/2026): (a).** "Compras" é um item novo no menu lateral, abaixo de "Vendas" (no celular, no "Mais"). Os atalhos "Registrar compra" ficam no topo da página do Estoque e no detalhe do fornecedor, que já abre a compra com o fornecedor escolhido (seção 5.8).
+**Decisão (21/11/2026): (a).** "Compras" é um item novo no menu lateral, abaixo de "Vendas" (no celular, no "Mais"). Os atalhos "Registrar compra" ficam no topo da página do Estoque e no detalhe do fornecedor, que já abre a compra com o fornecedor escolhido (seção 5.8).
 
 ### OPEN-009 — Política de Privacidade
 
@@ -578,7 +578,7 @@ A Política diz que o fornecedor é apagado "se não tiver contas nem despesas f
 
 **Recomendada: (a).** Muda uma regra de exclusão que a pessoa lê para exercer os seus direitos. A equipe já escolheu o novo aceite nas mudanças anteriores sobre clientes e fornecedores. A (b) deixa a Política desatualizada até a próxima versão.
 
-**Decisão (22/11/2026): (a).**
+**Decisão (21/11/2026): (a).**
 
 ### OPEN-010 — Exportar as compras
 
@@ -588,7 +588,7 @@ A Política diz que o fornecedor é apagado "se não tiver contas nem despesas f
 
 **Recomendada: (a).** Mantém a Spec menor. O que a contabilidade pede hoje (o que foi pago, o que se deve e o inventário) já sai pelos relatórios e pelo inventário. Se a equipe quiser o relatório, a (b) segue o padrão dos Relatórios (RF71).
 
-**Decisão (22/11/2026): (a).** Um relatório de compras fica como evolução.
+**Decisão (21/11/2026): (a).** Um relatório de compras fica como evolução, numa Spec própria: a usuária disse que ele seria bem útil, sem urgência (pendência 12 do Mapa).
 
 **Decisões derivadas do pedido e da baseline (sem questão nova):**
 - compras nos **dois planos**, sem limite de quantidade (RF46, RF47, RN18); a lista do plano gratuito mostra os últimos 12 meses (SPEC-013, OPEN-005);
@@ -611,7 +611,7 @@ A Política diz que o fornecedor é apagado "se não tiver contas nem despesas f
 
 A SPEC-027 estará concluída quando:
 
-- [x] as questões OPEN-001 a OPEN-010 tiverem sido decididas e registradas (22/11/2026), com a baseline ajustada (RF91 e RN43 incluídos; RF08, RF15, RF30, RF89, RF90 e RNF05 alterados);
+- [x] as questões OPEN-001 a OPEN-010 tiverem sido decididas e registradas (21/11/2026), com a baseline ajustada (RF91 e RN43 incluídos; RF08, RF15, RF30, RF89, RF90 e RNF05 alterados);
 - [ ] todos os critérios de aceitação (CA-01 a CA-17) estiverem implementados;
 - [ ] todos os invariantes (INV-001 a INV-011) estiverem preservados;
 - [ ] os testes derivados (T01 a T14) estiverem aprovados, com o CI verde em cada PR;
