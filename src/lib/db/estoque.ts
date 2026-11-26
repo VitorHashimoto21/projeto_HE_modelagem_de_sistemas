@@ -57,6 +57,8 @@ export type Movimento = {
   motivo?: MotivoSaidaManual | null;
   observacao?: string | null;
   vendaId?: string | null;
+  /** SPEC-027: a entrada da compra aponta para ela. */
+  compraId?: string | null;
   /** Movimentação manual exige item não arquivado; o estorno de venda (SPEC-011) pode dispensar. */
   exigirAtivo?: boolean;
 };
@@ -109,6 +111,7 @@ export async function movimentar(tx: Tx, negocioId: string, m: Movimento): Promi
       data: m.data,
       observacao: m.observacao ?? null,
       vendaId: m.vendaId ?? null,
+      compraId: m.compraId ?? null,
     },
   });
   return { saldoAnterior: num(anterior)!, saldoPosterior: num(posterior)! };

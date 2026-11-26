@@ -7,6 +7,7 @@ import { criarConsultasDoEstoque } from "./estoque";
 import { criarConsultasFinanceiras } from "./financeiro";
 import { criarConsultasDePrecificacao } from "./precificacao";
 import { criarConsultasDeVendas } from "./vendas";
+import { criarConsultasDeCompras } from "./compras";
 import { criarConsultasDeClientes, visaoDoCliente } from "./clientes";
 import { criarConsultasDeFornecedores, visaoDoFornecedor } from "./fornecedores";
 import { criarConsultasDeEquipe } from "./equipe";
@@ -28,6 +29,8 @@ export { ClienteNaoEncontrado, DocumentoRepetido, FILTRO_INCOMPLETOS, LIMITE_DA_
 export type { ClienteDaLista, CompraDoCliente, ConsultasDeClientes, DetalheDoCliente, ValoresDoCliente, Visao } from "./clientes";
 export { DocumentoDoFornecedorRepetido, FornecedorNaoEncontrado, LIMITE_DE_CONTAS_DO_FORNECEDOR, LIMITE_DE_FORNECEDORES } from "./fornecedores";
 export type { ConsultasDeFornecedores, ContaDoFornecedor, DetalheDoFornecedor, FornecedorDaLista, OpcaoDePessoa, ValoresDoFornecedor } from "./fornecedores";
+export { DocumentoDaCompraRepetido, ProdutoIndisponivel, ValoresDaCompraInvalidos } from "./compras";
+export type { ConsultasDeCompras, LinhaDoResumo, ResumoDaCompra } from "./compras";
 export type { ConsultasDePrecificacao, ItemCalculavel, ParametrosDePrecificacao } from "./precificacao";
 export type { ConsultasFinanceiras, ContaExibida, DespesaExibida, DetalheDaConta, FluxoDeCaixa, LancamentoExibido } from "./financeiro";
 export type { ConsultasDoEstoque, DetalheDoEstoque, ProdutoEmEstoque } from "./estoque";
@@ -74,6 +77,11 @@ export function estoque(contexto: ContextoDeNegocio) {
 /** Vendas do negócio ativo (SPEC-008): sempre pelo cliente do negócio; no modo suporte, clientes mascarados (SPEC-018). */
 export function vendas(contexto: ContextoDeNegocio) {
   return criarConsultasDeVendas(clienteDoNegocio(contexto), contexto.negocioId, { mascararClientes: contexto.modoSuporte === true });
+}
+
+/** Compras de fornecedores do negócio ativo (SPEC-027): sempre pelo cliente do negócio. */
+export function compras(contexto: ContextoDeNegocio) {
+  return criarConsultasDeCompras(clienteDoNegocio(contexto), contexto.negocioId);
 }
 
 /**
