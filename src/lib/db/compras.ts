@@ -72,6 +72,11 @@ export type LinhaDoResumo = {
   escolhaCusto: EscolhaDeCusto;
 };
 
+/** Produto na tela da compra (OPEN-003): físico e ativo, com o saldo e o custo atual. */
+export type ProdutoDaCompra = { id: string; nome: string; codigo: string | null; unidadeMedida: string; custoCentavos: number; saldo: number };
+
+export type CompraRegistrada = { id: string; numero: number; jaExistia: boolean; custosNovos: { itemId: string; nome: string }[] };
+
 /** O resumo antes de confirmar (5.1, item 4). */
 export type ResumoDaCompra = Omit<ValoresDaCompra, "linhas"> & {
   linhas: LinhaDoResumo[];
@@ -103,6 +108,15 @@ export function criarConsultasDeCompras(cliente: ClienteDoNegocio, negocioId: st
     if (outra) throw new DocumentoDaCompraRepetido(outra.numero, outra.numeroDocumento ?? d.numeroDocumento);
   }
 
+  /** 5.1, item 6: os produtos cujo custo mudou pela compra, para revisar o preço na Calculadora. */
+  async function custosNovosDa(compraId: string): Promise<{ itemId: string; nome: string }[]> {
+    const linhas = await cliente.itemCompra.findMany({ where: { compraId }, select: { itemId: true, custoAnterior: true, custoNovo: true, item: { select: { nome: true } } } });
+    return linhas
+      .filter((l) => num(l.custoNovo) !== num(l.custoAnterior))
+      .map((l) => ({ itemId: l.itemId, nome: l.item.nome }))
+      .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
+  }
+
   /** Produtos físicos ativos do negócio (OPEN-003, CA-07). */
   async function produtos(d: DadosDaCompra) {
     const itens = await cliente.item.findMany({
@@ -118,6 +132,17 @@ export function criarConsultasDeCompras(cliente: ClienteDoNegocio, negocioId: st
   }
 
   return {
+    /** Os produtos que podem entrar na compra (OPEN-003, 5.2): só os físicos ativos. */
+    async produtosDisponiveis(): Promise<ProdutoDaCompra[]> {
+      const itens = await cliente.item.findMany({
+        where: { tipo: "PRODUTO_FISICO", arquivadoEm: null },
+        select: { id: true, nome: true, codigo: true, unidadeMedida: true, custoBase: true, quantidadeEstoque: true },
+        orderBy: { nome: "asc" },
+        take: 2000,
+      });
+      return itens.map((i) => ({ id: i.id, nome: i.nome, codigo: i.codigo, unidadeMedida: i.unidadeMedida, custoCentavos: paraCentavos(num(i.custoBase)!), saldo: num(i.quantidadeEstoque)! }));
+    },
+
     /** Revisar compra (seção 9): o resumo com o saldo novo, as contas e os três custos de cada produto. */
     async revisar(d: DadosDaCompra): Promise<ResumoDaCompra> {
       const valores = valoresDa(d);
@@ -154,25 +179,29 @@ export function criarConsultasDeCompras(cliente: ClienteDoNegocio, negocioId: st
      * Registrar compra (5.4). O servidor valida tudo de novo e grava numa transação. Se a compra já foi
      * gravada (clique duplo, rede lenta), devolve a existente em vez de criar outra.
      */
-    async registrar(d: DadosDaCompra, usuarioId: string, agora = new Date()): Promise<{ id: string; numero: number; jaExistia: boolean }> {
+    async registrar(d: DadosDaCompra, usuarioId: string, agora = new Date()): Promise<CompraRegistrada> {
       const existente = await cliente.compra.findFirst({ where: { id: d.id }, select: { id: true, numero: true } });
-      if (existente) return { ...existente, jaExistia: true };
+      if (existente) return { ...existente, jaExistia: true, custosNovos: await custosNovosDa(existente.id) };
       const valores = valoresDa(d);
       await conferirFornecedor(d.fornecedorId);
       await conferirDocumento(d);
       await produtos(d);
+      let gravada: { id: string; numero: number; jaExistia: boolean };
       try {
-        return await cliente.$transaction(async (tx) => ({ ...(await gravar(tx as unknown as Tx, d, valores, usuarioId, agora)), jaExistia: false }), {
+        gravada = await cliente.$transaction(async (tx) => ({ ...(await gravar(tx as unknown as Tx, d, valores, usuarioId, agora)), jaExistia: false }), {
           timeout: 30_000,
         });
       } catch (e) {
         if (!ehUnicidade(e)) throw e;
         // Envio simultâneo da mesma compra, ou outra compra com o mesmo documento gravada antes (INV-011).
-        const gravada = await cliente.compra.findFirst({ where: { id: d.id }, select: { id: true, numero: true } });
-        if (gravada) return { ...gravada, jaExistia: true };
-        await conferirDocumento(d);
-        throw e;
+        const outra = await cliente.compra.findFirst({ where: { id: d.id }, select: { id: true, numero: true } });
+        if (!outra) {
+          await conferirDocumento(d);
+          throw e;
+        }
+        gravada = { ...outra, jaExistia: true };
       }
+      return { ...gravada, custosNovos: await custosNovosDa(gravada.id) };
     },
   };
 
