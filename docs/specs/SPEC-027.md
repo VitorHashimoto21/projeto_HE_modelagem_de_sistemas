@@ -48,7 +48,7 @@ Hoje o HE não tem compra. Para registrar uma compra de mercadoria, o negócio f
 Com esta Spec:
 - **Registrar compra:** uma tela com o fornecedor, o nº do documento, a data, os produtos (quantidade e custo unitário), o frete e o desconto (OPEN-005) e a forma de pagar (OPEN-004). Antes de confirmar, um resumo mostra o que vai acontecer no estoque, no financeiro e no custo.
 - **Gravação:** tudo numa transação. Se algo falhar, nada é gravado.
-- **Lista e detalhe:** cada compra tem um número. A lista tem busca, filtros e total, e o detalhe liga a compra às entradas do estoque e ao lançamento ou às contas.
+- **Lista e detalhe:** cada compra tem um número. A lista tem busca, filtros e total, e o detalhe liga a compra às entradas do estoque e às contas a pagar.
 - **Cancelamento:** uma compra registrada errada é desfeita de uma vez (OPEN-006).
 
 ### Exemplo que originou a Spec
@@ -97,7 +97,7 @@ A loja do exemplo da SPEC-026 compra da fornecedora "Embalagens Exemplo Ltda" 10
 | | RNF06 | Registrar e listar compras dentro do tempo da seção 10. |
 | **Decisões anteriores** | SPEC-007, OPEN-005 | Data das movimentações: hoje ou até 90 dias atrás. Vale para a data da compra. |
 | | SPEC-008, OPEN-007 | Número sequencial da venda por negócio, gravado na transação: modelo do número da compra. |
-| | SPEC-009, OPEN-003 | Lançamentos nunca são alterados nem apagados; só a conta manual sem pagamento é editável. O lançamento e as contas da compra seguem a mesma regra. |
+| | SPEC-009, OPEN-003 | Lançamentos nunca são alterados nem apagados; só a conta manual sem pagamento é editável. As contas da compra e os pagamentos delas seguem a mesma regra. |
 | | SPEC-011 | Cancelamento de venda em transação única: modelo do cancelamento da compra (OPEN-006). |
 | | SPEC-013, OPEN-005 | Plano gratuito: histórico dos últimos 12 meses. |
 | | SPEC-019, OPEN-005 | Lista fechada de correções do suporte; ação nova nasce proibida. |
@@ -125,13 +125,13 @@ A loja do exemplo da SPEC-026 compra da fornecedora "Embalagens Exemplo Ltda" 10
    - produtos buscados pelo nome ou pelo código interno, com quantidade, custo unitário e o total da linha (OPEN-003);
    - frete, outras despesas e desconto (OPEN-005);
    - forma de pagar: à vista, a prazo ou entrada + parcelas, sempre como contas a pagar (OPEN-004);
-   - resumo antes de confirmar: as entradas, o lançamento ou as contas, e o custo atual e o novo de cada produto (OPEN-001).
-2. **Gravação numa transação:** número da compra, entradas no estoque, lançamento ou contas a pagar e custo dos produtos.
+   - resumo antes de confirmar: as entradas, as contas a pagar e o custo atual e o novo de cada produto (OPEN-001).
+2. **Gravação numa transação:** número da compra, entradas no estoque, contas a pagar e custo dos produtos.
 3. **Lista de compras:** busca (fornecedor, nº do documento ou nº da compra), filtros (período, fornecedor e situação) e o total da lista filtrada.
-4. **Detalhe da compra:** produtos, frete e desconto, o lançamento ou as contas com a situação de cada uma, as entradas no estoque, quem registrou e quando.
+4. **Detalhe da compra:** produtos, frete e desconto, as contas com a situação de cada uma, as entradas no estoque, quem registrou e quando.
 5. **Ligações:**
    - a entrada no histórico do Estoque mostra "Compra nº N";
-   - o lançamento e as contas mostram a origem "Compra nº N", e o filtro de origem das contas ganha "Compra";
+   - as contas mostram a origem "Compra nº N", e o filtro de origem das contas ganha "Compra";
    - o detalhe do fornecedor mostra as compras dele.
 6. **Correção do fornecedor e do nº do documento** da compra a qualquer momento, sem mexer em valores; a correção vale também para as contas da compra.
 7. **Cancelamento** da compra (OPEN-006).
@@ -188,7 +188,7 @@ A loja do exemplo da SPEC-026 compra da fornecedora "Embalagens Exemplo Ltda" 10
 1. Quem tem a permissão (OPEN-007) abre **Registrar compra** (OPEN-008).
 2. Preenche:
    - **fornecedor** (obrigatório, OPEN-002), buscado pelo nome ou documento; "Novo fornecedor" abre o formulário da SPEC-026 no lugar da compra, que volta com o que foi digitado e o fornecedor escolhido;
-   - **nº do documento** (obrigatório, até 40 caracteres, como nas contas), único por fornecedor entre as compras não canceladas (OPEN-002). A caixa **"Compra sem nota fiscal"** (por exemplo, numa feira ou de pessoa física) dispensa o nº: o campo some, e a compra aparece como "Sem nota" na lista e no detalhe;
+   - **nº do documento** (obrigatório, até 40 caracteres, como nas contas), único por fornecedor entre as compras não canceladas (OPEN-002), comparado sem diferença de espaços e de maiúsculas: "nf-1234" e "NF-1234" são o mesmo documento (decisão de 26/11/2026). A caixa **"Compra sem nota fiscal"** (por exemplo, numa feira ou de pessoa física) dispensa o nº: o campo some, e a compra aparece como "Sem nota" na lista e no detalhe;
    - **data da compra:** hoje, por padrão, ou até 90 dias atrás;
    - **observação** (opcional, até 200 caracteres).
 3. Adiciona os **produtos** (5.2), o **frete e o desconto** (OPEN-005) e a **forma de pagar** (5.3).
@@ -259,9 +259,9 @@ No custo médio, o saldo antes é o saldo do produto no momento do registro; a e
   - filtros: período da data da compra, fornecedor e situação;
   - total da lista filtrada, somando todas as páginas, sem as canceladas;
   - plano gratuito: só os últimos 12 meses, com o aviso do plano (SPEC-013).
-- **Detalhe:** os dados da compra, os produtos com quantidade, custo unitário e total, o frete, as outras despesas e o desconto, o lançamento ou as contas (com a situação e os pagamentos), as entradas no estoque, o custo anterior e o novo de cada produto, quem registrou e quando, e, se cancelada, quem cancelou, quando e o motivo.
+- **Detalhe:** os dados da compra, os produtos com quantidade, custo unitário e total, o frete, as outras despesas e o desconto, as contas (com a situação e os pagamentos), as entradas no estoque, o custo anterior e o novo de cada produto, quem registrou e quando, e, se cancelada, quem cancelou, quando e o motivo.
 - **Estoque:** no histórico do produto, a entrada aparece como "Entrada — Compra nº N", com link para a compra para quem pode vê-la.
-- **Financeiro:** o lançamento e as contas mostram "Compra nº N", com link para a compra; o filtro de origem das contas ganha "Compra".
+- **Financeiro:** as contas mostram "Compra nº N", com link para a compra; o filtro de origem das contas ganha "Compra".
 - **Fornecedor:** o detalhe ganha a lista das compras do fornecedor (até 50, as mais recentes) e o total comprado.
 
 ### 5.7 Correção e cancelamento (OPEN-006)
@@ -322,6 +322,15 @@ No custo médio, o saldo antes é o saldo do produto no momento do registro; a e
 | Entrada fora do total (OPEN-004) | "A entrada precisa ser maior que zero e menor que o total da compra." |
 | Cancelamento sem saldo | "Não dá para cancelar: o saldo de {produto} é menor que a quantidade da compra." |
 | Compra já cancelada | "Esta compra já foi cancelada." |
+| Quantidade com mais de 3 casas | "Use uma quantidade com até 3 casas decimais." |
+| Custo com mais de 2 casas | "Use um custo com até 2 casas decimais." |
+| Frete, outras despesas ou desconto inválido | "Use um valor de 0 ou mais, com até 2 casas decimais." |
+| Parcelas fora de 1 a 12 | "Use de 1 a 12 parcelas." |
+| Parcela sem vencimento | "Informe o vencimento de cada parcela." |
+| Nº do documento longo | "Use no máximo 40 caracteres." |
+| Observação longa | "Use no máximo 200 caracteres." |
+| Mais de 100 produtos | "Use no máximo 100 produtos por compra." |
+| Valor acima do limite | "O valor passa do limite de R$ 99.999.999,99." |
 | Suporte ou negócio suspenso | As mensagens da SPEC-019. |
 
 ---
@@ -330,7 +339,7 @@ No custo médio, o saldo antes é o saldo do produto no momento do registro; a e
 
 | ID | Invariante | Como verificar |
 |---|---|---|
-| **INV-001** | A compra é gravada inteira ou nada: número, produtos, entradas, lançamento ou contas e custo. | Teste de integração com falha forçada no meio (produto arquivado entre a revisão e a confirmação). |
+| **INV-001** | A compra é gravada inteira ou nada: número, produtos, entradas, contas e custo. | Teste de integração com falha forçada no meio (produto arquivado entre a revisão e a confirmação). |
 | **INV-002** | Total = soma das linhas + frete + outras despesas − desconto, maior que zero. À vista, a conta é igual ao total; a prazo, a entrada (se houver) + a soma das parcelas é igual ao total, com os centavos na 1ª parcela. | Teste unitário das contas; teste de integração conferindo o banco. |
 | **INV-003** | Cada linha gera uma entrada no produto da linha, com a quantidade da linha e a ligação com a compra, pela primitiva de movimentação; compras e vendas simultâneas nunca deixam o saldo errado. | Teste de integração com compras e vendas simultâneas. |
 | **INV-004** | A compra só tem produtos físicos ativos e fornecedor do mesmo negócio; o banco recusa o contrário. | Teste de integração com gravação direta. |
@@ -362,7 +371,7 @@ No custo médio, o saldo antes é o saldo do produto no momento do registro; a e
 - tabelas `Compra` e `ItemCompra`, com RLS, índices por negócio, por fornecedor e por data, e os modelos em `modelos.ts`;
 - enums da condição e da situação da compra (a forma fica nos pagamentos das contas, SPEC-026);
 - colunas de ligação com a compra em `MovimentacaoEstoque`, `LancamentoFinanceiro`, `ContaPagarReceber` e `HistoricoCusto`, com índices;
-- valor novo nos enums do tipo da movimentação e da origem do lançamento;
+- valor novo no enum do tipo da movimentação, para a saída do cancelamento; a origem do lançamento não muda, porque nenhum lançamento nasce da compra: o pagamento de cada conta tem a origem de pagamento de conta, e os estornos do cancelamento, a de estorno;
 - gatilho de mesmo negócio para o fornecedor, os produtos e as ligações;
 - CHECKs: quantidade maior que zero, valores não negativos, total maior que zero, entrada só a prazo (maior que zero e menor que o total), nº do documento vazio se e só se a compra é sem nota fiscal, conta da compra só a pagar;
 - índice único parcial de fornecedor + nº do documento entre as compras não canceladas (INV-011);
@@ -379,10 +388,10 @@ No custo médio, o saldo antes é o saldo do produto no momento do registro; a e
   - custo novo pela regra da OPEN-001;
   - mensagens.
 - `src/lib/db/compras.ts` (novo):
-  - registrar: número, `movimentar()` da SPEC-007 para cada linha, lançamento ou contas e custo com o histórico, numa transação;
+  - registrar: número, `movimentar()` da SPEC-007 para cada linha, contas a pagar e custo com o histórico, numa transação;
   - listar com busca, filtros e total, calculados no banco; detalhar; corrigir o fornecedor e o nº do documento; cancelar.
 - `src/lib/db/estoque.ts`: a entrada da compra no histórico do produto; o novo tipo de saída fora do consumo.
-- `src/lib/db/financeiro.ts`: a origem "Compra" no lançamento, nas contas e no filtro; a recusa de estornar ou cancelar sozinho o que veio de uma compra.
+- `src/lib/db/financeiro.ts`: a origem "Compra" nas contas e no filtro; a recusa de estornar ou cancelar sozinho o que veio de uma compra.
 - `src/lib/db/fornecedores.ts`: compras no detalhe; a exclusão considera as compras.
 - `src/lib/db/lgpd.ts`: compras na exportação.
 - `src/lib/dominio/suporte.ts`: as telas de compra no registro de telas abertas; `correcoes.ts` não muda (a compra fica fora da lista).
@@ -399,10 +408,10 @@ No custo médio, o saldo antes é o saldo do produto no momento do registro; a e
 
 | Contrato | Entrada | Saída | Erros |
 |---|---|---|---|
-| **Revisar compra** | os campos da compra | o resumo: entradas (saldo atual e novo), lançamento, entrada e parcelas, e por produto o custo atual, o desta compra e o médio, com o médio marcado | `CampoInvalido`, `FornecedorNaoEncontrado`, `DocumentoRepetido`, `ItemNaoEncontrado`, `ItemSemEstoque`, `ItemArquivado`, `SemPermissao` |
+| **Revisar compra** | os campos da compra | o resumo: entradas (saldo atual e novo), as contas a pagar (à vista, entrada e parcelas) e, por produto, o custo atual, o desta compra e o médio, com o médio marcado | `CampoInvalido`, `FornecedorNaoEncontrado`, `DocumentoRepetido`, `ItemNaoEncontrado`, `ItemSemEstoque`, `ItemArquivado`, `SemPermissao` |
 | **Registrar compra** | fornecedorId, numeroDocumento ou semNotaFiscal, data, observacao?, linhas [{itemId, quantidade, custoUnitario, escolhaDoCusto}], frete?, outrasDespesas?, desconto?, condição (à vista; ou a prazo: entrada?, parcelas [{vencimento}]) | {compraId, numero} | os da revisão + `ForaDaListaDeCorrecoes`, `NegocioSuspenso` |
 | **Listar compras** | busca?, período?, fornecedorId?, situação?, página | [{id, numero, data, fornecedor, numeroDocumento, total, condição, situação}], total da lista | `SemPermissao`, `CampoInvalido` (período invertido) |
-| **Detalhar compra** | id | a compra, os produtos, o lançamento ou as contas com os pagamentos, as entradas, os custos e o cancelamento | `CompraNaoEncontrada`, `SemPermissao` |
+| **Detalhar compra** | id | a compra, os produtos, as contas com os pagamentos, as entradas, os custos e o cancelamento | `CompraNaoEncontrada`, `SemPermissao` |
 | **Corrigir fornecedor e documento** | id, fornecedorId, numeroDocumento ou semNotaFiscal | a compra | `CompraNaoEncontrada`, `FornecedorNaoEncontrado`, `DocumentoRepetido`, `CampoInvalido`, `SemPermissao`, `ForaDaListaDeCorrecoes`, `NegocioSuspenso` |
 | **Cancelar compra** | id, motivo | a compra cancelada, com os produtos cujo custo não voltou | `CompraNaoEncontrada`, `CompraJaCancelada`, `EstoqueInsuficiente`, `CampoInvalido`, `SemPermissao`, `ForaDaListaDeCorrecoes`, `NegocioSuspenso` |
 | **Detalhar fornecedor** (SPEC-026) | id | + compras [{id, numero, data, total, situação}] (até 50) e total comprado | Sem mudança |
@@ -413,15 +422,15 @@ No custo médio, o saldo antes é o saldo do produto no momento do registro; a e
 **Etapa 1a (22/11/2026)** — o banco das compras: schema, migração e proteções, e as contas da compra no Financeiro:
 - **A etapa 1 foi dividida em três.** Ela passava muito do tamanho de referência de um PR (cerca de 400 linhas de código). A 1a traz o banco: as tabelas, as regras do banco (seção 7) e o tratamento das contas da compra no Financeiro, com os testes T04. A 1b traz as regras e a gravação (validação, rateio, contas, custo e registrar), com os testes T01, T02, T03 e T09. A 1c traz a tela "Registrar compra", com o resumo, e o atalho no Estoque. Até a 1c, quem usa o HE não vê nada novo, salvo o filtro de origem "Compra" no Financeiro (abaixo), que fica sem contas.
 - **Unicidade do nº do documento (INV-011).** A seção 7 previa um índice único parcial. O CI compara o banco com o schema do Prisma, que não representa índice parcial. Por isso, a regra usa uma coluna-chave com um índice único comum, como o nome e o código do item (SPEC-006 e SPEC-024). A chave só existe na compra registrada com nº e fica vazia na cancelada e na sem nota. O efeito é o mesmo, e o banco recusa a repetição mesmo com compras simultâneas.
-- **Origem do lançamento.** A seção 7 previa um valor novo na origem do lançamento. Com a decisão de 21/11/2026 (toda compra gera contas a pagar), nenhum lançamento nasce da compra. O pagamento de cada conta tem a origem de pagamento de conta, como hoje, e os estornos do cancelamento terão a origem de estorno. Por isso, a origem do lançamento não ganhou valor novo. A ligação do lançamento com a compra e o tipo novo de movimentação (a saída do cancelamento) entram na etapa 3, que os usa. **Proposta:** (2) ajustar o texto da seção 7 e as menções que sobraram do "lançamento" da compra à vista (5.6, 8 e 9), escritas antes da decisão de 21/11/2026.
+- **Origem do lançamento.** A seção 7 previa um valor novo na origem do lançamento. Com a decisão de 21/11/2026 (toda compra gera contas a pagar), nenhum lançamento nasce da compra. O pagamento de cada conta tem a origem de pagamento de conta, como hoje, e os estornos do cancelamento terão a origem de estorno. Por isso, a origem do lançamento não ganhou valor novo. A ligação do lançamento com a compra e o tipo novo de movimentação (a saída do cancelamento) entram na etapa 3, que os usa. **Decidido pela equipe em 26/11/2026:** ajustar o texto (opção 2). As menções que sobraram do "lançamento" da compra à vista, escritas antes da decisão de 21/11/2026, foram trocadas pelas contas a pagar nas seções 1 a 3, 5.6, 6, 7, 8, 9 e nas decisões derivadas.
 - **Contas da compra no Financeiro já na etapa 1a.** A origem "Compra" na lista e no detalhe da conta e o filtro de origem "Compra" estavam na etapa 2. Entraram agora, junto com a regra de que a conta da compra não é editada, cancelada nem corrigida pelo Financeiro (5.7). Assim, a DEVELOP nunca trata uma conta de compra como manual. O pagamento e o estorno do pagamento continuam pelo Financeiro. Até a etapa 3, o fornecedor e o nº do documento dessas contas não têm correção, porque a correção pela compra é da etapa 3. O link "Compra nº N" na conta continua na etapa 2.
 - **Proteções no banco**, além dos CHECKs da seção 7: o produto da compra é físico e ativo (gatilho); os produtos da compra nunca mudam; a compra nunca é apagada nem muda de negócio; e as tabelas novas entram no gatilho do negócio suspenso.
 - **Modelo lógico.** O `MODELO_LOGICO_BANCO.md` será atualizado na etapa 4, com as tabelas desta Spec. Os campos da SPEC-028 também ainda não estão nele.
 
 **Etapa 1b (22/11/2026)** — regras e gravação, ainda sem tela: validação, total, rateio, contas a pagar, os três custos, revisar e registrar compra:
-- **Comparação do nº do documento.** O nº é comparado sem diferença de espaços e de maiúsculas: "nf-1234" e "NF-1234" contam como o mesmo documento. A Spec não diz como comparar. **A decidir pela equipe:** (1) manter assim (recomendado, porque evita a mesma nota duas vezes por um detalhe de digitação) ou (2) comparar exatamente como foi digitado.
-- **Rateio sem valor nas linhas.** O frete, as outras despesas e o desconto são rateados em proporção ao valor das linhas (OPEN-005). Quando todas as linhas têm custo zero (uma bonificação com frete, por exemplo), não há valor para fazer a proporção. Nesse caso, o rateio segue a quantidade. **A decidir pela equipe:** (1) manter o rateio pela quantidade (recomendado) ou (2) recusar a compra com frete e todos os produtos a custo zero.
-- **Mensagens de formato.** Além das mensagens da 5.11, o formulário usa: "Use uma quantidade com até 3 casas decimais.", "Use um custo com até 2 casas decimais.", "Use um valor de 0 ou mais, com até 2 casas decimais." (frete, outras despesas e desconto), "Use de 1 a 12 parcelas.", "Informe o vencimento de cada parcela.", "Use no máximo 40 caracteres." (nº do documento), "Use no máximo 200 caracteres." (observação), "Use no máximo 100 produtos por compra." e "O valor passa do limite de R$ 99.999.999,99.". **A decidir pela equipe:** (1) manter (recomendado) ou (2) ajustar os textos.
+- **Comparação do nº do documento.** O nº é comparado sem diferença de espaços e de maiúsculas: "nf-1234" e "NF-1234" contam como o mesmo documento. A Spec não diz como comparar. **Decidido pela equipe em 26/11/2026:** manter assim (opção 1, recomendada), porque evita a mesma nota duas vezes por um detalhe de digitação. A regra entrou na seção 5.1.
+- **Rateio sem valor nas linhas.** O frete, as outras despesas e o desconto são rateados em proporção ao valor das linhas (OPEN-005). Quando todas as linhas têm custo zero (uma bonificação com frete, por exemplo), não há valor para fazer a proporção. Nesse caso, o rateio segue a quantidade. **Decidido pela equipe em 26/11/2026:** manter o rateio pela quantidade (opção 1, recomendada). A regra entrou na decisão da OPEN-005.
+- **Mensagens de formato.** Além das mensagens da 5.11, o formulário usa: "Use uma quantidade com até 3 casas decimais.", "Use um custo com até 2 casas decimais.", "Use um valor de 0 ou mais, com até 2 casas decimais." (frete, outras despesas e desconto), "Use de 1 a 12 parcelas.", "Informe o vencimento de cada parcela.", "Use no máximo 40 caracteres." (nº do documento), "Use no máximo 200 caracteres." (observação), "Use no máximo 100 produtos por compra." e "O valor passa do limite de R$ 99.999.999,99.". **Decidido pela equipe em 26/11/2026:** manter (opção 1, recomendada). As mensagens entraram na tabela da seção 5.11.
 - **Data e custo.** A entrada no estoque fica na data da compra, ao meio-dia quando a data é passada, como a entrada manual retroativa (SPEC-007). O custo novo vale a partir do registro (5.5). O custo médio usa o total da linha com o rateio e só arredonda o resultado ao centavo.
 - **Envio duplicado.** Como na venda, o formulário manda um identificador; se a mesma compra chega duas vezes (clique duplo, rede lenta), o HE devolve a compra já gravada em vez de criar outra.
 
@@ -554,7 +563,7 @@ A compra informa o custo pago. O que acontece com o custo do produto, usado na C
 
 **Recomendada: (a).** O custo de aquisição inclui o frete e as despesas da compra e desconta os abatimentos (NBC TG 16), e o total da compra bate com o valor da nota. Com a OPEN-001 (a), o rateio só aparece no detalhe da compra.
 
-**Decisão (21/11/2026): (a).** O custo desta compra e o custo médio (OPEN-001) já usam o custo com o rateio.
+**Decisão (21/11/2026): (a).** O custo desta compra e o custo médio (OPEN-001) já usam o custo com o rateio. Quando todos os produtos da compra têm custo zero (uma bonificação com frete, por exemplo), não há valor para a proporção, e o rateio segue a quantidade de cada linha (decisão de 26/11/2026).
 
 ### OPEN-006 — Cancelar uma compra registrada errada
 
@@ -614,7 +623,7 @@ A Política diz que o fornecedor é apagado "se não tiver contas nem despesas f
 - **só produtos físicos ativos** (RN04), como a entrada manual; o mesmo produto não se repete na compra;
 - **quantidade** com até 3 casas, como o estoque; **custo unitário** com 2 casas, como o custo do produto;
 - **até 100 produtos** por compra, para caber no tempo da seção 10; o **custo unitário** vem preenchido com o custo atual do produto e pode ser trocado;
-- **categoria** Fornecedores (RF32) no lançamento e nas contas;
+- **categoria** Fornecedores (RF32) nas contas e nos pagamentos delas;
 - o **fornecedor e o nº do documento** das contas vêm da compra e são corrigidos pela compra (SPEC-026, OPEN-007);
 - as **contas da compra** não são editadas nem canceladas sozinhas pelo Financeiro, como as da venda (SPEC-009, OPEN-003); o pagamento das contas e o estorno de um pagamento (SPEC-028) continuam pelo Financeiro;
 - a **saída do cancelamento** é um estorno e não conta como consumo para o mínimo sugerido (RF20);
