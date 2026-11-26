@@ -33,7 +33,7 @@ const SITUACOES: [SituacaoFiltrada, string][] = [
   ["todas", "Todas"],
 ];
 
-const ORIGEM = { venda: "Venda no cartão", despesa: "Despesa fixa", manual: "Manual" } as const;
+const ORIGEM = { venda: "Venda no cartão", despesa: "Despesa fixa", manual: "Manual", compra: "Compra" } as const;
 const dataBr = (dia: string) => dia.split("-").reverse().join("/");
 const rotulo = "mb-1.5 block text-sm font-medium text-foreground";
 

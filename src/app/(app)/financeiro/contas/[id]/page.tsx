@@ -244,7 +244,8 @@ export default async function Conta({ params, searchParams }: PageProps<"/financ
             </Superficie>
           )}
 
-          {!alteravel && podeEditar && (
+          {/* SPEC-027 (5.7): a conta da compra é corrigida pela compra. */}
+          {!alteravel && podeEditar && c.origem !== "compra" && (
             <Superficie aria-labelledby="titulo-vinculo">
               <TituloDaSuperficie
                 id="titulo-vinculo"
