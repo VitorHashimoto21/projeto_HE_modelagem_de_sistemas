@@ -3,6 +3,7 @@ import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import type { PrismaClient } from "@/generated/prisma/client";
 import { comNegocio, type ClienteDoNegocio } from "@/lib/db/cliente-do-negocio";
 import { criarConsultasDeCompras, DocumentoDaCompraRepetido, ProdutoIndisponivel, type CompraRegistrada } from "@/lib/db/compras";
+import { criarConsultasDoCatalogo } from "@/lib/db/catalogo";
 import { criarPrismaClient } from "@/lib/db/criar-cliente";
 import { NegocioDivergente, NegocioSuspenso, SomenteLeituraNoSuporte } from "@/lib/db/erros";
 import { ContaNaoEditavel, criarConsultasFinanceiras } from "@/lib/db/financeiro";
@@ -12,6 +13,7 @@ import { MENSAGENS_COMPRA, validarCompra, vencimentosSugeridos, type DadosDaComp
 import { SEM_FILTROS } from "@/lib/dominio/contas";
 import { hoje as hojeLocal, intervaloDoDia } from "@/lib/dominio/datas";
 import { somarDias } from "@/lib/dominio/estoque";
+import { MENSAGENS_CATALOGO } from "@/lib/catalogo/validacao";
 import * as fluxo from "@/lib/compras/servicos";
 import * as financeiro from "@/lib/financeiro/servicos";
 import * as vendas from "@/lib/vendas/servicos";
@@ -505,3 +507,36 @@ describe("fluxo da tela: revisar e confirmar (etapa 1c, 5.1)", () => {
     expect(await compras().produtosDisponiveis()).toEqual([{ id: embalagemP, nome: "Embalagem P", codigo: null, unidadeMedida: "un", custoCentavos: 100, saldo: 20 }]);
   });
 });
+
+describe("\"Novo produto\" sem sair da compra (etapa 1d, OPEN-003)", () => {
+  const deps = () => ({ catalogo: criarConsultasDoCatalogo(cliente(), negocioA), usuarioId: usuario });
+  const campos = (extra: Record<string, string> = {}) => ({ nome: "Fita adesiva", categoria: "PRODUTOS", unidadeMedida: "un", custoBase: "3,50", codigo: "fita-1", ...extra });
+
+  it("cria sempre produto físico, com o custo da linha, sem estoque e sem preço; ignora o resto do formulário", async () => {
+    const r = await fluxo.criarProdutoDaCompra({ ...campos(), tipo: "SERVICO", preco: "10", materiais: "[]", estoqueMinimo: "5" }, deps());
+    expect(r.status).toBe("salvo");
+    if (r.status !== "salvo") return;
+    const item = await base.item.findUniqueOrThrow({ where: { id: r.itemId } });
+    expect({ tipo: item.tipo, nome: item.nome, codigo: item.codigo, custo: Number(item.custoBase), saldo: Number(item.quantidadeEstoque), preco: item.precoAtual, minimo: item.estoqueMinimo }).toEqual({
+      tipo: "PRODUTO_FISICO",
+      nome: "Fita adesiva",
+      codigo: "FITA-1",
+      custo: 3.5,
+      saldo: 0,
+      preco: null,
+      minimo: null,
+    });
+    // O histórico de custo começa com o custo da linha (SPEC-025), e o produto já pode entrar na compra.
+    expect((await base.historicoCusto.findMany({ where: { itemId: r.itemId } })).map((h) => Number(h.custo))).toEqual([3.5]);
+    expect((await compras().produtosDisponiveis()).some((p) => p.id === r.itemId)).toBe(true);
+  });
+
+  it("as regras do Catálogo: nome e código únicos; NCM obrigatório quando o negócio emite nota", async () => {
+    expect(await fluxo.criarProdutoDaCompra(campos({ nome: "Embalagem P" }), deps())).toMatchObject({ status: "erro", erros: { nome: expect.any(String) } });
+    await fluxo.criarProdutoDaCompra(campos(), deps());
+    expect(await fluxo.criarProdutoDaCompra(campos({ nome: "Outra fita" }), deps())).toMatchObject({ status: "erro", erros: { codigo: expect.stringContaining("FITA-1") } });
+    await base.negocio.update({ where: { id: negocioA }, data: { emiteNotaDeProduto: true } });
+    expect(await fluxo.criarProdutoDaCompra(campos({ nome: "Cola", codigo: "" }), deps())).toEqual({ status: "erro", erros: { ncm: MENSAGENS_CATALOGO.ncmObrigatorio } });
+  });
+});
+

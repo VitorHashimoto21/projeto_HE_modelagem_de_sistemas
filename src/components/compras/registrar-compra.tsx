@@ -1,10 +1,10 @@
 "use client";
 
-import { useActionState, useEffect, useMemo, useRef, useState } from "react";
+import { useActionState, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { CheckCircle2, Plus, Search, Trash2 } from "lucide-react";
+import { CheckCircle2, PackagePlus, Plus, Search, Trash2 } from "lucide-react";
 import { Aviso, MensagemDeCampo } from "@/components/acesso/campos";
 import { classeDoCampo } from "@/components/ui/classes";
 import { classeDoBotao } from "@/components/ui/estilos";
@@ -27,6 +27,7 @@ import {
 import { somarDias } from "@/lib/dominio/estoque";
 import { dividirEmParcelas, paraCentavos, reaisDeCentavos, subtotalEmCentavos } from "@/lib/dominio/venda";
 import { cn } from "@/lib/utils";
+import { NovoProdutoNaCompra } from "./novo-produto";
 
 // SPEC-026: o mesmo cadastro do fornecedor da conta, baixado só quando a pessoa abre "Novo fornecedor".
 const FormularioCliente = dynamic(() => import("@/components/clientes/formulario-cliente").then((m) => m.FormularioCliente), { ssr: false });
@@ -56,6 +57,10 @@ type PropsDaCompra = {
   fornecedores: OpcaoDePessoa[];
   podeCriarFornecedor: boolean;
   fornecedorInicial?: string;
+  /** OPEN-003: "Novo produto" sem sair da compra, para quem tem Catálogo — criar. */
+  podeCriarProduto?: boolean;
+  /** SPEC-021 (RN35): com a nota fiscal de produtos ligada, o produto novo exige o NCM. */
+  exigeNcm?: boolean;
 };
 
 export function RegistrarCompra(props: PropsDaCompra) {
@@ -74,7 +79,16 @@ export function RegistrarCompra(props: PropsDaCompra) {
   );
 }
 
-function FormularioDaCompra({ hoje, produtos, fornecedores: fornecedoresIniciais, podeCriarFornecedor, fornecedorInicial = "", aoRecomecar }: PropsDaCompra & { aoRecomecar: () => void }) {
+function FormularioDaCompra({
+  hoje,
+  produtos: produtosIniciais,
+  fornecedores: fornecedoresIniciais,
+  podeCriarFornecedor,
+  fornecedorInicial = "",
+  podeCriarProduto = false,
+  exigeNcm = false,
+  aoRecomecar,
+}: PropsDaCompra & { aoRecomecar: () => void }) {
   const [revisao, revisar, revisando] = useActionState(acaoRevisarCompra, COMPRA_INICIAL);
   const [registro, registrar, registrando] = useActionState(acaoRegistrarCompra, COMPRA_INICIAL);
   // Identificador da compra = id gravado: confirmar de novo a mesma compra não cria outra.
@@ -101,6 +115,10 @@ function FormularioDaCompra({ hoje, produtos, fornecedores: fornecedoresIniciais
   const [escolhas, setEscolhas] = useState<Record<string, EscolhaDeCusto>>({});
   const resumoRef = useRef<HTMLHeadingElement>(null);
 
+  // Os produtos criados aqui ("Novo produto") entram na lista na hora.
+  const [criados, setCriados] = useState<ProdutoNaCompra[]>([]);
+  const [novoProduto, setNovoProduto] = useState(false);
+  const produtos = useMemo(() => [...produtosIniciais, ...criados.filter((c) => !produtosIniciais.some((p) => p.id === c.id))], [produtosIniciais, criados]);
   const porId = useMemo(() => new Map(produtos.map((p) => [p.id, p])), [produtos]);
   const termo = busca.trim().toLowerCase();
   const filtrados = termo ? codigoExatoPrimeiro(produtos.filter((p) => p.nome.toLowerCase().includes(termo) || !!p.codigo?.toLowerCase().includes(termo)), busca) : [];
@@ -171,6 +189,13 @@ function FormularioDaCompra({ hoje, produtos, fornecedores: fornecedoresIniciais
     setCodigoSemItem(normalizarCodigo(busca) || null);
     e.currentTarget.select();
   }
+  // O produto novo nasce com o custo da linha (OPEN-003) e já entra na compra.
+  const aoCriarProduto = useCallback((p: ProdutoNaCompra, custo: string) => {
+    setCriados((cs) => [...cs, p]);
+    setLinhas((ls) => [...ls, { itemId: p.id, quantidade: "1", custo }]);
+    setNovoProduto(false);
+    setBusca("");
+  }, []);
   function mudarLinha(itemId: string, mudanca: Partial<Linha>) {
     setLinhas((ls) => ls.map((l) => (l.itemId === itemId ? { ...l, ...mudanca } : l)));
   }
@@ -308,7 +333,7 @@ function FormularioDaCompra({ hoje, produtos, fornecedores: fornecedoresIniciais
                 }}
                 onKeyDown={enterNaBusca}
                 placeholder="Nome ou código"
-                disabled={!produtos.length}
+                disabled={!produtos.length && !podeCriarProduto}
                 autoComplete="off"
                 className={cn(classeDoCampo(), "h-12 rounded-full pl-11")}
               />
@@ -342,6 +367,15 @@ function FormularioDaCompra({ hoje, produtos, fornecedores: fornecedoresIniciais
             ) : (
               termo && filtrados.length === 0 && <p className="mt-2 text-sm text-muted-foreground">Nenhum produto encontrado. Só aparecem produtos físicos ativos.</p>
             )}
+            {podeCriarProduto &&
+              (novoProduto ? (
+                <NovoProdutoNaCompra nomeInicial={busca.trim()} exigeNcm={exigeNcm} aoCriar={aoCriarProduto} aoCancelar={() => setNovoProduto(false)} />
+              ) : (
+                <button type="button" onClick={() => setNovoProduto(true)} className={classeDoBotao("secundario", "sm", "mt-3")}>
+                  <PackagePlus aria-hidden="true" />
+                  Novo produto
+                </button>
+              ))}
 
             <MensagemDeCampo id="itens-erro" erro={erros.itens} />
             {calc.length === 0 ? (

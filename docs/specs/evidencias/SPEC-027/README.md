@@ -40,3 +40,29 @@ Verificação em build de produção local (`next build` + `next start`), com Po
 | [`s27c_04_registrada_390_escuro.png`](s27c_04_registrada_390_escuro.png) | A mesma confirmação no celular, tema escuro |
 | [`s27c_05_contas_1440_claro.png`](s27c_05_contas_1440_claro.png) | A conta da compra no filtro de origem "Compra" |
 | [`s27c_06_repetido_1440_claro.png`](s27c_06_repetido_1440_claro.png) | O documento repetido recusado |
+
+## Etapa 1d — "Novo produto" sem sair da compra (26/11/2026)
+
+Mesmo ambiente da etapa 1c.
+
+### Testes automatizados
+
+| # | Teste | Onde | Resultado |
+|---|---|---|---|
+| OPEN-003 | O produto novo é sempre físico, com o custo da linha, sem estoque e sem preço, com o início do histórico de custo; o resto do formulário é ignorado | `test/integracao/compras.test.ts` | ✅ |
+| OPEN-003 | As regras do Catálogo valem: nome e código únicos, NCM obrigatório quando o negócio emite nota | idem | ✅ |
+
+### Roteiro no navegador
+
+21 verificações, todas aprovadas:
+- **cadastro:** a busca por "Fita adesiva" não acha nada, e "Novo produto" abre o cadastro já com esse nome. Sem a categoria e o custo, aparecem as mensagens do Catálogo, que somem quando o campo é corrigido. Com a categoria, o custo de R$ 3,50 e o código "fita-1", "Cadastrar e adicionar" grava o produto (físico, custo R$ 3,50, código FITA-1, sem estoque), fecha o cadastro e adiciona a linha com o custo informado;
+- **compra:** com 10 unidades, o resumo mostra "Saldo: 0 → 10" e um só custo (R$ 3,50). Depois de confirmar, o estoque da Fita adesiva é 10;
+- **permissão:** um membro com Estoque e Financeiro — criar, mas sem Catálogo — criar, registra compras sem o botão "Novo produto";
+- **telas** em 1440 e 390 px, claro e escuro, sem rolagem horizontal; axe sem violações com o cadastro aberto.
+
+| Captura | O que mostra |
+|---|---|
+| [`s27d_01_novo_produto_1440_claro.png`](s27d_01_novo_produto_1440_claro.png) | O cadastro do produto novo dentro da compra |
+| [`s27d_01_novo_produto_390_escuro.png`](s27d_01_novo_produto_390_escuro.png) | O mesmo cadastro no celular, tema escuro |
+| [`s27d_02_linha_do_produto_novo_1440_claro.png`](s27d_02_linha_do_produto_novo_1440_claro.png) | O produto novo na compra, com o custo informado |
+
