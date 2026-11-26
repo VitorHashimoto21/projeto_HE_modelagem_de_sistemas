@@ -30,7 +30,7 @@ export type { ClienteDaLista, CompraDoCliente, ConsultasDeClientes, DetalheDoCli
 export { DocumentoDoFornecedorRepetido, FornecedorNaoEncontrado, LIMITE_DE_CONTAS_DO_FORNECEDOR, LIMITE_DE_FORNECEDORES } from "./fornecedores";
 export type { ConsultasDeFornecedores, ContaDoFornecedor, DetalheDoFornecedor, FornecedorDaLista, OpcaoDePessoa, ValoresDoFornecedor } from "./fornecedores";
 export { DocumentoDaCompraRepetido, ProdutoIndisponivel, ValoresDaCompraInvalidos } from "./compras";
-export type { ConsultasDeCompras, LinhaDoResumo, ResumoDaCompra } from "./compras";
+export type { ConsultasDeCompras, LinhaDoResumo, ProdutoDaCompra, ResumoDaCompra } from "./compras";
 export type { ConsultasDePrecificacao, ItemCalculavel, ParametrosDePrecificacao } from "./precificacao";
 export type { ConsultasFinanceiras, ContaExibida, DespesaExibida, DetalheDaConta, FluxoDeCaixa, LancamentoExibido } from "./financeiro";
 export type { ConsultasDoEstoque, DetalheDoEstoque, ProdutoEmEstoque } from "./estoque";

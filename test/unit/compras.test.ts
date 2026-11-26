@@ -6,11 +6,13 @@ import {
   custosDaLinha,
   descricaoDaConta,
   MENSAGENS_COMPRA,
+  podeRegistrarCompra,
   ratear,
   validarCompra,
   vencimentosSugeridos,
   type DadosDaCompra,
 } from "@/lib/dominio/compras";
+import { MATRIZ_COMPLETA, PREDEFINICOES, type Matriz } from "@/lib/dominio/permissoes";
 
 // SPEC-027 — T01: validação da compra e das linhas, documento ou sem nota, total, rateio,
 // entrada e parcelas, e os três custos (CA-03, CA-04, CA-05, CA-06, INV-002).
@@ -234,5 +236,23 @@ describe("os três custos (CA-04, OPEN-001)", () => {
   it("o médio usa o total da linha com o rateio e saldo fracionado, ao centavo", () => {
     // (2,5 × 3,00 + 7,77) ÷ (2,5 + 1,5) = 15,27 ÷ 4 = 3,8175 → 3,82
     expect(custosDaLinha({ saldoAntes: 2.5, custoAtualCentavos: 300, quantidade: 1.5, totalComRateioCentavos: 777, custoComRateioCentavos: 518 }).medioCentavos).toBe(382);
+  });
+});
+
+describe("quem pode registrar (CA-13, OPEN-007)", () => {
+  const com = (m: Matriz, ajuste: (m: Matriz) => void) => {
+    const copia = structuredClone(m);
+    ajuste(copia);
+    return copia;
+  };
+
+  it("exige Estoque — criar e Financeiro — criar; o suporte nunca registra", () => {
+    expect(podeRegistrarCompra({ permissoes: MATRIZ_COMPLETA })).toBe(true);
+    expect(podeRegistrarCompra({ permissoes: PREDEFINICOES.DONO })).toBe(true);
+    // O Colaborador padrão (Estoque: ver e criar, sem Financeiro) não registra.
+    expect(podeRegistrarCompra({ permissoes: PREDEFINICOES.COLABORADOR })).toBe(false);
+    expect(podeRegistrarCompra({ permissoes: com(MATRIZ_COMPLETA, (m) => (m.financeiro.criar = false)) })).toBe(false);
+    expect(podeRegistrarCompra({ permissoes: com(MATRIZ_COMPLETA, (m) => (m.estoque.criar = false)) })).toBe(false);
+    expect(podeRegistrarCompra({ permissoes: MATRIZ_COMPLETA, modoSuporte: true })).toBe(false);
   });
 });

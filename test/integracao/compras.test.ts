@@ -2,16 +2,17 @@ import { randomUUID } from "node:crypto";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import type { PrismaClient } from "@/generated/prisma/client";
 import { comNegocio, type ClienteDoNegocio } from "@/lib/db/cliente-do-negocio";
-import { criarConsultasDeCompras, DocumentoDaCompraRepetido, ProdutoIndisponivel } from "@/lib/db/compras";
+import { criarConsultasDeCompras, DocumentoDaCompraRepetido, ProdutoIndisponivel, type CompraRegistrada } from "@/lib/db/compras";
 import { criarPrismaClient } from "@/lib/db/criar-cliente";
 import { NegocioDivergente, NegocioSuspenso, SomenteLeituraNoSuporte } from "@/lib/db/erros";
 import { ContaNaoEditavel, criarConsultasFinanceiras } from "@/lib/db/financeiro";
 import { FornecedorNaoEncontrado } from "@/lib/db/fornecedores";
 import { criarConsultasDeVendas } from "@/lib/db/vendas";
-import { validarCompra, vencimentosSugeridos, type DadosDaCompra } from "@/lib/dominio/compras";
+import { MENSAGENS_COMPRA, validarCompra, vencimentosSugeridos, type DadosDaCompra } from "@/lib/dominio/compras";
 import { SEM_FILTROS } from "@/lib/dominio/contas";
 import { hoje as hojeLocal, intervaloDoDia } from "@/lib/dominio/datas";
 import { somarDias } from "@/lib/dominio/estoque";
+import * as fluxo from "@/lib/compras/servicos";
 import * as financeiro from "@/lib/financeiro/servicos";
 import * as vendas from "@/lib/vendas/servicos";
 import { urlDoBancoDeTeste } from "../apoio/banco-de-teste";
@@ -105,7 +106,7 @@ describe("T02 — registrar compra no banco (CA-01, CA-02, CA-04, INV-002, INV-0
     const antes = await caixa();
     const d = exemplo();
     const r = await compras().registrar(d, usuario);
-    expect(r).toEqual({ id: d.id, numero: 1, jaExistia: false });
+    expect(r).toEqual({ id: d.id, numero: 1, jaExistia: false, custosNovos: [{ itemId: embalagemP, nome: "Embalagem P" }] });
 
     expect(await saldo(embalagemP)).toBe(120);
     expect(await saldo(embalagemG)).toBe(50);
@@ -289,7 +290,7 @@ describe("T03 — tudo ou nada, simultâneas e número (CA-07, CA-08, INV-001, I
         { vendas: criarConsultasDeVendas(cliente(), negocioA), usuarioId: usuario, hoje: HOJE, agora: new Date() },
       );
     const resultados = await Promise.all([comprar(5), vender(), comprar(5), vender(), comprar(5), vender(), comprar(5)]);
-    const numeros = resultados.filter((r): r is { id: string; numero: number; jaExistia: boolean } => "numero" in r && "jaExistia" in r && !("status" in r)).map((r) => r.numero);
+    const numeros = resultados.filter((r): r is CompraRegistrada => "numero" in r && "jaExistia" in r && !("status" in r)).map((r) => r.numero);
     expect(numeros.sort()).toEqual([1, 2, 3, 4]);
     expect(resultados.filter((r) => "status" in r && r.status === "registrada")).toHaveLength(3);
     // 10 + 4 × 5 − 3 × 2 = 24, e a cadeia de saldos fecha na ordem de registro.
@@ -444,5 +445,63 @@ describe("contas da compra no Financeiro (5.7, OPEN-004)", () => {
     expect((await contasDa(compra.id))[0]).toMatchObject({ status: "ABERTA", numeroDocumento: "1234", descricao: "Compra nº 1 — parcela 1/1" });
     // O pagamento continua pelo Financeiro.
     expect(await financeiro.registrarPagamento(contaId, { valor: "10", data: HOJE, forma: "PIX" }, depsFin())).toMatchObject({ status: "salvo" });
+  });
+});
+
+describe("fluxo da tela: revisar e confirmar (etapa 1c, 5.1)", () => {
+  const deps = (): fluxo.DependenciasDaCompra => ({ compras: compras(), usuarioId: usuario, hoje: HOJE, agora: new Date() });
+  /** Os campos como a tela manda: JSON com os valores digitados (vírgula decimal). */
+  const campos = (extra: Record<string, unknown> = {}) => ({
+    compra: JSON.stringify({
+      id: randomUUID(),
+      fornecedorId: fornecedor,
+      numeroDocumento: "1234",
+      semNotaFiscal: false,
+      dia: HOJE,
+      observacao: "",
+      linhas: [
+        { itemId: embalagemP, quantidade: "100", custoUnitario: "1,20" },
+        { itemId: embalagemG, quantidade: "50", custoUnitario: "2,00" },
+      ],
+      frete: "",
+      outrasDespesas: "",
+      desconto: "",
+      condicao: "A_PRAZO",
+      entrada: "",
+      parcelas: [{ vencimento: somarDias(HOJE, 28) }],
+      ...extra,
+    }),
+  });
+
+  it("revisar devolve o resumo sem gravar; confirmar grava e diz quais custos mudaram", async () => {
+    const revisado = await fluxo.revisarCompra(campos(), deps());
+    expect(revisado.status).toBe("revisada");
+    if (revisado.status !== "revisada") return;
+    expect(revisado.resumo.linhas.find((l) => l.itemId === embalagemP)?.custos).toEqual({ atualCentavos: 100, compraCentavos: 120, medioCentavos: 117 });
+    expect(await base.compra.count()).toBe(0);
+
+    const registrado = await fluxo.registrarCompra(campos(), deps());
+    expect(registrado).toMatchObject({ status: "registrada", numero: 1, jaExistia: false, custosNovos: [{ itemId: embalagemP, nome: "Embalagem P" }] });
+  });
+
+  it("mensagens: compra ilegível, campos, documento repetido e produto indisponível", async () => {
+    expect(await fluxo.revisarCompra({ compra: "{" }, deps())).toEqual({ status: "erro", mensagem: MENSAGENS_COMPRA.compraInvalida });
+    const semFornecedor = await fluxo.revisarCompra(campos({ fornecedorId: "" }), deps());
+    expect(semFornecedor).toMatchObject({ status: "erro", erros: { fornecedor: "Escolha o fornecedor." } });
+
+    await fluxo.registrarCompra(campos(), deps());
+    expect(await fluxo.registrarCompra(campos(), deps())).toEqual({
+      status: "erro",
+      erros: { documento: "Este fornecedor já tem a compra nº 1 com o documento 1234. Confira o número ou cancele a compra anterior." },
+    });
+
+    await base.item.update({ where: { id: embalagemG }, data: { arquivadoEm: new Date(), nomeChave: null } });
+    expect(await fluxo.revisarCompra(campos({ numeroDocumento: "999" }), deps())).toEqual({ status: "erro", mensagem: "Embalagem G não está mais disponível. Remova-o da compra." });
+  });
+
+  it("produtos da tela: só os físicos ativos, com o saldo e o custo", async () => {
+    await produto("Corte", 10, 0, negocioA, { tipo: "SERVICO" });
+    await base.item.update({ where: { id: embalagemG }, data: { arquivadoEm: new Date(), nomeChave: null } });
+    expect(await compras().produtosDisponiveis()).toEqual([{ id: embalagemP, nome: "Embalagem P", codigo: null, unidadeMedida: "un", custoCentavos: 100, saldo: 20 }]);
   });
 });

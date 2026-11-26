@@ -1,6 +1,7 @@
 import type { ErrosDeCampo, Validacao } from "@/lib/auth/validacao";
 import { casasDecimais, lerNumero } from "@/lib/dominio/catalogo";
 import { diasEntre, QUANTIDADE_MAXIMA, somarDias } from "@/lib/dominio/estoque";
+import { pode, type Matriz } from "@/lib/dominio/permissoes";
 import { dividirEmParcelas, MAX_PARCELAS, paraCentavos, subtotalEmCentavos } from "@/lib/dominio/venda";
 
 /**
@@ -83,6 +84,10 @@ export type DadosDaCompra = {
   /** Vencimento de cada parcela (só a prazo). */
   vencimentos: string[];
 };
+
+/** OPEN-007: registrar exige Estoque — criar e Financeiro — criar; o suporte nunca registra (RN37). */
+export const podeRegistrarCompra = (m: { permissoes: Matriz; modoSuporte?: boolean }) =>
+  !m.modoSuporte && pode(m.permissoes, "estoque", "criar") && pode(m.permissoes, "financeiro", "criar");
 
 /** INV-011: o nº do documento comparado sem diferença de espaços e de maiúsculas. */
 export const chaveDoDocumento = (numero: string) => numero.trim().replace(/\s+/g, " ").toUpperCase();

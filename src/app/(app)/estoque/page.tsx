@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ChevronRight, ClipboardList, Package, Plus, Search } from "lucide-react";
+import { ChevronRight, ClipboardList, Package, Plus, Search, ShoppingBag } from "lucide-react";
 import { FiltroDeCategoria } from "@/components/catalogo/filtro-de-categoria";
 import { ROTULO_CATEGORIA, rotuloUnidade } from "@/components/catalogo/rotulos";
 import { quantidade, SeloDeSituacao } from "@/components/estoque/situacao";
@@ -15,6 +15,7 @@ import type { CategoriaItem } from "@/generated/prisma/enums";
 import { exigirPermissao } from "@/lib/auth/servidor";
 import { CATEGORIAS } from "@/lib/catalogo/validacao";
 import { estoque } from "@/lib/db";
+import { podeRegistrarCompra } from "@/lib/dominio/compras";
 import { hoje } from "@/lib/dominio/datas";
 import { emAlerta } from "@/lib/dominio/estoque";
 import { podeVerInventario } from "@/lib/estoque/inventario";
@@ -56,6 +57,8 @@ export default async function Estoque({ searchParams }: PageProps<"/estoque">) {
   // O detalhe volta para esta lista, com os filtros (SPEC-020, correção da homologação T12).
   const aqui = link(situacao);
   const retorno = aqui === "/estoque" ? null : aqui;
+  const comCompra = podeRegistrarCompra(membro);
+  const comInventario = !membro.modoSuporte && podeVerInventario(membro.permissoes);
 
   return (
     <div className="space-y-6">
@@ -63,12 +66,23 @@ export default async function Estoque({ searchParams }: PageProps<"/estoque">) {
         titulo="Estoque"
         descricao="Os produtos físicos do catálogo, com o saldo e o mínimo de cada um."
         acoes={
-          // SPEC-025 (5.2, 5.6): quem vê o Estoque e o Catálogo; nunca no modo suporte.
-          !membro.modoSuporte && podeVerInventario(membro.permissoes) ? (
-            <Link href="/estoque/inventario" className={classeDoBotao("secundario")}>
-              <ClipboardList aria-hidden="true" />
-              Inventário
-            </Link>
+          comCompra || comInventario ? (
+            <>
+              {/* SPEC-027 (OPEN-008): atalho para quem pode registrar compras (Estoque e Financeiro — criar). */}
+              {comCompra && (
+                <Link href="/compras/nova" className={classeDoBotao("principal")}>
+                  <ShoppingBag aria-hidden="true" />
+                  Registrar compra
+                </Link>
+              )}
+              {/* SPEC-025 (5.2, 5.6): quem vê o Estoque e o Catálogo; nunca no modo suporte. */}
+              {comInventario && (
+                <Link href="/estoque/inventario" className={classeDoBotao("secundario")}>
+                  <ClipboardList aria-hidden="true" />
+                  Inventário
+                </Link>
+              )}
+            </>
           ) : undefined
         }
       />
