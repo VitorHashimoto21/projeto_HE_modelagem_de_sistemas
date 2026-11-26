@@ -6,10 +6,11 @@ import { acaoComPermissao } from "@/lib/auth/acao";
 import type { ContextoDoMembro } from "@/lib/auth/autorizacao";
 import { ROTA_SEM_ACESSO } from "@/lib/auth/rotas";
 import { camposDoFormulario } from "@/lib/auth/validacao";
-import { compras } from "@/lib/db";
+import { catalogo, compras } from "@/lib/db";
 import { hoje } from "@/lib/dominio/datas";
 import { pode } from "@/lib/dominio/permissoes";
 import * as servicos from "./servicos";
+import type { EstadoDoItem } from "@/lib/catalogo/servicos";
 import type { EstadoDaCompra } from "./servicos";
 
 // Server Actions da compra (SPEC-027, OPEN-007): registrar exige Estoque — criar e Financeiro — criar.
@@ -42,3 +43,12 @@ export const acaoRegistrarCompra = acaoComPermissao("estoque", "criar", async (m
   }
   return estado;
 });
+
+// OPEN-003: "Novo produto" sem sair da compra, para quem tem Catálogo — criar. Não sai da tela: o produto
+// criado volta para a compra, que o adiciona com o custo informado.
+export const acaoNovoProdutoDaCompra = acaoComPermissao("catalogo", "criar", async (membro, _: EstadoDoItem, form: FormData) => {
+  const estado = await servicos.criarProdutoDaCompra(camposDoFormulario(form), { catalogo: catalogo({ negocioId: membro.negocioId, usuarioId: membro.usuarioId }), usuarioId: membro.usuarioId });
+  if (estado.status === "salvo") revalidatePath("/catalogo", "layout");
+  return estado;
+});
+

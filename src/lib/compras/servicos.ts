@@ -1,4 +1,5 @@
 import type { ErrosDeCampo } from "@/lib/auth/validacao";
+import { criarItem, type DependenciasDoCatalogo, type EstadoDoItem } from "@/lib/catalogo/servicos";
 import { DocumentoDaCompraRepetido, ProdutoIndisponivel, ValoresDaCompraInvalidos, type ConsultasDeCompras, type ResumoDaCompra } from "@/lib/db/compras";
 import { FornecedorNaoEncontrado } from "@/lib/db/fornecedores";
 import { MENSAGENS_COMPRA, validarCompra, type DadosDaCompra } from "@/lib/dominio/compras";
@@ -69,3 +70,16 @@ export async function registrarCompra(campos: Record<string, string>, deps: Depe
     return erroDaCompra(e, "registrar");
   }
 }
+
+/** Os campos do "Novo produto" da compra (OPEN-003); os demais ficam para o Catálogo. */
+const CAMPOS_DO_PRODUTO = ["nome", "categoria", "unidadeMedida", "codigo", "ncm", "custoBase"] as const;
+
+/**
+ * "Novo produto" sem sair da compra (OPEN-003): o mesmo cadastro do Catálogo (validação, nome e código
+ * únicos, NCM obrigatório quando o negócio emite nota), sempre como produto físico, com o custo da linha.
+ */
+export async function criarProdutoDaCompra(campos: Record<string, string>, deps: DependenciasDoCatalogo): Promise<EstadoDoItem> {
+  const doProduto = Object.fromEntries(CAMPOS_DO_PRODUTO.map((c) => [c, campos[c] ?? ""]));
+  return criarItem({ ...doProduto, tipo: "PRODUTO_FISICO" }, deps);
+}
+

@@ -8,9 +8,10 @@ import { CabecalhoDePagina } from "@/components/ui/cabecalho-de-pagina";
 import { classeDoBotao } from "@/components/ui/estilos";
 import { ROTA_SEM_ACESSO } from "@/lib/auth/rotas";
 import { exigirPermissao } from "@/lib/auth/servidor";
-import { compras } from "@/lib/db";
+import { catalogo, compras } from "@/lib/db";
 import { podeRegistrarCompra } from "@/lib/dominio/compras";
 import { hoje } from "@/lib/dominio/datas";
+import { pode } from "@/lib/dominio/permissoes";
 import { opcoesDoVinculo } from "@/lib/financeiro/opcoes";
 
 export const metadata: Metadata = { title: "Registrar compra" };
@@ -23,7 +24,8 @@ export default async function NovaCompra({ searchParams }: PageProps<"/compras/n
   const membro = await exigirPermissao("estoque", "criar");
   if (!podeRegistrarCompra(membro)) redirect(ROTA_SEM_ACESSO);
   const p = await searchParams;
-  const [produtos, opcoes] = await Promise.all([compras(membro).produtosDisponiveis(), opcoesDoVinculo(membro)]);
+  const podeCriarProduto = pode(membro.permissoes, "catalogo", "criar");
+  const [produtos, opcoes, exigeNcm] = await Promise.all([compras(membro).produtosDisponiveis(), opcoesDoVinculo(membro), podeCriarProduto ? catalogo(membro).emiteNotaDeProduto() : false]);
   const pedido = typeof p.fornecedor === "string" && UUID.test(p.fornecedor) ? p.fornecedor : "";
   const fornecedorInicial = opcoes.fornecedores.some((f) => f.id === pedido) ? pedido : "";
 
@@ -38,7 +40,7 @@ export default async function NovaCompra({ searchParams }: PageProps<"/compras/n
           </Link>
         }
       />
-      {produtos.length === 0 && (
+      {produtos.length === 0 && !podeCriarProduto && (
         <AvisoDaPagina tom="atencao">
           Nenhum produto físico ativo no catálogo. Cadastre os produtos no{" "}
           <Link href="/catalogo" className="font-semibold underline underline-offset-2">
@@ -52,6 +54,8 @@ export default async function NovaCompra({ searchParams }: PageProps<"/compras/n
         fornecedores={opcoes.fornecedores}
         podeCriarFornecedor={opcoes.podeCriarFornecedor}
         fornecedorInicial={fornecedorInicial}
+        podeCriarProduto={podeCriarProduto}
+        exigeNcm={exigeNcm}
         produtos={produtos.map((i) => ({ id: i.id, nome: i.nome, codigo: i.codigo, unidade: rotuloUnidade(i.unidadeMedida), custoCentavos: i.custoCentavos, saldo: i.saldo }))}
       />
     </div>
