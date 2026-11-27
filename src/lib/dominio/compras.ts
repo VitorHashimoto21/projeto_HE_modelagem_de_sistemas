@@ -89,6 +89,9 @@ export type DadosDaCompra = {
 export const podeRegistrarCompra = (m: { permissoes: Matriz; modoSuporte?: boolean }) =>
   !m.modoSuporte && pode(m.permissoes, "estoque", "criar") && pode(m.permissoes, "financeiro", "criar");
 
+/** OPEN-007: ver a lista e o detalhe exige Estoque — ver e Financeiro — ver (o suporte, com os dois liberados, também). */
+export const podeVerCompras = (m: { permissoes: Matriz }) => pode(m.permissoes, "estoque", "ver") && pode(m.permissoes, "financeiro", "ver");
+
 /** INV-011: o nº do documento comparado sem diferença de espaços e de maiúsculas. */
 export const chaveDoDocumento = (numero: string) => numero.trim().replace(/\s+/g, " ").toUpperCase();
 

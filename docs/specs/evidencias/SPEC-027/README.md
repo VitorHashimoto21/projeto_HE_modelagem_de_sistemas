@@ -86,3 +86,50 @@ Feita pela equipe em <https://he-homol.vercel.app> (DEVELOP, depois do merge dos
 | Compra nº 2, à vista, paga no Financeiro: o lançamento "Compra nº 2 — à vista" de −R$ 135,00 em 27/11/2026 leva o saldo de R$ 749,50 a R$ 614,50 | ✅ | [`t14e1_11_compra_a_vista_paga.png`](homologacao/t14e1_11_compra_a_vista_paga.png) |
 
 Sem divergência com a Spec. A mensagem do documento repetido aparece no aviso do topo e no campo, como os erros de campo da Nova venda. O campo de data segue o idioma do navegador, como os outros campos de data do HE (decisão da equipe na SPEC-025).
+
+## Etapa 2a — lista de compras (27/11/2026)
+
+Verificação em build de produção local (`next build` + `next start`), com Postgres e um Supabase Auth falso. Negócio de teste **HE Testing**, com dados fictícios: as fornecedoras "Embalagens Exemplo Ltda" e "Papelaria Ficticia ME" e cinco compras gravadas direto no banco:
+- a nº 1, a prazo, com uma das duas contas paga;
+- a nº 2, à vista e paga;
+- a nº 3, sem nota e a pagar;
+- a nº 4, cancelada;
+- a nº 5, a prazo em 3 parcelas, a pagar.
+
+A Joana ficou com as permissões padrão do Colaborador.
+
+### Testes automatizados
+
+| # | Teste | Onde | Resultado |
+|---|---|---|---|
+| T05, CA-10 | Fornecedor e período filtrados; total de todas as páginas, sem as canceladas; mais recentes primeiro | `test/integracao/lista-de-compras.test.ts` | ✅ |
+| T05 | Busca pelo nome (ou nome fantasia) do fornecedor, pelo nº do documento e pelo nº da compra | idem | ✅ |
+| T05 | Situação das contas: a pagar, paga em parte e paga; a cancelada sem situação | idem | ✅ |
+| T05 | Várias páginas (100 por página) e a página fora do intervalo | idem | ✅ |
+| T05, CA-10 | Plano gratuito: compras anteriores ao histórico fora, com o aviso | idem | ✅ |
+| 5.9 | Modo suporte: o nome do fornecedor mascarado e fora da busca | idem | ✅ |
+| INV-010 | As compras de outro negócio ficam fora | idem | ✅ |
+| CA-13, OPEN-007, OPEN-008 | Quem vê as compras; "Compras" logo abaixo de "Vendas" no menu; no suporte, só com o Estoque e o Financeiro liberados | `test/unit/lista-de-compras.test.ts` | ✅ |
+| 5.6 | Filtros do endereço, nº da compra na busca e a situação das contas | idem | ✅ |
+
+**Suíte completa:** 756 testes unitários e 475 de integração, além de lint e tipos.
+
+### Roteiro no navegador
+
+38 verificações, todas aprovadas:
+- **menu:** "Compras" aparece logo abaixo de "Vendas" para o Dono e, no celular, no "Mais";
+- **lista:** as cinco compras, das mais recentes para as mais antigas, com a data, a fornecedora, o "Doc. 1001" ou o "Sem nota", a condição com a situação das contas e a cancelada riscada. Os totais mostram 4 compras e R$ 750,00, com o aviso da cancelada fora dos totais;
+- **filtros (CA-10):** a Embalagens Exemplo em outubro mostra as compras nº 2 e nº 1, com R$ 370,00. A busca acha pelo nome da fornecedora, pelo nº do documento ("a-77") e pelo nº da compra ("nº 4"). O botão "Canceladas" mantém a busca e mostra só a nº 4, que não soma. O período invertido mostra a mensagem e não filtra. Sem resultado, a tela oferece "Limpar filtros";
+- **atalho:** "Registrar compra" no topo abre a tela de registrar;
+- **permissão (CA-13):** a Colaboradora padrão não vê "Compras" no menu, e `/compras` leva a "Sem acesso";
+- **plano gratuito:** com uma compra de junho de 2025, a lista mostra o aviso do plano, esconde essa compra e não a soma;
+- **telas** em 1440, 768 e 390 px, claro e escuro, sem rolagem horizontal; axe sem violações.
+
+| Captura | O que mostra |
+|---|---|
+| [`s27e_01_lista_1440_claro.png`](s27e_01_lista_1440_claro.png) | A lista com as cinco compras, os totais e o item "Compras" no menu |
+| [`s27e_01_lista_1440_escuro.png`](s27e_01_lista_1440_escuro.png) | A mesma lista no tema escuro |
+| [`s27e_01_lista_390_escuro.png`](s27e_01_lista_390_escuro.png) | A lista no celular, tema escuro |
+| [`s27e_02_filtrada_1440_claro.png`](s27e_02_filtrada_1440_claro.png) | A Embalagens Exemplo em outubro, com o total do filtro |
+| [`s27e_03_sem_resultado_390_claro.png`](s27e_03_sem_resultado_390_claro.png) | Nenhuma compra com a busca, no celular |
+| [`s27e_04_plano_gratuito_1440_claro.png`](s27e_04_plano_gratuito_1440_claro.png) | O aviso do plano gratuito, sem a compra antiga |

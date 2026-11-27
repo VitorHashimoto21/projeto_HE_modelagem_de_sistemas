@@ -12,7 +12,7 @@
 > - **nova versão da Política com novo aceite** (OPEN-009);
 > - **sem relatório novo** (OPEN-010).
 >
-> A baseline foi ajustada: RF91 e RN43 novos; RF08, RF15, RF30, RF89, RF90 e RNF05 alterados. **Em implementação por etapas** (seção 14): as etapas 1a (o banco das compras) e 1b (regras e gravação) foram feitas em 22/11/2026, e a 1c (tela "Registrar compra") e a 1d ("Novo produto" sem sair da compra) em 26/11/2026, concluindo a etapa 1, homologada em 27/11/2026; as notas estão no fim da seção 9. Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar), a pedido da equipe. Origem: pendência 8 do Mapa, das melhorias de Estoque e Financeiro pedidas em 01/11/2026 a partir do uso real por uma usuária com CNPJ. É a terceira dessas Specs: usa o histórico de custo da SPEC-025 e os fornecedores da SPEC-026. A SPEC-019, concluída antes desta por decisão da equipe (01/11/2026), já garante que a compra nasce fora das correções do suporte e recusada em negócio suspenso.
+> A baseline foi ajustada: RF91 e RN43 novos; RF08, RF15, RF30, RF89, RF90 e RNF05 alterados. **Em implementação por etapas** (seção 14): as etapas 1a (o banco das compras) e 1b (regras e gravação) foram feitas em 22/11/2026, e a 1c (tela "Registrar compra") e a 1d ("Novo produto" sem sair da compra) em 26/11/2026, concluindo a etapa 1, homologada em 27/11/2026. A etapa 2a (lista de compras e o item "Compras" no menu) foi feita em 27/11/2026. As notas estão no fim da seção 9. Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar), a pedido da equipe. Origem: pendência 8 do Mapa, das melhorias de Estoque e Financeiro pedidas em 01/11/2026 a partir do uso real por uma usuária com CNPJ. É a terceira dessas Specs: usa o histórico de custo da SPEC-025 e os fornecedores da SPEC-026. A SPEC-019, concluída antes desta por decisão da equipe (01/11/2026), já garante que a compra nasce fora das correções do suporte e recusada em negócio suspenso.
 >
 > **Mapa:** [`MAPA_DE_SPECS.md`](../MAPA_DE_SPECS.md)
 > - **Altera:**
@@ -453,6 +453,14 @@ No custo médio, o saldo antes é o saldo do produto no momento do registro; a e
 
 É uma homologação parcial. A T14, com as compras do negócio de teste e o inventário do fim do mês, fica para depois da etapa 4, quando a compra já pode ser cancelada.
 
+**Etapa 2a (27/11/2026)** — a lista de compras e o item "Compras" no menu ([evidências](evidencias/SPEC-027/README.md#etapa-2a--lista-de-compras-27112026)):
+- **A etapa 2 foi dividida em três**, pelo tamanho de referência de um PR: a 2a traz a lista e o item "Compras" no menu, com os testes T05; a 2b traz o detalhe da compra; a 2c traz as ligações no Estoque, nas contas e no detalhe do fornecedor, com o atalho "Registrar compra" no fornecedor (CA-09). Até a 2b, as linhas da lista não abrem o detalhe.
+- **Situação.** A lista abre com todas as compras. A situação fica em botões acima dos filtros (Todas, Registradas e Canceladas), como nas contas. A compra cancelada aparece com o selo e o total riscado, e um aviso diz quantas canceladas ficaram fora dos totais.
+- **Situação das contas.** Ao lado da condição: "Paga" quando todas as contas da compra estão quitadas; "Paga em parte" quando alguma tem pagamento; "A pagar" quando nenhuma tem. A compra cancelada mostra só "Cancelada".
+- **Totais e páginas.** A quantidade e o total comprado somam todas as páginas, sem as canceladas. A lista mostra 100 compras por página, como as contas, das mais recentes para as mais antigas.
+- **Busca.** O nº da compra é encontrado com ou sem o prefixo ("12", "nº 12" ou "#12"); o nº do documento, por parte do texto, sem diferença de maiúsculas.
+- **Modo suporte (adiantado da etapa 3).** O item "Compras" aparece no menu do suporte com o Estoque e o Financeiro liberados; a lista mostra o fornecedor mascarado, e a tela entra no registro de telas abertas como "Compras". No suporte, a busca não procura pelo nome do fornecedor, só pelos números: buscar pelo nome revelaria, por tentativa, o nome que a tela mascara (5.9). **A confirmar com a equipe**: (1) manter assim ou (2) buscar também pelo nome no suporte.
+
 ---
 
 ## 10. Requisitos não funcionais aplicáveis
@@ -664,6 +672,6 @@ A SPEC-027 estará concluída quando:
 - [ ] não existir divergência conhecida entre a implementação e esta Spec;
 - [ ] toda divergência em relação à baseline tiver sido explicitamente analisada e registrada nos documentos.
 
-**Implementação por etapas:** a Spec é grande para um PR só (referência: até cerca de 400 linhas por revisão). Divisão prevista: (1) schema, domínio e registrar compra, em três partes: 1a (o banco: schema, migração e proteções), 1b (regras e gravação), 1c (tela "Registrar compra" com o resumo e o atalho no Estoque) e 1d ("Novo produto" sem sair da compra, OPEN-003); (2) lista, detalhe e ligações; (3) correção, cancelamento, suporte e LGPD; (4) roteiro, evidências e homologação.
+**Implementação por etapas:** a Spec é grande para um PR só (referência: até cerca de 400 linhas por revisão). Divisão prevista: (1) schema, domínio e registrar compra, em três partes: 1a (o banco: schema, migração e proteções), 1b (regras e gravação), 1c (tela "Registrar compra" com o resumo e o atalho no Estoque) e 1d ("Novo produto" sem sair da compra, OPEN-003); (2) lista, detalhe e ligações, em três partes: 2a (lista e o item "Compras" no menu), 2b (detalhe) e 2c (ligações no Estoque, nas contas e no fornecedor); (3) correção, cancelamento, suporte e LGPD; (4) roteiro, evidências e homologação.
 
 **Regra fundamental:** a implementação obedece a esta Spec aprovada. Se surgir conflito entre código, Spec e documentos de modelagem, o comportamento não é alterado em silêncio. A divergência é registrada com duas propostas, (1) corrigir a implementação ou (2) alterar a baseline, e a decisão é da equipe.

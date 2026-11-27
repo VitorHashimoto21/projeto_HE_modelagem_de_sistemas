@@ -172,6 +172,8 @@ const PAGINAS: { prefixo: string; modulo: Modulo | null; descricao: string }[] =
   { prefixo: "/estoque", modulo: "estoque", descricao: "Estoque" },
   { prefixo: "/vendas", modulo: "vendas", descricao: "Vendas — histórico" },
   { prefixo: "/calculadora", modulo: "calculadora", descricao: "Calculadora" },
+  // SPEC-027 (5.9): as compras cruzam o Estoque e o Financeiro, como os Relatórios.
+  { prefixo: "/compras", modulo: null, descricao: "Compras" },
   { prefixo: "/financeiro/contas", modulo: "financeiro", descricao: "Financeiro — contas" },
   { prefixo: "/financeiro/despesas-fixas", modulo: "financeiro", descricao: "Financeiro — despesas fixas" },
   { prefixo: "/financeiro", modulo: "financeiro", descricao: "Financeiro — caixa" },

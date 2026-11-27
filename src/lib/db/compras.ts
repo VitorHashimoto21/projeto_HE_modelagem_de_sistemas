@@ -1,3 +1,4 @@
+import { nomeDeExibicao } from "@/lib/dominio/cliente";
 import { intervaloDoDia } from "@/lib/dominio/datas";
 import {
   calcularCompra,
@@ -11,6 +12,8 @@ import {
   type EscolhaDeCusto,
   type ValoresDaCompra,
 } from "@/lib/dominio/compras";
+import { numeroDaBusca, pagamentoDaCompra, type FiltrosDasCompras, type PagamentoDaCompra, type SituacaoDaCompra } from "@/lib/dominio/lista-de-compras";
+import { mascararNome } from "@/lib/dominio/suporte";
 import { paraCentavos } from "@/lib/dominio/venda";
 import { ItemNaoEncontrado } from "./catalogo";
 import type { ClienteDoNegocio } from "./cliente-do-negocio";
@@ -85,7 +88,57 @@ export type ResumoDaCompra = Omit<ValoresDaCompra, "linhas"> & {
   descontoCentavos: number;
 };
 
-export function criarConsultasDeCompras(cliente: ClienteDoNegocio, negocioId: string) {
+export const COMPRAS_POR_PAGINA = 100;
+
+/** Uma compra na lista (5.6). */
+export type CompraDaLista = {
+  id: string;
+  numero: number;
+  /** Data da compra (AAAA-MM-DD). */
+  data: string;
+  fornecedor: string;
+  numeroDocumento: string | null;
+  semNotaFiscal: boolean;
+  totalCentavos: number;
+  condicao: "A_VISTA" | "A_PRAZO";
+  /** A situação das contas; nula na compra cancelada. */
+  pagamento: PagamentoDaCompra | null;
+  situacao: SituacaoDaCompra;
+};
+
+export type ListaDeCompras = {
+  compras: CompraDaLista[];
+  pagina: number;
+  paginas: number;
+  /** Totais de todas as páginas, sem as canceladas (5.6). */
+  quantidade: number;
+  totalCentavos: number;
+  canceladas: number;
+  /** Compras anteriores ao histórico do plano gratuito, fora da lista (SPEC-013). */
+  ocultasPeloPlano: number;
+};
+
+const diaDe = (d: Date) => d.toISOString().slice(0, 10);
+const dataDoDia = (dia: string) => new Date(`${dia}T00:00:00Z`);
+
+export function criarConsultasDeCompras(cliente: ClienteDoNegocio, negocioId: string, opcoes: { mascararNomes?: boolean } = {}) {
+  /** 5.9: no modo suporte, o nome do fornecedor sai mascarado (SPEC-026, OPEN-011). */
+  const nomeVisto = (f: Parameters<typeof nomeDeExibicao>[0]) => (opcoes.mascararNomes ? mascararNome(nomeDeExibicao(f)) : nomeDeExibicao(f));
+
+  /** Busca (5.6): nome do fornecedor, nº do documento ou nº da compra. No suporte, o nome não é buscado. */
+  function condicaoDaBusca(busca: string) {
+    const numero = numeroDaBusca(busca);
+    return {
+      OR: [
+        { numeroDocumento: { contains: busca, mode: "insensitive" as const } },
+        ...(numero !== null ? [{ numero }] : []),
+        ...(opcoes.mascararNomes
+          ? []
+          : [{ fornecedor: { is: { OR: [{ nome: { contains: busca, mode: "insensitive" as const } }, { nomeFantasia: { contains: busca, mode: "insensitive" as const } }] } } }]),
+      ],
+    };
+  }
+
   function valoresDa(d: DadosDaCompra): ValoresDaCompra {
     const v = calcularCompra(d);
     if (!v.ok) throw new ValoresDaCompraInvalidos();
@@ -132,6 +185,73 @@ export function criarConsultasDeCompras(cliente: ClienteDoNegocio, negocioId: st
   }
 
   return {
+    /**
+     * Listar compras (5.6): busca, período da data da compra, fornecedor e situação, das mais recentes
+     * para as mais antigas. O total soma todas as páginas, sem as canceladas. No plano gratuito, só a
+     * partir de `desde` (os últimos 12 meses).
+     */
+    async listar(f: { filtros: FiltrosDasCompras; pagina?: number; desde?: string | null }): Promise<ListaDeCompras> {
+      const { filtros } = f;
+      // O início é o mais recente entre o filtro e o limite do plano.
+      const inicio = [f.desde, filtros.de].filter((d): d is string => Boolean(d)).sort().at(-1);
+      const data = { ...(inicio ? { gte: dataDoDia(inicio) } : {}), ...(filtros.ate ? { lte: dataDoDia(filtros.ate) } : {}) };
+      const where = {
+        AND: [
+          Object.keys(data).length ? { data } : {},
+          filtros.fornecedorId ? { fornecedorId: filtros.fornecedorId } : {},
+          filtros.situacao ? { situacao: filtros.situacao } : {},
+          filtros.busca ? condicaoDaBusca(filtros.busca) : {},
+        ],
+      };
+      const registradas = { AND: [where, { situacao: "REGISTRADA" as const }] };
+      const [total, soma, canceladas, ocultasPeloPlano] = await Promise.all([
+        cliente.compra.count({ where }),
+        cliente.compra.aggregate({ where: registradas, _sum: { total: true }, _count: true }),
+        cliente.compra.count({ where: { AND: [where, { situacao: "CANCELADA" as const }] } }),
+        f.desde ? cliente.compra.count({ where: { data: { lt: dataDoDia(f.desde) } } }) : Promise.resolve(0),
+      ]);
+      const paginas = Math.max(1, Math.ceil(total / COMPRAS_POR_PAGINA));
+      const pagina = Math.min(Math.max(1, Math.floor(f.pagina ?? 1) || 1), paginas);
+      const linhas = await cliente.compra.findMany({
+        where,
+        orderBy: [{ data: "desc" }, { numero: "desc" }],
+        skip: (pagina - 1) * COMPRAS_POR_PAGINA,
+        take: COMPRAS_POR_PAGINA,
+        select: {
+          id: true,
+          numero: true,
+          data: true,
+          numeroDocumento: true,
+          semNotaFiscal: true,
+          total: true,
+          condicao: true,
+          situacao: true,
+          fornecedor: { select: { tipo: true, nome: true, nomeFantasia: true } },
+          contas: { select: { status: true } },
+        },
+      });
+      return {
+        compras: linhas.map((c) => ({
+          id: c.id,
+          numero: c.numero,
+          data: diaDe(c.data),
+          fornecedor: nomeVisto(c.fornecedor),
+          numeroDocumento: c.numeroDocumento,
+          semNotaFiscal: c.semNotaFiscal,
+          totalCentavos: paraCentavos(num(c.total)!),
+          condicao: c.condicao,
+          pagamento: c.situacao === "CANCELADA" ? null : pagamentoDaCompra(c.contas.map((k) => k.status)),
+          situacao: c.situacao,
+        })),
+        pagina,
+        paginas,
+        quantidade: soma._count,
+        totalCentavos: paraCentavos(num(soma._sum.total ?? 0)!),
+        canceladas,
+        ocultasPeloPlano,
+      };
+    },
+
     /** Os produtos que podem entrar na compra (OPEN-003, 5.2): só os físicos ativos. */
     async produtosDisponiveis(): Promise<ProdutoDaCompra[]> {
       const itens = await cliente.item.findMany({
