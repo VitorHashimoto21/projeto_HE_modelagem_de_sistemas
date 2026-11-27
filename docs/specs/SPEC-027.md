@@ -446,7 +446,7 @@ No custo médio, o saldo antes é o saldo do produto no momento do registro; a e
 - **Custo da linha.** O custo informado vira o custo do produto, com o início do histórico de custo (SPEC-025), e o da linha da compra. Como o produto nasce sem estoque, o resumo mostra um só custo (5.5).
 - **Sem preço.** O produto nasce sem preço oficial, como no Catálogo sem preço inicial. Depois da compra, o aviso da 5.1 (item 6) não aparece, porque o custo não mudou; o preço é definido no Catálogo ou na Calculadora, como em qualquer produto novo.
 
-**Homologação da etapa 1 (27/11/2026)** ([evidências](evidencias/SPEC-027/README.md#homologação-da-etapa-1-27112026)): a equipe percorreu a etapa 1 na homologação, depois do merge dos PRs #154 a #157, com o Dono de um negócio de teste. Fluxo aprovado, sem divergência:
+**Homologação da etapa 1 (27/11/2026)** ([evidências](evidencias/SPEC-027/README.md#homologação-da-etapa-1-27112026)): a equipe percorreu a etapa 1 na homologação, depois do merge dos PRs #154 a #157, com o Dono do negócio de teste criado para a apresentação do sistema. Fluxo aprovado, sem divergência:
 - a compra nº 1, a prazo, com o "Novo produto" e o custo desta compra escolhido no resumo: o estoque, o custo (com o aviso e o link da Calculadora), a conta a pagar "Compra nº 1 — parcela 1/1" e o caixa sem mudança, como previsto;
 - o documento repetido do mesmo fornecedor recusado;
 - a compra nº 2, à vista, paga no Financeiro, com o lançamento da saída no caixa.

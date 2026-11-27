@@ -69,7 +69,7 @@ Mesmo ambiente da etapa 1c.
 
 ## Homologação da etapa 1 (27/11/2026)
 
-Feita pela equipe em <https://he-homol.vercel.app> (DEVELOP, depois do merge dos PRs #154 a #157), com o Dono de um negócio de teste de salão de beleza. É uma homologação parcial: a homologação completa (T14) fica para depois da etapa 4. As capturas estão em [`homologacao/`](homologacao). Os nomes das pessoas da equipe do negócio, o nome do negócio e o nome do fornecedor foram cobertos. Nas capturas de página inteira, o menu lateral aparece fora do lugar: é um efeito da ferramenta de captura, porque o menu fica fixo na tela.
+Feita pela equipe em <https://he-homol.vercel.app> (DEVELOP, depois do merge dos PRs #154 a #157), com o Dono do negócio de teste que a equipe criou para apresentar o sistema ao professor, um salão de beleza fictício. É uma homologação parcial: a homologação completa (T14) fica para depois da etapa 4. As capturas estão em [`homologacao/`](homologacao). Os nomes das pessoas da equipe do negócio e o nome do fornecedor foram cobertos. O nome do negócio ficou visível, porque o negócio é de teste e não tem dado pessoal. Nas capturas de página inteira, o menu lateral aparece fora do lugar: é um efeito da ferramenta de captura, porque o menu fica fixo na tela.
 
 | Passo | Resultado | Captura |
 |---|---|---|
