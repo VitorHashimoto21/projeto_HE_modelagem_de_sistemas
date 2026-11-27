@@ -66,3 +66,23 @@ Mesmo ambiente da etapa 1c.
 | [`s27d_01_novo_produto_390_escuro.png`](s27d_01_novo_produto_390_escuro.png) | O mesmo cadastro no celular, tema escuro |
 | [`s27d_02_linha_do_produto_novo_1440_claro.png`](s27d_02_linha_do_produto_novo_1440_claro.png) | O produto novo na compra, com o custo informado |
 
+
+## Homologação da etapa 1 (27/11/2026)
+
+Feita pela equipe em <https://he-homol.vercel.app> (DEVELOP, depois do merge dos PRs #154 a #157), com o Dono de um negócio de teste de salão de beleza. É uma homologação parcial: a homologação completa (T14) fica para depois da etapa 4. As capturas estão em [`homologacao/`](homologacao). Os nomes das pessoas da equipe do negócio, o nome do negócio e o nome do fornecedor foram cobertos. Nas capturas de página inteira, o menu lateral aparece fora do lugar: é um efeito da ferramenta de captura, porque o menu fica fixo na tela.
+
+| Passo | Resultado | Captura |
+|---|---|---|
+| Antes da compra: Máscara de Hidratação 250 g com 9 unidades | ✅ | [`t14e1_01_estoque_antes.png`](homologacao/t14e1_01_estoque_antes.png) |
+| Compra nº 1 preenchida: fornecedor, nº 1234, 2 Máscaras a R$ 20,00 e o Condicionador, criado pelo "Novo produto" com R$ 45,00; a prazo, 1 parcela em 27/12/2026; total de R$ 85,00 | ✅ | [`t14e1_02_compra_preenchida.png`](homologacao/t14e1_02_compra_preenchida.png) |
+| Resumo: "+2 Máscara", saldo 9 → 11, com os três custos (médio R$ 21,64, marcado; desta compra R$ 20,00; atual R$ 22,00). O Condicionador mostra saldo 0 → 1 e um só custo. A parcela de R$ 85,00 vence em 27/12/2026, e o aviso diz que o caixa não muda agora | ✅ | [`t14e1_03_resumo_custo_medio.png`](homologacao/t14e1_03_resumo_custo_medio.png) |
+| A equipe escolheu o custo desta compra (R$ 20,00) para a Máscara | ✅ | [`t14e1_04_resumo_custo_desta_compra.png`](homologacao/t14e1_04_resumo_custo_desta_compra.png) |
+| "Compra nº 1 registrada.", com o aviso de que o custo da Máscara mudou e o link da Calculadora | ✅ | [`t14e1_05_compra_registrada.png`](homologacao/t14e1_05_compra_registrada.png) |
+| Calculadora da Máscara com o custo novo de R$ 20,00 | ✅ | [`t14e1_06_calculadora_custo_novo.png`](homologacao/t14e1_06_calculadora_custo_novo.png) |
+| O mesmo fornecedor com o documento 1234 de novo: recusado, com a mensagem no aviso e no campo | ✅ | [`t14e1_07_documento_repetido.png`](homologacao/t14e1_07_documento_repetido.png) |
+| Depois da compra: Máscara com 11 unidades; o Condicionador (código CONPHIL) com 1 | ✅ | [`t14e1_08_estoque_depois.png`](homologacao/t14e1_08_estoque_depois.png) |
+| Contas a pagar com a origem "Compra": "Compra nº 1 — parcela 1/1", R$ 85,00, vence em 27/12/2026, com o fornecedor e o Doc. 1234 | ✅ | [`t14e1_09_conta_a_pagar_da_compra.png`](homologacao/t14e1_09_conta_a_pagar_da_compra.png) |
+| O caixa não mudou com a compra a prazo: saldo de R$ 749,50, sem lançamento da compra | ✅ | [`t14e1_10_caixa_sem_mudanca.png`](homologacao/t14e1_10_caixa_sem_mudanca.png) |
+| Compra nº 2, à vista, paga no Financeiro: o lançamento "Compra nº 2 — à vista" de −R$ 135,00 em 27/11/2026 leva o saldo de R$ 749,50 a R$ 614,50 | ✅ | [`t14e1_11_compra_a_vista_paga.png`](homologacao/t14e1_11_compra_a_vista_paga.png) |
+
+Sem divergência com a Spec. A mensagem do documento repetido aparece no aviso do topo e no campo, como os erros de campo da Nova venda. O campo de data segue o idioma do navegador, como os outros campos de data do HE (decisão da equipe na SPEC-025).
