@@ -12,7 +12,7 @@
 > - **nova versão da Política com novo aceite** (OPEN-009);
 > - **sem relatório novo** (OPEN-010).
 >
-> A baseline foi ajustada: RF91 e RN43 novos; RF08, RF15, RF30, RF89, RF90 e RNF05 alterados. **Em implementação por etapas** (seção 14): as etapas 1a (o banco das compras) e 1b (regras e gravação) foram feitas em 22/11/2026, e a 1c (tela "Registrar compra") e a 1d ("Novo produto" sem sair da compra) em 26/11/2026, concluindo a etapa 1; as notas estão no fim da seção 9. Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar), a pedido da equipe. Origem: pendência 8 do Mapa, das melhorias de Estoque e Financeiro pedidas em 01/11/2026 a partir do uso real por uma usuária com CNPJ. É a terceira dessas Specs: usa o histórico de custo da SPEC-025 e os fornecedores da SPEC-026. A SPEC-019, concluída antes desta por decisão da equipe (01/11/2026), já garante que a compra nasce fora das correções do suporte e recusada em negócio suspenso.
+> A baseline foi ajustada: RF91 e RN43 novos; RF08, RF15, RF30, RF89, RF90 e RNF05 alterados. **Em implementação por etapas** (seção 14): as etapas 1a (o banco das compras) e 1b (regras e gravação) foram feitas em 22/11/2026, e a 1c (tela "Registrar compra") e a 1d ("Novo produto" sem sair da compra) em 26/11/2026, concluindo a etapa 1, homologada em 27/11/2026; as notas estão no fim da seção 9. Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar), a pedido da equipe. Origem: pendência 8 do Mapa, das melhorias de Estoque e Financeiro pedidas em 01/11/2026 a partir do uso real por uma usuária com CNPJ. É a terceira dessas Specs: usa o histórico de custo da SPEC-025 e os fornecedores da SPEC-026. A SPEC-019, concluída antes desta por decisão da equipe (01/11/2026), já garante que a compra nasce fora das correções do suporte e recusada em negócio suspenso.
 >
 > **Mapa:** [`MAPA_DE_SPECS.md`](../MAPA_DE_SPECS.md)
 > - **Altera:**
@@ -445,6 +445,13 @@ No custo médio, o saldo antes é o saldo do produto no momento do registro; a e
 - **Campos do cadastro.** O "Novo produto" da compra pede só o essencial do produto físico: nome (já vem com o texto da busca), categoria, unidade, custo desta compra, código e NCM. O NCM é obrigatório quando o negócio emite nota de produtos (SPEC-021). Subcategoria, preço, mínimo e comissão continuam no Catálogo, e a tela avisa isso. As regras são as mesmas do Catálogo: o nome e o código não se repetem entre os itens ativos.
 - **Custo da linha.** O custo informado vira o custo do produto, com o início do histórico de custo (SPEC-025), e o da linha da compra. Como o produto nasce sem estoque, o resumo mostra um só custo (5.5).
 - **Sem preço.** O produto nasce sem preço oficial, como no Catálogo sem preço inicial. Depois da compra, o aviso da 5.1 (item 6) não aparece, porque o custo não mudou; o preço é definido no Catálogo ou na Calculadora, como em qualquer produto novo.
+
+**Homologação da etapa 1 (27/11/2026)** ([evidências](evidencias/SPEC-027/README.md#homologação-da-etapa-1-27112026)): a equipe percorreu a etapa 1 na homologação, depois do merge dos PRs #154 a #157, com o Dono do negócio de teste criado para a apresentação do sistema. Fluxo aprovado, sem divergência:
+- a compra nº 1, a prazo, com o "Novo produto" e o custo desta compra escolhido no resumo: o estoque, o custo (com o aviso e o link da Calculadora), a conta a pagar "Compra nº 1 — parcela 1/1" e o caixa sem mudança, como previsto;
+- o documento repetido do mesmo fornecedor recusado;
+- a compra nº 2, à vista, paga no Financeiro, com o lançamento da saída no caixa.
+
+É uma homologação parcial. A T14, com as compras do negócio de teste e o inventário do fim do mês, fica para depois da etapa 4, quando a compra já pode ser cancelada.
 
 ---
 
