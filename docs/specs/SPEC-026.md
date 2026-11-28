@@ -435,6 +435,8 @@ Uma loja compra embalagens todo mês da fornecedora "Embalagens Exemplo Ltda" e 
   O lançamento avulso não tem fornecedor nem forma (OPEN-008). A compra à vista com fornecedor fica com a SPEC-027.
 - **Campos de data no padrão americano:** seguem o idioma do navegador, que estava em inglês. A equipe decidiu manter o campo do navegador na homologação da SPEC-025.
 
+**Correção posterior (28/11/2026):** na homologação da lista de compras (SPEC-027, etapa 2a), apareceu um defeito que também existia nos filtros das contas. Depois de "Limpar filtros", ou de trocar "A pagar" por "A receber", os seletores (fornecedor ou cliente, forma, categoria e origem) mantinham a escolha anterior, sem que a lista estivesse filtrada por ela. Agora o formulário dos filtros recomeça sempre que os filtros do endereço mudam ([evidências](evidencias/SPEC-027/README.md#homologação-da-etapa-2a-28112026)).
+
 ---
 
 ## 10. Requisitos não funcionais aplicáveis

@@ -133,3 +133,28 @@ A Joana ficou com as permissões padrão do Colaborador.
 | [`s27e_02_filtrada_1440_claro.png`](s27e_02_filtrada_1440_claro.png) | A Embalagens Exemplo em outubro, com o total do filtro |
 | [`s27e_03_sem_resultado_390_claro.png`](s27e_03_sem_resultado_390_claro.png) | Nenhuma compra com a busca, no celular |
 | [`s27e_04_plano_gratuito_1440_claro.png`](s27e_04_plano_gratuito_1440_claro.png) | O aviso do plano gratuito, sem a compra antiga |
+
+## Homologação da etapa 2a (28/11/2026)
+
+Feita pela equipe em <https://he-homol.vercel.app> (DEVELOP, depois do merge do PR #159), com o Dono do negócio de teste criado para a apresentação do sistema e as compras nº 1 e nº 2 registradas na homologação da etapa 1. As capturas estão em [`homologacao/`](homologacao). Os nomes do Dono e do fornecedor foram cobertos; o nome do negócio ficou visível, porque o negócio é de teste.
+
+| Passo | Resultado | Captura |
+|---|---|---|
+| A lista com as duas compras, das mais recentes para as mais antigas: a nº 2, sem nota, à vista e paga (R$ 135,00), e a nº 1, Doc. 1234, a prazo e a pagar (R$ 85,00). Os totais: 2 compras, R$ 220,00 | ✅ | [`t14e2a_01_lista.png`](homologacao/t14e2a_01_lista.png) |
+| Busca "1234" com o fornecedor e a data inicial: só a compra nº 1, com "1 Compra" e R$ 85,00 | ✅ | [`t14e2a_02_filtrada.png`](homologacao/t14e2a_02_filtrada.png) |
+| "Canceladas": nenhuma compra cancelada, totais zerados e "Escolha outra situação acima." | ✅, com o defeito abaixo | [`t14e2a_03_canceladas.png`](homologacao/t14e2a_03_canceladas.png) |
+
+**Defeito encontrado:** na terceira captura, o seletor mostra o fornecedor, mas a lista não está filtrada por ele. Não há "Limpar filtros", e a tela vazia é a da situação, não a dos filtros.
+
+A causa: depois de "Limpar filtros", a página muda sem recarregar, e o seletor (ao contrário dos campos de texto) mantinha a escolha anterior. Assim, ele mostrava um filtro que não estava valendo, e um novo "Filtrar" voltaria a aplicá-lo. O mesmo acontecia nos seletores da lista de Contas desde a SPEC-026.
+
+**Correção:** o formulário dos filtros recomeça sempre que os filtros do endereço mudam, como o filtro de categoria do Catálogo e do Estoque (SPEC-020).
+
+| Verificação no navegador (build local) | Antes | Depois |
+|---|---|---|
+| Compras: filtrar pelo fornecedor e "Limpar filtros"; o seletor volta para "Todos" | ✗ (o fornecedor continuava escolhido) | ✅ |
+| Compras: depois de limpar, "Canceladas" deixa o seletor em "Todos"; voltar no navegador mostra o fornecedor do endereço | — | ✅ |
+| Contas: filtrar pelo fornecedor e "Limpar filtros"; o seletor volta para "Todos" | ✗ (o fornecedor continuava escolhido) | ✅ |
+| Contas: trocar de "A pagar" para "A receber" deixa o seletor de cliente em "Todos" | — | ✅ |
+
+O roteiro da etapa 2a foi rodado de novo depois da correção, e as 38 verificações continuaram aprovadas.
