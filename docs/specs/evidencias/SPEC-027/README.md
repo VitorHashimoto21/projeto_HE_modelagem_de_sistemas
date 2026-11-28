@@ -262,3 +262,20 @@ Mesmo ambiente e mesma compra nº 1 da etapa 2b: a Embalagem P e a G, com frete,
 | [`s27g_03_fornecedor_1440_claro.png`](s27g_03_fornecedor_1440_claro.png) | O fornecedor com as compras, o total comprado e o atalho "Registrar compra" |
 | [`s27g_03_fornecedor_1440_escuro.png`](s27g_03_fornecedor_1440_escuro.png) | O mesmo detalhe no tema escuro |
 | [`s27g_03_fornecedor_390_claro.png`](s27g_03_fornecedor_390_claro.png) | O detalhe do fornecedor no celular |
+
+## Homologação da etapa 2c (28/11/2026)
+
+Feita pela equipe em <https://he-homol.vercel.app> (DEVELOP, depois do merge do PR #163), com o Dono do negócio de teste e as compras nº 1 a nº 3. As capturas estão em [`homologacao/`](homologacao). Foram cobertos:
+- o nome do Dono;
+- os nomes dos fornecedores, também na observação de uma entrada antiga;
+- o nome do contato, o e-mail e o CNPJ do cadastro do fornecedor.
+
+| Passo | Resultado | Captura |
+|---|---|---|
+| "Registrar compra" no detalhe do fornecedor abre a compra com ele já escolhido | ✅ | [`t14e2c_01_registrar_compra_do_fornecedor.png`](homologacao/t14e2c_01_registrar_compra_do_fornecedor.png) |
+| O histórico da Máscara de Hidratação mostra "+2 Entrada — Compra nº 1, 9 → 11", com o link. As movimentações antigas (a venda e a entrada manual) continuam iguais | ✅ | [`t14e2c_02_historico_do_produto.png`](homologacao/t14e2c_02_historico_do_produto.png) |
+| A conta "Compra nº 1 — parcela 1/1" mostra a origem "Compra nº 1", com o link, e não mais "Manual" | ✅ | [`t14e2c_03_conta_da_compra.png`](homologacao/t14e2c_03_conta_da_compra.png) |
+| O fornecedor das compras nº 1 e nº 2 mostra "Compras", com o total comprado de R$ 220,00 sem as canceladas, as duas compras e o atalho. As contas a pagar dele seguem iguais, inclusive uma conta manual | ✅ | [`t14e2c_04_fornecedor_fio_reto.png`](homologacao/t14e2c_04_fornecedor_fio_reto.png) |
+| O fornecedor da compra nº 3 mostra a compra e o total de R$ 125,00 | ✅ | [`t14e2c_05_fornecedor_da_compra_3.png`](homologacao/t14e2c_05_fornecedor_da_compra_3.png) |
+
+Sem divergência com a Spec. Com a homologação da 2c, a **etapa 2 está homologada** (lista, detalhe e ligações).
