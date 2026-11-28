@@ -8,7 +8,9 @@ import { podeNoPlano, type Plano } from "@/lib/dominio/planos";
  */
 /** `semAcao`: o item some para quem também tem essa ação (ex.: "Lançar despesa" só sem Financeiro — ver). */
 /** `algum`: basta uma das permissões (ex.: Relatórios — Vendas ou Financeiro — ver, SPEC-013). */
-type Exigencia = "membro" | "dono" | { modulo: Modulo; acao: Acao; semAcao?: Acao } | { algum: { modulo: Modulo; acao: Acao }[] };
+/** `todas`: exige todas as permissões (ex.: Compras — Estoque e Financeiro — ver, SPEC-027). */
+type Permissao = { modulo: Modulo; acao: Acao };
+type Exigencia = "membro" | "dono" | { modulo: Modulo; acao: Acao; semAcao?: Acao } | { algum: Permissao[] } | { todas: Permissao[] };
 
 /** `selo`: aviso ao lado do item (ex.: "Plano pago" nos Relatórios do plano gratuito — SPEC-013, OPEN-004). */
 export type ItemDoMenu = { rotulo: string; href: string; selo?: string };
@@ -24,6 +26,8 @@ const ITENS: (ItemDoMenu & { exige: Exigencia })[] = [
   { rotulo: "Estoque", href: "/estoque", exige: { modulo: "estoque", acao: "ver" } },
   { rotulo: "Nova venda", href: "/vendas/nova", exige: { modulo: "vendas", acao: "criar" } },
   { rotulo: "Vendas", href: "/vendas", exige: { modulo: "vendas", acao: "ver" } },
+  // SPEC-027 (OPEN-008): logo abaixo de Vendas, para quem vê as compras (OPEN-007).
+  { rotulo: "Compras", href: "/compras", exige: { todas: [{ modulo: "estoque", acao: "ver" }, { modulo: "financeiro", acao: "ver" }] } },
   { rotulo: "Calculadora", href: "/calculadora", exige: { modulo: "calculadora", acao: "ver" } },
   { rotulo: "Financeiro", href: "/financeiro", exige: { modulo: "financeiro", acao: "ver" } },
   // Relatórios do plano pago (SPEC-013, OPEN-003/OPEN-004): aparecem também no gratuito, com o selo.
@@ -47,7 +51,9 @@ export function menuDoMembro(papel: Papel | null, permissoes: Matriz | null, pla
         ? papel === "DONO"
         : "algum" in exige
           ? exige.algum.some((e) => pode(permissoes, e.modulo, e.acao))
-          : pode(permissoes, exige.modulo, exige.acao) && !(exige.semAcao && pode(permissoes, exige.modulo, exige.semAcao));
+          : "todas" in exige
+            ? exige.todas.every((e) => pode(permissoes, e.modulo, e.acao))
+            : pode(permissoes, exige.modulo, exige.acao) && !(exige.semAcao && pode(permissoes, exige.modulo, exige.semAcao));
   return ITENS.filter(({ exige }) => atende(exige)).map(({ rotulo, href }) =>
     href === "/relatorios" && !podeNoPlano(plano, "relatorios") ? { rotulo, href, selo: "Plano pago" } : { rotulo, href },
   );
@@ -57,12 +63,14 @@ export function menuDoMembro(papel: Papel | null, permissoes: Matriz | null, pla
  * Menu do modo suporte (SPEC-018, 5.5): só os módulos liberados, só o que se lê — sem
  * "Nova venda", "Lançar despesa" nem Configurações. O Painel entra só com o Dashboard liberado.
  * Relatórios (`algum`) cruzam módulos e ficam fora do modo suporte (decisão da homologação, 18/10/2026).
+ * Compras (`todas`) entram com o Estoque e o Financeiro liberados (SPEC-027, 5.9).
  */
 export function menuDoSuporte(permissoes: Matriz): ItemDoMenu[] {
   return ITENS.filter(({ exige }) => {
     if (exige === "dono") return false;
     if (exige === "membro") return pode(permissoes, "dashboard", "ver");
     if ("algum" in exige) return false;
+    if ("todas" in exige) return exige.todas.every((e) => e.acao === "ver" && pode(permissoes, e.modulo, e.acao));
     return exige.acao === "ver" && pode(permissoes, exige.modulo, exige.acao) && !exige.semAcao;
   }).map(({ rotulo, href }) => ({ rotulo, href }));
 }

@@ -30,7 +30,7 @@ export type { ClienteDaLista, CompraDoCliente, ConsultasDeClientes, DetalheDoCli
 export { DocumentoDoFornecedorRepetido, FornecedorNaoEncontrado, LIMITE_DE_CONTAS_DO_FORNECEDOR, LIMITE_DE_FORNECEDORES } from "./fornecedores";
 export type { ConsultasDeFornecedores, ContaDoFornecedor, DetalheDoFornecedor, FornecedorDaLista, OpcaoDePessoa, ValoresDoFornecedor } from "./fornecedores";
 export { DocumentoDaCompraRepetido, ProdutoIndisponivel, ValoresDaCompraInvalidos } from "./compras";
-export type { ConsultasDeCompras, LinhaDoResumo, ProdutoDaCompra, ResumoDaCompra } from "./compras";
+export type { CompraDaLista, ConsultasDeCompras, LinhaDoResumo, ListaDeCompras, ProdutoDaCompra, ResumoDaCompra } from "./compras";
 export type { ConsultasDePrecificacao, ItemCalculavel, ParametrosDePrecificacao } from "./precificacao";
 export type { ConsultasFinanceiras, ContaExibida, DespesaExibida, DetalheDaConta, FluxoDeCaixa, LancamentoExibido } from "./financeiro";
 export type { ConsultasDoEstoque, DetalheDoEstoque, ProdutoEmEstoque } from "./estoque";
@@ -79,9 +79,12 @@ export function vendas(contexto: ContextoDeNegocio) {
   return criarConsultasDeVendas(clienteDoNegocio(contexto), contexto.negocioId, { mascararClientes: contexto.modoSuporte === true });
 }
 
-/** Compras de fornecedores do negócio ativo (SPEC-027): sempre pelo cliente do negócio. */
+/**
+ * Compras de fornecedores do negócio ativo (SPEC-027): sempre pelo cliente do negócio. No modo
+ * suporte, o nome do fornecedor sai mascarado (5.9).
+ */
 export function compras(contexto: ContextoDeNegocio) {
-  return criarConsultasDeCompras(clienteDoNegocio(contexto), contexto.negocioId);
+  return criarConsultasDeCompras(clienteDoNegocio(contexto), contexto.negocioId, { mascararNomes: contexto.modoSuporte === true });
 }
 
 /**
