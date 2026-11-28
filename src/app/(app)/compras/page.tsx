@@ -93,7 +93,9 @@ export default async function Compras({ searchParams }: PageProps<"/compras">) {
 
       <PainelDeFiltros ativos={ativos}>
         <Superficie espaco="compacto" aria-label="Filtros das compras">
-          <form method="get" role="search" className="space-y-4">
+          {/* A `key` do endereço recomeça o formulário quando os filtros mudam por um link (Limpar filtros,
+              situação, voltar no navegador): sem ela, o seletor de fornecedor mantinha a escolha anterior. */}
+          <form key={new URLSearchParams(extras).toString()} method="get" role="search" className="space-y-4">
             {filtros.situacao && <input type="hidden" name="situacao" value={filtros.situacao} />}
             {/* Três pares de colunas no computador, para a busca, o fornecedor e as datas caberem inteiros. */}
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">

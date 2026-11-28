@@ -111,7 +111,9 @@ export default async function Contas({ searchParams }: PageProps<"/financeiro/co
 
       <PainelDeFiltros ativos={ativos}>
         <Superficie espaco="compacto" aria-label="Filtros das contas">
-          <form method="get" role="search" className="space-y-4">
+          {/* A `key` do endereço recomeça o formulário quando os filtros mudam por um link (Limpar filtros,
+              tipo, situação, voltar no navegador): sem ela, os seletores mantinham a escolha anterior. */}
+          <form key={`${tipo}:${situacao}:${new URLSearchParams(extras)}`} method="get" role="search" className="space-y-4">
             <input type="hidden" name="tipo" value={tipo} />
             <input type="hidden" name="situacao" value={situacao} />
             {/* Seis colunas no computador: as datas ocupam duas, para caberem inteiras. */}

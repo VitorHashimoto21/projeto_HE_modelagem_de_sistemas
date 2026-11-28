@@ -461,6 +461,8 @@ No custo médio, o saldo antes é o saldo do produto no momento do registro; a e
 - **Busca.** O nº da compra é encontrado com ou sem o prefixo ("12", "nº 12" ou "#12"); o nº do documento, por parte do texto, sem diferença de maiúsculas.
 - **Modo suporte (adiantado da etapa 3).** O item "Compras" aparece no menu do suporte com o Estoque e o Financeiro liberados; a lista mostra o fornecedor mascarado, e a tela entra no registro de telas abertas como "Compras". No suporte, a busca não procura pelo nome do fornecedor, só pelos números: buscar pelo nome revelaria, por tentativa, o nome que a tela mascara (5.9). **Decidido pela equipe em 28/11/2026**, pela opção recomendada: manter a busca do suporte só pelos números.
 
+**Homologação da etapa 2a (28/11/2026)** ([evidências](evidencias/SPEC-027/README.md#homologação-da-etapa-2a-28112026)): a equipe conferiu na homologação a lista das compras nº 1 e nº 2, a busca com filtros e o botão "Canceladas". Os valores e os totais estão certos. A homologação encontrou um defeito de tela: depois de "Limpar filtros", o seletor de fornecedor continuava mostrando a escolha anterior, sem que a lista estivesse filtrada por ela. O mesmo acontecia na lista de Contas (SPEC-026). O defeito foi corrigido em seguida: o formulário dos filtros recomeça sempre que os filtros do endereço mudam, como no filtro de categoria do Catálogo e do Estoque (SPEC-020).
+
 ---
 
 ## 10. Requisitos não funcionais aplicáveis
