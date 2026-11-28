@@ -459,7 +459,7 @@ No custo médio, o saldo antes é o saldo do produto no momento do registro; a e
 - **Situação das contas.** Ao lado da condição: "Paga" quando todas as contas da compra estão quitadas; "Paga em parte" quando alguma tem pagamento; "A pagar" quando nenhuma tem. A compra cancelada mostra só "Cancelada".
 - **Totais e páginas.** A quantidade e o total comprado somam todas as páginas, sem as canceladas. A lista mostra 100 compras por página, como as contas, das mais recentes para as mais antigas.
 - **Busca.** O nº da compra é encontrado com ou sem o prefixo ("12", "nº 12" ou "#12"); o nº do documento, por parte do texto, sem diferença de maiúsculas.
-- **Modo suporte (adiantado da etapa 3).** O item "Compras" aparece no menu do suporte com o Estoque e o Financeiro liberados; a lista mostra o fornecedor mascarado, e a tela entra no registro de telas abertas como "Compras". No suporte, a busca não procura pelo nome do fornecedor, só pelos números: buscar pelo nome revelaria, por tentativa, o nome que a tela mascara (5.9). **A confirmar com a equipe**: (1) manter assim ou (2) buscar também pelo nome no suporte.
+- **Modo suporte (adiantado da etapa 3).** O item "Compras" aparece no menu do suporte com o Estoque e o Financeiro liberados; a lista mostra o fornecedor mascarado, e a tela entra no registro de telas abertas como "Compras". No suporte, a busca não procura pelo nome do fornecedor, só pelos números: buscar pelo nome revelaria, por tentativa, o nome que a tela mascara (5.9). **Decidido pela equipe em 28/11/2026**, pela opção recomendada: manter a busca do suporte só pelos números.
 
 ---
 
