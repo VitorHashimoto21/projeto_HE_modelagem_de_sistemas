@@ -12,7 +12,7 @@
 > - **nova versão da Política com novo aceite** (OPEN-009);
 > - **sem relatório novo** (OPEN-010).
 >
-> A baseline foi ajustada: RF91 e RN43 novos; RF08, RF15, RF30, RF89, RF90 e RNF05 alterados. **Em implementação por etapas** (seção 14): as etapas 1a (o banco das compras) e 1b (regras e gravação) foram feitas em 22/11/2026, e a 1c (tela "Registrar compra") e a 1d ("Novo produto" sem sair da compra) em 26/11/2026, concluindo a etapa 1, homologada em 27/11/2026. A etapa 2a (lista de compras e o item "Compras" no menu) foi feita em 27/11/2026 e homologada em 28/11/2026, e a 2b (detalhe da compra), em 28/11/2026. As notas estão no fim da seção 9. Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar), a pedido da equipe. Origem: pendência 8 do Mapa, das melhorias de Estoque e Financeiro pedidas em 01/11/2026 a partir do uso real por uma usuária com CNPJ. É a terceira dessas Specs: usa o histórico de custo da SPEC-025 e os fornecedores da SPEC-026. A SPEC-019, concluída antes desta por decisão da equipe (01/11/2026), já garante que a compra nasce fora das correções do suporte e recusada em negócio suspenso.
+> A baseline foi ajustada: RF91 e RN43 novos; RF08, RF15, RF30, RF89, RF90 e RNF05 alterados. **Em implementação por etapas** (seção 14): as etapas 1a (o banco das compras) e 1b (regras e gravação) foram feitas em 22/11/2026, e a 1c (tela "Registrar compra") e a 1d ("Novo produto" sem sair da compra) em 26/11/2026, concluindo a etapa 1, homologada em 27/11/2026. A etapa 2a (lista de compras e o item "Compras" no menu) foi feita em 27/11/2026 e homologada em 28/11/2026, e a 2b (detalhe da compra), em 28/11/2026, também homologada no mesmo dia. As notas estão no fim da seção 9. Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar), a pedido da equipe. Origem: pendência 8 do Mapa, das melhorias de Estoque e Financeiro pedidas em 01/11/2026 a partir do uso real por uma usuária com CNPJ. É a terceira dessas Specs: usa o histórico de custo da SPEC-025 e os fornecedores da SPEC-026. A SPEC-019, concluída antes desta por decisão da equipe (01/11/2026), já garante que a compra nasce fora das correções do suporte e recusada em negócio suspenso.
 >
 > **Mapa:** [`MAPA_DE_SPECS.md`](../MAPA_DE_SPECS.md)
 > - **Altera:**
@@ -480,6 +480,8 @@ No custo médio, o saldo antes é o saldo do produto no momento do registro; a e
   As ligações no sentido contrário (do Estoque, das contas e do fornecedor para a compra) são da etapa 2c.
 - **Calculadora (CA-04).** Quando a compra mudou o custo de algum produto, o detalhe avisa que o preço não muda sozinho e leva à Calculadora de cada um, para quem pode vê-la. A compra cancelada não mostra o aviso.
 - **Modo suporte.** O fornecedor aparece mascarado e sem o link do cadastro. A tela entra no registro do suporte como "Compras — compra nº N". O fornecedor anonimizado também aparece sem o link.
+
+**Homologação da etapa 2b (28/11/2026)** ([evidências](evidencias/SPEC-027/README.md#homologação-da-etapa-2b-28112026)): a equipe conferiu o detalhe das compras nº 1 (a prazo, com o custo desta compra), nº 2 (sem nota, à vista e paga) e nº 3 (à vista, com frete rateado e o custo mantido), e o botão "Ver a compra". Os produtos, os custos, as contas, os pagamentos, as entradas e os valores estão como previsto, sem divergência.
 
 ---
 

@@ -211,3 +211,16 @@ O roteiro da etapa 2a também foi rodado de novo, com as linhas da lista abrindo
 | [`s27f_01_detalhe_1440_escuro.png`](s27f_01_detalhe_1440_escuro.png) | O mesmo detalhe no tema escuro |
 | [`s27f_01_detalhe_390_claro.png`](s27f_01_detalhe_390_claro.png) | O detalhe no celular |
 | [`s27f_02_a_vista_sem_nota_390_claro.png`](s27f_02_a_vista_sem_nota_390_claro.png) | A compra nº 2, sem nota e à vista, aberta pelo "Ver a compra" |
+
+## Homologação da etapa 2b (28/11/2026)
+
+Feita pela equipe em <https://he-homol.vercel.app> (DEVELOP, depois do merge do PR #161), com o Dono do negócio de teste. Foram usadas as compras nº 1 e nº 2 da etapa 1 e uma compra nova, a nº 3, de outro fornecedor, com frete. As capturas estão em [`homologacao/`](homologacao). Os nomes do Dono e dos fornecedores foram cobertos.
+
+| Passo | Resultado | Captura |
+|---|---|---|
+| Compra nº 1, a prazo: o Condicionador (1 × R$ 45,00, custo sem mudança) e a Máscara (2 × R$ 20,00, custo de R$ 22,00 para R$ 20,00, o custo desta compra). Também a parcela 1/1 de R$ 85,00 a pagar, as entradas (0 → 1 e 9 → 11), os valores (pago R$ 0,00, em aberto R$ 85,00), o documento 1234, quem registrou e a observação. O aviso leva à Calculadora da Máscara | ✅ | [`t14e2b_01_compra_1_a_prazo.png`](homologacao/t14e2b_01_compra_1_a_prazo.png) |
+| Compra nº 3, à vista, com frete de R$ 5,00: o rateio pelo valor de cada linha (R$ 46,88 e R$ 15,63 por unidade) e o custo mantido. Também a conta à vista de R$ 125,00 a pagar e as entradas (4 → 6 e 3 → 5). Sem aviso da Calculadora, porque nenhum custo mudou | ✅ | [`t14e2b_02_compra_3_com_frete.png`](homologacao/t14e2b_02_compra_3_com_frete.png) |
+| Compra nº 2, sem nota fiscal e à vista: a conta paga, com "Pago em 27/11/2026, R$ 135,00, pix", o selo "Paga" e a entrada (1 → 4) | ✅ | [`t14e2b_03_compra_2_paga.png`](homologacao/t14e2b_03_compra_2_paga.png) |
+| "Compra nº 3 registrada." com o botão "Ver a compra" | ✅ | [`t14e2b_04_ver_a_compra.png`](homologacao/t14e2b_04_ver_a_compra.png) |
+
+Sem divergência com a Spec. O rateio do frete confere com a OPEN-005: R$ 5,00 divididos em proporção ao valor das linhas, R$ 90,00 e R$ 30,00, dão R$ 3,75 e R$ 1,25. Por unidade, são R$ 1,875 e R$ 0,625, arredondados ao centavo na tela.
