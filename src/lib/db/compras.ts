@@ -98,6 +98,17 @@ export type ResumoDaCompra = Omit<ValoresDaCompra, "linhas"> & {
 };
 
 export const COMPRAS_POR_PAGINA = 100;
+/** 5.6: o detalhe do fornecedor mostra as 50 compras mais recentes. */
+export const LIMITE_DE_COMPRAS_DO_FORNECEDOR = 50;
+
+/** As compras de um fornecedor (5.6, contrato "Detalhar fornecedor"), com o total comprado. */
+export type ComprasDoFornecedor = {
+  compras: { id: string; numero: number; data: string; totalCentavos: number; situacao: SituacaoDaCompra }[];
+  /** Todas as compras do fornecedor, inclusive as que passam do limite. */
+  quantidade: number;
+  /** O total comprado, sem as canceladas. */
+  totalCentavos: number;
+};
 
 /** Uma compra na lista (5.6). */
 export type CompraDaLista = {
@@ -441,6 +452,26 @@ export function criarConsultasDeCompras(cliente: ClienteDoNegocio, negocioId: st
           saldoAnterior: num(m.saldoAnterior)!,
           saldoPosterior: num(m.saldoPosterior)!,
         })),
+      };
+    },
+
+    /** As compras do fornecedor (5.6): as 50 mais recentes e o total comprado, sem as canceladas. */
+    async doFornecedor(fornecedorId: string): Promise<ComprasDoFornecedor> {
+      if (!UUID.test(fornecedorId)) return { compras: [], quantidade: 0, totalCentavos: 0 };
+      const [linhas, quantidade, soma] = await Promise.all([
+        cliente.compra.findMany({
+          where: { fornecedorId },
+          orderBy: [{ data: "desc" }, { numero: "desc" }],
+          take: LIMITE_DE_COMPRAS_DO_FORNECEDOR,
+          select: { id: true, numero: true, data: true, total: true, situacao: true },
+        }),
+        cliente.compra.count({ where: { fornecedorId } }),
+        cliente.compra.aggregate({ where: { fornecedorId, situacao: "REGISTRADA" }, _sum: { total: true } }),
+      ]);
+      return {
+        compras: linhas.map((c) => ({ id: c.id, numero: c.numero, data: diaDe(c.data), totalCentavos: centavos(c.total), situacao: c.situacao })),
+        quantidade,
+        totalCentavos: centavos(soma._sum.total ?? 0),
       };
     },
 

@@ -152,6 +152,8 @@ export type MovimentacaoExibida = {
   registradoEm: Date;
   observacao: string | null;
   vendaId: string | null;
+  /** SPEC-027 (5.6): a entrada da compra aponta para ela ("Entrada — Compra nº N"). */
+  compra: { id: string; numero: number } | null;
 };
 
 export type DetalheDoEstoque = ProdutoEmEstoque & {
@@ -303,7 +305,7 @@ export function criarConsultasDoEstoque(cliente: ClienteDoNegocio, negocioId: st
         orderBy: { registradoEm: "desc" },
         skip: (atual - 1) * MOVIMENTACOES_POR_PAGINA,
         take: MOVIMENTACOES_POR_PAGINA,
-        include: { usuario: { select: { nome: true, administradorEm: true } } },
+        include: { usuario: { select: { nome: true, administradorEm: true } }, compra: { select: { id: true, numero: true } } },
       });
       const r = mapa.get(id) ?? VAZIO;
       return {
@@ -325,6 +327,7 @@ export function criarConsultasDoEstoque(cliente: ClienteDoNegocio, negocioId: st
           registradoEm: m.registradoEm,
           observacao: m.observacao,
           vendaId: m.vendaId,
+          compra: m.compra,
         })),
       };
     },

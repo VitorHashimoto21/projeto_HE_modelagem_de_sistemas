@@ -11,6 +11,7 @@ import { Superficie, TituloDaSuperficie } from "@/components/ui/superficie";
 import { exigirPermissao } from "@/lib/auth/servidor";
 import { financeiro } from "@/lib/db";
 import { ContaNaoEncontrada } from "@/lib/db/financeiro";
+import { podeVerCompras } from "@/lib/dominio/compras";
 import { ROTULO_MOTIVO_DO_ACRESCIMO, ROTULO_MOTIVO_DO_DESCONTO, rotuloDaForma, SEM_OPCOES } from "@/lib/dominio/contas";
 import { dataBrasileira, hoje } from "@/lib/dominio/datas";
 import { corrige } from "@/lib/dominio/correcoes";
@@ -149,6 +150,15 @@ export default async function Conta({ params, searchParams }: PageProps<"/financ
                   <Link href={`/vendas/${c.venda.id}`} className={classeDoLink()}>
                     Venda nº {c.venda.numero}
                   </Link>
+                ) : c.compra ? (
+                  // SPEC-027 (5.6): a conta da compra leva à compra, para quem pode vê-la.
+                  podeVerCompras(membro) ? (
+                    <Link href={`/compras/${c.compra.id}`} className={classeDoLink()}>
+                      Compra nº {c.compra.numero}
+                    </Link>
+                  ) : (
+                    `Compra nº ${c.compra.numero}`
+                  )
                 ) : c.despesa ? (
                   <Link href={`/financeiro/despesas-fixas/${c.despesa.id}`} className={classeDoLink()}>
                     Despesa fixa: {c.despesa.descricao}

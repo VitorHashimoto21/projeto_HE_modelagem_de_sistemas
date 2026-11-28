@@ -29,8 +29,8 @@ export { ClienteNaoEncontrado, DocumentoRepetido, FILTRO_INCOMPLETOS, LIMITE_DA_
 export type { ClienteDaLista, CompraDoCliente, ConsultasDeClientes, DetalheDoCliente, ValoresDoCliente, Visao } from "./clientes";
 export { DocumentoDoFornecedorRepetido, FornecedorNaoEncontrado, LIMITE_DE_CONTAS_DO_FORNECEDOR, LIMITE_DE_FORNECEDORES } from "./fornecedores";
 export type { ConsultasDeFornecedores, ContaDoFornecedor, DetalheDoFornecedor, FornecedorDaLista, OpcaoDePessoa, ValoresDoFornecedor } from "./fornecedores";
-export { CompraNaoEncontrada, DocumentoDaCompraRepetido, ProdutoIndisponivel, ValoresDaCompraInvalidos } from "./compras";
-export type { CompraDaLista, ConsultasDeCompras, DetalheDaCompra, LinhaDoResumo, ListaDeCompras, ProdutoDaCompra, ResumoDaCompra } from "./compras";
+export { CompraNaoEncontrada, DocumentoDaCompraRepetido, LIMITE_DE_COMPRAS_DO_FORNECEDOR, ProdutoIndisponivel, ValoresDaCompraInvalidos } from "./compras";
+export type { CompraDaLista, ComprasDoFornecedor, ConsultasDeCompras, DetalheDaCompra, LinhaDoResumo, ListaDeCompras, ProdutoDaCompra, ResumoDaCompra } from "./compras";
 export type { ConsultasDePrecificacao, ItemCalculavel, ParametrosDePrecificacao } from "./precificacao";
 export type { ConsultasFinanceiras, ContaExibida, DespesaExibida, DetalheDaConta, FluxoDeCaixa, LancamentoExibido } from "./financeiro";
 export type { ConsultasDoEstoque, DetalheDoEstoque, ProdutoEmEstoque } from "./estoque";

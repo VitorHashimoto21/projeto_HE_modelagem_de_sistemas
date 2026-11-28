@@ -321,6 +321,8 @@ export type ContaExibida = {
   origem: OrigemDaConta;
   pessoa: PessoaDaConta | null;
   numeroDocumento: string | null;
+  /** SPEC-027 (5.6): a conta da compra mostra "Compra nº N", com link. */
+  compra: { id: string; numero: number } | null;
 };
 
 export type DetalheDaConta = ContaExibida & {
@@ -395,6 +397,7 @@ export function criarConsultasFinanceiras(cliente: ClienteDoNegocio, negocioId: 
     parcelaId: string | null;
     despesaFixaId: string | null;
     compraId: string | null;
+    compra: { id: string; numero: number } | null;
     numeroDocumento: string | null;
     fornecedor: PessoaLida;
     cliente: PessoaLida;
@@ -430,6 +433,7 @@ export function criarConsultasFinanceiras(cliente: ClienteDoNegocio, negocioId: 
       origem: origemDaConta(c),
       pessoa: pessoaDaConta(c),
       numeroDocumento: c.numeroDocumento,
+      compra: c.compra,
     };
   }
 
@@ -447,6 +451,7 @@ export function criarConsultasFinanceiras(cliente: ClienteDoNegocio, negocioId: 
     parcelaId: true,
     despesaFixaId: true,
     compraId: true,
+    compra: { select: { id: true, numero: true } },
     numeroDocumento: true,
     fornecedor: { select: { id: true, tipo: true, nome: true, nomeFantasia: true } },
     cliente: { select: { id: true, tipo: true, nome: true, nomeFantasia: true } },
