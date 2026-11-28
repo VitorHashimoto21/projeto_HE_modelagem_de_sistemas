@@ -320,3 +320,20 @@ Mesmo ambiente da etapa 2b: a compra nº 1 da fornecedora "Embalagens Exemplo Lt
 | [`s27h_01_detalhe_com_correcao_390_claro.png`](s27h_01_detalhe_com_correcao_390_claro.png) | O detalhe no celular, com a correção depois das entradas no estoque |
 | [`s27h_02_documento_repetido_390_claro.png`](s27h_02_documento_repetido_390_claro.png) | O documento repetido recusado, com o que foi digitado |
 | [`s27h_03_corrigida_1440_claro.png`](s27h_03_corrigida_1440_claro.png) | A compra corrigida para a Papelaria e o NF 78, com a confirmação |
+
+## Homologação da etapa 3a (28/11/2026)
+
+Feita pela equipe em <https://he-homol.vercel.app> (DEVELOP, depois do merge do PR #165), com o Dono do negócio de teste. A correção foi feita na compra nº 2, à vista e já paga, registrada sem nota fiscal e do mesmo fornecedor da compra nº 1. A compra passou para o fornecedor da compra nº 3, com o documento 3456. As capturas estão em [`homologacao/`](homologacao). Foram cobertos:
+- o nome do Dono, no menu e em "Registrada";
+- os nomes dos fornecedores, no cabeçalho, no registro, no formulário, na conta e na lista.
+
+| Passo | Resultado | Captura |
+|---|---|---|
+| A compra nº 2 corrigida mostra "Fornecedor e documento corrigidos, na compra e nas contas dela.", com o fornecedor novo e o "Doc. 3456" no cabeçalho e no registro. O produto, o custo, a entrada no estoque, os valores e a conta à vista de R$ 135,00 paga em Pix continuam iguais | ✅ | [`t14e3a_01_compra_2_corrigida.png`](homologacao/t14e3a_01_compra_2_corrigida.png) |
+| Nas contas a pagar quitadas, a conta "Compra nº 2 — à vista" mostra o fornecedor novo e o "Doc. 3456", ainda paga | ✅ | [`t14e3a_02_conta_corrigida.png`](homologacao/t14e3a_02_conta_corrigida.png) |
+| A lista mostra a compra nº 2 com o fornecedor novo e o "Doc. 3456", à vista e paga. O total de R$ 345,00 das três compras não mudou | ✅ | [`t14e3a_03_lista_de_compras.png`](homologacao/t14e3a_03_lista_de_compras.png) |
+| O nº 2345, da compra nº 3 do mesmo fornecedor, é recusado com "Este fornecedor já tem a compra nº 3 com o documento 2345. Confira o número ou cancele a compra anterior.", e a compra continua com o "Doc. 3456" | ✅ | [`t14e3a_04_documento_repetido_recusado.png`](homologacao/t14e3a_04_documento_repetido_recusado.png) |
+| Com "Compra sem nota fiscal" marcada, o campo mostra "Sem nota", e o cabeçalho e o registro passam a "Sem nota fiscal" | ✅ | [`t14e3a_05_compra_2_sem_nota.png`](homologacao/t14e3a_05_compra_2_sem_nota.png) |
+
+Sem divergência com a Spec. Na última captura, o menu lateral aparece mais abaixo. Isso vem da captura da página inteira: o menu fica fixo na tela enquanto a página rola. Na tela, ele não se desloca.
+
