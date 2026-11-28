@@ -1,8 +1,8 @@
 import type { ErrosDeCampo } from "@/lib/auth/validacao";
 import { criarItem, type DependenciasDoCatalogo, type EstadoDoItem } from "@/lib/catalogo/servicos";
-import { DocumentoDaCompraRepetido, ProdutoIndisponivel, ValoresDaCompraInvalidos, type ConsultasDeCompras, type ResumoDaCompra } from "@/lib/db/compras";
+import { CompraNaoEncontrada, DocumentoDaCompraRepetido, ProdutoIndisponivel, ValoresDaCompraInvalidos, type ConsultasDeCompras, type ResumoDaCompra } from "@/lib/db/compras";
 import { FornecedorNaoEncontrado } from "@/lib/db/fornecedores";
-import { MENSAGENS_COMPRA, validarCompra, type DadosDaCompra } from "@/lib/dominio/compras";
+import { MENSAGENS_COMPRA, validarCompra, validarCorrecaoDaCompra, type DadosDaCompra } from "@/lib/dominio/compras";
 
 /**
  * Fluxos da compra (SPEC-027, 5.1), independentes do Next.js: as Server Actions (com a guarda de
@@ -13,6 +13,9 @@ export const MENSAGENS_FLUXO_COMPRA = {
   falhaInterna: "Não foi possível registrar a compra agora. Nada foi gravado; tente novamente.",
   registrada: (numero: number) => `Compra nº ${numero} registrada.`,
   jaRegistrada: (numero: number) => `Esta compra já tinha sido registrada como a compra nº ${numero}.`,
+  corrigida: "Fornecedor e documento corrigidos, na compra e nas contas dela.",
+  compraNaoEncontrada: "Compra não encontrada.",
+  falhaNaCorrecao: "Não foi possível corrigir a compra agora. Nada foi alterado; tente novamente.",
 } as const;
 
 export type ProdutoComCustoNovo = { itemId: string; nome: string };
@@ -83,3 +86,25 @@ export async function criarProdutoDaCompra(campos: Record<string, string>, deps:
   return criarItem({ ...doProduto, tipo: "PRODUTO_FISICO" }, deps);
 }
 
+export type EstadoDaCorrecao = { status: "ocioso" } | { status: "erro"; mensagem?: string; erros?: ErrosDeCampo } | { status: "salvo"; mensagem: string };
+
+export const CORRECAO_INICIAL: EstadoDaCorrecao = { status: "ocioso" };
+
+/**
+ * Corrigir o fornecedor e o nº do documento (5.7, CA-11), com a mesma regra de unicidade do registro.
+ * Os campos: `fornecedor`, `numeroDocumento` e `semNotaFiscal`.
+ */
+export async function corrigirCompra(compraId: string, campos: Record<string, string>, deps: Pick<DependenciasDaCompra, "compras">): Promise<EstadoDaCorrecao> {
+  const v = validarCorrecaoDaCompra(campos);
+  if (!v.ok) return { status: "erro", erros: v.erros };
+  try {
+    await deps.compras.corrigir(compraId, v.dados);
+    return { status: "salvo", mensagem: MENSAGENS_FLUXO_COMPRA.corrigida };
+  } catch (e) {
+    if (e instanceof DocumentoDaCompraRepetido) return { status: "erro", erros: { documento: MENSAGENS_COMPRA.documentoRepetido(e.numero, e.documento) } };
+    if (e instanceof FornecedorNaoEncontrado) return { status: "erro", erros: { fornecedor: MENSAGENS_COMPRA.semFornecedor } };
+    if (e instanceof CompraNaoEncontrada) return { status: "erro", mensagem: MENSAGENS_FLUXO_COMPRA.compraNaoEncontrada };
+    console.error("[compras] falha ao corrigir:", e instanceof Error ? e.name : "erro");
+    return { status: "erro", mensagem: MENSAGENS_FLUXO_COMPRA.falhaNaCorrecao };
+  }
+}

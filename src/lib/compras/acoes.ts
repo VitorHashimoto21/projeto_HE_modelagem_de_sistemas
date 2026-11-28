@@ -11,7 +11,7 @@ import { hoje } from "@/lib/dominio/datas";
 import { pode } from "@/lib/dominio/permissoes";
 import * as servicos from "./servicos";
 import type { EstadoDoItem } from "@/lib/catalogo/servicos";
-import type { EstadoDaCompra } from "./servicos";
+import type { EstadoDaCompra, EstadoDaCorrecao } from "./servicos";
 
 // Server Actions da compra (SPEC-027, OPEN-007): registrar exige Estoque — criar e Financeiro — criar.
 // A fábrica confere o Estoque (e recusa o suporte e o negócio suspenso, SPEC-019); o Financeiro é
@@ -52,3 +52,14 @@ export const acaoNovoProdutoDaCompra = acaoComPermissao("catalogo", "criar", asy
   return estado;
 });
 
+// 5.7 (OPEN-007): corrigir o fornecedor e o nº do documento exige Financeiro — editar. A compra fica fora
+// da lista fechada de correções (RN37): no modo suporte, a fábrica recusa, mesmo com "ver e corrigir".
+export const acaoCorrigirCompra = acaoComPermissao("financeiro", "editar", async (membro, _: EstadoDaCorrecao, form: FormData) => {
+  const campos = camposDoFormulario(form);
+  const estado = await servicos.corrigirCompra(campos.compraId ?? "", campos, { compras: compras({ negocioId: membro.negocioId, usuarioId: membro.usuarioId }) });
+  if (estado.status === "salvo") {
+    revalidatePath("/compras", "layout");
+    revalidatePath("/financeiro", "layout");
+  }
+  return estado;
+});

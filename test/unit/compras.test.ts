@@ -6,9 +6,11 @@ import {
   custosDaLinha,
   descricaoDaConta,
   MENSAGENS_COMPRA,
+  podeCorrigirCompra,
   podeRegistrarCompra,
   ratear,
   validarCompra,
+  validarCorrecaoDaCompra,
   vencimentosSugeridos,
   type DadosDaCompra,
 } from "@/lib/dominio/compras";
@@ -254,5 +256,28 @@ describe("quem pode registrar (CA-13, OPEN-007)", () => {
     expect(podeRegistrarCompra({ permissoes: com(MATRIZ_COMPLETA, (m) => (m.financeiro.criar = false)) })).toBe(false);
     expect(podeRegistrarCompra({ permissoes: com(MATRIZ_COMPLETA, (m) => (m.estoque.criar = false)) })).toBe(false);
     expect(podeRegistrarCompra({ permissoes: MATRIZ_COMPLETA, modoSuporte: true })).toBe(false);
+  });
+
+  it("corrigir o fornecedor e o documento exige Financeiro — editar; o suporte nunca corrige (etapa 3a)", () => {
+    expect(podeCorrigirCompra({ permissoes: PREDEFINICOES.DONO })).toBe(true);
+    expect(podeCorrigirCompra({ permissoes: com(MATRIZ_COMPLETA, (m) => (m.financeiro.editar = false)) })).toBe(false);
+    // Só o Financeiro — editar: o Estoque não entra na correção (OPEN-007).
+    expect(podeCorrigirCompra({ permissoes: com(PREDEFINICOES.COLABORADOR, (m) => (m.financeiro.editar = true)) })).toBe(true);
+    expect(podeCorrigirCompra({ permissoes: MATRIZ_COMPLETA, modoSuporte: true })).toBe(false);
+  });
+});
+
+describe("validarCorrecaoDaCompra (5.7, etapa 3a)", () => {
+  it("o fornecedor e o nº, com os espaços ajustados; a caixa marcada dispensa o nº", () => {
+    expect(validarCorrecaoDaCompra({ fornecedor: FORNECEDOR, numeroDocumento: "  NF   12 " })).toEqual({ ok: true, dados: { fornecedorId: FORNECEDOR, numeroDocumento: "NF 12", semNotaFiscal: false } });
+    expect(validarCorrecaoDaCompra({ fornecedor: FORNECEDOR, numeroDocumento: "12", semNotaFiscal: "on" })).toEqual({ ok: true, dados: { fornecedorId: FORNECEDOR, numeroDocumento: null, semNotaFiscal: true } });
+    expect(validarCorrecaoDaCompra({ fornecedor: FORNECEDOR, semNotaFiscal: "on" })).toMatchObject({ ok: true });
+  });
+
+  it("as mensagens da 5.11: sem fornecedor, sem nº e nº longo", () => {
+    expect(validarCorrecaoDaCompra({ fornecedor: "", numeroDocumento: "" })).toEqual({ ok: false, erros: { fornecedor: MENSAGENS_COMPRA.semFornecedor, documento: MENSAGENS_COMPRA.semDocumento } });
+    expect(validarCorrecaoDaCompra({ fornecedor: "nao-e-uuid", numeroDocumento: "1" })).toEqual({ ok: false, erros: { fornecedor: MENSAGENS_COMPRA.semFornecedor } });
+    expect(validarCorrecaoDaCompra({ fornecedor: FORNECEDOR, numeroDocumento: "x".repeat(41) })).toEqual({ ok: false, erros: { documento: MENSAGENS_COMPRA.documentoLongo } });
+    expect(validarCorrecaoDaCompra({ fornecedor: FORNECEDOR, numeroDocumento: "x".repeat(40) })).toMatchObject({ ok: true });
   });
 });

@@ -9,6 +9,7 @@ import {
   custosDaLinha,
   descricaoDaConta,
   type ContaDaCompra,
+  type CorrecaoDaCompra,
   type CustosDaLinha,
   type DadosDaCompra,
   type EscolhaDeCusto,
@@ -149,6 +150,8 @@ export type DetalheDaCompra = {
   data: string;
   /** No modo suporte, o nome sai mascarado; `id` nulo quando não há o que abrir (anonimizado ou suporte). */
   fornecedor: { id: string | null; nome: string };
+  /** O fornecedor gravado na compra, mesmo anonimizado: o valor inicial da correção (5.7). */
+  fornecedorId: string;
   numeroDocumento: string | null;
   semNotaFiscal: boolean;
   observacao: string | null;
@@ -226,7 +229,7 @@ export function criarConsultasDeCompras(cliente: ClienteDoNegocio, negocioId: st
   }
 
   /** INV-011: outra compra não cancelada do mesmo fornecedor com o mesmo nº. */
-  async function conferirDocumento(d: DadosDaCompra) {
+  async function conferirDocumento(d: Pick<DadosDaCompra, "id" | "fornecedorId" | "numeroDocumento">) {
     if (!d.numeroDocumento) return;
     const outra = await cliente.compra.findFirst({
       where: { fornecedorId: d.fornecedorId, documentoChave: chaveDoDocumento(d.numeroDocumento), id: { not: d.id } },
@@ -411,6 +414,7 @@ export function criarConsultasDeCompras(cliente: ClienteDoNegocio, negocioId: st
         numero: c.numero,
         data: diaDe(c.data),
         fornecedor: { id: c.fornecedor.anonimizadoEm || opcoes.mascararNomes ? null : c.fornecedor.id, nome: nomeVisto(c.fornecedor) },
+        fornecedorId: c.fornecedor.id,
         numeroDocumento: c.numeroDocumento,
         semNotaFiscal: c.semNotaFiscal,
         observacao: c.observacao,
@@ -545,6 +549,36 @@ export function criarConsultasDeCompras(cliente: ClienteDoNegocio, negocioId: st
         gravada = { ...outra, jaExistia: true };
       }
       return { ...gravada, custosNovos: await custosNovosDa(gravada.id) };
+    },
+
+    /**
+     * Corrigir o fornecedor e o nº do documento (5.7, CA-11): a qualquer momento, na compra e em todas
+     * as contas dela, sem mexer em valores, vencimentos, situação nem pagamentos. A unicidade do nº vale
+     * entre as compras não canceladas (INV-011): a cancelada guarda o nº sem a chave. A linha da compra
+     * fica travada, para a correção não se cruzar com um cancelamento.
+     */
+    async corrigir(id: string, d: CorrecaoDaCompra): Promise<{ numero: number }> {
+      if (!UUID.test(id)) throw new CompraNaoEncontrada();
+      try {
+        return await cliente.$transaction(async (tx) => {
+          const [c] = await tx.$queryRaw<{ numero: number; fornecedorId: string; situacao: SituacaoDaCompra }[]>`
+            SELECT numero, "fornecedorId", situacao FROM "Compra"
+            WHERE id = ${id}::uuid AND "negocioId" = ${negocioId}::uuid
+            FOR UPDATE`;
+          if (!c) throw new CompraNaoEncontrada();
+          // O fornecedor atual continua aceito, mesmo excluído (anonimizado); um novo precisa estar ativo.
+          if (d.fornecedorId !== c.fornecedorId) await conferirFornecedor(d.fornecedorId);
+          const chave = c.situacao === "REGISTRADA" && d.numeroDocumento ? chaveDoDocumento(d.numeroDocumento) : null;
+          if (chave) await conferirDocumento({ id, ...d });
+          await tx.compra.update({ where: { id }, data: { fornecedorId: d.fornecedorId, numeroDocumento: d.numeroDocumento, documentoChave: chave, semNotaFiscal: d.semNotaFiscal } });
+          await tx.contaPagarReceber.updateMany({ where: { compraId: id }, data: { fornecedorId: d.fornecedorId, numeroDocumento: d.numeroDocumento } });
+          return { numero: c.numero };
+        });
+      } catch (e) {
+        // Outra compra com o mesmo nº gravada ao mesmo tempo (INV-011).
+        if (ehUnicidade(e)) await conferirDocumento({ id, ...d });
+        throw e;
+      }
     },
   };
 
