@@ -162,7 +162,7 @@ export const dataHoraCompleta = (d: Date) => formatoCompleto.format(d);
 // ---------------------------------------------------------------------------------------
 // Descrição das telas no registro (OPEN-008, 5.5): módulo e um texto curto, a partir do caminho.
 
-export type TelaDoSuporte = { modulo: Modulo | null; descricao: string; detalhe?: { tipo: "venda" | "item" | "conta"; id: string } };
+export type TelaDoSuporte = { modulo: Modulo | null; descricao: string; detalhe?: { tipo: "venda" | "item" | "conta" | "compra"; id: string } };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -194,7 +194,7 @@ function periodo(busca: URLSearchParams): string {
 
 /**
  * Descreve a tela aberta em modo suporte a partir do caminho e da busca. Telas de detalhe
- * (venda, item, conta) trazem o id para quem chama completar com o número ou o nome.
+ * (venda, item, conta, compra) trazem o id para quem chama completar com o número ou o nome.
  */
 export function descreverTela(caminhoComBusca: string): TelaDoSuporte {
   const url = new URL(caminhoComBusca || "/", "http://interno.invalid");
@@ -209,5 +209,6 @@ export function descreverTela(caminhoComBusca: string): TelaDoSuporte {
     return { modulo: pagina.modulo, descricao: `${pagina.descricao} — item`, detalhe: { tipo: "item", id } };
   }
   if (id && pagina.prefixo === "/financeiro/contas") return { modulo: "financeiro", descricao: "Financeiro — conta", detalhe: { tipo: "conta", id } };
+  if (id && pagina.prefixo === "/compras") return { modulo: null, descricao: "Compras — compra", detalhe: { tipo: "compra", id } };
   return { modulo: pagina.modulo, descricao: `${pagina.descricao}${periodo(url.searchParams)}` };
 }

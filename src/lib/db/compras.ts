@@ -1,5 +1,7 @@
 import { nomeDeExibicao } from "@/lib/dominio/cliente";
-import { intervaloDoDia } from "@/lib/dominio/datas";
+import { diaLocal, intervaloDoDia } from "@/lib/dominio/datas";
+import { estaAtrasada, restanteDaConta } from "@/lib/dominio/financeiro";
+import type { FormaDoPagamento } from "@/lib/dominio/contas";
 import {
   calcularCompra,
   chaveDoDocumento,
@@ -40,6 +42,13 @@ export class ProdutoIndisponivel extends Error {
   constructor(public readonly nome: string) {
     super("Produto indisponível para a compra.");
     this.name = "ProdutoIndisponivel";
+  }
+}
+/** Detalhar compra (seção 9): id inválido, de outro negócio ou inexistente. */
+export class CompraNaoEncontrada extends Error {
+  constructor() {
+    super("Compra não encontrada.");
+    this.name = "CompraNaoEncontrada";
   }
 }
 /** Os valores não fecham (o formulário já valida; só por segurança no servidor). */
@@ -119,6 +128,60 @@ export type ListaDeCompras = {
 };
 
 const diaDe = (d: Date) => d.toISOString().slice(0, 10);
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const centavos = (d: unknown) => paraCentavos(num(d) ?? 0);
+
+/** O detalhe da compra (5.6). */
+export type DetalheDaCompra = {
+  id: string;
+  numero: number;
+  data: string;
+  /** No modo suporte, o nome sai mascarado; `id` nulo quando não há o que abrir (anonimizado ou suporte). */
+  fornecedor: { id: string | null; nome: string };
+  numeroDocumento: string | null;
+  semNotaFiscal: boolean;
+  observacao: string | null;
+  valorProdutosCentavos: number;
+  freteCentavos: number;
+  outrasDespesasCentavos: number;
+  descontoCentavos: number;
+  totalCentavos: number;
+  condicao: "A_VISTA" | "A_PRAZO";
+  entradaCentavos: number | null;
+  situacao: SituacaoDaCompra;
+  pagamento: PagamentoDaCompra | null;
+  registradaPor: string;
+  registradaEm: Date;
+  cancelamento: { por: string | null; em: Date; motivo: string } | null;
+  produtos: {
+    itemId: string;
+    nome: string;
+    codigo: string | null;
+    unidadeMedida: string;
+    quantidade: number;
+    custoUnitarioCentavos: number;
+    totalLinhaCentavos: number;
+    custoComRateioCentavos: number;
+    escolhaCusto: EscolhaDeCusto;
+    custoAnteriorCentavos: number;
+    custoNovoCentavos: number;
+  }[];
+  contas: {
+    id: string;
+    descricao: string | null;
+    totalCentavos: number;
+    pagoCentavos: number;
+    restanteCentavos: number;
+    vencimento: string;
+    status: "ABERTA" | "PARCIAL" | "QUITADA" | "CANCELADA";
+    atrasada: boolean;
+    pagamentos: { data: Date; valorCentavos: number; forma: FormaDoPagamento | null; estornado: boolean }[];
+  }[];
+  /** Pago e em aberto, somando as contas não canceladas. */
+  pagoCentavos: number;
+  emAbertoCentavos: number;
+  entradas: { itemId: string; nome: string; tipo: string; quantidade: number; saldoAnterior: number; saldoPosterior: number }[];
+};
 const dataDoDia = (dia: string) => new Date(`${dia}T00:00:00Z`);
 
 export function criarConsultasDeCompras(cliente: ClienteDoNegocio, negocioId: string, opcoes: { mascararNomes?: boolean } = {}) {
@@ -249,6 +312,135 @@ export function criarConsultasDeCompras(cliente: ClienteDoNegocio, negocioId: st
         totalCentavos: paraCentavos(num(soma._sum.total ?? 0)!),
         canceladas,
         ocultasPeloPlano,
+      };
+    },
+
+    /**
+     * Detalhar compra (5.6, seção 9): os dados, os produtos com os custos, as contas com os pagamentos, as
+     * entradas no estoque, quem registrou e, se cancelada, quem cancelou, quando e o motivo.
+     */
+    async detalhar(id: string, hoje: string): Promise<DetalheDaCompra> {
+      if (!UUID.test(id)) throw new CompraNaoEncontrada();
+      const c = await cliente.compra.findFirst({
+        where: { id },
+        select: {
+          id: true,
+          numero: true,
+          data: true,
+          numeroDocumento: true,
+          semNotaFiscal: true,
+          observacao: true,
+          valorProdutos: true,
+          frete: true,
+          outrasDespesas: true,
+          desconto: true,
+          total: true,
+          condicao: true,
+          valorEntrada: true,
+          situacao: true,
+          registradaEm: true,
+          canceladaEm: true,
+          motivoCancelamento: true,
+          fornecedor: { select: { id: true, tipo: true, nome: true, nomeFantasia: true, anonimizadoEm: true } },
+          registradaPor: { select: { nome: true } },
+          canceladaPor: { select: { nome: true } },
+          itens: {
+            select: {
+              itemId: true,
+              quantidade: true,
+              custoUnitario: true,
+              totalLinha: true,
+              custoComRateio: true,
+              escolhaCusto: true,
+              custoAnterior: true,
+              custoNovo: true,
+              item: { select: { nome: true, codigo: true, unidadeMedida: true } },
+            },
+          },
+          contas: {
+            orderBy: [{ vencimento: "asc" }, { descricao: "asc" }],
+            select: {
+              id: true,
+              descricao: true,
+              valorTotal: true,
+              valorPago: true,
+              valorDesconto: true,
+              valorAcrescimo: true,
+              vencimento: true,
+              status: true,
+              lancamentos: {
+                where: { origem: "CONTA" },
+                orderBy: { data: "asc" },
+                select: { data: true, valor: true, formaPagamento: true, estornadoPor: { select: { id: true } } },
+              },
+            },
+          },
+          movimentacoes: { orderBy: { registradoEm: "asc" }, select: { itemId: true, tipo: true, quantidade: true, saldoAnterior: true, saldoPosterior: true, item: { select: { nome: true } } } },
+        },
+      });
+      if (!c) throw new CompraNaoEncontrada();
+      const contas = c.contas.map((k) => {
+        const valores = { totalCentavos: centavos(k.valorTotal), pagoCentavos: centavos(k.valorPago), descontoCentavos: centavos(k.valorDesconto), acrescimoCentavos: centavos(k.valorAcrescimo) };
+        const vencimento = diaLocal(k.vencimento);
+        return {
+          id: k.id,
+          descricao: k.descricao,
+          totalCentavos: valores.totalCentavos,
+          restanteCentavos: k.status === "CANCELADA" ? 0 : restanteDaConta(valores),
+          vencimento,
+          status: k.status,
+          atrasada: estaAtrasada({ ...valores, vencimento, status: k.status }, hoje),
+          pagoCentavos: valores.pagoCentavos,
+          pagamentos: k.lancamentos.map((l) => ({ data: l.data, valorCentavos: centavos(l.valor), forma: l.formaPagamento, estornado: l.estornadoPor !== null })),
+        };
+      });
+      const validas = contas.filter((k) => k.status !== "CANCELADA");
+      return {
+        id: c.id,
+        numero: c.numero,
+        data: diaDe(c.data),
+        fornecedor: { id: c.fornecedor.anonimizadoEm || opcoes.mascararNomes ? null : c.fornecedor.id, nome: nomeVisto(c.fornecedor) },
+        numeroDocumento: c.numeroDocumento,
+        semNotaFiscal: c.semNotaFiscal,
+        observacao: c.observacao,
+        valorProdutosCentavos: centavos(c.valorProdutos),
+        freteCentavos: centavos(c.frete),
+        outrasDespesasCentavos: centavos(c.outrasDespesas),
+        descontoCentavos: centavos(c.desconto),
+        totalCentavos: centavos(c.total),
+        condicao: c.condicao,
+        entradaCentavos: c.valorEntrada === null ? null : centavos(c.valorEntrada),
+        situacao: c.situacao,
+        pagamento: c.situacao === "CANCELADA" ? null : pagamentoDaCompra(c.contas.map((k) => k.status)),
+        registradaPor: c.registradaPor.nome,
+        registradaEm: c.registradaEm,
+        cancelamento: c.situacao === "CANCELADA" ? { por: c.canceladaPor?.nome ?? null, em: c.canceladaEm!, motivo: c.motivoCancelamento! } : null,
+        produtos: c.itens
+          .map((i) => ({
+            itemId: i.itemId,
+            nome: i.item.nome,
+            codigo: i.item.codigo,
+            unidadeMedida: i.item.unidadeMedida,
+            quantidade: num(i.quantidade)!,
+            custoUnitarioCentavos: centavos(i.custoUnitario),
+            totalLinhaCentavos: centavos(i.totalLinha),
+            custoComRateioCentavos: centavos(i.custoComRateio),
+            escolhaCusto: i.escolhaCusto,
+            custoAnteriorCentavos: centavos(i.custoAnterior),
+            custoNovoCentavos: centavos(i.custoNovo),
+          }))
+          .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")),
+        contas,
+        pagoCentavos: validas.reduce((s, k) => s + k.pagoCentavos, 0),
+        emAbertoCentavos: validas.reduce((s, k) => s + k.restanteCentavos, 0),
+        entradas: c.movimentacoes.map((m) => ({
+          itemId: m.itemId,
+          nome: m.item.nome,
+          tipo: m.tipo,
+          quantidade: num(m.quantidade)!,
+          saldoAnterior: num(m.saldoAnterior)!,
+          saldoPosterior: num(m.saldoPosterior)!,
+        })),
       };
     },
 

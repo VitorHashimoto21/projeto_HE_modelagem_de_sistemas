@@ -95,5 +95,8 @@ describe("quem vê as compras (OPEN-007, CA-13) e o menu (OPEN-008)", () => {
 
   it("as telas de compra entram no registro do suporte com o próprio nome", () => {
     expect(descreverTela("/compras?situacao=CANCELADA")).toEqual({ modulo: null, descricao: "Compras" });
+    // Etapa 2b: o detalhe traz o id, para o registro completar com o nº da compra.
+    expect(descreverTela(`/compras/${FORNECEDOR}`)).toEqual({ modulo: null, descricao: "Compras — compra", detalhe: { tipo: "compra", id: FORNECEDOR } });
+    expect(descreverTela("/compras/nova")).toEqual({ modulo: null, descricao: "Compras" });
   });
 });

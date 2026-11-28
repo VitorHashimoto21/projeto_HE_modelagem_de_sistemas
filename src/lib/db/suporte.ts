@@ -501,6 +501,9 @@ export function criarConsultasDeSuporte(cliente: PrismaClient) {
       } else if (tela.detalhe?.tipo === "conta") {
         const c = await db.contaPagarReceber.findFirst({ where: { id: tela.detalhe.id }, select: { descricao: true } });
         if (c) descricao = `Financeiro — conta "${c.descricao}"`;
+      } else if (tela.detalhe?.tipo === "compra") {
+        const c = await db.compra.findFirst({ where: { id: tela.detalhe.id }, select: { numero: true } });
+        if (c) descricao = `Compras — compra nº ${c.numero}`;
       }
       await registrar(db, { negocioId, acessoId, usuarioId: administradorId, evento: "TELA", modulo: tela.modulo, descricao });
     },

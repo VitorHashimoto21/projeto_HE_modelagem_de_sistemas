@@ -705,6 +705,9 @@ function CompraRegistrada({ estado, aoRecomecar }: { estado: Extract<EstadoDaCom
             <button type="button" onClick={aoRecomecar} className={classeDoBotao("principal")}>
               Registrar outra compra
             </button>
+            <Link href={`/compras/${estado.compraId}`} className={classeDoBotao("secundario")}>
+              Ver a compra
+            </Link>
             <Link href="/financeiro/contas?tipo=PAGAR" className={classeDoBotao("secundario")}>
               Ver as contas a pagar
             </Link>
