@@ -279,3 +279,44 @@ Feita pela equipe em <https://he-homol.vercel.app> (DEVELOP, depois do merge do 
 | O fornecedor da compra nº 3 mostra a compra e o total de R$ 125,00 | ✅ | [`t14e2c_05_fornecedor_da_compra_3.png`](homologacao/t14e2c_05_fornecedor_da_compra_3.png) |
 
 Sem divergência com a Spec. Com a homologação da 2c, a **etapa 2 está homologada** (lista, detalhe e ligações).
+
+## Etapa 3a — correção do fornecedor e do documento (28/11/2026)
+
+Mesmo ambiente da etapa 2b: a compra nº 1 da fornecedora "Embalagens Exemplo Ltda", com o documento NF 77, a entrada paga em Pix e 2 parcelas. Para a correção, a semente ganhou um segundo fornecedor fictício, "Papelaria Exemplo", com a compra nº 2 e o documento NF 80.
+
+### Testes automatizados
+
+| # | Teste | Onde | Resultado |
+|---|---|---|---|
+| CA-11 | Com a entrada quitada e uma parcela paga em parte, a correção troca o fornecedor e o nº na compra e nas três contas; a compra, os produtos, as contas, os pagamentos, o estoque e o custo ficam iguais | `test/integracao/correcao-da-compra.test.ts` | ✅ |
+| 5.7 | Marcar e desmarcar "Compra sem nota fiscal": a compra e as contas ficam sem o nº e depois com o nº | idem | ✅ |
+| INV-011 | A mesma regra do registro: sem diferença de espaços e maiúsculas, por fornecedor, só entre as não canceladas; a compra cancelada é corrigida sem prender o nº | idem | ✅ |
+| INV-011 | Duas correções simultâneas para o mesmo nº do mesmo fornecedor: uma grava, a outra é recusada | idem | ✅ |
+| 5.7 | Fornecedor novo de outro negócio ou excluído: recusado; o atual, mesmo excluído depois, continua aceito | idem | ✅ |
+| INV-010 | Compra de outro negócio, inexistente ou com id inválido: não encontrada | idem | ✅ |
+| CA-15, INV-009 | O suporte e o negócio suspenso não corrigem; nada muda | idem e `test/unit/correcoes.test.ts` (a ação fica fora da lista mesmo com o Estoque e o Financeiro em "ver e corrigir") | ✅ |
+| 5.11 | As mensagens do formulário, do documento repetido e da compra não encontrada; a confirmação | `test/integracao/correcao-da-compra.test.ts` e `test/unit/compras.test.ts` | ✅ |
+| OPEN-007 | Corrigir exige *Financeiro: editar*; o suporte nunca corrige | `test/unit/compras.test.ts` | ✅ |
+
+**Suíte completa:** 761 testes unitários e 493 de integração, além de lint e tipos.
+
+### Roteiro no navegador
+
+25 verificações, todas aprovadas:
+- **o formulário:** no fim do detalhe da compra, com o fornecedor e o nº atuais;
+- **validação:** sem o nº, a mensagem aparece no campo, sem enviar. Com o nº "nf 80" da compra nº 2 da Papelaria, a tela mostra "Este fornecedor já tem a compra nº 2 com o documento NF 80. …", e o que foi digitado continua no formulário;
+- **correção (CA-11):**
+  - trocando para a Papelaria e o NF 78, o cabeçalho e o registro mostram os dados novos;
+  - as três contas passam a ter o fornecedor e o nº novos, com os mesmos valores, pagamentos, situação e vencimentos;
+  - o detalhe da conta mostra os dados corrigidos, e a compra passa para as compras da Papelaria;
+- **sem nota fiscal:** marcada a caixa, o campo do nº some, e a compra e as contas ficam sem o nº. Depois, a compra volta para a Embalagens e o NF 77, sem mudar valores;
+- **permissão:** um membro com *Estoque: ver* e *Financeiro: ver*, sem *Financeiro: editar*, vê a compra sem a seção da correção;
+- **telas** em 1440 e 390 px, claro e escuro, sem rolagem horizontal; axe sem violações no detalhe com a correção.
+
+| Captura | O que mostra |
+|---|---|
+| [`s27h_01_detalhe_com_correcao_1440_claro.png`](s27h_01_detalhe_com_correcao_1440_claro.png) | O detalhe da compra com a seção "Corrigir o fornecedor e o documento" no fim |
+| [`s27h_01_detalhe_com_correcao_1440_escuro.png`](s27h_01_detalhe_com_correcao_1440_escuro.png) | O mesmo detalhe no tema escuro |
+| [`s27h_01_detalhe_com_correcao_390_claro.png`](s27h_01_detalhe_com_correcao_390_claro.png) | O detalhe no celular, com a correção depois das entradas no estoque |
+| [`s27h_02_documento_repetido_390_claro.png`](s27h_02_documento_repetido_390_claro.png) | O documento repetido recusado, com o que foi digitado |
+| [`s27h_03_corrigida_1440_claro.png`](s27h_03_corrigida_1440_claro.png) | A compra corrigida para a Papelaria e o NF 78, com a confirmação |

@@ -8,12 +8,13 @@ import { CabecalhoDePagina } from "@/components/ui/cabecalho-de-pagina";
 import { classeDoLink } from "@/components/ui/estilos";
 import { Selo, type TomDoSelo } from "@/components/ui/selo";
 import { Superficie, TituloDaSuperficie } from "@/components/ui/superficie";
+import { CorrigirCompra } from "@/components/compras/corrigir-compra";
 import { qtd } from "@/components/vendas/rotulos";
 import { ROTA_SEM_ACESSO } from "@/lib/auth/rotas";
 import { exigirPermissao } from "@/lib/auth/servidor";
-import { compras } from "@/lib/db";
+import { compras, fornecedores } from "@/lib/db";
 import { CompraNaoEncontrada } from "@/lib/db/compras";
-import { CONDICOES_DE_COMPRA, ESCOLHAS_DE_CUSTO, podeVerCompras } from "@/lib/dominio/compras";
+import { CONDICOES_DE_COMPRA, ESCOLHAS_DE_CUSTO, podeCorrigirCompra, podeVerCompras } from "@/lib/dominio/compras";
 import { rotuloDaForma } from "@/lib/dominio/contas";
 import { hoje } from "@/lib/dominio/datas";
 import { PAGAMENTOS_DA_COMPRA, type PagamentoDaCompra } from "@/lib/dominio/lista-de-compras";
@@ -37,7 +38,8 @@ function Linha({ rotulo, children, destaque }: { rotulo: string; children: React
 }
 
 // Detalhe da compra (SPEC-027, 5.6): Estoque — ver e Financeiro — ver (OPEN-007). Os produtos com os
-// custos, as contas com os pagamentos, as entradas no estoque, quem registrou e o cancelamento.
+// custos, as contas com os pagamentos, as entradas no estoque, quem registrou e o cancelamento. A
+// correção do fornecedor e do nº do documento (5.7), com Financeiro — editar; nunca no modo suporte.
 export default async function DetalheDaCompra({ params }: PageProps<"/compras/[id]">) {
   const membro = await exigirPermissao("estoque", "ver");
   if (!podeVerCompras(membro)) redirect(ROTA_SEM_ACESSO);
@@ -49,6 +51,8 @@ export default async function DetalheDaCompra({ params }: PageProps<"/compras/[i
       throw e;
     });
   const cancelada = c.situacao === "CANCELADA";
+  const corrige = podeCorrigirCompra(membro);
+  const opcoesDeFornecedor = corrige ? await fornecedores(membro).opcoes() : [];
   // CA-04: o custo não muda o preço sozinho; o detalhe leva à Calculadora (só para quem a vê).
   const custosNovos = cancelada || !pode(membro.permissoes, "calculadora", "ver") ? [] : c.produtos.filter((p) => p.custoNovoCentavos !== p.custoAnteriorCentavos);
   const documento = c.semNotaFiscal ? "Sem nota fiscal" : `Doc. ${c.numeroDocumento}`;
@@ -156,6 +160,16 @@ export default async function DetalheDaCompra({ params }: PageProps<"/compras/[i
               ))}
             </ul>
           </Superficie>
+
+          {corrige && (
+            <Superficie aria-labelledby="titulo-correcao">
+              <TituloDaSuperficie id="titulo-correcao" titulo="Corrigir o fornecedor e o documento" descricao="Vale também para as contas da compra. Não muda valores, produtos nem pagamentos." />
+              <CorrigirCompra
+                compra={{ id: c.id, fornecedor: { id: c.fornecedorId, nome: c.fornecedor.nome }, numeroDocumento: c.numeroDocumento, semNotaFiscal: c.semNotaFiscal }}
+                fornecedores={opcoesDeFornecedor}
+              />
+            </Superficie>
+          )}
         </div>
 
         <aside className="flex w-full flex-col gap-6 lg:sticky lg:top-6 lg:w-80">

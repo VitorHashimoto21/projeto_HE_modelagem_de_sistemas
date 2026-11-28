@@ -12,7 +12,7 @@
 > - **nova versão da Política com novo aceite** (OPEN-009);
 > - **sem relatório novo** (OPEN-010).
 >
-> A baseline foi ajustada: RF91 e RN43 novos; RF08, RF15, RF30, RF89, RF90 e RNF05 alterados. **Em implementação por etapas** (seção 14): as etapas 1a (o banco das compras) e 1b (regras e gravação) foram feitas em 22/11/2026, e a 1c (tela "Registrar compra") e a 1d ("Novo produto" sem sair da compra) em 26/11/2026, concluindo a etapa 1, homologada em 27/11/2026. A etapa 2a (lista de compras e o item "Compras" no menu) foi feita em 27/11/2026 e homologada em 28/11/2026, e a 2b (detalhe da compra), em 28/11/2026, também homologada no mesmo dia. A 2c (ligações no Estoque, nas contas e no fornecedor), em 28/11/2026, concluindo a etapa 2, homologada no mesmo dia. As notas estão no fim da seção 9. Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar), a pedido da equipe. Origem: pendência 8 do Mapa, das melhorias de Estoque e Financeiro pedidas em 01/11/2026 a partir do uso real por uma usuária com CNPJ. É a terceira dessas Specs: usa o histórico de custo da SPEC-025 e os fornecedores da SPEC-026. A SPEC-019, concluída antes desta por decisão da equipe (01/11/2026), já garante que a compra nasce fora das correções do suporte e recusada em negócio suspenso.
+> A baseline foi ajustada: RF91 e RN43 novos; RF08, RF15, RF30, RF89, RF90 e RNF05 alterados. **Em implementação por etapas** (seção 14): as etapas 1a (o banco das compras) e 1b (regras e gravação) foram feitas em 22/11/2026, e a 1c (tela "Registrar compra") e a 1d ("Novo produto" sem sair da compra) em 26/11/2026, concluindo a etapa 1, homologada em 27/11/2026. A etapa 2a (lista de compras e o item "Compras" no menu) foi feita em 27/11/2026 e homologada em 28/11/2026, e a 2b (detalhe da compra), em 28/11/2026, também homologada no mesmo dia. A 2c (ligações no Estoque, nas contas e no fornecedor), em 28/11/2026, concluindo a etapa 2, homologada no mesmo dia. A etapa 3 foi dividida em três partes; a 3a (correção do fornecedor e do nº do documento) foi feita em 28/11/2026. As notas estão no fim da seção 9. Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar), a pedido da equipe. Origem: pendência 8 do Mapa, das melhorias de Estoque e Financeiro pedidas em 01/11/2026 a partir do uso real por uma usuária com CNPJ. É a terceira dessas Specs: usa o histórico de custo da SPEC-025 e os fornecedores da SPEC-026. A SPEC-019, concluída antes desta por decisão da equipe (01/11/2026), já garante que a compra nasce fora das correções do suporte e recusada em negócio suspenso.
 >
 > **Mapa:** [`MAPA_DE_SPECS.md`](../MAPA_DE_SPECS.md)
 > - **Altera:**
@@ -503,6 +503,15 @@ No custo médio, o saldo antes é o saldo do produto no momento do registro; a e
 - o atalho "Registrar compra", que abre a compra com o fornecedor escolhido.
 
 Tudo como previsto, sem divergência. Com isso, **a etapa 2 está homologada**.
+
+**Etapa 3a (28/11/2026)** — a correção do fornecedor e do nº do documento (CA-11) ([evidências](evidencias/SPEC-027/README.md#etapa-3a--correção-do-fornecedor-e-do-documento-28112026)):
+- **A etapa 3 foi dividida em três**, pelo tamanho de referência de um PR: a 3a traz a correção (5.7), com os testes T06; a 3b traz o cancelamento, com os testes T07; a 3c traz a LGPD (5.10), com os testes T11. As recusas no modo suporte e no negócio suspenso (T10) entram em cada parte, com a ação que elas recusam.
+- **Onde fica.** No fim do detalhe da compra, a seção "Corrigir o fornecedor e o documento", só para quem tem *Financeiro: editar* (OPEN-007), e nunca no modo suporte. O formulário traz o fornecedor e o nº atuais e a caixa "Compra sem nota fiscal".
+- **O que muda.** A correção grava o fornecedor e o nº na compra e em todas as contas dela, inclusive as quitadas e as canceladas. Valores, vencimentos, situação e pagamentos não mudam. A linha da compra fica travada durante a correção, para ela não se cruzar com um cancelamento.
+- **Unicidade (INV-011).** A regra é a mesma do registro: o nº é comparado sem diferença de espaços e de maiúsculas, por fornecedor, entre as compras não canceladas. A compra cancelada também pode ser corrigida ("a qualquer momento", 5.7); o nº dela não prende o nº de outra compra.
+- **Fornecedor.** O fornecedor novo precisa ser do negócio e não pode ter sido excluído. O fornecedor atual continua aceito mesmo se foi excluído (anonimizado) depois da compra, para corrigir só o nº.
+- **Confirmação.** Depois de salvar, a tela mostra "Fornecedor e documento corrigidos, na compra e nas contas dela.". As mensagens de erro são as da 5.11.
+- **Suporte e negócio suspenso (CA-15, INV-009).** A correção fica fora da lista fechada (RN37): no modo suporte, a ação é recusada mesmo com o Financeiro em "ver e corrigir", e a seção não aparece. No negócio suspenso, a ação é recusada (RN39). O banco também recusa as duas.
 
 ---
 

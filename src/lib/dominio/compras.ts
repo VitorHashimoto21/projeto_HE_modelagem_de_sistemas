@@ -92,8 +92,34 @@ export const podeRegistrarCompra = (m: { permissoes: Matriz; modoSuporte?: boole
 /** OPEN-007: ver a lista e o detalhe exige Estoque — ver e Financeiro — ver (o suporte, com os dois liberados, também). */
 export const podeVerCompras = (m: { permissoes: Matriz }) => pode(m.permissoes, "estoque", "ver") && pode(m.permissoes, "financeiro", "ver");
 
+/** OPEN-007: corrigir o fornecedor e o nº do documento exige Financeiro — editar; o suporte nunca corrige (RN37). */
+export const podeCorrigirCompra = (m: { permissoes: Matriz; modoSuporte?: boolean }) => !m.modoSuporte && pode(m.permissoes, "financeiro", "editar");
+
 /** INV-011: o nº do documento comparado sem diferença de espaços e de maiúsculas. */
 export const chaveDoDocumento = (numero: string) => numero.trim().replace(/\s+/g, " ").toUpperCase();
+
+/** OPEN-002: o nº do documento, obrigatório salvo na compra sem nota fiscal (que fica sem o nº). */
+function lerDocumento(semNotaFiscal: boolean, bruto: unknown, erros: ErrosDeCampo): string | null {
+  if (semNotaFiscal) return null;
+  const numero = typeof bruto === "string" ? bruto.trim().replace(/\s+/g, " ") : "";
+  if (!numero) erros.documento = MENSAGENS_COMPRA.semDocumento;
+  else if (numero.length > MAX_DOCUMENTO) erros.documento = MENSAGENS_COMPRA.documentoLongo;
+  return numero;
+}
+
+/** 5.7: a correção do fornecedor e do nº do documento (ou da marcação "Compra sem nota fiscal"). */
+export type CorrecaoDaCompra = { fornecedorId: string; numeroDocumento: string | null; semNotaFiscal: boolean };
+
+/** Os campos do formulário da correção: `fornecedor`, `numeroDocumento` e `semNotaFiscal` (marcado). */
+export function validarCorrecaoDaCompra(campos: Record<string, string | undefined>): Validacao<CorrecaoDaCompra> {
+  const erros: ErrosDeCampo = {};
+  const fornecedorId = campos.fornecedor && UUID.test(campos.fornecedor) ? campos.fornecedor : null;
+  if (!fornecedorId) erros.fornecedor = MENSAGENS_COMPRA.semFornecedor;
+  const semNotaFiscal = Boolean(campos.semNotaFiscal);
+  const numeroDocumento = lerDocumento(semNotaFiscal, campos.numeroDocumento, erros);
+  if (!fornecedorId || Object.keys(erros).length > 0) return { ok: false, erros };
+  return { ok: true, dados: { fornecedorId, numeroDocumento, semNotaFiscal } };
+}
 
 /** OPEN-004: vencimentos sugeridos, a cada 30 dias depois da data da compra. */
 export function vencimentosSugeridos(dia: string, n: number): string[] {
@@ -128,12 +154,7 @@ export function validarCompra(entrada: unknown, hoje: string): Validacao<DadosDa
   if (!fornecedorId) erros.fornecedor = MENSAGENS_COMPRA.semFornecedor;
 
   const semNotaFiscal = c.semNotaFiscal === true;
-  let numeroDocumento: string | null = null;
-  if (!semNotaFiscal) {
-    numeroDocumento = typeof c.numeroDocumento === "string" ? c.numeroDocumento.trim().replace(/\s+/g, " ") : "";
-    if (!numeroDocumento) erros.documento = MENSAGENS_COMPRA.semDocumento;
-    else if (numeroDocumento.length > MAX_DOCUMENTO) erros.documento = MENSAGENS_COMPRA.documentoLongo;
-  }
+  const numeroDocumento = lerDocumento(semNotaFiscal, c.numeroDocumento, erros);
 
   const dia = vazio(c.dia) ? hoje : c.dia;
   const diaOk = diaValido(dia) && diasEntre(dia, hoje) >= 0 && diasEntre(dia, hoje) <= DIAS_RETROATIVOS_COMPRA;

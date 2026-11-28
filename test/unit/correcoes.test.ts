@@ -257,6 +257,13 @@ describe("T02/CA-06/CA-07 — autorização no modo suporte com o Catálogo em c
     expect(autorizar(c, acao("catalogo", "criar", "catalogo.criarItem"))).toEqual({ ok: false, motivo: "ForaDaListaDeCorrecoes" });
   });
 
+  it("SPEC-027 (CA-15, RN37): registrar e corrigir a compra ficam fora da lista, mesmo com o Estoque e o Financeiro em correção", async () => {
+    const c = await resolverContextoDaRequisicao(entrada(), deps(liberacao({ modulosComCorrecao: ["estoque", "financeiro"] })));
+    expect(c?.suporte?.modulosComCorrecao).toEqual(["estoque", "financeiro"]);
+    // As ações da compra não têm marca de correção: registrar (Estoque — criar) e corrigir (Financeiro — editar).
+    for (const n of [acao("estoque", "criar"), acao("financeiro", "editar")]) expect(autorizar(c, n), JSON.stringify(n)).toEqual({ ok: false, motivo: "ForaDaListaDeCorrecoes" });
+  });
+
   it("nos módulos só em 'ver', e fora dos módulos: SomenteLeitura (vendas, clientes, Financeiro, Configurações)", async () => {
     const c = await resolverContextoDaRequisicao(entrada(), deps());
     const niveis: NivelDeAcesso[] = [
