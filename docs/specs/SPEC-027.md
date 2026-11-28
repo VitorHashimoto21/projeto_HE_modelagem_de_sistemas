@@ -12,7 +12,7 @@
 > - **nova versão da Política com novo aceite** (OPEN-009);
 > - **sem relatório novo** (OPEN-010).
 >
-> A baseline foi ajustada: RF91 e RN43 novos; RF08, RF15, RF30, RF89, RF90 e RNF05 alterados. **Em implementação por etapas** (seção 14): as etapas 1a (o banco das compras) e 1b (regras e gravação) foram feitas em 22/11/2026, e a 1c (tela "Registrar compra") e a 1d ("Novo produto" sem sair da compra) em 26/11/2026, concluindo a etapa 1, homologada em 27/11/2026. A etapa 2a (lista de compras e o item "Compras" no menu) foi feita em 27/11/2026 e homologada em 28/11/2026, e a 2b (detalhe da compra), em 28/11/2026, também homologada no mesmo dia. A 2c (ligações no Estoque, nas contas e no fornecedor), em 28/11/2026, concluindo a etapa 2. As notas estão no fim da seção 9. Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar), a pedido da equipe. Origem: pendência 8 do Mapa, das melhorias de Estoque e Financeiro pedidas em 01/11/2026 a partir do uso real por uma usuária com CNPJ. É a terceira dessas Specs: usa o histórico de custo da SPEC-025 e os fornecedores da SPEC-026. A SPEC-019, concluída antes desta por decisão da equipe (01/11/2026), já garante que a compra nasce fora das correções do suporte e recusada em negócio suspenso.
+> A baseline foi ajustada: RF91 e RN43 novos; RF08, RF15, RF30, RF89, RF90 e RNF05 alterados. **Em implementação por etapas** (seção 14): as etapas 1a (o banco das compras) e 1b (regras e gravação) foram feitas em 22/11/2026, e a 1c (tela "Registrar compra") e a 1d ("Novo produto" sem sair da compra) em 26/11/2026, concluindo a etapa 1, homologada em 27/11/2026. A etapa 2a (lista de compras e o item "Compras" no menu) foi feita em 27/11/2026 e homologada em 28/11/2026, e a 2b (detalhe da compra), em 28/11/2026, também homologada no mesmo dia. A 2c (ligações no Estoque, nas contas e no fornecedor), em 28/11/2026, concluindo a etapa 2, homologada no mesmo dia. As notas estão no fim da seção 9. Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar), a pedido da equipe. Origem: pendência 8 do Mapa, das melhorias de Estoque e Financeiro pedidas em 01/11/2026 a partir do uso real por uma usuária com CNPJ. É a terceira dessas Specs: usa o histórico de custo da SPEC-025 e os fornecedores da SPEC-026. A SPEC-019, concluída antes desta por decisão da equipe (01/11/2026), já garante que a compra nasce fora das correções do suporte e recusada em negócio suspenso.
 >
 > **Mapa:** [`MAPA_DE_SPECS.md`](../MAPA_DE_SPECS.md)
 > - **Altera:**
@@ -495,6 +495,14 @@ No custo médio, o saldo antes é o saldo do produto no momento do registro; a e
   - O atalho "Registrar compra" (5.8) abre a compra já com o fornecedor escolhido, só para quem pode registrar.
 
 **Etapa 2 concluída** com a 2c.
+
+**Homologação da etapa 2c (28/11/2026)** ([evidências](evidencias/SPEC-027/README.md#homologação-da-etapa-2c-28112026)): a equipe conferiu na homologação:
+- a entrada da compra nº 1 no histórico da Máscara, com o link;
+- a origem "Compra nº 1" na conta, com o link;
+- as compras e o total comprado nos dois fornecedores;
+- o atalho "Registrar compra", que abre a compra com o fornecedor escolhido.
+
+Tudo como previsto, sem divergência. Com isso, **a etapa 2 está homologada**.
 
 ---
 
