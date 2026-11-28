@@ -52,6 +52,7 @@ function Situacao({ c }: { c: CompraDaLista }) {
 
 // Lista de compras (SPEC-027, 5.6): Estoque — ver e Financeiro — ver (OPEN-007). Busca e filtros no
 // endereço da página, o total de todas as páginas sem as canceladas e o limite do plano gratuito.
+// Cada compra abre o detalhe (etapa 2b).
 export default async function Compras({ searchParams }: PageProps<"/compras">) {
   const membro = await exigirPermissao("estoque", "ver");
   if (!podeVerCompras(membro)) redirect(ROTA_SEM_ACESSO);
@@ -211,9 +212,11 @@ export default async function Compras({ searchParams }: PageProps<"/compras">) {
             </thead>
             <tbody>
               {r.compras.map((c) => (
-                <tr key={c.id} className="border-b last:border-b-0">
+                <tr key={c.id} className="border-b last:border-b-0 hover:bg-muted/50">
                   <td className="px-6 py-3">
-                    <span className="font-semibold text-foreground">Compra nº {c.numero}</span>
+                    <Link href={`/compras/${c.id}`} className="font-semibold text-foreground hover:text-primary hover:underline">
+                      Compra nº {c.numero}
+                    </Link>
                     <span className="block text-xs text-muted-foreground">{documento(c)}</span>
                   </td>
                   <td className="px-3 py-3 text-muted-foreground tabular-nums">{dataBr(c.data)}</td>
@@ -228,18 +231,21 @@ export default async function Compras({ searchParams }: PageProps<"/compras">) {
           </table>
           <ul className="divide-y md:hidden">
             {r.compras.map((c) => (
-              <li key={c.id} className="flex items-start gap-3 px-4 py-3.5">
-                <div className="min-w-0 flex-1">
-                  <p className="font-semibold text-foreground">Compra nº {c.numero}</p>
-                  <p className="text-xs break-words text-muted-foreground">
-                    {dataBr(c.data)}, {c.fornecedor}
-                  </p>
-                  <p className="text-xs text-muted-foreground">{documento(c)}</p>
-                  <div className="mt-1.5 text-xs">
-                    <Situacao c={c} />
+              <li key={c.id}>
+                <Link href={`/compras/${c.id}`} className="flex items-start gap-3 px-4 py-3.5 hover:bg-muted/50 focus-visible:outline-2 focus-visible:outline-ring">
+                  <div className="min-w-0 flex-1">
+                    <p className="font-semibold text-foreground">Compra nº {c.numero}</p>
+                    <p className="text-xs break-words text-muted-foreground">
+                      {dataBr(c.data)}, {c.fornecedor}
+                    </p>
+                    <p className="text-xs text-muted-foreground">{documento(c)}</p>
+                    <div className="mt-1.5 text-xs">
+                      <Situacao c={c} />
+                    </div>
                   </div>
-                </div>
-                <p className={cn("font-bold tabular-nums", c.situacao === "CANCELADA" && "text-muted-foreground line-through")}>{reais(c.totalCentavos)}</p>
+                  <p className={cn("font-bold tabular-nums", c.situacao === "CANCELADA" && "text-muted-foreground line-through")}>{reais(c.totalCentavos)}</p>
+                  <ChevronRight aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+                </Link>
               </li>
             ))}
           </ul>

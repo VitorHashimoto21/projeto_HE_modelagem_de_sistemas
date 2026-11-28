@@ -158,3 +158,56 @@ A causa: depois de "Limpar filtros", a página muda sem recarregar, e o seletor 
 | Contas: trocar de "A pagar" para "A receber" deixa o seletor de cliente em "Todos" | — | ✅ |
 
 O roteiro da etapa 2a foi rodado de novo depois da correção, e as 38 verificações continuaram aprovadas.
+
+**Correção conferida na homologação (28/11/2026)**, depois do merge do PR #160: em Compras e em Contas, "Limpar filtros" volta o seletor para "Todos", e trocar de "A pagar" para "A receber" começa o cliente em "Todos".
+
+## Etapa 2b — detalhe da compra (28/11/2026)
+
+Verificação em build de produção local, com Postgres e um Supabase Auth falso. Negócio de teste **HE Testing**, com dados fictícios. A compra nº 1 foi registrada pela própria consulta do HE, como faz a tela:
+- a Embalagem P (20 em estoque, custo R$ 1,00): 100 unidades a R$ 1,20;
+- a Embalagem G (sem estoque): 50 unidades a R$ 2,00;
+- frete de R$ 20,00 e desconto de R$ 10,00, num total de R$ 230,00;
+- a prazo, com entrada de R$ 30,00 paga em Pix e 2 parcelas.
+
+A Joana ficou com as permissões padrão do Colaborador.
+
+### Testes automatizados
+
+| # | Teste | Onde | Resultado |
+|---|---|---|---|
+| 5.6, CA-04 | O detalhe: dados, produtos com os custos (anterior, novo e a escolha), o custo com o rateio, as contas com os pagamentos, as entradas, quem registrou, o pago e o em aberto | `test/integracao/detalhe-da-compra.test.ts` | ✅ |
+| 5.6 | A compra cancelada: quem cancelou, quando e o motivo, sem a situação das contas | idem | ✅ |
+| 5.9 | Modo suporte: o fornecedor mascarado e sem o link do cadastro | idem | ✅ |
+| RN42 | Fornecedor anonimizado: o nome anonimizado, sem o link | idem | ✅ |
+| INV-010 | Compra inexistente, id inválido e compra de outro negócio: não encontrada | idem | ✅ |
+| 5.9 | O detalhe entra no registro do suporte com o nº da compra | `test/unit/lista-de-compras.test.ts` | ✅ |
+
+**Suíte completa:** 756 testes unitários e 480 de integração, além de lint e tipos.
+
+### Roteiro no navegador
+
+29 verificações, todas aprovadas:
+- **da lista ao detalhe:** a linha "Compra nº 1" abre o detalhe, com a data, a fornecedora e o "Doc. NF 77" no cabeçalho;
+- **produtos e custos (CA-04):**
+  - cada produto mostra a quantidade, o custo unitário e o total, e o custo com o frete menos o desconto;
+  - a Embalagem P passou de R$ 1,00 para o custo médio;
+  - a Embalagem G, sem estoque antes, ficou com R$ 2,09, o custo da compra com o rateio;
+  - o aviso leva à Calculadora de cada produto, porque o preço não muda sozinho;
+- **contas:** a entrada aparece "Paga", com "Pago em …, R$ 30,00, pix", e as duas parcelas, "A pagar". Cada conta abre o detalhe no Financeiro;
+- **entradas:** "+100, 20 → 120" e "+50, 0 → 50", cada uma com o link do produto no Estoque;
+- **resumo, valores e registro:**
+  - o resumo: R$ 230,00, "a prazo com entrada de R$ 30,00" e "Paga em parte";
+  - os valores: produtos R$ 220,00, frete R$ 20,00, desconto − R$ 10,00, pago R$ 30,00 e em aberto R$ 200,00;
+  - o registro: a fornecedora, com o link do cadastro, o documento, quem registrou e quando, e a observação;
+- **"Ver a compra":** depois de registrar pela tela uma compra sem nota e à vista, o botão abre o detalhe da compra nº 2;
+- **endereço e permissão:** uma compra inexistente dá "não encontrada" (404), e a Colaboradora padrão vai para "Sem acesso";
+- **telas** em 1440, 768 e 390 px, claro e escuro, sem rolagem horizontal; axe sem violações.
+
+O roteiro da etapa 2a também foi rodado de novo, com as linhas da lista abrindo o detalhe, e as 38 verificações continuaram aprovadas.
+
+| Captura | O que mostra |
+|---|---|
+| [`s27f_01_detalhe_1440_claro.png`](s27f_01_detalhe_1440_claro.png) | O detalhe da compra nº 1: produtos e custos, contas, entradas, valores e registro |
+| [`s27f_01_detalhe_1440_escuro.png`](s27f_01_detalhe_1440_escuro.png) | O mesmo detalhe no tema escuro |
+| [`s27f_01_detalhe_390_claro.png`](s27f_01_detalhe_390_claro.png) | O detalhe no celular |
+| [`s27f_02_a_vista_sem_nota_390_claro.png`](s27f_02_a_vista_sem_nota_390_claro.png) | A compra nº 2, sem nota e à vista, aberta pelo "Ver a compra" |

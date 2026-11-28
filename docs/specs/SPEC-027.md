@@ -12,7 +12,7 @@
 > - **nova versão da Política com novo aceite** (OPEN-009);
 > - **sem relatório novo** (OPEN-010).
 >
-> A baseline foi ajustada: RF91 e RN43 novos; RF08, RF15, RF30, RF89, RF90 e RNF05 alterados. **Em implementação por etapas** (seção 14): as etapas 1a (o banco das compras) e 1b (regras e gravação) foram feitas em 22/11/2026, e a 1c (tela "Registrar compra") e a 1d ("Novo produto" sem sair da compra) em 26/11/2026, concluindo a etapa 1, homologada em 27/11/2026. A etapa 2a (lista de compras e o item "Compras" no menu) foi feita em 27/11/2026. As notas estão no fim da seção 9. Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar), a pedido da equipe. Origem: pendência 8 do Mapa, das melhorias de Estoque e Financeiro pedidas em 01/11/2026 a partir do uso real por uma usuária com CNPJ. É a terceira dessas Specs: usa o histórico de custo da SPEC-025 e os fornecedores da SPEC-026. A SPEC-019, concluída antes desta por decisão da equipe (01/11/2026), já garante que a compra nasce fora das correções do suporte e recusada em negócio suspenso.
+> A baseline foi ajustada: RF91 e RN43 novos; RF08, RF15, RF30, RF89, RF90 e RNF05 alterados. **Em implementação por etapas** (seção 14): as etapas 1a (o banco das compras) e 1b (regras e gravação) foram feitas em 22/11/2026, e a 1c (tela "Registrar compra") e a 1d ("Novo produto" sem sair da compra) em 26/11/2026, concluindo a etapa 1, homologada em 27/11/2026. A etapa 2a (lista de compras e o item "Compras" no menu) foi feita em 27/11/2026 e homologada em 28/11/2026, e a 2b (detalhe da compra), em 28/11/2026. As notas estão no fim da seção 9. Gerada conforme `docs/Prompt_SDD_Specs.pdf` (prompt complementar), a pedido da equipe. Origem: pendência 8 do Mapa, das melhorias de Estoque e Financeiro pedidas em 01/11/2026 a partir do uso real por uma usuária com CNPJ. É a terceira dessas Specs: usa o histórico de custo da SPEC-025 e os fornecedores da SPEC-026. A SPEC-019, concluída antes desta por decisão da equipe (01/11/2026), já garante que a compra nasce fora das correções do suporte e recusada em negócio suspenso.
 >
 > **Mapa:** [`MAPA_DE_SPECS.md`](../MAPA_DE_SPECS.md)
 > - **Altera:**
@@ -461,7 +461,25 @@ No custo médio, o saldo antes é o saldo do produto no momento do registro; a e
 - **Busca.** O nº da compra é encontrado com ou sem o prefixo ("12", "nº 12" ou "#12"); o nº do documento, por parte do texto, sem diferença de maiúsculas.
 - **Modo suporte (adiantado da etapa 3).** O item "Compras" aparece no menu do suporte com o Estoque e o Financeiro liberados; a lista mostra o fornecedor mascarado, e a tela entra no registro de telas abertas como "Compras". No suporte, a busca não procura pelo nome do fornecedor, só pelos números: buscar pelo nome revelaria, por tentativa, o nome que a tela mascara (5.9). **Decidido pela equipe em 28/11/2026**, pela opção recomendada: manter a busca do suporte só pelos números.
 
-**Homologação da etapa 2a (28/11/2026)** ([evidências](evidencias/SPEC-027/README.md#homologação-da-etapa-2a-28112026)): a equipe conferiu na homologação a lista das compras nº 1 e nº 2, a busca com filtros e o botão "Canceladas". Os valores e os totais estão certos. A homologação encontrou um defeito de tela: depois de "Limpar filtros", o seletor de fornecedor continuava mostrando a escolha anterior, sem que a lista estivesse filtrada por ela. O mesmo acontecia na lista de Contas (SPEC-026). O defeito foi corrigido em seguida: o formulário dos filtros recomeça sempre que os filtros do endereço mudam, como no filtro de categoria do Catálogo e do Estoque (SPEC-020).
+**Homologação da etapa 2a (28/11/2026)** ([evidências](evidencias/SPEC-027/README.md#homologação-da-etapa-2a-28112026)): a equipe conferiu na homologação a lista das compras nº 1 e nº 2, a busca com filtros e o botão "Canceladas". Os valores e os totais estão certos. A homologação encontrou um defeito de tela: depois de "Limpar filtros", o seletor de fornecedor continuava mostrando a escolha anterior, sem que a lista estivesse filtrada por ela. O mesmo acontecia na lista de Contas (SPEC-026). O defeito foi corrigido em seguida: o formulário dos filtros recomeça sempre que os filtros do endereço mudam, como no filtro de categoria do Catálogo e do Estoque (SPEC-020). A correção foi conferida na homologação no mesmo dia.
+
+**Etapa 2b (28/11/2026)** — o detalhe da compra ([evidências](evidencias/SPEC-027/README.md#etapa-2b--detalhe-da-compra-28112026)):
+- **O que o detalhe mostra (5.6):**
+  - os produtos, com a quantidade, o custo unitário, o total e o custo com o frete, as outras despesas e o desconto;
+  - o custo anterior e o novo de cada produto, com a escolha feita no resumo;
+  - as contas a pagar, com a situação e os pagamentos (data, valor e forma; o estornado aparece riscado);
+  - as entradas no estoque, com o saldo antes e depois;
+  - os valores, com o pago e o em aberto;
+  - quem registrou e quando, e a observação;
+  - na compra cancelada, quem cancelou, quando e o motivo.
+- **Ligações a partir do detalhe:**
+  - cada conta abre o detalhe no Financeiro, cada entrada abre o produto no Estoque, e a fornecedora abre o cadastro, para quem vê o Financeiro;
+  - as linhas da lista abrem o detalhe;
+  - a confirmação da compra ganhou o botão "Ver a compra".
+
+  As ligações no sentido contrário (do Estoque, das contas e do fornecedor para a compra) são da etapa 2c.
+- **Calculadora (CA-04).** Quando a compra mudou o custo de algum produto, o detalhe avisa que o preço não muda sozinho e leva à Calculadora de cada um, para quem pode vê-la. A compra cancelada não mostra o aviso.
+- **Modo suporte.** O fornecedor aparece mascarado e sem o link do cadastro. A tela entra no registro do suporte como "Compras — compra nº N". O fornecedor anonimizado também aparece sem o link.
 
 ---
 
