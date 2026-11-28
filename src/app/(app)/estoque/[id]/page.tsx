@@ -7,12 +7,13 @@ import { FormularioMinimo } from "@/components/estoque/formularios";
 import { quantidade, ROTULO_MOTIVO, ROTULO_MOVIMENTACAO, SeloDeSituacao } from "@/components/estoque/situacao";
 import { AvisoDoHistorico } from "@/components/planos/avisos";
 import { CabecalhoDePagina } from "@/components/ui/cabecalho-de-pagina";
-import { classeDoBotao } from "@/components/ui/estilos";
+import { classeDoBotao, classeDoLink } from "@/components/ui/estilos";
 import { Numero } from "@/components/ui/numero";
 import { Superficie, TituloDaSuperficie } from "@/components/ui/superficie";
 import { exigirPermissao } from "@/lib/auth/servidor";
 import { estoque } from "@/lib/db";
 import { ItemNaoEncontrado } from "@/lib/db/catalogo";
+import { podeVerCompras } from "@/lib/dominio/compras";
 import { dataBrasileira, hoje } from "@/lib/dominio/datas";
 import { diasEntre, JANELA_DIAS } from "@/lib/dominio/estoque";
 import { pode } from "@/lib/dominio/permissoes";
@@ -55,6 +56,8 @@ export default async function EstoqueDoProduto({ params, searchParams }: PagePro
   // SPEC-019 (5.3, item 2): no modo suporte com o Estoque em "ver e corrigir", os botões da lista.
   const podeMovimentar = pode(membro.permissoes, "estoque", "criar") || corrige(membro, "estoque.registrarEntrada");
   const podeEditarMinimo = pode(membro.permissoes, "estoque", "editar") || corrige(membro, "estoque.definirMinimo");
+  // SPEC-027 (5.6): a entrada da compra leva à compra, para quem pode vê-la.
+  const verCompras = podeVerCompras(membro);
   const diasConsumo = d.consumoNaJanela.primeiroDia ? Math.min(JANELA_DIAS, diasEntre(d.consumoNaJanela.primeiroDia, dia) + 1) : 0;
 
   const minimo = d.minimo?.valor ?? null;
@@ -175,6 +178,18 @@ export default async function EstoqueDoProduto({ params, searchParams }: PagePro
                         <span className="ml-2 font-semibold text-foreground">
                           {ROTULO_MOVIMENTACAO[m.tipo]}
                           {m.motivo && `, ${ROTULO_MOTIVO[m.motivo].toLowerCase()}`}
+                          {m.compra && (
+                            <>
+                              {" — "}
+                              {verCompras ? (
+                                <Link href={`/compras/${m.compra.id}`} className={classeDoLink()}>
+                                  Compra nº {m.compra.numero}
+                                </Link>
+                              ) : (
+                                `Compra nº ${m.compra.numero}`
+                              )}
+                            </>
+                          )}
                         </span>
                         <span className="ml-2 text-muted-foreground tabular-nums">
                           {quantidade(m.saldoAnterior)} → {quantidade(m.saldoPosterior)}

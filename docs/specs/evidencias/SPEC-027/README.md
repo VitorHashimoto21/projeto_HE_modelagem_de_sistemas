@@ -224,3 +224,41 @@ Feita pela equipe em <https://he-homol.vercel.app> (DEVELOP, depois do merge do 
 | "Compra nº 3 registrada." com o botão "Ver a compra" | ✅ | [`t14e2b_04_ver_a_compra.png`](homologacao/t14e2b_04_ver_a_compra.png) |
 
 Sem divergência com a Spec. O rateio do frete confere com a OPEN-005: R$ 5,00 divididos em proporção ao valor das linhas, R$ 90,00 e R$ 30,00, dão R$ 3,75 e R$ 1,25. Por unidade, são R$ 1,875 e R$ 0,625, arredondados ao centavo na tela.
+
+## Etapa 2c — ligações com a compra (28/11/2026)
+
+Mesmo ambiente e mesma compra nº 1 da etapa 2b: a Embalagem P e a G, com frete, desconto, entrada paga em Pix e 2 parcelas.
+
+### Testes automatizados
+
+| # | Teste | Onde | Resultado |
+|---|---|---|---|
+| CA-09 | O histórico do produto traz a compra (nº e id) na entrada da compra; as outras movimentações, não | `test/integracao/ligacoes-da-compra.test.ts` | ✅ |
+| CA-09 | A conta da compra traz a compra na lista e no detalhe; a conta manual, não; o filtro de origem "Compra" a encontra | idem | ✅ |
+| CA-09 | As compras do fornecedor, das mais recentes para as mais antigas, e o total comprado sem as canceladas; nada de outro fornecedor | idem | ✅ |
+| 5.6, INV-010 | Até 50 compras, com a quantidade de todas; id inválido e outro negócio não trazem nada | idem | ✅ |
+
+**Suíte completa:** 756 testes unitários e 484 de integração, além de lint e tipos.
+
+### Roteiro no navegador
+
+25 verificações, todas aprovadas:
+- **Estoque:** o histórico da Embalagem P mostra "+100 Entrada — Compra nº 1, 20 → 120", e o nº da compra abre o detalhe dela;
+- **contas:**
+  - o detalhe da conta mostra a origem "Compra nº 1", com o link para a compra. Até a 2c, a origem dessas contas aparecia como "Manual";
+  - o filtro de origem "Compra" encontra as contas da compra;
+- **fornecedor:**
+  - o detalhe da fornecedora mostra "Compras", com o total comprado (R$ 230,00, sem as canceladas) e a compra nº 1, que abre o detalhe;
+  - "Registrar compra" abre a compra já com a fornecedora escolhida;
+- **permissões:**
+  - a Colaboradora padrão (Estoque, sem Financeiro) vê "Entrada — Compra nº 1" sem o link, porque não vê as compras;
+  - um membro só com *Financeiro: ver* vê a origem "Compra nº 1" na conta, sem o link, e o fornecedor sem a seção "Compras" e sem o atalho;
+- **telas** em 1440 e 390 px, claro e escuro, sem rolagem horizontal; axe sem violações no histórico do produto e no detalhe do fornecedor.
+
+| Captura | O que mostra |
+|---|---|
+| [`s27g_01_historico_do_produto_1440_claro.png`](s27g_01_historico_do_produto_1440_claro.png) | "Entrada — Compra nº 1" no histórico da Embalagem P |
+| [`s27g_02_conta_da_compra_1440_claro.png`](s27g_02_conta_da_compra_1440_claro.png) | A origem "Compra nº 1" no detalhe da conta |
+| [`s27g_03_fornecedor_1440_claro.png`](s27g_03_fornecedor_1440_claro.png) | O fornecedor com as compras, o total comprado e o atalho "Registrar compra" |
+| [`s27g_03_fornecedor_1440_escuro.png`](s27g_03_fornecedor_1440_escuro.png) | O mesmo detalhe no tema escuro |
+| [`s27g_03_fornecedor_390_claro.png`](s27g_03_fornecedor_390_claro.png) | O detalhe do fornecedor no celular |

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ChevronRight, Pencil, Receipt } from "lucide-react";
+import { ChevronRight, Pencil, Receipt, ShoppingBag } from "lucide-react";
 import { SeloParaNota } from "@/components/clientes/selo-para-nota";
 import { reais, SeloDaConta } from "@/components/financeiro/exibicao";
 import { ExcluirFornecedor } from "@/components/fornecedores/excluir-fornecedor";
@@ -9,9 +9,11 @@ import { AvisoDaPagina } from "@/components/ui/aviso";
 import { CabecalhoDePagina } from "@/components/ui/cabecalho-de-pagina";
 import { EstadoVazio } from "@/components/ui/estado-vazio";
 import { classeDoBotao, classeDoLink } from "@/components/ui/estilos";
+import { Selo } from "@/components/ui/selo";
 import { Superficie, TituloDaSuperficie } from "@/components/ui/superficie";
 import { exigirPermissao } from "@/lib/auth/servidor";
-import { FornecedorNaoEncontrado, fornecedores, LIMITE_DE_CONTAS_DO_FORNECEDOR } from "@/lib/db";
+import { compras, FornecedorNaoEncontrado, fornecedores, LIMITE_DE_COMPRAS_DO_FORNECEDOR, LIMITE_DE_CONTAS_DO_FORNECEDOR } from "@/lib/db";
+import { podeRegistrarCompra, podeVerCompras } from "@/lib/dominio/compras";
 import { nomeDeExibicao, ROTULO_SITUACAO_IE, ROTULO_TIPO_CLIENTE, textoDoQueFalta } from "@/lib/dominio/cliente";
 import { hoje } from "@/lib/dominio/datas";
 import { pode } from "@/lib/dominio/permissoes";
@@ -37,13 +39,17 @@ function endereco(c: { logradouro: string | null; numero: string | null; complem
 
 // Detalhe do fornecedor (SPEC-026, 5.1, item 7): Financeiro — ver. Os dados chegam do servidor já
 // com a máscara de quem vê (5.2); as contas a pagar e as despesas fixas ligadas a ele, com os totais.
+// SPEC-027 (5.6, 5.8): as compras do fornecedor e o total comprado, para quem vê as compras, e o atalho
+// "Registrar compra", que já abre a compra com ele, para quem pode registrar.
 export default async function DetalheDoFornecedor({ params, searchParams }: PageProps<"/financeiro/fornecedores/[id]">) {
   const membro = await exigirPermissao("financeiro", "ver");
   const [{ id }, busca] = await Promise.all([params, searchParams]);
   const consultas = fornecedores(membro);
-  const [{ fornecedor: f, contas, quantidadeDeContas, pagoCentavos, emAbertoCentavos, despesas }, vinculos] = await Promise.all([
+  const verCompras = podeVerCompras(membro);
+  const [{ fornecedor: f, contas, quantidadeDeContas, pagoCentavos, emAbertoCentavos, despesas }, vinculos, comprado] = await Promise.all([
     consultas.detalhar(id, hoje()),
     consultas.vinculos(id),
+    verCompras ? compras(membro).doFornecedor(id) : Promise.resolve(null),
   ]).catch((e) => {
     if (e instanceof FornecedorNaoEncontrado) notFound();
     throw e;
@@ -66,12 +72,20 @@ export default async function DetalheDoFornecedor({ params, searchParams }: Page
           </span>
         }
         acoes={
-          podeEditar && (
-            <Link href={`/financeiro/fornecedores/${f.id}/editar`} className={classeDoBotao("secundario", "sm")}>
-              <Pencil aria-hidden="true" />
-              Editar
-            </Link>
-          )
+          <>
+            {podeRegistrarCompra(membro) && (
+              <Link href={`/compras/nova?fornecedor=${f.id}`} className={classeDoBotao("secundario", "sm")}>
+                <ShoppingBag aria-hidden="true" />
+                Registrar compra
+              </Link>
+            )}
+            {podeEditar && (
+              <Link href={`/financeiro/fornecedores/${f.id}/editar`} className={classeDoBotao("secundario", "sm")}>
+                <Pencil aria-hidden="true" />
+                Editar
+              </Link>
+            )}
+          </>
         }
       />
 
@@ -117,6 +131,44 @@ export default async function DetalheDoFornecedor({ params, searchParams }: Page
               <Linha rotulo="Endereço" valor={endereco(f)} />
             </dl>
           </Superficie>
+
+          {comprado && (
+            <Superficie aria-labelledby="titulo-compras">
+              <TituloDaSuperficie
+                id="titulo-compras"
+                titulo="Compras"
+                descricao={comprado.quantidade > 0 ? `Total comprado: ${reais(comprado.totalCentavos)}, sem as canceladas` : undefined}
+              />
+              {comprado.compras.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Nenhuma compra deste fornecedor.</p>
+              ) : (
+                <>
+                  <ul className="divide-y">
+                    {comprado.compras.map((c) => (
+                      <li key={c.id} className="flex flex-wrap items-center justify-between gap-2 py-3 text-sm">
+                        <span className="inline-flex flex-wrap items-center gap-2">
+                          <Link href={`/compras/${c.id}`} className={classeDoLink("font-semibold")}>
+                            Compra nº {c.numero}
+                          </Link>
+                          <span className="text-muted-foreground tabular-nums">{c.data.split("-").reverse().join("/")}</span>
+                          {c.situacao === "CANCELADA" && <Selo tom="neutro">Cancelada</Selo>}
+                        </span>
+                        <span className={c.situacao === "CANCELADA" ? "text-muted-foreground tabular-nums line-through" : "font-bold tabular-nums"}>{reais(c.totalCentavos)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  {comprado.quantidade > LIMITE_DE_COMPRAS_DO_FORNECEDOR && (
+                    <p className="mt-3 text-sm text-muted-foreground">
+                      Mostrando as {LIMITE_DE_COMPRAS_DO_FORNECEDOR} mais recentes.{" "}
+                      <Link href={`/compras?fornecedor=${f.id}`} className={classeDoLink()}>
+                        Ver todas nas compras
+                      </Link>
+                    </p>
+                  )}
+                </>
+              )}
+            </Superficie>
+          )}
 
           {despesas.length > 0 && (
             <Superficie aria-labelledby="titulo-despesas">
